@@ -1,0 +1,48 @@
+      SUBROUTINE xpinv(vect,mat,xang)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*-----------------------------------------------------------------------*
+*     fonction chapeau : matrice tangente de l'exponentiel dans SO(3) :                                                                       *
+*     dexp^{-1}
+*-----------------------------------------------------------------------*
+      REAL*8 vect(3),mat(3,3),uchap(3,3),uchap2(3,3)
+-INC CCREEL 
+*     calcul de l'angle :
+      xang = 0.d0
+      do id=1,3
+        xang = xang + (vect(id)**2)
+      enddo
+      xang = dsqrt(xang)
+*       axe de rotation (unitaire) :
+      do id=1,3
+        u2(id) = vect(id)/xang
+      enddo
+      call chap(vect(1),uchap(1,1))
+      do id = 1,3
+        do j = 1,3
+          uchap2(id,j) = 0.d0
+          do k = 1,3
+            uchap2(id,j) = uchap2(id,j) + uchap(id,k)*uchap(k,j)
+          enddo
+        enddo
+      enddo
+*       mat :
+      do id=1,3
+        do j=1,3
+          mat(id,j) = -(uchap(id,j)/2.d0)
+        enddo
+      enddo
+      if (dabs(xang).gt.xzprec) then
+        do id=1,3
+          do j=1,3
+            mat(id,j) = -(uchap(id,j)/2.d0) + 
+     &     ((1.d0 - 5.d-1*xang*dcotan(xang/2.d0))/(xang**2))*uchap2
+          enddo
+        enddo
+      endif
+*       + l'identite :
+      do id=1,3
+        mat(id,id) = mat(id,id) + 1.d0
+      enddo
+      
+      END
