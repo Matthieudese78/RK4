@@ -1,0 +1,122 @@
+      SUBROUTINE CALCNOR(THM,VN,VT,VX,VY,NUT,ALPHA,XRAY,
+     &                  XXGC,YYGC,XXD,
+     &                  XPR,YPR,ZPR,
+     &                  XNC,YNC,ZNC,XDTH,NECH)
+*     TODO : virer XDL qui ne sert a rien.
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*     Calcul des vecteurs normaux au cone dans le repere du cone 
+*     sur tous les points du profile de raction dans le repere du cone
+*           (Ex, Ey, Ez)
+*     THM largeur angulaire du contact en radians
+*     VN = NPE = vect. radial au pt d'incidence plan de nutation (repere cercle)
+*     VT = TPE = vect.  tangentiel au pt d'incidence plan de nutation (repere cercle)
+*     VX = EX = XN3 = EX plan de nutation (repere cercle)
+*     VY = EY = XN2 = EY plan de nutation (repere cercle)
+-INC CCREEL
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettant de calculer                                 * 
+*     l'angle d'un vect. / axe (0x) via l'operateur ATAN                *
+*     Matthieu SERRE     : le 23/05/2023 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*      
+*     INTEGER NECH
+      REAL*8 THM,NUT,ALPHA,XRAY,XXGC,YYGC,XXD,XDTH 
+      REAL*8 VN(3),VT(3),VX(3),VY(3)
+*     1 = dummy argument
+      REAL*8 XPR(NECH),YPR(NECH),ZPR(NECH)
+      REAL*8 XNC(NECH),YNC(NECH),ZNC(NECH)
+*
+*     WRITE(*,*)'CALCNOR : XXGC = ',XXGC
+*     WRITE(*,*)'CALCNOR : YYGC = ',YYGC
+************************************************************************ 
+*        CALCUL DES VECTEURS NORMAUX AU CONE SUR LE PROFIL DE REACTION 
+************************************************************************  
+*        Discretisation en theta du profil de reaction : 
+*        XDTH = (0.3/5.D0)*XPI/180.D0
+*    XDTH = THM/20.D0
+*        WRITE(*,*)'DEVFB10 : XDTH = ',XDTH
+*        Longueur d'arc elementaire : 
+*    XDL = XRAY * XDTH
+*        WRITE(*,*)'DEVFB10 : XDL = ',XDL
+*    NECH = FLOOR(THM/XDTH) + 1
+*        WRITE(*,*)'NECH = ',NECH
+*        1. : Calcul : coordonnees des points du profils :
+*           Dans le repere (CE,EX,EY) 
+*           (ou G = intersection axe du cone / plan de l'ellipse)
+*           1.a : XPROF_X = R*dcos(theta)*(VN . EX) + R*dsin(theta)*(VT . EX)
+*                                      + XCEC
+*                 XPROF_Y = R*dcos(theta)*(VN . EY) + R*dsin(theta)*(VT . EY)
+*                                      + YCEC
+         PSNPEX = 0.D0
+         PSTPEX = 0.D0
+         PSNPEY = 0.D0
+         PSTPEY = 0.D0
+         DO ID=1,3   
+            PSNPEX = PSNPEX + (VN(ID)*VX(ID))
+            PSTPEX = PSTPEX + (VT(ID)*VX(ID))
+            PSNPEY = PSNPEY + (VN(ID)*VY(ID))
+            PSTPEY = PSTPEY + (VT(ID)*VY(ID))
+         ENDDO
+*        WRITE(*,*)'CALCNOR : PSNPEX = ',PSNPEX
+*        WRITE(*,*)'          PSTPEX = ',PSTPEX
+*        WRITE(*,*)'          PSNPEY = ',PSNPEY
+*        WRITE(*,*)'          PSTPEY = ',PSTPEY
+
+*        WRITE(*,*)'    LOOP sur le profile NECH = ',NECH
+*        WRITE(*,*)'CALCNOR : LOOP 1'
+*        WRITE(*,*)'        : THM = ',THM
+         DO IPROF=1,NECH 
+            THPROF = ((-1.)*(THM/2.D0)) + REAL(IPROF-1)*XDTH
+*           Rq : UFLEX deja pris en compte dans la reco du pt de liaison.   
+            XPR(IPROF)= ((XRAY*dcos(THPROF)) * PSNPEX)
+     &                    + ((XRAY*dsin(THPROF)) * PSTPEX) + XXGC
+
+            YPR(IPROF)= ((XRAY*dcos(THPROF)) * PSNPEY)
+     &                    + ((XRAY*dsin(THPROF)) * PSTPEY) + YYGC
+
+            IF (IIMPI.EQ.555) THEN
+              WRITE(IOIMP,*)'THPROF = ',THPROF*180.D0/XPI
+            ENDIF
+*           WRITE(*,*)'XRAY*dcos(',THPROF,') = ',XRAY*dcos(THPROF)
+*           WRITE(*,*)'XXGC = ',XXGC
+*           WRITE(*,*)'XPR(',IPROF,') = ',XPR(IPROF)
+*           WRITE(*,*)'XRAY*dsin(',THPROF,') = ',XRAY*dsin(THPROF)
+*           WRITE(*,*)'YYGC = ',YYGC
+*           WRITE(*,*)'YPR(',IPROF,') = ',YPR(IPROF)
+         ENDDO
+
+*        2. : Calcul : normale au cone en chaque point du cone :
+*          2.a : Dans le repere du cone (Scone,Ex,Ey,Ez=Ncone) :
+*        ZPR inutile !!
+*        WRITE(*,*)'CALCNOR : LOOP 2'
+*        WRITE(*,*)'        NUT = ',NUT
+*        WRITE(*,*)'        XXD = ',XXD
+         DO IPROF=1,NECH
+            ZPR(IPROF) = (-1.D0*dsin(NUT)*XPR(IPROF)) + XXD
+*           WRITE(*,*)'ZPR(',IPROF,') = ',ZPR(IPROF)
+         ENDDO
+*        WRITE(*,*)'CALCNOR : LOOP 3'
+         DO IPROF=1,NECH
+            XPR(IPROF) = dcos(NUT)*XPR(IPROF)
+*           WRITE(*,*)'XPR(',IPROF,') = ',XPR(IPROF)
+         ENDDO
+*           2.b. : Normale au cone a chaque point du profil 
+*                  dans le repère du cone : ()
+*        WRITE(*,*)'CALCNOR : LOOP 4'
+         DO IPROF=1,NECH
+            XNC(IPROF) = dcos(ALPHA) * XPR(IPROF)  /
+     &               dsqrt((XPR(IPROF)**2) + (YPR(IPROF)**2))
+            YNC(IPROF) = dcos(ALPHA) * YPR(IPROF)  /
+     &               dsqrt((XPR(IPROF)**2) + (YPR(IPROF)**2))
+            ZNC(IPROF) = (-1.D0)*dsin(ALPHA)
+*           IF (IIMPI.EQ.555) THEN
+*             WRITE(*,*)'CALCNOR : XNC(',IPROF,') = ',XNC(IPROF)
+*             WRITE(*,*)'CALCNOR : YNC(',IPROF,') = ',YNC(IPROF)
+*             WRITE(*,*)'CALCNOR : ZNC(',IPROF,') = ',ZNC(IPROF)
+*           ENDIF
+         ENDDO
+
+*
+      END

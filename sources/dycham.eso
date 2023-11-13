@@ -1,0 +1,73 @@
+C DYCHAM    SOURCE    BP208322  20/09/18    21:16:18     10718          
+      SUBROUTINE DYCHAM(XDEP,XVIT,XRAID,XJEU,XAMO,ETA,
+     &                  XFL,DFDX,DFDV,IPERM,iannul)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*     operateurs DYn* : calcul de la force d'un CHoc AMorti          *
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   XDEP    Valeur du deplacement.                                 *
+* e   XVIT    Valeur de la vitesse.                                  *
+* e   XRAID   Valeur de la raideur.                                  *
+* e   XJEU    Valeur du jeu.                                         *
+* e   XAMO    Valeur de l'amortissement.                             *
+* e   ETA     Parametre de regularisation.                           *
+* e   IPERM   =2 si liaison permanente                               *
+*  s  XFL     Valeur de la force de choc.                            *
+*  s  DFDX    Derivee de la force de choc.                           *
+*                                                                    *
+*--------------------------------------------------------------------*
+      
+*     Contact permanent (<=> ressort+amortisseur localise)
+      IF (IPERM.EQ.2) THEN
+cbp         IF (iannul.EQ.0) THEN
+            XVAL = XDEP - XJEU
+            XFL  = -XRAID*XVAL - XAMO*XVIT
+            DFDX = -XRAID
+            DFDV = -XAMO
+cbp         ENDIF
+
+*     Contact strict      
+      ELSEIF (ETA.EQ.0.D0) THEN
+         IF ((XDEP.GE.XJEU).AND.(iannul.EQ.0)) THEN
+            XVAL = XDEP - XJEU
+*            WRITE(*,*)'DYCHAM: XDEP = ',XDEP
+*            WRITE(*,*)'DYCHAM: XJEU = ',XJEU
+*            WRITE(*,*)'DYCHAM: penetration XVAL = XDEP - XJEU = ',
+*     &                                     XVAL
+            XFL  = -XRAID*XVAL - XAMO*XVIT
+*            WRITE(*,*)'DYCHAM: XFL (<0)  = ',XFL
+            DFDX = -XRAID
+            DFDV = -XAMO
+            IF ( XFL.GT.0.D0) THEN 
+               XFL = 0.D0
+               DFDX = 0.D0 
+               DFDV = 0.D0
+            ENDIF
+         ELSE
+            XFL = 0.D0
+            DFDX = 0.D0
+            DFDV = 0.D0
+         ENDIF
+         
+*     Contact regularise
+      ELSE
+         XVAL = XDEP - XJEU
+         XFLR = XRAID*XVAL+XAMO*XVIT
+         XAUX = SQRT(XFLR**2 + 4.*XRAID*ETA)
+         XFL  = -0.5*(XFLR  + XAUX)      
+         DFDX = -0.5*XRAID*(1.+XFLR/XAUX)
+         DFDV = -0.5*XAMO *(1.+XFLR/XAUX)
+      ENDIF
+*
+*
+      END
+
+
+
+ 
+ 
+ 

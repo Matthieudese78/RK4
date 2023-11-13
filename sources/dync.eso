@@ -1,0 +1,123 @@
+C DYNC      SOURCE    BP208322  20/10/05    21:15:06     10742          
+c      
+      SUBROUTINE DYNC
+*  
+************************************************************************
+*
+*     RESOUT LE PB DYNAMIQUE PAR HBM + CONTINUATION :
+*         ..     .                           .
+*       M q  + C q + K q = f^ext(t) + f^nl(Q,Q,a) 
+*
+*     avec q(t) = \sum_j{q_jc cos (jwt) + q_js sin(jwt)}
+*
+*     AUTEUR : ROBERTO ALCORTA, 2020
+*
+************************************************************************
+*
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+      REAL*8  INDA,INDB
+      INTEGER NHBM,NFFT,SPAS
+      LOGICAL CHECK,RIGIDE,REPRIS
+      
+-INC PPARAM    
+-INC CCOPTIO   
+***** extrait du futur include TMDYNC.INC :
+      SEGMENT PARNUM
+         CHARACTER*4 TYPS
+         REAL*8   DS,DSMAX,DSMIN,ANGMIN,ANGMAX,ITERMOY,ISENS,TOLMIN
+         REAL*8   PARINI,PARFIN
+         INTEGER  ITERMAX,NBPAS
+         LOGICAL  JANAL
+      ENDSEGMENT
+***** fin extrait du futur include TMDYNC.INC :
+
+************************************************************************
+*     LECTURE
+************************************************************************
+
+c     lecture des arguments
+c     HBMLIR copie depuis DEVLIR
+      IF (IIMPI.EQ.333) WRITE(IOIMP,*) 'DYNC : appel a HBMLIR'
+      CALL HBMLIR(ITBAS,ITKM,ITA,ITLIA,ITCHAR,ITINIT,ITOPT,NINS,
+     &            ITREDU,IPARNUM,KPREF,KCPR,NHBM,NFFT,KCPRIG)
+      IF (IERR.NE.0) RETURN   
+      RIGIDE = (KCPRIG.ne.0)
+      IF (KCPRIG.NE.0) THEN
+        RIGIDE = .false.
+        WRITE(*,*)'DYNDIF: HBM incompatible avec rotations rigides'
+        CALL ERREUR(272)
+        RETURN
+      ENDIF
+c     allocation memoire (creation des segments)
+      IF (IIMPI.EQ.333) WRITE(IOIMP,*) 'DYNC : appel a HBMALO'
+      CALL HBMALO(ITBAS,ITKM,ITA,ITLIA,ITCHAR,ITINIT,NINS,ITREDU,
+     &            IPARNUM,KPREF,KTQ,KTKAM,KTPHI,KTLIAA,KTEMP,KTLIAB,
+     &            KTFEX,KTPAS,KTRES,KTNUM,IPMAIL,REPRIS,KPARNUM,
+     &            KSORT,ICHAIN,KOCLFA,KOCLB1,NHBM,NFFT)
+     
+c     Remplissage des tableaux des liaisons: 
+      IF (ITLIA.NE.0) THEN
+         IF (IIMPI.EQ.333) WRITE(IOIMP,*) 'DYNC : appel a DEVLIA'
+         CALL DEVLIA(ITLIA,KCPR,0.D0,KTLIAA,KTLIAB,0,.false.,2)
+         IF (IERR.NE.0) RETURN
+      ENDIF
+      
+c     Transposition des objets CASTEM dans des tableaux 
+      IF (IIMPI.EQ.333) WRITE(IOIMP,*) 'DYNC : appel a HBMTRA'
+      CALL HBMTRA(ITBAS,ITKM,ITA,KTKAM,IPMAIL,NHBM,KTRES,KTNUM,KPREF,
+     &            KTPHI,KTLIAB,RIGIDE) 
+     
+     
+************************************************************************
+*     CALCUL D'UNE SOLUTION INITIALE
+************************************************************************ 
+
+       IF (IIMPI.EQ.333) WRITE(IOIMP,*) 'DYNC : appel a HBMINI'
+       CALL HBMINI(KTKAM,KTQ,KTFEX,KTPAS,KTLIAA,KTEMP,KTLIAB,KTPHI,
+     &             KCPR,KOCLFA,KOCLB1,KPARNUM,NHBM,NFFT,CHECK,ITER)
+     
+       IF (CHECK) THEN
+c        Pas de convergence, arret de %m1:8
+         MOTERR(1:8)='DYNC    '
+         CALL ERREUR(997)
+         RETURN
+       ELSEIF(IIMPI.GE.2) THEN
+         WRITE(IOIMP,*) 'DYNC : Solution initiale convergee'
+       ENDIF
+       
+************************************************************************
+*     CONTINUATION EN FONCTION D'UN PARAMETRE
+************************************************************************ 
+
+       PARNUM = KPARNUM 
+       IF (TYPS.EQ.'FORC') THEN
+        NOTYPS = 0
+        IF (IIMPI.EQ.333) WRITE(IOIMP,*) 'DYNC : appel a HBMCON'
+        CALL HBMCON(KTKAM,KTQ,KTFEX,KTPAS,KTLIAA,KTEMP,KTLIAB,KTPHI,
+     &            KCPR,KOCLFA,KOCLB1,NHBM,NFFT,KPARNUM,KSORT,SPAS,ITER) 
+       ELSEIF (TYPS.EQ.'AUTO') THEN
+        NOTYPS = 1
+        IF (IIMPI.EQ.333) WRITE(IOIMP,*) 'DYNC : appel a HBMCO2'
+        CALL HBMCO2(KTKAM,KTQ,KTFEX,KTPAS,KTLIAA,KTEMP,KTLIAB,KTPHI,
+     &            KCPR,KOCLFA,KOCLB1,NHBM,NFFT,KPARNUM,KSORT,SPAS,ITER) 
+       ELSEIF (TYPS.EQ.'NNM') THEN
+        NOTYPS = 0
+        IF (IIMPI.EQ.333) WRITE(IOIMP,*) 'DYNC : appel a HBMCO3'
+        CALL HBMCO3(KTKAM,KTQ,KTFEX,KTPAS,KTLIAA,KTEMP,KTLIAB,KTPHI,
+     &            KCPR,KOCLFA,KOCLB1,NHBM,NFFT,KPARNUM,KSORT,SPAS,ITER) 
+       ENDIF
+       
+************************************************************************
+*     ECRITURE DES RESULTATS ET SORTIE DU PROGRAMME
+************************************************************************
+*
+      IF (IIMPI.EQ.333) WRITE(IOIMP,*) 'DYNC : appel a HBMSOR'
+      CALL HBMSOR(KSORT,KPREF,NOTYPS,NHBM)
+*      
+      RETURN
+      END
+ 
+ 
+ 
+ 

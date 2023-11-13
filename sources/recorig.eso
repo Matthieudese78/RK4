@@ -1,0 +1,448 @@
+      SUBROUTINE RECORIG(IBAS,ITRES,IPOS,ITYP,ICHD1,ICHDE,
+     &                   KTRAV,KCPR,KCHAR,XTEMP,ITLIA,LTRIG)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*  KTRAV,KCPR,KCHAR,XTEMP,ITLIA: uniquement pour l'appel a rcdepel   *
+*                                                                    *
+*     Matthieu Serre, le 04 Juin 2021.                               *
+*                                                                    *
+*--------------------------------------------------------------------*
+-INC PPARAM
+-INC CCOPTIO
+-INC SMCOORD
+-INC SMCHPOI
+-INC SMELEME
+*
+      INTEGER IPTR(4)
+      REAL*8 WANG(3),AANG(3),QUAT(4),QUAT0(4),ROT(3,3),ROT0(3,3)
+      REAL*8 VLOCAL(3),ANORM(3),ATANG(3),ACORIO(3)
+      REAL*8 XXGP(3),Utemp(3,3),XP0(3),UXEL0(3)
+*     Pour reco des translations rigides en presence de rotas rigides
+      REAL*8 XTRIG(6),XVTRIG(6),XATRIG(6) 
+*     6 comps: seul 'UX' 'UY' 'UZ' nous interessent mais dans rcdepel2,
+*              on ne sait pas quelles sont les bonnes (par precaution)
+* Utemp: table temporaire pour ne pas ecraser VPOCHA:
+* Utemp(1,...) = depl
+* Utemp(2,...) = vite
+* Utemp(3,...) = acce
+      CHARACTER*8 MOTCOMP(3),MOTLAG
+      CHARACTER*12 TYPRET
+      DATA MOTCOMP/'UX','UY','UZ'/
+      DATA MOTLAG/'LX'/
+      LOGICAL RIGRECO,L0,L1,LTRIG
+      INTEGER URECO(3)
+*     URECO(1) = I si NOCOMP(I) = 'UX'
+*     URECO(2) = I si NOCOMP(I) = 'UY'
+*     URECO(3) = I si NOCOMP(I) = 'UZ'
+*
+      SEGMENT ICPR(nbpts)
+*
+      ICPR = KCPR
+*
+*      IF (ITYP.EQ.0) THEN
+*        WRITE(*,*)'RECORIG: RECO DEPLACEMENT, IPOS = ',IPOS
+*      ELSEIF (ITYP.EQ.1) THEN
+*        WRITE(*,*)'RECORIG: RECO VITESSE, IPOS = ',IPOS
+*      ELSEIF (ITYP.EQ.-1) THEN
+*        WRITE(*,*)'RECORIG: RECO ACCELERATION, IPOS = ',IPOS
+*      ENDIF
+
+
+* Inititalisation translation rigide:
+      DO I=1,6
+        XTRIG(I) = 0.D0
+        XVTRIG(I) = 0.D0
+        XATRIG(I) = 0.D0
+      ENDDO
+*
+*      WRITE(*,*)'RECORIG: IDIM = ',IDIM
+*      WRITE(*,*)'         LTRIG = ',LTRIG
+      IF ((ITYP.EQ.0).AND.(LTRIG)) THEN 
+*       Si translation rigide on veut les depl d'ensemble de la ss base XTRIG
+        TYPRET=' '
+        CALL ACCTAB(ITRES ,'MOT',I0,X0,'DEPLACEMENT',L0,IRET0,
+     &               TYPRET,I1,X1,' ',L1,IDYN1) 
+        IF((TYPRET.EQ.'TABLE').AND.(IDYN1.NE.0)) THEN
+*         ICHPT<0 car ne marche que en listreel:
+          ICHPT=-1*IDYN1
+          CALL RCDEPEL(IBAS,ICHPT,KCHAR,XTEMP,ITRES,IPOS,ITLIA,ICHD0,
+     &                 0,ICHD1,LTRIG,XTRIG)
+*          WRITE(*,*)'RECORIG: XTRIG(1) = ',XTRIG(1)
+*          WRITE(*,*)'RECORIG: XTRIG(2) = ',XTRIG(2)
+*          WRITE(*,*)'RECORIG: XTRIG(3) = ',XTRIG(3)
+        ENDIF
+*
+      ELSEIF (ITYP.EQ.1) THEN 
+*       Besoin des deplacemetns purement elastiques pour reco des vite / acce:
+        TYPRET=' '
+        CALL ACCTAB(ITRES ,'MOT',I0,X0,'DEPLACEMENT',L0,IRET0,
+     &               TYPRET,I1,X1,' ',L1,IDYN1) 
+        IF((TYPRET.EQ.'TABLE').AND.(IDYN1.NE.0)) THEN
+*         ICHPT<0 car ne marche que en listreel:
+          ICHPT=-1*IDYN1
+      CALL RCDEPEL(IBAS,ICHPT,KCHAR,XTEMP,ITRES,IPOS,ITLIA,ICHDEPL,
+     &                 0,ICHD1,LTRIG,XTRIG)
+        ENDIF
+* Si il y a des translations rigides, il faut avoir la vitesse d'ensemble de la ss base XVTRIG
+        IF (LTRIG) THEN
+          TYPRET=' '
+          CALL ACCTAB(ITRES ,'MOT',I0,X0,'VITESSE',L0,IRET0,
+     &               TYPRET,I1,X1,' ',L1,IDYN2) 
+          IF((TYPRET.EQ.'TABLE').AND.(IDYN2.NE.0)) THEN
+*           ICHPT2<0 car ne marche que en listreel:
+            ICHPT2=-1*IDYN2
+            CALL RCDEPEL(IBAS,ICHPT2,KCHAR,XTEMP,ITRES,IPOS,ITLIA,
+     &                 ICHVIT,1,ICHD1,LTRIG,XVTRIG)
+          ENDIF
+        ENDIF
+      ELSEIF (ITYP.EQ.-1) THEN
+        TYPRET=' '
+        CALL ACCTAB(ITRES ,'MOT',I0,X0,'DEPLACEMENT',L0,IRET0,
+     &               TYPRET,I1,X1,' ',L1,IDYN1) 
+        IF((TYPRET.EQ.'TABLE').AND.(IDYN1.NE.0)) THEN
+*         ICHPT<0 car ne marche que en listreel:
+          ICHPT=-1*IDYN1
+          CALL RCDEPEL(IBAS,ICHPT,KCHAR,XTEMP,ITRES,IPOS,ITLIA,ICHDEPL,
+     &             0,ICHD1,LTRIG,XTRIG)
+        ENDIF
+        TYPRET=' '
+        CALL ACCTAB(ITRES ,'MOT',I0,X0,'VITESSE',L0,IRET0,
+     &               TYPRET,I1,X1,' ',L1,IDYN2) 
+        IF((TYPRET.EQ.'TABLE').AND.(IDYN2.NE.0)) THEN
+*         ICHPT2<0 car ne marche que en listreel:
+          ICHPT2=-1*IDYN2
+          CALL RCDEPEL(IBAS,ICHPT2,KCHAR,XTEMP,ITRES,IPOS,ITLIA,
+     &                 ICHVIT,1,ICHD1,LTRIG,XVTRIG)
+*          WRITE(*,*)'RECORIG: XVTRIG(1) = ',XVTRIG(1)
+*          WRITE(*,*)'RECORIG: XVTRIG(2) = ',XVTRIG(2)
+*          WRITE(*,*)'RECORIG: XVTRIG(3) = ',XVTRIG(3)
+        ENDIF
+* Si il y a des translations rigides, il faut avoir l acceleration d'ensemble de la ss base XATRIG
+        IF (LTRIG) THEN
+          TYPRET=' '
+          CALL ACCTAB(ITRES ,'MOT',I0,X0,'ACCELERATION',L0,IRET0,
+     &               TYPRET,I1,X1,' ',L1,IDYN2) 
+          IF((TYPRET.EQ.'TABLE').AND.(IDYN2.NE.0)) THEN
+*           ICHPT2<0 car ne marche que en listreel:
+            ICHPT2=-1*IDYN2
+            CALL RCDEPEL(IBAS,ICHPT2,KCHAR,XTEMP,ITRES,IPOS,ITLIA,
+     &                 ICHACC,1,ICHD1,LTRIG,XATRIG)
+*          WRITE(*,*)'RECORIG: XATRIG(1) = ',XATRIG(1)
+*          WRITE(*,*)'RECORIG: XATRIG(2) = ',XATRIG(2)
+*          WRITE(*,*)'RECORIG: XATRIG(3) = ',XATRIG(3)
+          ENDIF
+        ENDIF
+      ENDIF
+*************** Recuperation donnees IBAS modale et stockage:
+* boucle sur les 4 modes rigides:
+      DO I=1,4
+*        CALL ACCTAB(IBAS,'MOT',I0,X0,'MODES',L0,IP0,
+*     &              'TABLE',I1,X1,'  ',L1,IBBAS)      
+*        IF (IERR.NE.0) RETURN 
+        CALL ACCTAB(IBAS,'MOT',I0,X0,'ROTAS',L0,IP0,
+     &              'TABLE',I1,X1,'  ',L1,ITBROTA)      
+        IF (IERR.NE.0) RETURN 
+        CALL ACCTAB(ITBROTA,'ENTIER',I,X0,' ',L0,IP0,
+     &               'TABLE',I1,X1,'  ',L1,ITROTA)
+        IF (IERR.NE.0) RETURN   
+        CALL ACCTAB(ITROTA,'MOT',I0,X0,'POINT_REPERE',L0,IP0,
+     &               'POINT',I1,X1,'  ',L1,KNOE)
+        IPTR(I) = KNOE
+        CALL ACCTAB(ITROTA,'MOT',I0,X0,'CENTRE_DE_ROTATION',L0,IP0,
+     &               'POINT',I1,X1,'  ',L1,ICDRI)
+* le centre de rotation est le mm pour ttes les rotas de la ss base
+          IF (ICDRI.NE.0) THEN
+            ICDR = ICDRI
+          ENDIF
+
+      ENDDO
+*      WRITE(*,*)'RECORIG: ICDR = ',ICDR
+****************** Recuperation donnees ITRES et stockage:
+* Quaternion:
+      CALL RECANG(ITRES,IPOS,IPTR,QUAT,QUAT0)
+*      DO I=1,4
+*        WRITE(*,*)'recorig: QUAT0(',I,') = ',QUAT0(I)
+*      ENDDO
+* Matrice de rotation:
+      CALL QUAT2MAT(QUAT,ROT)
+* Matrice de rotation a t = 0:
+      CALL QUAT2MAT(QUAT0,ROT0)
+*      DO I=1,3
+*        DO J=1,3
+*          WRITE(*,*)'recorig: ROT0(',I,J,') = ',ROT0(I,J)
+*        ENDDO
+*      ENDDO
+*  Vecteur vitesse angulaire WANG:
+      IF (ITYP.EQ.1) THEN
+        CALL RECVIT(ITRES,IPOS,IPTR,WANG) 
+      ELSEIF (ITYP.EQ.-1) THEN
+        IF (IIMPI.EQ.333) WRITE(IOIMP,*)'Recorig: appel recvit'
+        CALL RECVIT(ITRES,IPOS,IPTR,WANG)
+        IF (IIMPI.EQ.333) WRITE(IOIMP,*)'Recorig: appel recacc'
+        CALL RECACC(ITRES,IPOS,IPTR,AANG)
+      ENDIF
+      
+*********************** Recombinaison *************************
+* Recuperation chpoint de sortie:
+      MCHPOI = ICHDE
+*      WRITE(*,*)'RECORIG: ICHDE = ',ICHDE
+      SEGACT MCHPOI
+      NSOUPO = IPCHP(/1)
+*
+      DO 22 ISOU = 1,NSOUPO
+        MSOUPO = IPCHP(ISOU)
+        SEGACT MSOUPO
+        MELEME = IGEOC
+        SEGACT MELEME
+        MPOVAL = IPOVAL
+        SEGACT MPOVAL*MOD
+        N  = VPOCHA(/1)
+        NC = VPOCHA(/2)        
+* Pour les totas rigides, on passe les soupos contenant les 'LX'
+        DO I = 1,NC
+          IF (NOCOMP(I).EQ.MOTLAG) THEN
+            GOTO 22
+          ENDIF
+        ENDDO
+* Si on reconnais une des 3 comp Ux Uy Uz: 
+*         on effectue la reco rigide.
+* Rq: si une des 3 comps existe, les 3 sont dans le chpoint 
+*     grace a ADCOMP avant appel recorig. 
+*     La double boucle ci-dessous permet de retrouver les composantes si ces 
+*     dernieres sont dans le desordre.
+        RIGRECO = .false.
+        URECO(1) = 0
+        URECO(2) = 0
+        URECO(3) = 0
+        DO I=1,NC
+          DO J=1,3
+           IF (NOCOMP(I).EQ.MOTCOMP(J)) THEN
+            RIGRECO = .true.
+            URECO(J) = I
+*            WRITE(*,*)'RECORIG: URECO(',J,') = ',I
+           ENDIF
+          ENDDO
+        ENDDO 
+*
+* Si on a repéré une des 3 comp UX UY ou UZ on lance la RECO rigide:
+        IF (RIGRECO) THEN
+* introduction des chpoin defo elastique necessaires a la reco 
+* des vite / acce:
+* 1: chpoint des deplacements élastiques à t = 0:
+*          IF (ITYP.EQ.0) THEN
+*           on prend les valeurs des depls elastiques a t = 0
+*            MCHPO1 = ICHD0
+*            SEGACT MCHPO1
+*            MSOUP1 = MCHPO1.IPCHP(ISOU)
+*            SEGDES MCHPO1
+*            SEGACT MSOUP1
+*            MPOVA1 = MSOUP1.IPOVAL
+*            SEGDES MSOUP1
+*            SEGACT MPOVA1
+          IF (ITYP.EQ.1) THEN
+            MCHPO2 = ICHDEPL
+            SEGACT MCHPO2
+            MSOUP2 = MCHPO2.IPCHP(ISOU)
+            SEGDES MCHPO2
+            SEGACT MSOUP2
+            MPOVA2 = MSOUP2.IPOVAL
+            SEGDES MSOUP2
+            SEGACT MPOVA2        
+          ELSEIF (ITYP.EQ.-1) THEN
+* chpoin reco elastiques: depl
+            MCHPO2 = ICHDEPL
+            SEGACT MCHPO2
+            MSOUP2 = MCHPO2.IPCHP(ISOU)
+            SEGDES MCHPO2
+            SEGACT MSOUP2
+            MPOVA2 = MSOUP2.IPOVAL
+            SEGDES MSOUP2
+            SEGACT MPOVA2
+* chpoin reco elastiques: vite
+            MCHPO3 = ICHVIT
+            SEGACT MCHPO3
+            MSOUP3 = MCHPO3.IPCHP(ISOU)
+            SEGDES MCHPO3
+            SEGACT MSOUP3
+            MPOVA3 = MSOUP3.IPOVAL
+            SEGDES MSOUP3
+            SEGACT MPOVA3          
+          ENDIF
+          DO 26 IN = 1,N
+            IPOINT = NUM(1,IN)
+*            WRITE(*,*)'recorig: boucle 26 IPOINT = ',IPOINT
+*            WRITE(*,*)'                   ICDR = ',ICDR
+*           DYNE44: on recupere XXGP:
+            CALL DYNE44(IPOINT,ICDR,XXGP)
+*            WRITE(*,*)' recorig: XXGP(1) = ',XXGP(1)
+*            WRITE(*,*)' recorig: XXGP(2) = ',XXGP(2)
+*            WRITE(*,*)' recorig: XXGP(3) = ',XXGP(3)
+* Calcul de la position initiale du point (on veut les deplacements pas la position)
+
+* Reco depl:
+            IF (ITYP.EQ.0) THEN
+              DO I=1,IDIM
+*                XP0(I) = 0.D0
+*                DO J=1,IDIM
+*                  XP0(I) = XP0(I) + ROT0(I,J)*(XXGP(J) + 
+*     &                   MPOVA1.VPOCHA(IN,URECO(J)))
+*                ENDDO
+                XP0(I) = XXGP(I)
+*               ( MCHPO1 = depls elastiques a t = 0 )
+*                WRITE(*,*)'recorig: XP0(',I,') = ',XP0(I)
+              ENDDO
+*
+              DO 34 I=1,IDIM
+                Utemp(1,I) = 0.D0
+                DO J=1,IDIM
+*                  WRITE(*,*)'recorig: produit ligne',I,'colonne',J
+      Utemp(1,I) = Utemp(1,I) + ROT(I,J)*(XXGP(J) + VPOCHA(IN,URECO(J)))
+                ENDDO
+*                WRITE(*,*)'recorig: Utemp(',1,I,') = ',Utemp(1,I) 
+*                WRITE(*,*)'recorig: XP0(',I,') = ',XP0(I)
+ 34           CONTINUE
+              DO I = 1,IDIM
+*                VPOCHA(IN,URECO(I)) = Utemp(1,I) - XP0(I) + 
+*     &                                XTRIG(URECO(I))
+*                WRITE(*,*)' I = ',I
+*                WRITE(*,*)'Utemp(1,I) = ',Utemp(1,I)
+*                WRITE(*,*)'XP0(I) = ',XP0(I)
+*                WRITE(*,*)'XTRIG(I) = ',XTRIG(I)
+                VPOCHA(IN,URECO(I)) = Utemp(1,I) - XP0(I) + 
+     &                                XTRIG(I)
+*                WRITE(*,*)'recorig: DEPL = ',VPOCHA(IN,URECO(I))
+              ENDDO
+*  
+* Reco vitesse:
+            ELSEIF (ITYP.EQ.1) THEN
+*              WRITE(*,*)'MPOVA2.VPOCHA(IN,URECO(1)) = ',
+*     &                   MPOVA2.VPOCHA(IN,URECO(1))
+*              WRITE(*,*)'MPOVA2.VPOCHA(IN,URECO(2)) = ',
+*     &                   MPOVA2.VPOCHA(IN,URECO(2))
+*              WRITE(*,*)'MPOVA2.VPOCHA(IN,URECO(3)) = ',
+*     &                   MPOVA2.VPOCHA(IN,URECO(3))
+              IF (IDIM.EQ.3) THEN
+        VLOCAL(1) = WANG(2)*(XXGP(3)+MPOVA2.VPOCHA(IN,URECO(3))) - 
+     &                    WANG(3)*(XXGP(2)+MPOVA2.VPOCHA(IN,URECO(2)))
+        VLOCAL(2) = WANG(3)*(XXGP(1)+MPOVA2.VPOCHA(IN,URECO(1))) - 
+     &                    WANG(1)*(XXGP(3)+MPOVA2.VPOCHA(IN,URECO(3)))
+        VLOCAL(3) = WANG(1)*(XXGP(2)+MPOVA2.VPOCHA(IN,URECO(2))) - 
+     &                    WANG(2)*(XXGP(1)+MPOVA2.VPOCHA(IN,URECO(1)))
+              ELSEIF (IDIM.EQ.2) THEN
+        VLOCAL(1) = -WANG(3)*(XXGP(2)+MPOVA2.VPOCHA(IN,URECO(2)))
+        VLOCAL(2) = WANG(3)*(XXGP(1)+MPOVA2.VPOCHA(IN,URECO(1)))
+              ENDIF
+              DO ID=1,IDIM
+                Utemp(2,ID) = 0.D0
+                DO J=1,IDIM
+                  Utemp(2,ID)= Utemp(2,ID) + ROT(ID,J)*(VLOCAL(J) +
+     &                         VPOCHA(IN,URECO(J)))
+                ENDDO
+              ENDDO
+* VPOCHA + Utemp dans une autre boucle pour ne pas ecraser
+              DO I =1,IDIM
+* old:                VPOCHA(IN,URECO(I)) = VPOCHA(IN,URECO(I)) + 
+*     &                               Utemp(2,I) + XVTRIG(URECO(I))
+*                VPOCHA(IN,URECO(I)) = Utemp(2,I) + 
+*     &                                XVTRIG(URECO(I))
+                VPOCHA(IN,URECO(I)) = Utemp(2,I) + 
+     &                                XVTRIG(I)
+              ENDDO
+*
+*****   Reco acceleration: *****************
+            ELSEIF (ITYP.EQ.-1) THEN
+              IF (IDIM.EQ.3) THEN
+* On a besoin du champp des vitesses elastiques:                 
+      VLOCAL(1) = WANG(2)*(XXGP(3)+MPOVA2.VPOCHA(IN,URECO(3))) - 
+     &            WANG(3)*(XXGP(2)+MPOVA2.VPOCHA(IN,URECO(2)))
+      VLOCAL(2) = WANG(3)*(XXGP(1)+MPOVA2.VPOCHA(IN,URECO(1))) - 
+     &            WANG(1)*(XXGP(3)+MPOVA2.VPOCHA(IN,URECO(3)))
+      VLOCAL(3) = WANG(1)*(XXGP(2)+MPOVA2.VPOCHA(IN,URECO(2))) - 
+     &            WANG(2)*(XXGP(1)+MPOVA2.VPOCHA(IN,URECO(1)))
+* Calcul de la comp. normal de l'acceleration ss defo elastique:
+*                  (repere du solide)
+      ANORM(1)  = WANG(2)*VLOCAL(3) - WANG(3)*VLOCAL(2) 
+      ANORM(2)  = WANG(3)*VLOCAL(1) - WANG(1)*VLOCAL(3)
+      ANORM(3)  = WANG(1)*VLOCAL(2) - WANG(2)*VLOCAL(1)
+* Calcul de la comp. tangentielle de l'acceleration ss defo elastique:
+*                  (repere du solide)
+      ATANG(1) = AANG(2)*(XXGP(3)+MPOVA2.VPOCHA(IN,URECO(3))) - 
+     &           AANG(3)*(XXGP(2)+MPOVA2.VPOCHA(IN,URECO(2)))
+      ATANG(2) = AANG(3)*(XXGP(1)+MPOVA2.VPOCHA(IN,URECO(1))) - 
+     &           AANG(1)*(XXGP(3)+MPOVA2.VPOCHA(IN,URECO(3)))
+      ATANG(3) = AANG(1)*(XXGP(2)+MPOVA2.VPOCHA(IN,URECO(2))) - 
+     &           AANG(2)*(XXGP(1)+MPOVA2.VPOCHA(IN,URECO(1))) 
+*
+* Calcul de la comp. de coriolis de l'acceleration:
+*             (repere du solide)
+      ACORIO(1) = 2.D0*(WANG(2)*MPOVA3.VPOCHA(IN,URECO(3)) - 
+     &                  WANG(3)*MPOVA3.VPOCHA(IN,URECO(2)))
+      ACORIO(2) = 2.D0*(WANG(3)*MPOVA3.VPOCHA(IN,URECO(1)) - 
+     &                  WANG(1)*MPOVA3.VPOCHA(IN,URECO(3)))
+      ACORIO(3) = 2.D0*(WANG(1)*MPOVA3.VPOCHA(IN,URECO(2)) - 
+     &                  WANG(2)*MPOVA3.VPOCHA(IN,URECO(1)))
+              ELSEIF (IDIM.EQ.2) THEN
+      VLOCAL(1) = -WANG(3)*(XXGP(2)+MPOVA2.VPOCHA(IN,URECO(2)))
+      VLOCAL(2) = WANG(3)*(XXGP(1)+MPOVA2.VPOCHA(IN,URECO(1)))
+* Calcul de la comp. normal de l'acceleration ss defo elastique:
+*                  (repere du solide)
+      ANORM(1)  = -WANG(3)*VLOCAL(2) 
+      ANORM(2)  = WANG(3)*VLOCAL(1)
+* Calcul de la comp. tangentielle de l'acceleration ss defo elastique:
+*                  (repere du solide)
+      ATANG(1) = -AANG(3)*(XXGP(2)+MPOVA2.VPOCHA(IN,URECO(2)))
+      ATANG(2) = AANG(3)*(XXGP(1)+MPOVA2.VPOCHA(IN,URECO(1)))                
+*
+* Calcul de la comp. de coriolis de l'acceleration:
+*             (repere du solide)
+      ACORIO(1) = -2.D0*WANG(3)*MPOVA3.VPOCHA(IN,URECO(2))
+      ACORIO(2) =  2.D0*WANG(3)*MPOVA3.VPOCHA(IN,URECO(1))
+              ENDIF
+*
+* On multiplie tous ces termes par la matrice de rotation pour 
+*        obtenir les deplacements dans le repere global:
+* VPOCHA a ce stade = ddot(Uelastique).
+              DO ID=1,IDIM
+                Utemp(3,ID) = 0.D0
+                DO J=1,IDIM
+            Utemp(3,ID) = Utemp(3,ID) + ROT(ID,J)*
+     &   (ANORM(J) + ATANG(J) + ACORIO(J) + VPOCHA(IN,URECO(J)))
+                ENDDO
+              ENDDO
+              DO I =1,IDIM
+* old:                VPOCHA(IN,URECO(I)) = VPOCHA(IN,URECO(I)) + 
+*     &                            Utemp(3,I) + XATRIG(URECO(I))
+*                VPOCHA(IN,URECO(I)) = Utemp(3,I) + 
+*     &                                XATRIG(URECO(I)) 
+                VPOCHA(IN,URECO(I)) = Utemp(3,I) + 
+     &                                XATRIG(I)
+              ENDDO
+*
+            ENDIF
+* Fin if ityp = O,1,-1
+ 26       CONTINUE
+* fin boucle sur les point IN=1,N
+          SEGDES MPOVAL,MSOUPO
+          SEGDES MELEME
+          IF (ITYP.EQ.1) THEN
+            SEGDES MPOVA2
+          ELSEIF (ITYP.EQ.-1) THEN 
+            SEGDES MPOVA2,MPOVA3
+          ENDIF
+*
+        ENDIF
+* fin condition RIGRECO = T
+ 22   CONTINUE
+* fin boucle sur les soupo
+      SEGDES MCHPOI
+*
+      END
+      
+      
+      
+      
+      
+      
+      
+      

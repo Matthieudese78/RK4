@@ -1,0 +1,404 @@
+C RCDEP2    SOURCE    CB215821  20/11/25    13:38:34     10792          
+      SUBROUTINE RCDEPEL2(IBAS,KTRAV,KCPR,KCHAR,XTEMP,ICHDEPL,ITRES,
+     &                    IPOS,ITLIA,ITYP,ICHD1,LTRIG,XTRIG)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Subroutine quasi-identique a rcdep2:                           * 
+*     mais consacree uniquement aux deplacements elastiques!         *
+*     Recombine le chpoint ICHPT en d�placement ou en r�action.      *
+*                                                                    *
+*     Param�tres:                                                    *
+*                                                                    *
+* e   IBAS    table repr�sentant une base modale                     *
+* e   KCHAR   chargement de la structure                             *
+* e   XTEMP   temps de recombinaison                                 *
+* e   ITRES   table r�sultat issue de l'op�rateur DYNE               *
+* e   IPOS    position de XTEMP dans le listreel des temps           *
+* e   ITLIA   table des liaisons                                     *
+* e   ITYP    = 0 , on recombine les d�placements nature diffuse     *
+*             = 1 , on recombine les vitesses                        *
+*             =-1 , on recombine les acc�l�rations                   *
+*             = 2 , on recombine les r�actions.   nature discrete    *
+* -   RIGIDE  Vrai si l'on a un corps rigide,faux sinon              *
+*                                                                    *
+*     Translations rigides:                                          *
+*                 Si mode IM = transl. rigide --> XTRIG              *
+*                 Sinon        depl. elastiques--> VPOCHA            *
+*     Boucle de recombinaison: on saute le soupo des multiplicateurs *
+*                              de Lagrange.                          *
+*                                                                    *
+*                                                                    *
+*     Auteur, date de cr�ation:                                      *
+*                                                                    *
+*     Matthieu Serre, le 21/09/2021                                  *
+*                                                                    *
+*--------------------------------------------------------------------*
+
+-INC PPARAM
+-INC CCOPTIO
+-INC SMCOORD
+-INC SMCHPOI
+-INC SMELEME
+      SEGMENT ICPR(nbpts)
+      SEGMENT TRAV(NPOIN)*D
+      LOGICAL L0,L1,RIGIDE,LTRIG,RECTR,ITCOMP(3),LJOK
+      CHARACTER*8 TYPRET,MORIGI,CMOT,CHARRE,MOTLAG,CMOT1,MOTCOMP(3)
+*     MOTLAG = pour identifier les mult. de Lagrange et les sauter
+      DATA MOTLAG/'LX'/
+      DATA MOTCOMP/'UX','UY','UZ'/
+      REAL*8 XAXROT(3),XTRIG(6)
+      INTEGER URECO(3)
+*     URECO(1) = I si NOCOMP(I) = 'UX'
+*     URECO(2) = I si NOCOMP(I) = 'UY'
+*     URECO(3) = I si NOCOMP(I) = 'UZ'
+*      
+*
+
+      TRAV = KTRAV
+      ICPR = KCPR
+      RIGIDE =.FALSE.
+*
+cmsw      Write(*,*)'rcdepel2 : START : acquisition IBAS . MODES'
+cmsw      Write(*,*)'rcdepel2 : IBAS = ',IBAS
+      CALL ACCTAB(IBAS,'MOT',I0,X0,'MODES',L0,IP0,
+     &               'TABLE',I1,X1,' ',L1,IBBB)
+      
+cmsw      write(*,*)'rcdepel2 pour essai acctab :'
+cmsw      write(*,*)'       IBAS . MODES = IBBB = ',IBBB
+*
+*     initialisation du CHPOINT
+* ICHD1 = deformee modale modele de recombinaison depuis RECORIG
+      MCHPO1 = ICHD1
+      SEGACT MCHPO1
+      NSOUPO = MCHPO1.IPCHP(/1)
+*      WRITE(*,*)'RCDEPEL2 : CHPO modele : NSOUPO = ',NSOUPO
+      NAT=MAX(MCHPO1.JATTRI(/1),1)
+      SEGINI MCHPOI
+      ICHDEPL = MCHPOI
+      IFOPOI = MCHPO1.IFOPOI
+      MTYPOI = MCHPO1.MTYPOI
+      MOCHDE = '                    CHPOINT CREE PAR RCDEPEL2  '
+      IF ( ITYP .EQ. 0 .OR.ITYP.EQ.1.OR.ITYP.EQ.-1) THEN
+        JATTRI(1) = 1
+      ELSE IF ( ITYP .EQ. 2 ) THEN
+        JATTRI(1) = 2
+      ENDIF
+      DO 10 ISOU = 1,NSOUPO
+         MSOUP1 = MCHPO1.IPCHP(ISOU)
+         SEGACT MSOUP1
+         NC = MSOUP1.NOCOMP(/2)
+         SEGINI MSOUPO
+         IPCHP(ISOU) = MSOUPO
+         DO 12 IC = 1,NC
+            NOCOMP(IC) = MSOUP1.NOCOMP(IC)
+            NOHARM(IC) = MSOUP1.NOHARM(IC)
+ 12      CONTINUE
+         IGEOC = MSOUP1.IGEOC
+         MELEME = IGEOC
+         SEGACT MELEME
+         N = NUM(/2)
+         SEGDES MELEME,MSOUP1
+         SEGINI MPOVAL
+         IPOVAL = MPOVAL
+         SEGDES MPOVAL
+         SEGDES MSOUPO
+ 10   CONTINUE
+      SEGDES MCHPO1
+*      WRITE(*,*)'RCDEPEL2 : fin initialisation du SOUPO de sortie'
+*
+*     boucle sur le nombre de modes
+*
+      IM = 0
+ 20   CONTINUE
+      RECTR = .FALSE.
+      IM = IM + 1
+*      WRITE(*,*)'RCDEPEL2: MODE IM = ',IM
+      TYPRET = ' '
+      CALL ACCTAB(IBBB,'ENTIER',IM,X0,' ',L0,IP0,
+     &                   TYPRET,I1,X1,CHARRE,L1,ITBMOD)
+*      write(*,*)'rcdepel2 : mode ',im
+      IF (ITBMOD.NE.0 .AND. TYPRET.EQ.'TABLE   ') THEN
+         CALL ACCTAB(ITBMOD,'MOT',I0,X0,'POINT_REPERE',L0,IP0,
+     &                    'POINT',I1,X1,' ',L1,IPTR)
+         IF (ITYP.EQ.0.OR.ITYP.EQ.1.OR.ITYP.EQ.-1) THEN
+            CALL ACCTAB(ITBMOD,'MOT',I0,X0,'DEFORMEE_MODALE',L0,IP0,
+     &                     'CHPOINT',I1,X1,' ',L1,ICHDI)
+            rigide = .false.
+            MORIGI = ' '
+            CALL ACCTAB(ITBMOD,'MOT',I0,X0,'ROTATION_RIGIDE',L0,IP0,
+     &                      MORIGI,I1,X1,CMOT,L1,IP1)
+            IF (IERR.NE.0) RETURN
+            IF (MORIGI.EQ.'MOT') THEN
+                IF (CMOT(1:4).EQ.'VRAI') THEN
+                    RIGIDE =.TRUE.
+* on saute les rotas rigides car on ne veut que le reci elastique
+*            WRITE(*,*)'RCDEPEL2: on passe le mode IM = ',IM
+                    GOTO 20
+                ENDIF
+            ENDIF
+            TYPRET = ' '
+            CALL ACCTAB(ITBMOD,'MOT',I0,X0,'TRANSLATION_RIGIDE',
+     &                           L0,IP0,TYPRET,I1,X1,CMOT1,L1,IP1)
+            IF (IERR.NE.0) RETURN
+            IF (TYPRET.EQ.'MOT') THEN
+              IF (CMOT1(1:4).EQ.'VRAI') THEN
+                RECTR = .TRUE.
+*                WRITE(*,*)'RCDEPEL2: mode ',IM,' = transl. rigide'
+              ENDIF
+            ENDIF
+            
+          ELSE IF (ITYP.EQ.2) THEN
+            CALL ACCTAB(ITBMOD,'MOT',I0,X0,'REACTION_MODALE',L0,IP0,
+     &                     'CHPOINT',I1,X1,' ',L1,ICHDI)
+         ENDIF
+         IMODE = ICPR(IPTR)
+         IF (IMODE.EQ.0) THEN
+*
+*           on ne trouve pas la d�form�e modale
+*
+            MOTERR(1:8) = 'RCDEP2'
+            INTERR(1) = IM
+            CALL ERREUR(169)
+            RETURN
+         ENDIF
+         XVAL = TRAV(IMODE)
+*         WRITE(*,*)'RCDEPEL2: XVAL = TRAV(',IMODE,') = ',XVAL
+* Ajout des eventuelles composantes manquantes parmis: UX,UY et UZ:
+* (deja fait sur ICHD1 dans RCDEP2 avant appel RECORIG).
+         CALL ADCOMP(ICHDI)
+         MCHPO1 = ICHDI
+         SEGACT MCHPO1
+         NSOUP1 = MCHPO1.IPCHP(/1)
+*         WRITE(*,*)' modele ICHD1 = ',ICHD1
+*         WRITE(*,*)' def modale mode a reco ICHDI',ICHDI
+*
+*         WRITE(*,*)'RCDEPEL2: '
+*         WRITE(*,*)'          NSOUPO = ',NSOUPO
+*         WRITE(*,*)'          NSOUP1 = ',NSOUP1
+
+*
+**** COMM 15/05
+* TODO: ERREUR
+*         IF (NSOUP1.NE.NSOUPO) THEN
+*           IF (NSOUPO.LT.2) THEN
+*             WRITE(*,*)'Si base modale construite avec ET:'
+*             WRITE(*,*)'Mettre un mode avec 2 SOUPO en 1er'
+*             WRITE(*,*)'(par ex. un mode elastique)'
+*             CALL ERREUR(1015)
+*             RETURN     
+*           ENDIF
+*           IF ((NSOUP1.EQ.1).AND.(.NOT.(RECTR))) THEN
+*             WRITE(*,*)'Si base modale construite avec ET:'
+*             WRITE(*,*)'Seules les transl. rig. peuvent'
+*             WRITE(*,*)'etre construites via MANU CHPO!'
+*             WRITE(*,*)'sinon: pas de recombinaison!'
+*             CALL ERREUR(1015)             
+*             RETURN     
+*           ENDIF             
+* OLD: on interdit une ss base base mixte avec            
+*        WRITE(*,*)
+*     & 'RCDEPEL2: Les CHPOs n ont pas le meme nombre de SOUPO!!'
+*           CALL ERREUR(1015)
+*           RETURN
+*         ENDIF
+***** FIN COMM 15/05
+         LJOK=.FALSE.
+         DO 22 ISOU = 1,NSOUPO
+*            WRITE(*,*)'RCDEPEL2: ISOU = ',ISOU
+            MSOUP1 = MCHPO1.IPCHP(ISOU)
+            MSOUPO = IPCHP(ISOU)
+            SEGACT MSOUP1,MSOUPO
+*            WRITE(*,*)'RCDEPEL2: SEGACT MSOUP1,MSOUPO'
+*            WRITE(*,*)'          MSOUP1 = ',MSOUP1
+*            WRITE(*,*)'          MSOUPO = ',MSOUPO
+            MPOVA1 = MSOUP1.IPOVAL
+            MPOVAL = IPOVAL
+            SEGACT MPOVA1,MPOVAL*MOD
+*            WRITE(*,*)'          MPOVAL = ',MPOVAL
+            N  = MPOVA1.VPOCHA(/1)
+            N1 = VPOCHA(/1)
+*            WRITE(*,*)'       N(MPOVA1) = ',N
+*            WRITE(*,*)'       N(MSOUPO) = ',N1
+            NC = MPOVA1.VPOCHA(/2)
+            NC1 = VPOCHA(/2)
+*            WRITE(*,*)'   NC(MPOVA1) = ',NC
+*            WRITE(*,*)'   NC(MPOVAL) = ',NC1
+
+*****            si NSOUPO < NSOUP1 
+*              & si NSOUPO < ISOU+1
+*              & si MSOUP1.NOCOMP(IC)=MOTLAG
+*              on ne peut pas impl�menter ISOU pour les deux,
+*              il faut incr�menter MSOUP1 sans incr�menter MSOUPO
+*            WRITE(*,*)'DEBUT correction si NSOUPO different NSOUP1'
+            IF (NSOUPO.LT.NSOUP1) THEN
+              IF (NSOUPO.LT.(ISOU+1)) THEN
+*                WRITE(*,*)'RCDEP2 : on ne peut pas sauter'
+                DO IC=1,NC
+                  IF ((MSOUP1.NOCOMP(IC)).EQ.MOTLAG) THEN
+*                    WRITE(*,*)'RCDEP2 : soupo des mult. de Lag.'
+*                    SEGDES MSOUP1,MPOVA1
+                    MSOUP1=MCHPO1.IPCHP(ISOU+1)
+*                    WRITE(*,*)'RCDEP2 : nouveau MSOUP1 = ',MSOUP1
+                    SEGACT MSOUP1
+                    MPOVA1 = MSOUP1.IPOVAL
+                    SEGACT MPOVA1
+                    N  = MPOVA1.VPOCHA(/1)
+                    NC = MPOVA1.VPOCHA(/2)
+                    LJOK=.TRUE.
+*                    WRITE(*,*)'RCDEP2 : on reprend'
+                    GOTO 30
+                  ENDIF
+                ENDDO
+              ENDIF
+            ELSEIF (NSOUPO.GT.NSOUP1) THEN
+*              WRITE(*,*)'Cas NSOUPO > NSOUP1'
+              IF (NSOUP1.LT.(ISOU+1)) THEN
+*                WRITE(*,*)'Initialement : '
+*                WRITE(*,*)'RCDEP2: N = ',VPOCHA(/1)
+*                WRITE(*,*)'RCDEP2: NC = ',VPOCHA(/2)
+                NC1 = NOCOMP(/2)
+                DO IC1=1,NC1
+                  IF ((NOCOMP(IC1)).EQ.MOTLAG) THEN
+*                    WRITE(*,*)'RCDEP2 : soupo des mult. de Lag.'
+*                    SEGDES MSOUPO,MPOVAL
+                    MSOUPO = IPCHP(ISOU+1)
+*                    WRITE(*,*)'MSOUPO = ',MSOUPO
+                    SEGACT MSOUPO
+                    MPOVAL = IPOVAL
+*                    WRITE(*,*)'MPOVAL = ',MPOVAL
+                    SEGACT MPOVAL*MOD
+                    N  = VPOCHA(/1)
+                    NC = VPOCHA(/2)
+                    LJOK=.TRUE.
+*                    WRITE(*,*)'RCDEP2: N = ',N
+*                    WRITE(*,*)'RCDEP2: NC = ',NC
+*                    WRITE(*,*)'RCDEP2 : on reprend'
+                    GOTO 30                    
+                  ENDIF
+                ENDDO
+              ENDIF
+            ENDIF
+ 30         CONTINUE
+*            WRITE(*,*)'FIN correction si NSOUPO different NSOUP1'
+*****
+
+*
+*           On scann pour sauter le soupo des mult. de Lagrange:
+*
+*            WRITE(*,*)'Saut des mult. Lag. si NSOUPO=NSOUP1'
+            DO IC=1,NC
+              IF ((MSOUP1.NOCOMP(IC)).EQ.(MOTLAG)) THEN
+cmsw                WRITE(*,*)' SOUPO Mult. Lagrange saute'
+                GOTO 22
+              ENDIF
+            ENDDO
+*
+*           Si le mode est une transl. rigide: on reco dans XTRIG puis on saute:
+*
+            IF ((RECTR).AND.(LTRIG)) THEN
+              DO IC=1,NC
+               DO J=1,3
+                IF ((MSOUP1.NOCOMP(IC)).EQ.(MOTCOMP(J))) THEN
+*                  Mvmt d ensemble: il ne faut pas sommer tous les pts!
+*                  La valeur de la comp est la meme en tout point donc 
+*                  la meme qu'au point 1.
+                   XTRIG(J) = XTRIG(J) + 
+     &                        (XVAL * MPOVA1.VPOCHA(1,IC))
+*                   write(*,*)'rcdepel2 : remplissage XTRIG :'
+*                   write(*,*)'           composante : ',motcomp(j)
+                ENDIF
+               ENDDO
+              ENDDO
+*              WRITE(*,*)'On passe au soupo suivant'
+              GOTO 22
+*             Attention, ici on part du principe que les 3 comp. 'UX' 'UY' 'UZ'
+*             appartiennent toujours au meme SOUPO --> solution trouvee au cas ou: 
+*               -une partie des def_modale est definie par VIBR, (2 soupo)
+*               -une partie des def_modale est definie en MANU CHPO, (1 soupo)
+***** Test 15/05 : plus utile ?
+*              IF (NSOUP1.LT.NSOUPO) THEN
+*                WRITE(*,*)'On passe au mode suivant'
+*                GOTO 20
+*              ELSE
+*                WRITE(*,*)'On passe au soupo suivant'
+*                GOTO 22
+*              ENDIF
+*****
+            ENDIF
+ 
+*
+*           Boucle depl. elastiques:
+*
+*            WRITE(*,*)'RCDEPEL2: RECO elastique: '        
+            DO 24 IC = 1,NC
+*               WRITE(*,*)'         IC = ',IC
+*               WRITE(*,*)'MSOUP1.NOCOMP(',IC,') =  ',
+*     &                    MSOUP1.NOCOMP(IC)
+
+
+               DO 26 IN = 1,N
+*                 WRITE(*,*)' boucle 26, IN = ',IN
+* OLD: FAUX, maintenant, on saute les mult de Lagrange
+*   MATT: On a calque le CHPOINT de SORTIE sur la premiere def modale. 
+*   Or parfois, le SOUPO des mult de Lagrange des modes suivants 
+*   a un VPOCHA(/1) superieur a celui qui a dimensionne le CHPOINT de sortie
+*   N = (nbr de points concern�s par les CL * nbr de composantes concernees)
+*   Il est donc necessaire de redimensionner MPOVAL de sortie.
+*   Ex .dgibi: FSB en chute libre
+*                  IF (IN.GT.VPOCHA(/1)) THEN
+*                    N = N + 1
+*                    SEGADJ, MPOVAL
+*                  ENDIF
+*
+*                  WRITE(*,*)'MPOVA1.VPOCHA(IN,IC) = ',
+*     &                              MPOVA1.VPOCHA(IN,IC)
+*                  WRITE(*,*)'RCDEPEL2: VPOCHA(IN,IC) = ',
+*     &                                 VPOCHA(IN,IC)
+                  VPOCHA(IN,IC) = VPOCHA(IN,IC)
+     &                          + ( XVAL * MPOVA1.VPOCHA(IN,IC) )
+ 26            CONTINUE
+ 24         CONTINUE
+            SEGDES MPOVA1,MPOVAL
+            SEGDES MSOUP1,MSOUPO
+            IF (LJOK) THEN 
+              SEGDES MCHPO1
+              GOTO 20
+            ENDIF
+ 22      CONTINUE
+         SEGDES MCHPO1
+         GOTO 20
+      ENDIF
+      SEGDES MCHPOI
+*
+*     Prise en compte des pseudo-modes
+*
+      IF (KCHAR.NE.0 .OR. ITLIA.NE.0) THEN
+        TYPRET = ' '
+        CALL ACCTAB(IBAS,'MOT',I0,X0,'PSEUDO_MODES',L0,IP0,
+     &                  TYPRET,I1,X1,CHARRE,L1,ITPS)
+       IF (ITPS.NE.0 .AND. TYPRET.EQ.'TABLE   ') THEN
+          IF (ITYP.EQ.0.OR.ITYP.EQ.1.OR.ITYP.EQ.-1) THEN
+       CALL PSRCD2('DEPL',ITPS,IBBB,ICHDEPL,KCHAR,XTEMP,ITRES,
+     &              IPOS,ITLIA)
+          ELSE IF (ITYP.EQ.2) THEN
+       CALL PSRCD2('REAC',ITPS,IBBB,ICHDEPL,KCHAR,XTEMP,ITRES,
+     &             IPOS,ITLIA)
+          ENDIF
+       ELSE
+          CALL ERREUR(429)
+       ENDIF
+      ENDIF
+*       
+      IF (IIMPI.EQ.333) THEN
+cmsw        WRITE(IOIMP,*)'RCDEPEL2: FIN'
+      ENDIF
+      
+      END
+
+
+
+
+ 
+ 

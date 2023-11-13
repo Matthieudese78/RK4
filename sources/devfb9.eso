@@ -1,0 +1,468 @@
+C DEVFB1    SOURCE    BP208322  20/09/18    21:15:26     10718          
+      SUBROUTINE DEVFB9(ITYP,FTOTB,XPTB,IPALB,IPLIB,XPALB,XVALB,NLIAB,
+     &                  NPLB,IND,IND1,INDM1,NPA,NPAM1,IND2,PDT,PDTS2,
+     &                  FEXPSM,NPC1,I,iannul,
+     &                  KTOTXB,KTOTVB,IDIMB,GETJAC,IBASB,KTROT)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNE et DYNC :                                       *
+*     Calcul des forces de choc pour les liaisons B de type :        *
+*     - POINT_PLAN avec ou sans amortissement                        *
+*     - POINT_PLAN_FROTTEMENT avec ou sans amortissement             *
+*     - CERCLE_PLAN_FROTTEMENT avec ou sans amortissement            *
+*     - POINT_PLAN_FLUIDE                                            *
+*                                                                    *
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   ITYP    type de la liaison.                                    *
+* es  FTOTB   Forces exterieures totalisees sur la base B.           *
+* e   XPTB    Tableau des deplacements des points                    *
+* e   IPALB   Renseigne sur la liaison.                              *
+* e   IPLIB   Tableau contenant les numeros "DYNE" de la liaison.    *
+* e   XPALB   Tableau contenant les parametres de la liaison.        *
+* es  XVALB   Tableau contenant les variables internes de liaisons.  *
+* e   NLIAB   Nombre de liaisons sur la base B.                      *
+* e   NPLB    Nombre total de points intervenant dans les liaisons.  *
+* e   IND     Indice du pas.                                         *
+* e   IND1    Indice du pas (ou demi-pas si De Vogelaere) precedent. *
+* e   I       numero de la liaison.                                  *
+* e   PDT     pas de temps                                           *
+* e   PDTS2   = | pas de temps/2 si devogelaere                      *
+*               | pas de temps   si differences centrees             *
+*                                                                    *
+*--------------------------------------------------------------------*
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+-INC CCREEL   
+
+* Matthieu: Segment rotas rigides:
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,2,NSB),OMEG2(3,2,NSB),OMEG3(3,2,NSB)
+         REAL*8 ROT(3,3,2,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,2,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+*
+      INTEGER IPALB(NLIAB,*),IPLIB(NLIAB,*),IBASB(*)
+      REAL*8  XPALB(NLIAB,*),XPTB(NPLB,2,*),FTOTB(NPLB,*)
+      REAL*8  XVALB(NLIAB,4,*),FEXPSM(NPLB,NPC1,2,*)
+      REAL*8  XPTP2(3),XPTPM2(3),XFNT(3)
+      REAL*8  XVPC0(3),XN1(3),XN2(3),XN3(3),XN4(3),XVPCT(3)
+      REAL*8  VROT(3),ROT2(3,3),XFOR(3),XVN(3)
+*     en + pour DYNC :      
+      REAL*8  KTOTXB(NPLB,IDIMB,IDIMB),KTOTVB(NPLB,IDIMB,IDIMB)
+      LOGICAL GETJAC
+*
+      IF (KTROT.NE.0) THEN
+        MTROT = KTROT
+*        WRITE(*,*)'DEVFB9: KTROT = ',KTROT
+      ENDIF
+      IF (KTROT.EQ.0) THEN
+      WRITE(*,*)'DEVFB9: CERCLE_PLAN_3D dispo qu avec rotas rigides!!'
+      CALL ERREUR(490)
+      RETURN
+      ENDIF
+*--------------------------------------------------------------------*
+* --- choc elementaire CERCLE_PLAN_3D
+*                      avec ou sans amortissement
+*--------------------------------------------------------------------*
+*
+      IF (ITYP.EQ.65 .OR. ITYP.EQ.66) THEN
+         NPOI   = IPLIB(I,1)
+         ISB = IBASB(NPOI)
+         IGP    = IPALB(I,2)
+         IDIM   = IPALB(I,3)
+         if (ITYP.LT.100) then
+           INTER=1
+         else
+           INTER=0
+         endif
+         IF (ITYP.EQ.65) THEN
+            ID1  = 6
+         ELSE
+            ID1  = 7
+         ENDIF
+         ID2  = ID1 + IDIM
+         ID3  = ID1 + 2*IDIM
+         ID4  = ID1 + 3*IDIM
+         ID5  = ID1 + 4*IDIM
+         ID6  = ID1 + 5*IDIM
+         ID7  = ID1 + 6*IDIM
+         ID8  = ID1 + 7*IDIM
+         ID9  = ID1 + 8*IDIM
+         ID10 = ID1 + 9*IDIM
+*         WRITE(*,*)'DEVFB9: ID1 = ',ID1
+*         WRITE(*,*)'DEVFB9: ID2 = ',ID2
+*         WRITE(*,*)'DEVFB9: ID3 = ',ID3
+*         WRITE(*,*)'DEVFB9: ID4 = ',ID4
+*         WRITE(*,*)'DEVFB9: ID5 = ',ID5
+*         WRITE(*,*)'DEVFB9: ID6 = ',ID6
+*         WRITE(*,*)'DEVFB9: ID7 = ',ID7
+*         WRITE(*,*)'DEVFB9: ID8 = ',ID8
+*         WRITE(*,*)'DEVFB9: ID9 = ',ID9
+*         WRITE(*,*)'DEVFB9: ID10 = ',ID10
+*        XRAYT : rayon du tube interne (rTube)= RAYON_SUPPORT
+*        XREXT : rayon du tube externe (rExt) = RAYON_BUTEE
+         XRAYT = XPALB(I,ID10+1)
+* Si adherence: le rayon de roulement est le rayon du cercle:
+*         XREXT = XPALB(I,2)
+         XREXT = XRAYT
+* Jeu: mis dans le slot de RAYON_BUTEE:
+         XJEU = XPALB(I,2)
+* Calcul des angles d'Euler a partir des composantes du quaternion:
+*        Nutation:
+         THETA = ACOS(2.D0*(OMEG1(1,IND,ISB)**2 + 
+     &                       OMEG1(4,IND,ISB)**2) - 1.D0)
+*         WRITE(*,*)'DEVFB9: THETA = ',THETA
+*        Precession: pas utilisé
+*         PHI = ACOS(-2.D0*(OMEG1(3,IND,ISB)*OMEG1(4,IND,ISB)-
+*     &                      OMEG1(1,IND,ISB)*OMEG1(2,IND,ISB))/
+*     &                      (SIN THETA))
+*        Spin: pas utilisé
+*         PSI = ACOS(2.D0*(OMEG1(3,IND,ISB)*OMEG1(4,IND,ISB)+
+*     &                      OMEG1(1,IND,ISB)*OMEG1(2,IND,ISB))/
+*     &                      (SIN THETA))
+
+**** En standby: test theta = 0
+* Si THETA = 0 (cercle parallele au plan):
+*        On calcul les efforts pour un point quelconque du cercle,  
+*        Puis on les integrent sur toute la circonference.
+*        (comme les efforts sont independant de la position sur le cercle:
+*                 integrer <--> mutliplier par 2Pi )
+*         IF (THETA.LT.xpetit) GOTO 20
+**** fin test
+* Normale de choc = XPALB(I,ID1+ID) ne change pas, c est la normale au plan
+* La normale doit etre rentrante (vers l interieur du solide). 
+
+* Matthieu: inversion de la normale au plan jusqu'au calcul de XN4 + discussion sur le signe de theta.
+*       jusqu a maintenant rentrante: 
+*       on la passe sortante pour avoir une bonne orientation de XN2 dans le plan de nutation 
+*       (faire une dessin).
+*       On la reinverse apres le calcul de XN4.
+         DO ID=1,3
+           XPALB(I,ID1+ID) = -1.d0*XPALB(I,ID1+ID)
+         ENDDO
+
+* XN1 = n_cercle = normale au cercle:
+         PSXPM1 = 0.D0
+         DO ID=1,3
+           XN1(ID) = 0.D0
+*           WRITE(*,*)'DEVFB9: normale plan XPALB(',I,ID1+ID,')= ',
+*     &     XPALB(I,ID1+ID)
+           DO J=1,3
+             XN1(ID) = XN1(ID) + ROT(ID,J,IND,ISB)*XPALB(I,ID1+J)
+*             WRITE(*,*)'DEVFB9: ROT(',ID,J,IND,ISB,') = ',
+*     &                          ROT(ID,J,IND,ISB)
+           ENDDO
+*           WRITE(*,*)'DEVFB9: XN1(',ID,') = ',XN1(ID)
+           PSXPM1 = PSXPM1 + XN1(ID)**2
+         ENDDO
+         PSXPM1 = SQRT(PSXPM1)
+*         WRITE(*,*)'DEVFB9: PSXPM1'
+         XN1(1) = XN1(1)/PSXPM1
+         XN1(2) = XN1(2)/PSXPM1
+         XN1(3) = XN1(3)/PSXPM1
+*         WRITE(*,*)'DEVFB9: normale au cercle:'
+*         WRITE(*,*)'DEVFB9: XN1(1) = ',XN1(1)
+*         WRITE(*,*)'DEVFB9: XN1(2) = ',XN1(2)
+*         WRITE(*,*)'DEVFB9: XN1(3) = ',XN1(3)
+* XN2 = n_cercle - (n_cercle . n_plan)n_plan 
+*     = vecteur orthogonal à n_plan dans le plan de nutation:         
+         PSXPM2 = 0.D0
+         DO ID=1,3
+           PSXPM2 = PSXPM2 + XN1(ID)*XPALB(I,ID1+ID)
+         ENDDO
+*         WRITE(*,*)'DEVFB9: produit scal. n_plan * n_cercle = ',
+*     &   PSXPM2
+         PSXPM3 = 0.D0
+         DO ID=1,3
+           XN2(ID) = XN1(ID) - PSXPM2*XPALB(I,ID1+ID)
+           PSXPM3 = PSXPM3 + XN2(ID)**2
+         ENDDO
+         PSXPM3 = SQRT(PSXPM3)
+*         WRITE(*,*)'DEVFB9: PSXPM3 = ',PSXPM3
+         IF (PSXPM3.GT.xpetit) THEN
+*         WRITE(*,*)'DEVFB9: normalisation de XN2'
+         XN2(1) = XN2(1)/PSXPM3
+         XN2(2) = XN2(2)/PSXPM3
+         XN2(3) = XN2(3)/PSXPM3
+         ENDIF
+* Rq XN2: Dans le plan de nutation:
+*          - si theta > 0 XN2 oriente vers la gauche
+*          - si theta < 0 XN2 oriente vers la droite
+*         L orientation est donc bonne.
+*
+*         WRITE(*,*)'DEVFB9: XN2(1) = ',XN2(1)
+*         WRITE(*,*)'DEVFB9: XN2(2) = ',XN2(2)
+*         WRITE(*,*)'DEVFB9: XN2(3) = ',XN2(3)
+* XN3 = n_plan *vect XN2 
+*     = troisieme vecteur de la BON (n_plan, XN2, XN3) 
+         XN3(1) = XPALB(I,ID1+2)*XN2(3) - XPALB(I,ID1+3)*XN2(2)
+         XN3(2) = XPALB(I,ID1+3)*XN2(1) - XPALB(I,ID1+1)*XN2(3)
+         XN3(3) = XPALB(I,ID1+1)*XN2(2) - XPALB(I,ID1+2)*XN2(1)
+         PSXPM4=SQRT((XN3(1)**2)+(XN3(2)**2)+(XN3(3)**2))
+         IF (PSXPM4.GT.xpetit) THEN
+           XN3(1) = XN3(1)/PSXPM4
+           XN3(2) = XN3(2)/PSXPM4
+           XN3(3) = XN3(3)/PSXPM4
+         ENDIF
+***** OLD: avant utilisation du produit vectoriel pour calcul de XN4: 
+*                (discussion sur le signe de theta)
+*        Si theta < 0, XN3 est oriente negativement (vers l interieur de la feuille). 
+*        On veut une rotation de theta < 0 autour d un axe oriente vers l observateur (faire un dessin):
+*         IF (THETA.LT.0.D0) THEN
+*           XN3(1) = -1.D0*XN3(1)
+*           XN3(2) = -1.D0*XN3(2)
+*           XN3(3) = -1.D0*XN3(3)           
+*         ENDIF
+*         WRITE(*,*)'DEVFB9: XN3(1) = ',XN3(1)
+*         WRITE(*,*)'DEVFB9: XN3(2) = ',XN3(2)
+*         WRITE(*,*)'DEVFB9: XN3(3) = ',XN3(3)
+***** OLD: avant utilisation du produit vectoriel pour calcul de XN4:
+*                 (calcul de la matrice de rotation ROT2)
+* Enfin, calcul du deplacement du point de contact en appliquant la nutation autour de XN3:
+*         VROT(1) = THETA*XN3(1)
+*         VROT(2) = THETA*XN3(2)
+*         VROT(3) = THETA*XN3(3)
+*         WRITE(*,*)'DEVFB9: VROT(1) = ',VROT(1)
+*         WRITE(*,*)'DEVFB9: VROT(2) = ',VROT(2)
+*         WRITE(*,*)'DEVFB9: VROT(3) = ',VROT(3)
+* Calcul de la matrice de rotation de vecteur THETA*XN3:
+*         CALL EXPTHR(VROT,ROT2)
+* Calcul de XN4 = vecteur centre du cercle --> point de contact:      
+*         DO ID=1,3
+*           XN4(ID) = 0.D0
+*           DO J=1,3
+*             WRITE(*,*)'DEVFB9: ROT2(',ID,J,') = ',ROT2(ID,J)
+*             XN4(ID) = XN4(ID) + ROT2(ID,J)*XRAYT*XN2(J)
+*           ENDDO
+*           WRITE(*,*)'DEVFB9: XN4(',ID,') = ',XN4(ID)
+*         ENDDO
+* Calcul de XN4 par produit vectoriel: XN3 * n_cercle :
+         XN4(1) = ( XN3(2)*XN1(3) - XN3(3)*XN1(2) )
+         XN4(2) = ( XN3(3)*XN1(1) - XN3(1)*XN1(3) )
+         XN4(3) = ( XN3(1)*XN1(2) - XN3(2)*XN1(1) )
+*
+*        Calcul de XN4 termine: on reinverse la normale au plan
+*          desormais --> normale de nouveau rentrante
+         DO ID=1,3
+           XPALB(I,ID1+ID) = -1.d0*XPALB(I,ID1+ID)
+         ENDDO
+**** OLD: test theta = 0
+* 20      CONTINUE
+*        Si theta nul, on prend arbitrairement XN4 = ROT*(R*(vecteur orthogonal a la normal)
+* XVN = (1 1 1) - ((1 1 1)*n_plan)*n_plan
+*         IF (THETA.LT.xpetit) THEN
+*           XVN(1) = 1.D0 - XPALB(I,ID1+1)**2
+*           XVN(2) = 1.D0 - XPALB(I,ID1+2)**2
+*           XVN(3) = 1.D0 - XPALB(I,ID1+3)**2
+*          On norme XVN et on multiplie par XRAYT:
+*           PSXPM5 = sqrt((XVN(1)**2)+(XVN(2)**2)+(XVN(3)**2))
+*           XVN(1) = XRAYT*XVN(1)/PSXPM5
+*           XVN(2) = XRAYT*XVN(2)/PSXPM5
+*           XVN(3) = XRAYT*XVN(3)/PSXPM5
+*           DO ID=1,3
+*             XN4(ID)
+*             DO J=1,3
+*               XN4(ID) = XN4(ID) + ROT(ID,J,IND,ISB)*XVN(J)
+*             ENDDO
+*           ENDDO
+*         ENDIF
+
+**** fin test 
+* Rq: on va se resservir d XN4 = OM pour le calul des moments.
+         XPTP2(1) =  XPTB(NPOI,1,1) + XRAYT*XN4(1)
+         XPTP2(2) =  XPTB(NPOI,1,2) + XRAYT*XN4(2)
+         XPTP2(3) =  XPTB(NPOI,1,3) + XRAYT*XN4(3)
+*         WRITE(*,*)'DEVFB9: XPTB(NPOI,1,1) = ',XPTB(NPOI,1,1)
+*         WRITE(*,*)'DEVFB9: XPTB(NPOI,1,2) = ',XPTB(NPOI,1,2)
+*         WRITE(*,*)'DEVFB9: XPTB(NPOI,1,3) = ',XPTB(NPOI,1,3)
+*         WRITE(*,*)'DEVFB9: XPTP2(1) = ',XPTP2(1)
+*         WRITE(*,*)'DEVFB9: XPTP2(2) = ',XPTP2(2)  
+*         WRITE(*,*)'DEVFB9: XPTP2(3) = ',XPTP2(3)           
+         
+* Deplacement du point geometrique de contact suivant la normale n_plan:
+         PSXPME = 0.D0
+         DO ID = 1,IDIM
+           PSXPME = PSXPME + XPTP2(ID)*XPALB(I,ID1+ID)
+         ENDDO
+         XDEP =  PSXPME
+*         WRITE(*,*)'DEVFB9: XDEP = ',XDEP
+* On stock le déplacement au pas précédent:  
+         XPTPM2(1) = XPALB(I,ID3+1)
+         XPTPM2(2) = XPALB(I,ID3+2)
+         XPTPM2(3) = XPALB(I,ID3+3)
+*         WRITE(*,*)'DEVFB9: XPTPM2(1) = ',XPTPM2(1)
+*         WRITE(*,*)'DEVFB9: XPTPM2(2) = ',XPTPM2(2)
+*         WRITE(*,*)'DEVFB9: XPTPM2(3) = ',XPTPM2(3)
+* On le met à jour:
+         XPALB(I,ID3+1) = XPTP2(1)
+         XPALB(I,ID3+2) = XPTP2(2)
+         XPALB(I,ID3+3) = XPTP2(3)
+*  -Vrota  = -w  x (R*n_4) (x designe le produit vectoriel ∧)
+*
+          XVPC0(1)= - (XPTB(NPOI,2 ,5) * XRAYT*XN4(3))
+     &              + (XPTB(NPOI,2 ,6) * XRAYT*XN4(2))
+          XVPC0(2)= - (XPTB(NPOI,2 ,6) * XRAYT*XN4(1))
+     &              + (XPTB(NPOI,2 ,4) * XRAYT*XN4(3))
+          XVPC0(3)= - (XPTB(NPOI,2 ,4) * XRAYT*XN4(2))
+     &              + (XPTB(NPOI,2 ,5) * XRAYT*XN4(1))
+*          WRITE(*,*)'DEVFB9: XPTB(NPOI,2 ,4) = ',XPTB(NPOI,2 ,4)
+*          WRITE(*,*)'DEVFB9: XPTB(NPOI,2 ,5) = ',XPTB(NPOI,2 ,5)
+*          WRITE(*,*)'DEVFB9: XPTB(NPOI,2 ,6) = ',XPTB(NPOI,2 ,6)
+*          WRITE(*,*)'DEVFB9: XVPC0(1) = ',XVPC0(1)
+*          WRITE(*,*)'DEVFB9: XVPC0(2) = ',XVPC0(2)
+*          WRITE(*,*)'DEVFB9: XVPC0(3) = ',XVPC0(3)
+*   si glissement au pas precedent, reactualisation de la position
+*   origine d'adherence a l'aide du point de contact
+         IF (IGP.EQ.1 .OR. IGP.EQ.-1) THEN
+            DO ID=1,IDIM
+               XPALB(I,ID7+ID) = XPTP2(ID)
+            ENDDO
+*        si adherence au pas precedent, on met a jour x(t_adhe0)
+         ELSE
+c           composante hors plan de Vrota
+            PXVPC0 = 0.D0
+            DO ID = 1,IDIM
+                PXVPC0 = PXVPC0 + XVPC0(ID)*XPALB(I,ID1+ID)
+            ENDDO
+c           XVPCT : Vrota' = Vrota - (Vrota*n_plan)*n_plan
+            DO ID = 1,IDIM
+                XVPCT(ID) = XVPC0(ID) - PXVPC0 * XPALB(I,ID1+ID)
+            ENDDO
+**** Calcul du roulement sans glissement (et sans allongement) (ID7 + ID)
+* Si adherence, sur un plan, pas besoin de theoreme de Thales pour calculer le RSG:
+* si on avait que de l adherence, quelque soit son inclinaison, le cercle parcourerait une trajectoire sur le plan support qui n est autre que lui-meme. 
+* En adherence, Vrota est ainsi tangent au cercle de rayon XRAYT parcouru sur le plan.
+* Autrement dit: le cercle roule sur un cercle de même rayon dessiné sur le plan.
+            XPALB(I,ID7+1) = XPALB(I,ID7+1)+(XVPCT(1)*PDTS2)
+            XPALB(I,ID7+2) = XPALB(I,ID7+2)+(XVPCT(2)*PDTS2)
+            XPALB(I,ID7+3) = XPALB(I,ID7+3)+(XVPCT(3)*PDTS2)
+         ENDIF     
+
+*  calcul du deplacement sur la normale au plan de section droite
+*  et de l'ecart a la position origine adherencee
+         DO ID = 1,IDIM
+            IDD1 =  3 + ID
+            IDD2 =  6 + ID
+            IDD3 = 15 + ID
+c           x : ddl de TRANSLATION au point A
+            XVALB(I,IND,IDD1) = XPTB(NPOI,1,ID)
+c           vP : vitesse du point P de contact (a modifier + tard)
+            XVALB(I,IND,IDD2) = (XPTP2(ID) - XPTPM2(ID) ) / PDTS2
+c           theta : ddl de ROTATION au point A
+            XVALB(I,IND,IDD3) = XPTB(NPOI,1,ID+3)
+c           mvt du point geometrique de contact - mvt du point de contact attache au tube
+c           in fine, on a vt = dxP/dt + Vrota
+            XPALB(I,ID4+ID) = (XPTP2(ID)-XPTPM2(ID))/PDTS2 - XVPC0(ID)
+c           allongement du ressort d'adherence 
+* --> le roulement san glissement (ID7+ID) ne participe pas a
+*     l allongement du ressort d'adherence:
+            XPALB(I,ID5+ID) = XPTP2(ID) - XPALB(I,ID7+ID)
+         ENDDO
+*  calcul de la vitesse tangentielle 
+*  et de l'ecart a la position origine adherencee dans le plan
+         XVITN= 0.D0
+         PSN0 = 0.D0
+         DO ID = 1,IDIM
+            XVITN= XVITN+ XPALB(I,ID4+ID) * XPALB(I,ID1+ID)
+            PSN0 = PSN0 + XPALB(I,ID5+ID) * XPALB(I,ID1+ID)
+         ENDDO
+         DO ID = 1,IDIM
+            XPALB(I,ID4+ID) = XPALB(I,ID4+ID) - XVITN * XPALB(I,ID1+ID)
+            XPALB(I,ID5+ID) = XPALB(I,ID5+ID) - PSN0  * XPALB(I,ID1+ID)
+         ENDDO
+***
+*  calcul de la force de choc
+         IF (ITYP.EQ.65) THEN
+*            WRITE(*,*)'DEVFB9: appel  DYCHE3:'
+            CALL DYCHE3(XDEP,IDIM,IGP,XPALB,NLIAB,I,INTER
+     &                  ,XFN,XFT,XPUS,iannul)
+*            WRITE(*,*)'DEVFB9: apres DYCHE3 :'
+*            WRITE(*,*)'        XFN = ',XFN
+*            WRITE(*,*)'        XFT = ',XFT
+         ELSE
+            XVITN = PSN / PDTS2
+            XVALB(I,IND,3) = XVITN
+*            WRITE(*,*)'DEVFB9: appel DYCHA3 :'
+            CALL DYCHA3(XDEP,XVITN,IDIM,IGP,XPALB,NLIAB,I,INTER
+     &                  ,XFN,XFT,XPUS,iannul)
+         ENDIF
+         XVALB(I,IND,1) = XFN
+         XVALB(I,IND,10) = ABS(XFT)
+         XVALB(I,IND,12) = XPUS
+         IPALB(I,2) = IGP
+*  si glissement, memorisation de la vitesse tangentielle et de la force
+*  tangentielle
+         IF (IGP.EQ.1) THEN
+            DO ID = 1,IDIM
+               XPALB(I,ID8+ID) = XPALB(I,ID4+ID)
+               XPALB(I,ID9+ID) = XPALB(I,ID6+ID)
+            ENDDO
+         ELSE
+            DO ID = 1,IDIM
+               XPALB(I,ID9+ID) = 0.D0
+            ENDDO
+         ENDIF
+*** OLD:
+*     Test Matthieu: RE-inversion de la normale au plan 
+*     (pour calcul des forces + pour pas suivant)
+*         DO ID=1,3
+*           XPALB(I,ID1+ID) = -1.d0*XPALB(I,ID1+ID)
+*         ENDDO
+***
+*        Force : f = fn*n + ft
+         DO ID = 1,IDIM
+            XFOR(ID) = ( XFN * XPALB(I,ID1+ID) ) + XPALB(I,ID6+ID)
+*            WRITE(*,*)' DEVFB9: XFOR(',ID,') = ',XFOR(ID)
+            FTOTB(NPOI,ID) = FTOTB(NPOI,ID) + XFOR(ID)
+*            WRITE(*,*)' DEVFB9: XFN = ',XFN
+            XFNT(ID) = XPALB (I,ID6+ID)
+*            WRITE(*,*)' DEVFB9: XFNT(',ID,') = ',XFNT(ID)
+         ENDDO
+*        Moment : m = (R*OM) x f
+*         XNOR =SQRT((XPTP2(1)**2)+(XPTP2(2)**2)+(XPTP2(3)**2))
+*
+         XAPFP1 = (XRAYT*XN4(2)*XFOR(3))-(XRAYT*XN4(3)*XFOR(2))
+         XAPFP2 = (XRAYT*XN4(3)*XFOR(1))-(XRAYT*XN4(1)*XFOR(3))
+         XAPFP3 = (XRAYT*XN4(1)*XFOR(2))-(XRAYT*XN4(2)*XFOR(1))
+         XVALB(I,IND,13) = XAPFP1
+         XVALB(I,IND,14) = XAPFP2
+         XVALB(I,IND,15) = XAPFP3
+*
+         FTOTB(NPOI,4) = FTOTB(NPOI,4) + XAPFP1
+         FTOTB(NPOI,5) = FTOTB(NPOI,5) + XAPFP2
+         FTOTB(NPOI,6) = FTOTB(NPOI,6) + XAPFP3
+*         WRITE(*,*)'        FTOTB(NPOI,4) = ',FTOTB(NPOI,4)
+*         WRITE(*,*)'        FTOTB(NPOI,5) = ',FTOTB(NPOI,5)
+*         WRITE(*,*)'        FTOTB(NPOI,6) = ',FTOTB(NPOI,6)
+*
+*--------------------------------------------------------------------*
+* --- choc ...........
+*--------------------------------------------------------------------*
+*
+*     ELSE IF (ITYP.EQ.  ) THEN
+*        .......
+*        .......
+*
+      ENDIF
+*
+      END
+
+
+
+
+
+
+ 
+ 
+ 
+ 

@@ -1,0 +1,227 @@
+C DEVMOM    SOURCE    CHAT      05/01/12    22:46:46     5004
+        SUBROUTINE DEVMOM(FTOTB,Q1,FEXB,XPHILB,IAROTA,IBASB,IPLSB,
+     &                    INMSB,NA2,NA1,NSB,NPLSB,NPLB,IND,IDIM,
+     &                    KTROT)
+      IMPLICIT INTEGER(I-N)
+        IMPLICIT REAL*8(A-H,O-Z)
+*-------------------------------------------------------------------*
+*                                                                   *
+*     Op�rateur DYNE : algorithme de Fu - de Vogelaere              *
+*     ________________________________________________              *
+*                                                                   *
+*     Mise en oeuvre de l'algorithme.                               *
+*     Pour le cas des corps rigides, calcul des moments dus aux     *
+*     forces sur base B.                                            *
+*                                                                   *
+*     Param�tres:                                                   *
+*                                                                   *
+* es  FTOTB  Forces totalis�es sur la base B (choc + moment)        *
+* e   FEXB   Forces ext�rieures sur Base B,intervenant dans le      *
+*            calcul des moments                                     *
+* e   XPHILB Tableau contenant les d�form�es modales                *
+* e   IAROTA Indique la position des modes de rotation              *
+* e   IBASB  Indique � quelle sous base appartient le point de      *
+*            liaison                                                *
+* e   IPLSB  Indique la position du point dans la sous base         *
+* e   INMSB  Indique le nombre de modes de la sous base             *
+* e   Q1     Tableau des d�placements g�n�ralis�s                   *
+* e   NA1    Nombre total de modes                                  *
+* e   NSB    Nombre de sous bases                                   *
+* e   NPLB   Nombre de points intervenant dans les liaisons         *
+* e   UFLEX(IP,IB,1-3,IND)                                          *
+*        = Uf(IP) = depl. elastique du point de                     *
+*        liaison IP dans le rep�re du solide (ss base)              *
+*                                                                   *
+*   Produit vectoriel GP^FORCE (rotations rigides):                 *
+* 1)  GP:                                                           *
+*     Orientation du solide au demi pas de temps:                   *
+*       ROT12 = ROT * exp(dtheta/2)                                 *
+*     Vecteur centre de rot - point de liaison:                     *
+*      -Dans le repere du solide:                                   *
+*        XCOOLB - XCENT                                             *
+*      -Dans le repere spatial au 1/2 pdt:                          *
+*        ROT12*(XCOOLB - XCENT)                                     *
+* 2)  FORCE:                                                        *
+*     Force dans le repere spatial:                                 *
+*       FORCE = FEXB + FTOTB                                        *
+*     Moment forces ext. ds le reper spatial au 1/2 pdt:            *
+*       FTOTB = (ROT12 * (XCOOLB - XCENT + U_f))*FORCE              *
+*                                                                   *
+*     Auteur, date de creation:                                     *
+*                                                                   *
+*     Samuel DURAND, le 07 Octobre 1996  .                          *
+*                                                                   * 
+******** MS :    Est-ce que le moment a deja été calculé            *
+*                         dans le calcul de FTOTB ??                * 
+*    Explication :                                                  * 
+*     - Certaines liaisons (comme le point cerlce), possèdent       * 
+*       une résultante dans le plan de liaison.                     * 
+*     --> Le calcul du moment n'est alors pas réalisé dans defb**   * 
+*       mais dans devmom. Au quel cas il faut :                     * 
+*                 FORCE = FEXB + FTOTB                              * 
+*     - Si au contraire (ex: cercle_cercle & cercle_cone)           * 
+*       FTOTB(..,4-6) a deja ete rempli dans defb** :               * 
+*       1) on ne peut pas recalculer FMOMTOT en l'absence du point  * 
+*         d'incidence                                               * 
+*       2) on va compter 2 fois le couple de liaison FTOTB(..,4-6)  * 
+*         dont une fois de façon erronee!                           * 
+*     Remarque 1 : cela pose probleme si le point de liaison est    * 
+*     impliquee dans plusieurs liaisons appartenant à               * 
+*     des cas différents.                                           * 
+*     Remarque 2 : si pt liai n'appartient qu'a 1 liaison           * 
+*                  ET FTOTB(4-6) nn nul, il faut :                  * 
+*                     FORCE = FEXB                                  * 
+*                     FMOM = XCOO12 wedge FORCE                     * 
+*                     FMOMTOT = FMOMTOT + FMOM + FTOTB(..,4-6)      * 
+*                                                                   *
+*-------------------------------------------------------------------*
+*
+-INC CCREEL
+*
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,2,NSB),OMEG2(3,2,NSB),OMEG3(3,2,NSB)
+         REAL*8 ROT(3,3,2,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,2,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+*
+        INTEGER IBASB(*),IAROTA(*),IPLSB(*),INMSB(*)
+        REAL*8  XPHILB(NSB,NPLSB,NA2,*),Q1(NA1,*)
+        REAL*8  FEXB(NPLB,2,*),FTOTB(NPLB,*)
+        REAL*8  XCDG(3),FORCE(3)
+* variables Matthieu:
+        REAL*8 DTHETA12(3),DROT12(3,3),ROT12(3,3),FMOM(3),XCOO12(3)
+        LOGICAL RIGIDE
+*
+      MTROT = KTROT
+      RIGIDE=(KTROT.NE.0)
+*
+* FMOMTOT: couple exterieur total = somme couple pts de liaison B
+*             au demi-pas ed temps
+* Initialisation FMOMTOT:
+      IF (RIGIDE) THEN
+        NSB = OMEG1(/3)
+        DO J =1,NSB
+          FMOMTOT(1,IND,J) = 0.D0
+          FMOMTOT(2,IND,J) = 0.D0
+          FMOMTOT(3,IND,J) = 0.D0
+        ENDDO
+      ENDIF
+* FMOMTOT ne sera MAJ que si la sous base comporte au moins une rota rigide
+*  (IAROTA(ISB).NE.0).
+*
+********************************************************************* 
+*              Boucle sur les points de liaison:
+********************************************************************* 
+cmsw        WRITE(*,*)'DEVMOM : NPLB = ',NPLB
+        DO 10 IP=1,NPLB
+            ISB=IBASB(IP)
+cmsw            WRITE(*,*)'   Pt liai IP = ',IP
+cmsw            WRITE(*,*)'   ss base ISB  = ',ISB
+*           Produit vectoriel GP^F
+*           Dans MTROT GP = XCOOLB - XCENT:
+*           moment au demi pas de temps: ROT12=ROT*exp(dtheta/2)
+*           puis: FTOTB = (ROT12 * (XCOOLB - XCENT + U^f_{1/2))*FORCE)
+            DO I=1,3
+              DTHETA12(I) = DTHETA(I,ISB)/2.D0
+            ENDDO
+            CALL EXPTHR(DTHETA12,DROT12)
+*           Calcul ROT12, multiplication � droite:
+            DO I=1,3
+              DO J=1,3
+                ROT12(I,J) = 0.D0
+                DO K=1,3
+      ROT12(I,J) = ROT12(I,J) + ROT(I,K,IND,ISB)*DROT12(K,J)
+                ENDDO
+              ENDDO
+            ENDDO
+            IROT=IAROTA(ISB)
+*           Matt: plus utile:
+            IPSB = IPLSB(IP)
+*           Matt: plus utile:
+            NA3 = INMSB(ISB)
+            IF (IROT.NE.0) THEN
+              DO 20 ID=1,IDIM
+*               FEXB: resultante des force ext .en base B
+*               FTOTB: resultante chocs + contacts en base B
+*            IF (IIMPI.EQ.333) THEN
+*            WRITE(*,*)'DEVMOM: FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
+*            WRITE(*,*)'        FEXB(',IP,IND,ID,') = ',
+*     &                         FEXB(IP,IND,ID)
+*            ENDIF
+             FORCE(ID) = FEXB(IP,IND,ID)+FTOTB(IP,ID)
+*             WRITE(*,*)'DEVMOM : bilan des forces en base B :'
+*             WRITE(*,*)'         Forces exterieures :'
+*             WRITE(*,*)'         FEXB(',IP,IND,ID,') = ',FEXB(IP,IND,ID)
+*             WRITE(*,*)'         Forces NL :'
+*             WRITE(*,*)'         FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
+*             WRITE(*,*)'         Moment déjà calule ? :'
+*             WRITE(*,*)'         FTOTB(',IP,ID+3,') = ',FTOTB(IP,ID+3)
+
+ 20           CONTINUE
+
+              DO I=1,3
+                XCOO12(I) = 0.D0
+                DO J=1,3
+                  IF (IND.EQ.1) THEN
+                  XCOO12(I) = XCOO12(I) + ROT12(I,J)*
+     &                    ( XCOOLB(J,ISB,IP) - XCENT(J,ISB) +
+     &           (UFLEX(IP,ISB,J,1) - UFLEX(IP,ISB,J,2))/2.D0)
+*                 si il s agit de l initialisation (d2vini):
+                  ELSEIF (IND.EQ.2) THEN
+                  XCOO12(I) = XCOO12(I) + ROT12(I,J)*
+     &             ( XCOOLB(J,ISB,IP) - XCENT(J,ISB) +
+     &                         UFLEX(IP,ISB,J,2) ) 
+                  ENDIF
+*                  WRITE(*,*)'DEVMOM: XCOO12(',I,') = ',XCOO12(I)
+                ENDDO
+              ENDDO
+              IF (IDIM.EQ.3) THEN        
+               FMOM(1) = XCOO12(2)*FORCE(3) -
+     &                   XCOO12(3)*FORCE(2)
+               FMOM(2) = XCOO12(3)*FORCE(1) -
+     &                   XCOO12(1)*FORCE(3)
+               FMOM(3) = XCOO12(1)*FORCE(2) -
+     &                   XCOO12(2)*FORCE(1)
+* FMOM = couple exterieur dans le repere global.
+               DO I=1,3
+                I2 = I+3
+* FTOTB = couple exterieur du aux liaisons:
+* ex du cercle_cercle_frottement: 
+* FTOTB(4-6) = vec(pt liaison - pt de contact) \wedge F_nl
+*            = Rint*normale_choc \wedge (F_n + F_t)
+* il ne nous reste plus qu a sommer FMOMTOT et FTOTB (relation de chasles):
+* TODO: moment au demi pas de temps --> corriger FTOTB(4-6) qui est a t_n+1!!
+*                WRITE(*,*)'DEVMOM: avant somme FMOMTOT'
+*                 WRITE(*,*)'       FMOM(',I,') = ',FMOM(I)
+*                 WRITE(*,*)'       FTOTB(',IP,I2,') = ',
+*     &                            FTOTB(IP,I2)
+                FMOMTOT(I,IND,ISB) = FMOMTOT(I,IND,ISB) + FMOM(I)+
+     &                               FTOTB(IP,I2)
+*                 WRITE(*,*)'DEVMOM: FMOMTOT(',I,IND,ISB,') = ',
+*     &                             FMOMTOT(I,IND,ISB)
+               ENDDO
+* Pour l'instant FMOMTOT qu'en dimension 3!!!
+* FTOTB(IP,3-6) = couple exterieur ds le repere global.
+              ELSE
+        FMOM(3) = XCOO12(1)*FORCE(2)- XCOO12(2)*FORCE(1)
+        FMOMTOT(3,IND,ISB) = FMOMTOT(3,IND,ISB) + FMOM(3) + 
+     &                       FTOTB(IP,3)
+* OLD: FTOTB n est plus rempli avec les moments (on met = 0):
+*        FTOTB(IP,3) = 0.D0
+              ENDIF
+* fin IROT.NE.0:
+            ENDIF
+ 10     CONTINUE
+*
+        IF (IIMPI.EQ.333) WRITE(IOIMP,*)'DEVMOM: FIN'
+*
+        END
+*
+
+

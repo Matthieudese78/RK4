@@ -1,0 +1,1292 @@
+C DEVFB1    SOURCE    BP208322  20/09/18    21:15:26     10718          
+      SUBROUTINE DEVFBINT(ITYP,FTOTB,XPTB,IPALB,IPLIB,XPALB,XVALB,NLIAB,
+     &                  NPLB,IND,IND1,INDM1,NPA,NPAM1,IND2,PDT,PDTS2,
+     &                  FEXPSM,NPC1,I,iannul,
+     &                  KTOTXB,KTOTVB,IDIMB,GETJAC,IBASB,KTROT,NECH)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNE et DYNC :                                       *
+*     Calcul des forces de choc pour les liaisons B de type :        *
+*     - POINT_PLAN avec ou sans amortissement                        *
+*     - POINT_PLAN_FROTTEMENT avec ou sans amortissement             *
+*     - CERCLE_PLAN_FROTTEMENT avec ou sans amortissement            *
+*     - POINT_PLAN_FLUIDE                                            *
+*                                                                    *
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   ITYP    type de la liaison.                                    *
+* es  FTOTB   Forces exterieures totalisees sur la base B.           *
+* e   XPTB    Tableau des deplacements des points                    *
+* e   IPALB   Renseigne sur la liaison.                              *
+* e   IPLIB   Tableau contenant les numeros "DYNE" de la liaison.    *
+* e   XPALB   Tableau contenant les parametres de la liaison.        *
+* es  XVALB   Tableau contenant les variables internes de liaisons.  *
+* e   NLIAB   Nombre de liaisons sur la base B.                      *
+* e   NPLB    Nombre total de points intervenant dans les liaisons.  *
+* e   IND     Indice du pas.                                         *
+* e   IND1    Indice du pas (ou demi-pas si De Vogelaere) precedent. *
+* e   I       numero de la liaison.                                  *
+* e   PDT     pas de temps                                           *
+* e   PDTS2   = | pas de temps/2 si devogelaere                      *
+*               | pas de temps   si differences centrees             *
+*                                                                    *
+*--------------------------------------------------------------------*
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+
+cms : pour detecter les Nan
+*     LOGICAL            DISNAN
+-INC CCREEL   
+* -INC SMCOORD
+* -INC CCOPTIO
+*     WRITE(*,*)'DEVFB10 : NECH = ',NECH
+* Matthieu: Segment rotas rigides:
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,2,NSB),OMEG2(3,2,NSB),OMEG3(3,2,NSB)
+         REAL*8 ROT(3,3,2,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,2,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+*
+      INTEGER IPALB(NLIAB,*),IPLIB(NLIAB,*),IBASB(*)
+      REAL*8  XPALB(NLIAB,*),XPTB(NPLB,2,*),FTOTB(NPLB,*)
+      REAL*8  XVALB(NLIAB,4,*),FEXPSM(NPLB,NPC1,2,*)
+      REAL*8  XPTP2(3),XPTPM2(3),XFNT(3)
+      REAL*8  XVPC0(3),XVPCT(3)
+      REAL*8  ZCE(3),YCE(3),XCE(3),XCO(3),ZCO(3),NCONE(3)
+      REAL*8  XSCO(3),XPROJ(3),XPROJ2(3),NPE(3),TPE(3)
+      REAL*8  VROT(3),ROT2(3,3),XFOR(3),XVN(3),XSUP(3)
+*     TODO : tester en mettant 1 en dimension
+      REAL*8  XPROF(NECH),YPROF(NECH),ZPROF(NECH)
+      REAL*8  XNCONE(NECH),YNCONE(NECH),ZNCONE(NECH),XNCB(3,NECH)
+      REAL*8  VNB(NECH),VTB(3,NECH),XPRB(3,NECH)
+      REAL*8  VNBCO(NECH),VTBCO(3,NECH),XPRBCO(3,NECH)
+      REAL*8  FNB(NECH),FTB(3,NECH),XPUS(NECH),FNBRES(3),FTBRES(3)
+      REAL*8  GRES(3)
+*     en + pour DYNC :      
+      REAL*8  KTOTXB(NPLB,IDIMB,IDIMB),KTOTVB(NPLB,IDIMB,IDIMB)
+*     Critere Newton de detection du pt incidence (FINDP2) :
+      REAL*8  CRIT
+      LOGICAL GETJAC,LFLAT,LFLAT1,LCENT,laxe,L0,L90,L180,L270,LPENE
+      LOGICAL LNORSEUL,LTEST,LSUP
+*
+      IF (KTROT.NE.0) THEN
+        MTROT = KTROT
+*        WRITE(*,*)'DEVFB9: KTROT = ',KTROT
+      ENDIF
+      IF (KTROT.EQ.0) THEN
+*        write(*,*)'DEVFB9: CERCLE_CONE dispo qu avec rotas rigides!!'
+        CALL EXIT(1)
+      ENDIF
+      IF (IIMPI.EQ.555) WRITE(IOIMP,*)'DEVFB10 START'
+*     Longueur indicative du profile de réaction : 1
+*        --> deja fait avnt call devfb10 dans d2vlb1 :
+*      NECH = 1
+
+*--------------------------------------------------------------------*
+* --- choc elementaire CERCLE_CONE
+*                      avec ou sans amortissement
+*--------------------------------------------------------------------*
+* Remarques :
+*     - I numero de la liason (parmis NLIAB liaison en base B)
+
+      IF (ITYP.EQ.67.OR.ITYP.EQ.68) THEN
+*****     Cirtere de precision pour la detection du point d'incidence (FINDP2):
+          CRIT = 1.D-9
+*         MAXIT = 10
+          MAXIT = 20
+*         valeur limite de nutation en dessous de la quelle on interpole
+*         les resultantes :
+          xlimint = (0.01)*xpi/180.
+***** Inititialsation :
+*        A priori pas de penetration : 
+*           - ni radiale :
+         XDR = 0.D0
+*           - ni normale :
+         XDN = 0.D0
+*        Initialisation des grandeurs qui ne 
+*        sont pas caclulees si pas de penetration :
+*        LARGEUR_PROFILE :
+         XTHMAX = 0.D0
+*        FORCE_DE_CHOC_NORMALE :
+         FNBRES(1) = 0.D0
+         FNBRES(2) = 0.D0
+         FNBRES(3) = 0.D0
+         FTBRES(1) = 0.D0
+         FTBRES(2) = 0.D0
+         FTBRES(3) = 0.D0
+         GRES(1) = 0.D0
+         GRES(2) = 0.D0
+         GRES(3) = 0.D0
+         XGLISADH = 0.D0
+* OLD :        XVALB(I,IND,1) = 0.D0
+
+*        MX_POINT_FIBRE_NEUTRE :
+*        XVALB(I,IND,13) = 0.D0
+*        MY_POINT_FIBRE_NEUTRE :
+*        XVALB(I,IND,14) = 0.D0
+*        MZ_POINT_FIBRE_NEUTRE :
+*        XVALB(I,IND,15) = 0.D0
+*****
+*        A priori le cercle n'est pas a plas :
+         LFLAT = .FALSE.
+         LFLAT1 = .FALSE.
+         LCENT = .FALSE.
+         LPENE = .FALSE.
+         L0 = .FALSE.
+         L90 = .FALSE.
+         L180 = .FALSE.
+         L270 = .FALSE.
+*        Calcul test avec seulement les forces normales ? 
+         LNORSEUL = .FALSE.
+
+*        NPOI : place du numero de point IMOD du point de liaison
+*                dans la table JPLIB.
+*              - NPOI = IPLIB(I,1) : position du point pour 
+*                       (IBASB,XCOOLB) dans une boucle IP=1,NPLB
+*              - JPLIB(NPOI) = vrai numero du point dans cast3m, 
+*                                par ex pour XCOOR.
+
+************************************************************************ 
+*        Indices du point support IP --> XCOOLB(ID,IB,IP)
+************************************************************************ 
+**       Point support :
+         NPOI = IPLIB(I,1)
+*         write(*,*)'DEVFB10 : liaison I = ',I
+*         write(*,*)'          point liaison NPOI = ',NPOI
+************************************************************************   
+         ISB  = IBASB(NPOI)
+* IGP : servait pour stocker l'origine de pt d adhrence : ne sert plus (slot libre dans IPALB).
+*        IGP    = IPALB(I,2)
+         IDIM   = IPALB(I,3)
+         IF (IDIM.NE.3) THEN
+            write(IOIMP,*)'CERCLE_CONE disponible qu en dim = 3!'
+            RETURN
+         ENDIF
+         if (ITYP.LT.100) then
+           INTER=1
+         else
+           INTER=0
+         endif
+         IF (ITYP.EQ.67) THEN
+            ID1  = 7
+         ELSE
+            ID1  = 8
+         ENDIF
+         ID2  = ID1 + IDIM
+         ID3  = ID1 + 2*IDIM
+         ID4  = ID1 + 3*IDIM
+*        ID5  = ID1 + 4*IDIM
+*        ID6  = ID1 + 5*IDIM
+*        ID7  = ID1 + 6*IDIM
+*        ID8  = ID1 + 7*IDIM
+*        ID9  = ID1 + 8*IDIM
+         ID10 = ID1 + 8*IDIM
+
+*     Rq : XALPHA est deja en radian (cf. dyn203.eso)
+         XRAIN  = XPALB(I,1) 
+         ISBC   = XPALB(I,2) 
+         WRITE(*,*)'DEVFB10 : ISBC = ',ISBC
+         XGLIS  = XPALB(I,3) 
+         XALPHA = XPALB(I,4) 
+         ISCO   = XPALB(I,5) 
+         VLIM   = XPALB(I,6) 
+         XKV    = XPALB(I,7) 
+         XAMOR  = XPALB(I,8) 
+cmsw     WRITE(*,*)'DEVFB10 : XAMOR = ',XAMOR
+         XRAYP  = XPALB(I,ID10+1)
+
+************************************************************************ 
+*        Indices du sommet du cone IP --> XCOOLB(ID,IB,IP)
+************************************************************************ 
+**       Sommet du cone : si mobile
+         IF (ISBC.GT.0) THEN 
+            IPSOM = IPLIB(I,2)
+*           Puis eventuelle correction de ISBC :
+            ISBC = IBASB(IPSOM)
+            IF (IBASB(IPSOM).EQ.0) THEN   
+              write(*,*)'Sommet du cone n a pas de ss base attribuee!'
+              CALL EXIT(1)
+            ENDIF
+cmsw        WRITE(*,*)'DEVFB10 : IPSOM = ',IPSOM
+cmsw        WRITE(*,*)'DEVFB10 : ISBC = ',ISBC
+         ENDIF
+************************************************************************ 
+*        EXPRESSION DE Ncone, Ncercle, (EX,EY) = base plan de nutation
+*              Dans le repere global.
+************************************************************************ 
+
+******     NORMALE AU CONE : Ez repere global
+         IF (ISBC.LE.0) THEN
+*           Cone fixe --> normale inchangee :
+            DO ID=1,3
+              ZCO(ID) = XPALB(I,ID1+ID)
+cmsw          WRITE(*,*)'DEVFB10 : XPALB(I,ID1+ID) = ',XPALB(I,ID1+ID) 
+cmsw          WRITE(*,*)'DEVFB10 : ZCO(ID)) = ',ZCO(ID) 
+            ENDDO
+         ELSEIF (ISBC.GT.0) THEN 
+*           MAJ de la normale au cone.
+            DO ID=1,3
+              ZCO(ID) = 0.D0
+              DO J=1,3
+                ZCO(ID) = ZCO(ID) + ROT(ID,J,IND,ISBC)*XPALB(I,ID1+J)
+              ENDDO
+              WRITE(*,*)'DEVFB10 : ZCO(',ID,') = ',ZCO(ID) 
+            ENDDO
+            write(*,*)'matrice de rotation du cone'
+            do id=1,3
+              write(*,'(3(1X,F8.5))') , (rot(id,j,ind,isbc),j=1,3)
+            enddo
+cmsw        WRITE(*,*)'DEVFB10 : XPALB(I,ID1+ID) = ',XPALB(I,ID1+ID) 
+         ENDIF
+******     NORMALE AU CERCLE : repere global
+*           Application de la la rotation a la normale au cercle :
+         PSXPM1 = 0.D0
+         DO ID=1,3
+           ZCE(ID) = 0.D0
+           DO J=1,3
+             ZCE(ID) = ZCE(ID) + ROT(ID,J,IND,ISB)*XPALB(I,ID2+J)
+*             WRITE(*,*)'DEVFB9: ROT(',ID,J,IND,ISB,') = ',
+*     &                          ROT(ID,J,IND,ISB)
+           ENDDO
+           PSXPM1 = PSXPM1 + ZCE(ID)**2
+         ENDDO
+         PSXPM1 = dsqrt(PSXPM1)
+         ZCE(1) = ZCE(1)/PSXPM1
+         ZCE(2) = ZCE(2)/PSXPM1
+         ZCE(3) = ZCE(3)/PSXPM1
+
+         IF (IIMPI.EQ.555) THEN 
+*            write(IOIMP,*)'DEVFB10: normale au cercle:'
+*            write(IOIMP,*)'DEVFB10: ZCE(1) = ',ZCE(1)
+*            write(IOIMP,*)'DEVFB10: ZCE(2) = ',ZCE(2)
+*            write(IOIMP,*)'DEVFB10: ZCE(3) = ',ZCE(3)
+         ENDIF
+
+******  EY = Ey axe de nutation repere global ET local 
+*        YCE = n_cone \wedge n_cercle : 
+         YCE(1) = ZCO(2)*ZCE(3) - ZCO(3)*ZCE(2)
+         YCE(2) = ZCO(3)*ZCE(1) - ZCO(1)*ZCE(3)
+         YCE(3) = ZCO(1)*ZCE(2) - ZCO(2)*ZCE(1)
+         PSXPM2=dsqrt((YCE(1)**2)+(YCE(2)**2)+(YCE(3)**2))
+*         write(*,*)'DEVFB10 : critère LFLAT : PSXPM2 = ',PSXPM2
+*        1.745e-6 rad --> 1.e-4 °
+*        ie. on considere FLAT si XNUT <= 1.e-4 °
+*        Marche avec cone fixe :
+*        IF (PSXPM2.GT.1.D-10) THEN
+*        Test ASIN :
+*        Marche pour tous les cas-tests sauf le cas a plat ou on lache avec les deux poids :
+        IF (PSXPM2.GT.0.D0) THEN
+           YCE(1) = YCE(1)/PSXPM2
+           YCE(2) = YCE(2)/PSXPM2
+           YCE(3) = YCE(3)/PSXPM2
+           XNUT = dasin(PSXPM2)
+           write(*,*)'DEVFB10 : xnut = ',xnut
+         ELSE 
+           LFLAT = .TRUE.
+           XNUT = 0.D0
+           write(*,*)'DEVFB10 : CAS FLAT !!!!!'
+         ENDIF
+*         write(*,*)'DEVFB10 : XNUT = ',XNUT
+***** Avertissement : XNUT > XALPHA
+         IF (XNUT.GT.XALPHA) THEN
+            write(*,*)'Nutation depasse l angle du cone!!!'
+            RETURN
+         ENDIF
+***** EX PLAN DE NUTATION : Vecteur de la base (EX, EY) du plan de nutation :
+*           = EY \wedge EZ(=n_cercle=ZCE)
+         XCE(1) =  ZCE(3)*YCE(2) - ZCE(2)*YCE(3)
+         XCE(2) =  ZCE(1)*YCE(3) - ZCE(3)*YCE(1)
+         XCE(3) =  ZCE(2)*YCE(1) - ZCE(1)*YCE(2)
+         PSXPM3=dsqrt((XCE(1)**2)+(XCE(2)**2)+(XCE(3)**2))
+*        IF (PSXPM3.GT.XSZPRE) THEN
+         IF (PSXPM3.GT.0.D0) THEN
+            XCE(1) = XCE(1)/PSXPM3
+            XCE(2) = XCE(2)/PSXPM3
+            XCE(3) = XCE(3)/PSXPM3
+         ENDIF
+
+***** Ex repere global : orthogonal a axe du cone
+* XN4 = n_cone - (n_cercle . n_cone)n_cone 
+*     = vecteur orthogonal à n_plan dans le plan de nutation: 
+         PSXPM4 = 0.D0
+         DO ID=1,IDIM
+           PSXPM4 = PSXPM4 + ZCE(ID)*ZCO(ID)
+         ENDDO
+cmsw     WRITE(*,*)'PSXPM4 = ',PSXPM4
+         PSXPM5 = 0.D0
+         DO ID=1,IDIM
+           XCO(ID) = ZCE(ID) - PSXPM4*ZCO(ID)
+           PSXPM5 = PSXPM5 + XCO(ID)**2
+         ENDDO
+         PSXPM5 = dsqrt(PSXPM5)
+*        IF (PSXPM5.GT.XSZPRE) THEN
+         IF (PSXPM5.GT.0.D0) THEN
+            XCO(1) = XCO(1)/PSXPM5
+            XCO(2) = XCO(2)/PSXPM5
+            XCO(3) = XCO(3)/PSXPM5
+         ENDIF
+
+************************************************************************ 
+*        COORDONNEES PT LIAISON / SOMMET CONE
+************************************************************************ 
+***** COORD. SOMMET DU CONE :
+         IF (ISBC.LE.0) THEN 
+            DO ID=1,IDIM
+               XSCO(ID) = XPALB(I,ID3+ID) 
+            ENDDO
+         ELSE
+*           TODO : recombinaison des depl. / vite. du sommet du cone
+*                  en fonction de la ss base a laquelle il appartient
+*           Pour l'instant on laisse pareil que cas immobile :
+*           test : 
+            WRITE(*,*)'DEVFB10 : cone mobile : '
+            DO ID=1,IDIM
+cmsw          WRITE(*,*)'XCOOLB(',ID,ISB,IPSOM,') - XPALB(',I,ID3+ID,') = ',
+cmsw     &                 XCOOLB(ID,ISBC,IPSOM) - XPALB(I,ID3+ID)
+               XSCO(ID) = XPALB(I,ID3+ID) + XPTB(IPSOM,1,ID)
+            ENDDO
+         ENDIF
+*        Coordonnées du point support = centre du cercle : en base B
+         DO ID=1,3
+            XSUP(ID) = XCOOLB(ID,ISB,NPOI) + XPTB(NPOI,1,ID) 
+            WRITE(*,*)'DEVFB10 : XPTB(',NPOI,1,ID,') = ',XPTB(NPOI,1,ID)
+         ENDDO
+cmsw     WRITE(*,*)'DEVFB10 : XSUP(1) = ',XSUP(1)
+cmsw     WRITE(*,*)'DEVFB10 : XSUP(2) = ',XSUP(2)
+cmsw     WRITE(*,*)'DEVFB10 : XSUP(3) = ',XSUP(3)
+cmsw     WRITE(*,*)'DEVFB10 : XSCO(1) = ',XSCO(1)
+cmsw     WRITE(*,*)'DEVFB10 : XSCO(2) = ',XSCO(2)
+cmsw     WRITE(*,*)'DEVFB10 : XSCO(3) = ',XSCO(3)
+*        test est-ce qu'on peut utiliser XCOOLB a la place de XPALB(I,ID4+ID) ?
+cmsw     WRITE(*,*)'DEVFB10 : XCOOLB(ID,ISB,NPOI) = ',XCOOLB(1,ISB,NPOI)
+cmsw     WRITE(*,*)'DEVFB10 : XCOOLB(ID,ISB,NPOI) = ',XCOOLB(2,ISB,NPOI)
+cmsw     WRITE(*,*)'DEVFB10 : XCOOLB(ID,ISB,NPOI) = ',XCOOLB(3,ISB,NPOI)
+*        Coordonnees du point de liaison dans le repere du cone :
+*        = vecteur SconeCcercle en base B.
+         XPTP2(1) = XSUP(1) - XSCO(1)
+         XPTP2(2) = XSUP(2) - XSCO(2)
+         XPTP2(3) = XSUP(3) - XSCO(3)
+         WRITE(*,*)'XPTP2(1)',XPTP2(1)
+         WRITE(*,*)'XPTP2(2)',XPTP2(2)
+         WRITE(*,*)'XPTP2(3)',XPTP2(3)
+******   CAS A PLAT :
+         IF (LFLAT) THEN
+*          Calcul de z PSCA ZCO : (altitude centre du cercle / sommet cone)
+           PSZZCO = 0.D0
+           DO ID=1,3
+             PSZZCO = PSZZCO + XPTP2(ID)*ZCO(ID)
+           ENDDO
+*          Rq : PSZZCO --> XPROJ(3) dans qqes lignes.
+           PSZZCO = dabs(PSZZCO)
+           WRITE(*,*)'DEVFB10 : PSZZCO - XRAYP/dtan(XALPHA) = ',
+     &                          PSZZCO - (XRAYP/dtan(XALPHA))
+*           write(*,*)'DEVFB10 : XRAYP = ',XRAYP
+*           write(*,*)'DEVFB10 : dtan(XALPHA) = ',dtan(XALPHA)
+           IF (PSZZCO.GE.(XRAYP/dtan(XALPHA))) THEN
+*            On va le traiter normalement : 
+             WRITE(*,*)'FLAT mais z > ZLIM'
+             LFLAT = .FALSE.
+*            On rajoute une petite distinction pour remplacer FINDP 
+*                 (moins couteux + plus precis)
+             LFLAT1 = .TRUE.
+             write(*,*)'lfat1'
+		         RC = dtan(XALPHA)*PSZZCO
+*            Les normales sont confondus, on cree une BON :
+             CALL COMPBAS(ZCO,XCO,YCE)
+             DO ID=1,3 
+              XCE(ID) = XCO(ID)
+              ZCE(ID) = ZCO(ID)
+             ENDDO
+*            Fonctionnement normal :
+*              C'est juste que l'ELLIPSE = CERCLE !!
+*            test : on ignore --> nn penetration
+           ELSE
+*            OLD : on ne prend pas la norme de XPTP2, 
+*                  on prend simplement son altitude / sommet du cone.
+*            --> autrement dit appprox : si le cercle est en dessous 
+*                          de l'altitude limite, on considere qu'il 
+*                          est centre.
+*            XSC = dsqrt((XPTP2(1)**2) + (XPTP2(2)**2) + (XPTP2(3)**2))
+*            XDN = XSC - (XRAYP/dtan(XALPHA)) 
+cmsw         WRITE(*,*)'DEFB10 : FLAT CASE : '
+             XDN = PSZZCO - (XRAYP/dtan(XALPHA))
+*            on definit qd mm un xdr pour avoir lpene = .true.
+*            XDR = -1.d0
+*            dans ce cas, on fixe arbitrairement l'incidence a :
+             XINCID = 0.D0
+*            le rayon de courbure est diminue de :
+*            RC = XRAYP - (dtan(XALPHA)*dabs(XDN))
+             RC = dtan(XALPHA)*PSZZCO
+             WRITE(*,*)' cas flat XDN = ',XDN
+             WRITE(*,*)' cas flat RC = ',RC
+*            Rq : on aura bien XDN < 0 si penetration.
+             IF (XDN.LT.0.D0) THEN
+              write(*,*)'FLAT + penetration : goto 20'
+              GOTO 20
+             ELSE
+              write(*,*)'FLAT + Pas de penetration : goto 10'
+              GOTO 10
+             ENDIF
+           ENDIF
+         ENDIF
+*****    CHECK REPERES : 
+         WRITE(*,*)'DEVFB10 : vecteurs de la base repere du cone'
+         WRITE(*,*)'          Ex(1) = ',XCO(1)
+         WRITE(*,*)'          Ex(2) = ',XCO(2)
+         WRITE(*,*)'          Ex(3) = ',XCO(3)
+         WRITE(*,*)'          Ey(1) = EY(1) = ',YCE(1)
+         WRITE(*,*)'          Ey(2) = EY(2) = ',YCE(2)
+         WRITE(*,*)'          Ey(3) = EY(3) = ',YCE(3)
+         WRITE(*,*)'          Ez(1) = ',ZCO(1)
+         WRITE(*,*)'          Ez(2) = ',ZCO(2)
+         WRITE(*,*)'          Ez(3) = ',ZCO(3)
+
+         WRITE(*,*)'DEVFB10 : vecteurs de la base repere de l ellipse'
+         WRITE(*,*)'          EX(1) = ',XCE(1)
+         WRITE(*,*)'          EX(2) = ',XCE(2)
+         WRITE(*,*)'          EX(3) = ',XCE(3)
+         WRITE(*,*)'          EZ(1) = ',ZCE(1)
+         WRITE(*,*)'          EZ(2) = ',ZCE(2)
+         WRITE(*,*)'          EZ(3) = ',ZCE(3)
+
+         WRITE(*,*)'DEVFB10 : normes des vecteurs : '
+         WRITE(*,*)'     EX = ',dsqrt(XCE(1)**2 + XCE(2)**2 + XCE(3)**2)
+         WRITE(*,*)'     Ey = ',dsqrt(YCE(1)**2 + YCE(2)**2 + YCE(3)**2)
+         WRITE(*,*)'     EZ = ',dsqrt(ZCE(1)**2 + ZCE(2)**2 + ZCE(3)**2)
+         WRITE(*,*)'     Ex = ',dsqrt(XCO(1)**2 + XCO(2)**2 + XCO(3)**2)
+         WRITE(*,*)'     Ez = ',dsqrt(ZCO(1)**2 + ZCO(2)**2 + ZCO(3)**2)
+******   
+* On passe dans le repère global lié au plan de nutation : 
+*        Ex (XCO), Ey (YCE), Ez (Ncone=XPALB(ID1+ID))  
+         XPROJ(1) = XPTP2(1)*XCO(1) + XPTP2(2)*XCO(2) + XPTP2(3)*XCO(3)
+         XPROJ(2) = XPTP2(1)*YCE(1) + XPTP2(2)*YCE(2) + XPTP2(3)*YCE(3)
+         XPROJ(3) = XPTP2(1)*ZCO(1) + XPTP2(2)*ZCO(2) + XPTP2(3)*ZCO(3)
+         
+* On passe dans le repère local 2D de l'ellipse : 
+*        EX (XCE), EY (YCE), EZ (Nccercle=ZCE)  
+         XPROJ2(1) = XPTP2(1)*XCE(1) + XPTP2(2)*XCE(2) + XPTP2(3)*XCE(3)
+         XPROJ2(2) = XPROJ(2)
+         XPROJ2(3) = XPTP2(1)*ZCE(1) + XPTP2(2)*ZCE(2) + XPTP2(3)*ZCE(3)
+
+cmsw     WRITE(*,*)'DEVFB10 : Position centre cercle / Scone (Ex,Ey,Ez)'
+cmsw     WRITE(*,*)'DEVFB10 : XSCO(1) = ',XSCO(1)
+cmsw     WRITE(*,*)'DEVFB10 : XSCO(2) = ',XSCO(2)
+cmsw     WRITE(*,*)'DEVFB10 : XSCO(3) = ',XSCO(3)
+cmsw     WRITE(*,*)'DEVFB10 : XPTB(NPOI,1,1) = ',XPTB(NPOI,1,1)
+cmsw     WRITE(*,*)'DEVFB10 : XPTB(NPOI,1,2) = ',XPTB(NPOI,1,2)
+cmsw     WRITE(*,*)'DEVFB10 : XPTB(NPOI,1,3) = ',XPTB(NPOI,1,3)
+cmsw     WRITE(*,*)'DEVFB10 : Coord. C (Scone,EX,EY)'
+cmsw     WRITE(*,*)'DEVFB10 : XPTP2(1) = ',XPTP2(1) 
+cmsw     WRITE(*,*)'DEVFB10 : XPTP2(2) = ',XPTP2(2) 
+cmsw     WRITE(*,*)'DEVFB10 : XPTP2(3) = ',XPTP2(3) 
+cmsw     WRITE(*,*)'DEVFB10 : Coord. C (Scone,Ex,Ey)'
+cmsw     WRITE(*,*)'DEVFB10 : XPROJ(1) = ',XPROJ(1) 
+cmsw     WRITE(*,*)'DEVFB10 : XPROJ(2) = ',XPROJ(2) 
+cmsw     WRITE(*,*)'DEVFB10 : XPROJ(3) = ',XPROJ(3) 
+
+************************************************************************ 
+*        CALCUL DES CARACTERISTIQUES DE L ELLIPSE
+************************************************************************
+         XD = dabs(XPROJ(3) + (XPROJ(1)*(dtan(XNUT))))  
+         XE = (dsin(XNUT))/(dcos(XALPHA)) 
+* Ds le repere de l'adaptateur :
+         XGD = XD*(dsin(XALPHA)) / (dcos(XALPHA + XNUT) ) 
+         XGE = XD*(dsin(XALPHA)) / (dcos(XALPHA - XNUT) ) 
+         XA = (XGD + XGE)/2. 
+*        XC = XA*XE
+         XB = XA*( (1. - (XE**2))**0.5 ) 
+         XP = (XB**2)/XA
+*   Paramètre LAMBDA (pour alcul tangente à l'ellipse) :
+         XLAMBDA = XB/XA
+*   Par rapport au centre de l'ellipse (dans la base (EX, EY)) 
+         XCEG = XA - XGE
+         YCEG = 0.D0
+         XGC  = XPROJ(1)/dcos(XNUT)
+         YGC  = XPROJ(2)
+*   On obtient CeC : vecteur centre ellipse - centre cercle
+*                    dans la bas (EX,EY) :
+         XCEC = XCEG + XGC
+         YCEC = YCEG + YGC
+cmsw     WRITE(*,*)'DEVFB10 : XCEG = ',XCEG
+cmsw     WRITE(*,*)'DEVFB10 : XCEC = XCEG + XGC'
+cmsw     WRITE(*,*)'DEVFB10 : YCEC = YCEG + YGC'
+
+*   Ce qui nous permet de MAJ les coord. du centre du cercle 
+*           / centre de l'ellipse dans la bas (EX;EY)
+         XPROJ2(1) = XCEC
+         XPROJ2(2) = YCEC
+
+         WRITE(*,*)'DEVFB10 : Prorietes ellipse :'
+         WRITE(*,*)'          XA = ',XA
+         WRITE(*,*)'          XB = ',XB
+         WRITE(*,*)'          XE = ',XE
+         WRITE(*,*)'          XGC = ',XGC
+         WRITE(*,*)'          YGC = ',YGC
+         WRITE(*,*)'          XCEC = ',XCEC
+         WRITE(*,*)'          YCEC = ',YCEC
+         WRITE(*,*)'          XD = ',XD
+         WRITE(*,*)'          XGD = ',XGD
+         WRITE(*,*)'          XGE = ',XGE
+
+         WRITE(*,*)'DEVFB10 : Coord. centre du cercle / CE'
+         WRITE(*,*)'          XPROJ2(1) = ',XPROJ2(1)
+         WRITE(*,*)'          XPROJ2(2) = ',XPROJ2(2)
+
+************************************************************************ 
+*        POINT DE CHOC = PLUS PROCHE VOISIN DU CENTRE DU CERCLE C
+*                 parmis les points de l'ellipse
+************************************************************************         
+      
+************************************************************************ 
+*        CAS PARTICULIERS : centre du cercle sur un axe de l'ellipse
+************************************************************************         
+*      IF ((dabs(XPROJ2(2)).LT.1.D-20).AND.
+*     &    (dabs(XPROJ2(1)).LT.1.D-20)) THEN
+**        write(*,*)' Le cercle est centre dans l ellipse.'
+**       Cas tres particulier on considere qu'il n'y a pas penetration.
+**       On met des valeurs bidons : --> tres con
+*        XINCID = 0.
+*        RC = XA
+*        XTHMAX = 0.
+*        XINCID = 0.
+*        GOTO 10
+*      ENDIF
+      if ((dabs(xproj2(2)).eq.0.d0).or.(dabs(xproj2(1)).eq.0.d0)) then
+       if ((dabs(xproj2(2)).eq.0.d0).and.(dabs(xproj2(1)).eq.0.d0)) then
+          DO ID=1,IDIM
+             NPE(ID) = XCE(ID)
+             TPE(ID) = YCE(ID)
+          ENDDO
+          XP = XA
+          YP = 0.D0
+          RC = ((XB**2)/XA)
+          XINCID = 0.D0           
+          XDR = XA - XRAYP
+          laxe = .true.
+          write(*,*)'devfb10 : centre'
+        endif
+       if ((dabs(xproj2(2)).eq.0.d0).and.(dabs(xproj2(1)).gt.0.d0)) then
+          DO ID=1,IDIM
+             NPE(ID) = dsign(1.d0,xproj2(1))*XCE(ID)
+             TPE(ID) = dsign(1.d0,xproj2(1))*YCE(ID)
+          ENDDO
+          XP = dsign(1.,xproj2(1))*XA
+          YP = 0.D0
+          RC = ((XB**2)/XA)
+          XDR = XA - dabs(xproj2(1)) - XRAYP
+          if (xproj2(1).gt.0.d0) then
+            xincid = 0.d0           
+            laxe = .true.
+            write(*,*)'devfb10 : l0'
+          endif
+          if (xproj2(1).lt.0.d0) then
+            xincid = xpi
+            laxe = .true.
+            write(*,*)'devfb10 : l180'
+          endif
+        endif
+      if ((dabs(xproj2(1)).eq.0.d0).and.(dabs(xproj2(2)).gt.0.d0)) then
+          do id=1,idim
+             npe(id) = dsign(1.d0,xproj2(2))*yce(id)
+             tpe(id) = dsign(1.d0,xproj2(2))*xce(id)
+          enddo
+          XP = 0.D0
+          YP = dsign(1.,xproj2(2))*XB
+          RC = ((XA**2)/XB)
+          XDR = XB - dabs(xproj2(2)) - XRAYP
+          if (xproj2(2).gt.0.d0) then
+            xincid = xpi/2.d0
+            laxe = .true.
+            write(*,*)'devfb10 : l90'
+          endif
+          if (xproj2(2).lt.0.d0) then
+            XINCID = (3.d0/2.d0)*xpi
+            laxe = .true.
+            write(*,*)'devfb10 : l270'
+          endif
+        endif
+      endif
+*     si l'incidence est selon un axe, on saute le bloc suivant.
+      if (laxe) goto 30
+************************************************************************ 
+*        CAS GENERAL : 
+*     On trouve le plus proche voisin du centre du cercle 
+*     sur l'ellipse.
+************************************************************************         
+*        Calcul du point d'incidence P et de la distance ||CP|| 
+*						petite distinction de cas si l'ellipse est une cercle 
+*						et que ZC > ZLIM. (FINDP marche dans les deux cas mais moins precis et plus couteux)
+        IF (LFLAT1) THEN
+cmsw      WRITE(*,*)' LFLAT1 : calcul du point d incidence.'
+          XDMIN  = RC - dsqrt((XPROJ2(1)**2) + (XPROJ2(2)**2))
+          XP = RC*XPROJ2(1)/dsqrt((XPROJ2(1)**2) + (XPROJ2(2)**2))
+          YP = RC*XPROJ2(2)/dsqrt((XPROJ2(1)**2) + (XPROJ2(2)**2))
+          write(*,*)'lflat1 : xp = ',xp
+          write(*,*)'       : yp = ',yp
+          write(*,*)'       : rc = ',rc
+          write(*,*)'       : xdmin = ',xdmin
+        ELSE
+*         Old procedure de detection :
+*         CALL FINDP(XA,XB,XPROJ2(1),XPROJ2(2),XP,YP,XDMIN)
+*         Critere sur la norme du produit vectoriel entre :
+*         CP et la normale a l'ellipse en P n(P).
+          write(*,*)'call findp2'
+         	CALL FINDP2(XA,XB,XPROJ2(1),XPROJ2(2),CRIT,MAXIT,XP,YP,XDMIN)
+        ENDIF
+*        Penetration radiale :
+         XDR = XDMIN - XRAYP
+         write(*,*)'       : xdr = ',xdr
+*        Calcul de l'angle d'incidence : 
+*        CALL CALCINC(XP,YP,XINCID)
+         write(*,*)'call calcinc'
+         CALL CALCINC(XP,YP,XINCID,laxe,NPE,TPE,XCE,YCE,
+     &                   XRAYP,XA,XB,RC,IDIM,XDR)
+         write(*,*)'xincid = ',xincid
+         write(*,*)'xdr = ',xdr
+         if (laxe) then
+          write(*,*)'devfb10 : laxe --> goto 30 '
+          goto 30
+         endif
+****     Si le point d'indidence n'est aps sur un axe :
+
+*        Calcule du rayon de courbure RC :
+         RC = ((XA**2)/XB) * 
+     &         ((1.d0 - ((XE**2)*(dcos(XINCID)**2)))**(3.D0/2.D0))
+         write(*,*)'rc = ',rc
+*        Calcul de NPE le vecteur normal a l'ellipse en P (dans le plan de l'ellipse)
+         XALF = (-1.D0)*(XB**2)*XP/((XA**2)*YP) 
+cmsw     WRITE(*,*)'       XALF =',XALF
+         YSIG = XPROJ2(2)/dabs(XPROJ2(2))
+cmsw     WRITE(*,*)'       YSIG =',YSIG
+         PSXNPE = 0.D0
+         PSXTPE = 0.D0
+         PSXTNPE = 0.D0
+         DO ID=1,IDIM
+            TPE(ID) = (-1.D0)*YSIG*(XCE(ID) + (XALF*YCE(ID)))
+            NPE(ID) = YSIG*(((-1.D0)*XALF*XCE(ID)) + YCE(ID))
+            PSXNPE = PSXNPE + NPE(ID)**2
+            PSXTPE = PSXTPE + TPE(ID)**2
+            PSXTNPE = PSXTNPE + NPE(ID)*TPE(ID)
+         ENDDO
+cmsw     WRITE(*,*)'     NPEX = ',YSIG*(((-1.D0)*XALF))/dsqrt(PSXNPE)
+cmsw     WRITE(*,*)'     NPEY = ',YSIG/dsqrt(PSXNPE)
+         DO ID=1,3
+            NPE(ID) = NPE(ID)/dsqrt(PSXNPE) 
+            TPE(ID) = TPE(ID)/dsqrt(PSXTPE) 
+            write(*,*)'npe(',id,') = ',npe(id)
+            write(*,*)'tpe(',id,') = ',tpe(id)
+         ENDDO
+*     Saut dans le cas ou l'incidence se fait le long d'un axe de l'ellipse :
+ 30   CONTINUE
+
+cmsw  WRITE(*,*)'DEVFB10 : XDR = ',XDR
+cmsw  WRITE(*,*)'          Rcurv = ',RC
+cmsw  WRITE(*,*)'          Rcurv/Rcirc = ',RC/XRAYP
+cmsw  WRITE(*,*)'          XINCID = ',XINCID*180.D0/XPI
+cmsw  WRITE(*,*)'          RC90 = ',(XA**2/XB)
+cmsw  WRITE(*,*)'          dcos(XINCID) = ',dcos(XINCID)
+cmsw  WRITE(*,*)' NPE repere Cast3m : '
+cmsw  WRITE(*,*)' NPE(1) = ',NPE(1)
+cmsw  WRITE(*,*)' NPE(2) = ',NPE(2)
+cmsw  WRITE(*,*)' NPE(3) = ',NPE(3)
+
+************************************************************************ 
+*        Y A T IL PENETRATION DU CERCLE DANS LE CONE ?
+************************************************************************         
+*     XPR = penetration radiale (ie. suivant er dans le plan de nutation)
+*     XJEU = dsqrt(((XP - XPROJ2(1))**2) + ((YP - XPROJ2(2))**2))
+*     Valeur de la penetration radiale :
+*        - si XDR < 0 : penetration
+*        - si XDR > 0 : pas penetration
+* OLD qui marche : IF ((XDR.LT.0.D0).AND.(dabs(XDR).GT.1.D-11)) THEN
+      IF ((XDR.LT.0.D0).OR.(LFLAT.AND.(XDN.LT.0.d0))) THEN
+         LPENE = .TRUE.
+         WRITE(*,*)'DEFVB10 : Penetration : '
+         WRITE(*,*)'           XDR = ',XDR
+         WRITE(*,*)'          LPENE = ',LPENE
+         IF (LFLAT) THEN 
+*            write(*,*)'DEFVB10 : FLAT CASE '
+            GOTO 20
+         ENDIF
+      ELSE
+         write(*,*)'DEFVB10 : Pas de penetration : '
+         GOTO 10
+      ENDIF
+************************************************************************ 
+*        CALCUL DE LA NORMALE AU CONE AU POINT D IMPACT
+************************************************************************         
+*     XDN : penetration noralement au cone au point d'incidence :
+      IF (LPENE) THEN
+*        Il s'agit dans un 1er temps de calculer les coordonnees 
+*        du point d'incidence dans le repere du cone : 
+*        On replace le point d'incidence 
+*        par / G (vertical du sommet du cone)
+*        et nn plus / CE (centre de l'ellipse)
+         XGP = XP - XCEG
+         YGP = YP - YCEG
+*        WRITE(*,*)'DEVFB10 : XGP = ',XGP
+*        WRITE(*,*)'DEVFB10 : YGP = ',YGP
+* Passage dans le repere du cone (G,Ex,Ey,Ez) avec :
+*        Ex = XCO, Ey = YCE, Ez = XPALB(I,ID1+ID)
+*        EX = XCE, EY = YCE, EZ = ZCE
+*        normalement : 
+         XGP2 = dcos(XNUT)*XGP
+         YGP2 = YGP
+         write(*,*)'devfb10 : xgp2 = ',xgp2
+         write(*,*)'devfb10 : ygp2 = ',ygp2
+*        WRITE(*,*)'DEVFB10 : XGP2 = ',XGP2
+*        WRITE(*,*)'DEVFB10 : YGP2 = ',YGP2
+*       XGP2 = XGP*(XCE(1)*XCO(1)+XCE(2)*XCO(2)+XCE(3)*XCO(3)) + 
+*   &          YGP*(YCE(1)*XCO(1)+YCE(2)*XCO(2)+YCE(3)*XCO(3)) 
+*       YGP2 = XGP*(XCE(1)*YCE(1)+XCE(2)*YCE(2)+XCE(3)*YCE(3)) + YGP
+*  
+         if ((dabs(xgp2).eq.0.d0).or.((ygp2).eq.0.d0)) then
+          if ((dabs(xgp2).eq.0.d0).and.(dabs(ygp2).eq.0.d0)) then
+*           lcent = .true.
+*           ici : 
+*           - le cercle est centre dans l'ellipse
+*           - il y a penetration
+*           - le cercle n'est pas a plat ie. xnut nn nul
+*           --> la penetration se fait forcement selon l'axe de l'ellipse
+            xcos = dsign(1.d0,xgp2)
+            xsin = 0.d0
+          endif
+          if ((dabs(xgp2).eq.0.d0).and.(dabs(ygp2).gt.0.d0)) then
+            xcos = 0.d0
+            xsin = dsign(1.d0,ygp2)
+          endif
+          if ((dabs(xgp2).gt.0.d0).and.(dabs(ygp2).eq.0.d0)) then
+            xcos = dsign(1.d0,xgp2)
+            xsin = 0.d0
+          endif
+         else
+          XCOS = XGP2/dsqrt((XGP2**2)+(YGP2**2))
+          XSIN = YGP2/dsqrt((XGP2**2)+(YGP2**2))
+         endif
+*        WRITE(*,*)'DEVFB10 : XCOS = ',XCOS
+*        WRITE(*,*)'DEVFB10 : XSIN = ',XSIN
+*        Dans le repere du cone :
+         XNCONEX = dcos(XALPHA)*XCOS
+         XNCONEY = dcos(XALPHA)*XSIN
+         XNCONEZ = (-1.D0)*dsin(XALPHA)
+         DO ID=1,3
+            NCONE(ID) = XNCONEX*XCO(ID) + XNCONEY*YCE(ID) + 
+     &                  XNCONEZ*ZCO(ID)
+         ENDDO
+*        On peut maintenant calculer la valeur de la penetration
+*        normalement au cone = XDR*(NPE PSCA NCONE)
+         XPNENC = 0.D0
+         DO ID=1,3
+            XPNENC = XPNENC + NCONE(ID)*NPE(ID)
+         ENDDO
+*        Finalement, penetration normalement au cone XDN :
+         XDN = XDR*XPNENC
+        write(*,*)'xdn = ',xdn
+
+cmsw      WRITE(*,*)'           XALPHA = ',XALPHA
+cmsw      WRITE(*,*)'L560 : Ncone repere (Ex, Ey, Ez) :'
+cmsw      WRITE(*,*)'           NCONEX = ',XNCONEX
+cmsw      WRITE(*,*)'           NCONEY = ',XNCONEY
+cmsw      WRITE(*,*)'           NCONEZ = ',XNCONEZ
+cmsw      WRITE(*,*)'           NCONE(1) = ',NCONE(1)
+cmsw      WRITE(*,*)'           NCONE(2) = ',NCONE(2)
+cmsw      WRITE(*,*)'           NCONE(3) = ',NCONE(3)
+cmsw      WRITE(*,*)'           XPNENC = ',XPNENC
+cmsw      WRITE(*,*)'           XDN = ',XDN
+*     Pour check geometrique : 
+cmsw      WRITE(*,*)'DEVFB10 : XP = ',XP
+cmsw      WRITE(*,*)'DEVFB10 : YP = ',YP
+cmsw      WRITE(*,*)'DEVFB10 : XNUT = ',(XNUT*180.D0/XPI)
+cmsw      WRITE(*,*)'DEVFB10 : XINCID = ',(XINCID*180.D0/XPI)
+cmsw      WRITE(*,*)'DEVFB10 : Rcurv/Rcirc = ',RC/XRAYP
+*        ENDIF
+
+************************************************************************ 
+* Calcul de la force normale via formule analytique :
+* IF (LPENE) THEN
+************************************************************************ 
+*        Veritable limite "physique" :      
+         XATRANS = 0.012533086738156748
+*        Veritable limite "physique" :      
+*        XATRANS = 0.00030498823335122383
+*
+         IF (dabs(XDN).GE.(XATRANS*((RC/XRAYP)-1.D0))) THEN
+*           HERTZ 
+            LHERTZ = .TRUE.
+            WRITE(*,*)'DEVFB10 : CAS HERTZ'
+            XAMAX = 194.4
+            XATAU = 20421.124219237907
+            XBTAU = -20420.933942756194
+*           TAU est fction affine de Rcurv/Rcirc :
+            XTAU = dabs(XBTAU + (XATAU * (RC/XRAYP)))
+cmsw        WRITE(*,*)'         XTAU = ',XTAU
+*           On calcul la largeur de contact angulaire XTHMAX en radians :
+*              Attention ! Delta_imp en micrometre !!
+            XTHMAX = XAMAX * (1.D0 - EXP(-dabs(XDN)*(10.**6)/XTAU)) *
+     &                            XPI / 180.D0
+            WRITE(*,*)'         XTHMAX degres = ',
+     &                  XAMAX * (1.D0 - EXP(-dabs(XDN)*(10.**6)/XTAU))
+*           1/2 largeur du contact
+            XL12 = (XRAYP * XTHMAX) / 2.D0
+*           CHERTZ2 : 
+            XACH = -13619.717998379898
+            XBCH = -528.7181273178094
+*              Attention ! Delta_imp en micrometre !!
+            XCHERTZ = XACH*dabs(XDN)*1.D6 + XBCH
+            XREQ = XRAYP*RC/(XRAYP + RC)
+cmsw        WRITE(*,*)'         XREQ = ',XREQ
+cmsw        WRITE(*,*)'         Chertz = ',XChertz
+*           Calcul pre-call de calcnor : 
+            XDTH = XTHMAX/(REAL(NECH - 1))
+            XDL = XRAYP * XDTH
+*           NECH = FLOOR(XTHMAX/XDTH) + 1
+            CALL CALCNOR(XTHMAX,NPE,TPE,XCE,YCE,XNUT,XALPHA,XRAYP,
+     &                XGC,YGC,XD,
+     &                XPROF,YPROF,ZPROF,
+     &                XNCONE,YNCONE,ZNCONE,XDTH,NECH)
+            XFNX = 0.D0
+            XFNY = 0.D0
+            XFNZ = 0.D0
+*           Pour modele de Hertz : THMAX en degres ou radian car c'est un ratio
+            DO IPROF=1,NECH
+               THPROF = ((-1.)*XTHMAX/2.D0) + REAL(IPROF-1)*XDTH
+               IF (LNORSEUL) THEN 
+               XFNX = XFNX + (XCHERTZ*XL12 / (2.D0*XREQ)) *
+     &    dsqrt(dabs(1.D0 - ((THPROF/(0.5*XTHMAX))**2)))*XNCONE(IPROF)* 
+     &                                 XDL 
+
+               XFNY = XFNY + (XCHERTZ*XL12 / (2.D0*XREQ)) *
+     &    dsqrt(dabs(1.D0 - ((THPROF/(0.5*XTHMAX))**2)))*YNCONE(IPROF)* 
+     &                                 XDL 
+
+               XFNZ = XFNZ + (XCHERTZ*XL12 / (2.D0*XREQ)) *
+     &    dsqrt(dabs(1.D0 - ((THPROF/(0.5*XTHMAX))**2)))*ZNCONE(IPROF)* 
+     &                                 XDL 
+               ENDIF
+*              Pour le calcul de la resultante tangentielle,
+*               on va avoir besoin de FNB :
+               FNB(IPROF) = (XCHERTZ*XL12 / (2.D0*XREQ)) *
+     &            dsqrt(dabs(1.D0 - ((THPROF/(0.5*XTHMAX))**2))) * XDL
+               IF (IIMPI.EQ.555) THEN
+*                write(IOIMP,*)'    FNB(',IPROF,') = ',FNB(IPROF)
+               ENDIF
+            ENDDO
+         ELSE
+*           PARABOLIC 
+            LPARAB = .TRUE.
+            WRITE(*,*)'DEVFB10 : CAS PARABOLIC'
+*           Calcul des coeffs A0 et A2 :
+*           A0 : 
+            YFTY0  = -1.68244079 * (10.D0**6)
+            XBETA0 = 1.07926347 * (10.D0**6)
+            XALF0  = 0.997563673
+            XD0    = -5.85040053 * (10.D0**(-2))
+            XREF0  = 10.D0**(-5)
+            XP0    = 0.822937776
+*           TODO VIRER : Bricolage : 
+*           IF ((RC/XRAYP).LT.1.D0) RC = (XALF0 + 1.D-4) * XRAYP
+            XA0 = ( YFTY0 + XBETA0 * (((RC/XRAYP) - XALF0)**(XD0)) )*
+     &                           (dabs(XDN)/XREF0)**XP0
+*           A2 : 
+            YFTY2  = -1.25487133 * (10.D0**4)
+            XBETA2 = 1.16651218 * (10.D0**4)
+            XALF2  = 0.D0
+            XD2    = -1.94886983 * (10.D0**(-2)) 
+            XREF2  = 1.00814747
+            XP2    = 1.10651702
+            XA2    = ( YFTY2 + XBETA2 * ((dabs(XDN) - XALF2)**(XD2)) )*
+     &                     ((RC/XRAYP)/(XREF2-1.D0))**XP2
+*           THMAX : en radians 
+            XTHMAX = 2.D0*dsqrt(dabs(XA0/XA2)) * XPI / 180.D0
+
+            WRITE(*,*)'      XA0 = ',XA0
+            WRITE(*,*)'      XA2 = ',XA2
+            WRITE(*,*)'      XTHMAX = ',XTHMAX*180.D0/XPI
+
+*           Calcul pre-call de calcnor : XDTH en radians
+            XDTH = XTHMAX/(REAL(NECH - 1))
+            XDL = XRAYP * XDTH
+*           NECH = FLOOR(XTHMAX/XDTH) + 1
+            CALL CALCNOR(XTHMAX,NPE,TPE,XCE,YCE,XNUT,XALPHA,XRAYP,
+     &                   XGC,YGC,XD,
+     &                   XPROF,YPROF,ZPROF,
+     &                   XNCONE,YNCONE,ZNCONE,XDTH,NECH)
+
+****        CALCUL DE LA FORCE NORMALE RESULTANTE
+*           Tjrs dans le repere du cone, la force normale a :
+*              Fn^x = sum_nech (A0 + A2 theta**2 ) * Ncone_x * dl 
+*              Fn^y = sum_nech (A0 + A2 theta**2 ) * Ncone_y * dl 
+*              Fn^z = sum_nech (A0 + A2 theta**2 ) * Ncone_z * dl 
+            XFNX = 0.D0
+            XFNY = 0.D0
+            XFNZ = 0.D0
+            DO IPROF=1,NECH
+*             Parabolic : il faut THPROF & XDTH en degres!
+              THPROF = ((-1.)*(XTHMAX*180.D0/XPI)/2.D0) + 
+     &                      REAL(IPROF-1)*(XDTH*180.D0/XPI)
+              IF (LNORSEUL) THEN 
+              XFNX = XFNX + ((XA0 + XA2*(THPROF**2))*XNCONE(IPROF)*XDL) 
+              XFNY = XFNY + ((XA0 + XA2*(THPROF**2))*YNCONE(IPROF)*XDL)
+              XFNZ = XFNZ + ((XA0 + XA2*(THPROF**2))*ZNCONE(IPROF)*XDL)
+              ENDIF
+*              Pour le calcul de la resultante tangentielle,
+*               on va avoir besoin de FNB :
+               FNB(IPROF) = (XA0 + XA2*(THPROF**2))*XDL
+               IF (IIMPI.EQ.555) THEN
+*                write(IOIMP,*)'    FNB(',IPROF,') = ',FNB(IPROF)
+               ENDIF
+            ENDDO
+
+            IF (LNORSEUL) THEN
+*            write(*,*)'  PARABOLIC : Resultante normale repere du cone'
+*            write(*,*)'          XFNX = ',XFNX
+*            write(*,*)'          XFNY = ',XFNY
+*            write(*,*)'          XFNZ = ',XFNZ
+            ENDIF
+************************************************************************ 
+*        FIN DISTINCTION PARABOLIC / HERTZ 
+         ENDIF
+
+************************************************************************  
+
+************************************************************************  
+*     SI A PLAT :               
+ 20   CONTINUE
+************************************************************************ 
+      IF (LFLAT) THEN
+         write(*,*)'flat case : 20 continue'
+*        On définit quand meme certaines grandeurs 
+*        utiles pour la suite :
+         XTHMAX = 2.D0*XPI
+         XDTH = XTHMAX/(REAL(NECH))
+         XDL = XRAYP * XDTH
+         write(*,*)'    xthmax = ',xthmax
+*        Les normales sont confondus, on cree une BON :
+         CALL COMPBAS(ZCO,XCO,YCE)
+         DO ID=1,3 
+          XCE(ID) = XCO(ID)
+          ZCE(ID) = ZCO(ID)
+          NPE(ID) = XCO(ID)
+          TPE(ID) = YCE(ID)
+         ENDDO
+         write(*,*)'    xce = '
+         do id=1,3
+           write(*,'(1X,F8.5)') , xce(id)
+         enddo
+         write(*,*)'    yce = '
+         do id=1,3
+           write(*,'(1X,F8.5)') , yce(id)
+         enddo
+         write(*,*)'    zce = '
+         do id=1,3
+           write(*,'(1X,F8.5)') , zce(id)
+         enddo
+         write(*,*)'    npe = '
+         do id=1,3
+           write(*,'(1X,F8.5)') , npe(id)
+         enddo
+         write(*,*)'    tpe = '
+         do id=1,3
+           write(*,'(1X,F8.5)') , tpe(id)
+         enddo
+         XGC = 0.D0
+         YGC = 0.D0
+         XD = dabs(XPTP2(1)*ZCO(1) + XPTP2(2)*ZCO(2) + XPTP2(3)*ZCO(3))
+         CALL CALCNOR(XTHMAX,NPE,TPE,XCE,YCE,XNUT,XALPHA,XRAYP,
+     &                 XGC,YGC,XD,
+     &                 XPROF,YPROF,ZPROF,
+     &                 XNCONE,YNCONE,ZNCONE,XDTH,NECH)
+
+*        Calcul force normale : pour l'instant pas de tnagentielle 
+         XKVERT =  3.27043021 * (10.D0**9)
+cmsw     WRITE(*,*)'DEVFB10 FLAT CASE : XDN*XKVERT',XDN*XKVERT
+         XFNX = 0.D0
+         XFNY = 0.D0
+         XFNZ = 0.D0
+         DO IPROF=1,NECH
+*           Calcul de la force normale : 
+            FNB(IPROF) = XDN*XKVERT/(REAL(NECH - 1))
+            IF (IIMPI.EQ.555) THEN
+*             write(IOIMP,*)'    FNB(',IPROF,') = ',FNB(IPROF)
+            ENDIF
+            IF (LNORSEUL) THEN 
+              XFNX = XFNX + (FNB(IPROF)*XNCONE(IPROF)*XDL) 
+              XFNY = XFNY + (FNB(IPROF)*YNCONE(IPROF)*XDL)
+              XFNZ = XFNZ + (FNB(IPROF)*ZNCONE(IPROF)*XDL)
+            ENDIF
+         ENDDO
+*        
+      ENDIF
+* test sortie calcnor  :
+cmsw  WRITE(*,*)'DEVFB10 : NECH = ',NECH
+cmsw  WRITE(*,*)'DEVFB10 : XDTH = ',XDTH
+cmsw  WRITE(*,*)'DEVFB10 : XDL = ',XDL
+
+************************************************************************  
+*                             CERCLE
+*         CALCUL DE LA VITESSE TANGENTIELLE & NORMALE SUR LE PROFILE 
+*                           EN BASE B
+*                   --> VNB(NECH) & VTB(3,NECH)
+************************************************************************  
+*         Arguments dans calcvtb : 
+*         IBCO = -1 car mm si le cone est mobile. C'est bien 
+*         les vitesses sur le profile du cercle en base B que l'on veut.
+          write(*,*)'call calcvtb cercle'
+          CALL CALCVTB(NPOI,XTHMAX,NPE,TPE,XCE,YCE,XCO,ZCO,
+     &                  XRAYP,XNUT,XALPHA,
+     &                  XNCONE,YNCONE,ZNCONE,XDTH,NECH,KTROT,ISB,IND,
+     &                  VNB,VTB,XPRB,XNCB,XPTB,NPLB,XPTP2,-1)
+
+************************************************************************  
+*                             CONE
+*         CALCUL DE LA VITESSE TANGENTIELLE & NORMALE SUR LE PROFILE 
+*                           EN BASE B
+*                   --> VNBCO(NECH) & VTBCO(3,NECH)
+************************************************************************  
+*         Arguments dans calcvtb : 
+*         IB = IBCO = ISBC : ss base du cone 
+*         --> représente deux arguments dans l'appel de calcvtb.
+*         IPSOM = IP du sommet du cone.
+*         SCE = XPTP2 : vecteur SconeCcercle en base B
+          IF (ISBC.GT.0) THEN
+cmsw        WRITE(*,*)'DEVFB10 : RECO vite profile CONE'
+            write(*,*)'call calcvtb cone'
+            CALL CALCVTB(IPSOM,XTHMAX,NPE,TPE,XCE,YCE,XCO,ZCO,
+     &                   XRAYP,XNUT,XALPHA,
+     &                   XNCONE,YNCONE,ZNCONE,XDTH,NECH,KTROT,ISBC,IND,
+     &                   VNBCO,VTBCO,XPRBCO,XNCB,XPTB,NPLB,XPTP2,ISBC)
+*
+*           MAJ des vitesses en base B : on ne garde que les vitesses
+*             normales et tangentielles RELATIVES.
+cmsw        WRITE(*,*)'DEVFB10 : Soustraction Vcercle - Vcone :'
+            DO ID=1,3
+cmsw          WRITE(*,*)'  MAJ VT(',ID,') : '
+              DO IPROF=1,NECH
+                VNB(IPROF) = VNB(IPROF) - VNBCO(IPROF)
+                VTB(ID,IPROF) = VTB(ID,IPROF) - VTBCO(ID,IPROF)
+cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
+              ENDDO
+            ENDDO
+* 
+          ENDIF
+
+************************************************************************  
+*         MAJ FORCE NORMALE --> PRISE EN COMPTE DE L'AMORTISSEMENT
+************************************************************************  
+*        XAMOR est une densite lineique d'amortissement :
+         IF (XAMOR.GT.0.d0) THEN
+            DO ID=1,3
+              DO IPROF=1,NECH
+                 FNB(IPROF) = FNB(IPROF) - (XAMOR* XDL * VNB(IPROF))
+              ENDDO
+            ENDDO
+         ENDIF
+************************************************************************  
+*         CALCUL DE LA FORCE TANGENTIELLE SUR LE PROFILE 
+*                DE LA PUISSANCE D'USURE SUR LE PROFILE
+*                           EN BASE B
+*                   --> FTB(3,NECH) XPUS(NECH)
+************************************************************************  
+         write(*,*)'call calcftb'
+         CALL CALCFTB(FNB,VTB,NECH,XGLIS,VLIM,FTB,XPUS,XPUSTOT,IDIM,
+     &                XLGISADH)
+
+************************************************************************  
+*                 CALCUL DU COUPLE RESISTANT + RESULTANTE 
+*                    (totalisation sur le profile)  
+*                           EN BASE B
+*                   --> FTOTB(NPOI,1-3),FTOTB(NPOI,4-6)
+************************************************************************  
+         write(*,*)'call calcrgb'
+         CALL CALCRGB(FNB,FTB,XPRB,NECH,XNCB,FTOTB,NPOI,NPLB,
+     &                FNBRES,FTBRES,GRES)
+*  TODO : FTOTB --> prend eventuellement en compte d'autre liaisons
+*         si on ne veut sauver que l'influence du cercle_cone, il faut 
+*         creer une variable intermédiaire qui sauve uniquement les efforts
+*         du cercle_cone.
+*         TODO : sommer les forces tangentielles au passage 
+*                 a exporter dans XVALB.
+
+************************************************************************  
+*                 faible nutation : interpolation avec : 
+*   - le cercle "a plat"
+*   - un depl. imp. projete sur la vertical xdv
+************************************************************************  
+        if ((xnut.gt.0.d0).and.(xnut.lt.xlimint)) then
+          xpnezc = 0.D0
+          DO ID=1,3
+            xpnezc = xpnezc + zco(id)*npe(id)
+          ENDDO
+*         Finalement, penetration verticalement au cone XDN :
+*           rq : on sait deja qu'il y a penetration dc on prend la valeur abs
+          xdv = -xdr*dabs(xpnezc)
+          write(*,*)'xdv = ',xdv
+
+*        On définit quand meme certaines grandeurs 
+*        utiles pour la suite :
+         XTHMAX = 2.D0*XPI
+         XDTH = XTHMAX/(REAL(NECH))
+         XDL = XRAYP * XDTH
+         write(*,*)'    xthmax = ',xthmax
+         XGC = 0.D0
+         YGC = 0.D0
+         XD = dabs(XPTP2(1)*ZCO(1) + XPTP2(2)*ZCO(2) + XPTP2(3)*ZCO(3))
+         CALL CALCNOR(XTHMAX,NPE,TPE,XCE,YCE,XNUT,XALPHA,XRAYP,
+     &                 XGC,YGC,XD,
+     &                 XPROF,YPROF,ZPROF,
+     &                 XNCONE,YNCONE,ZNCONE,XDTH,NECH)
+
+*        Calcul force normale : pour l'instant pas de tnagentielle 
+         XKVERT =  3.27043021 * (10.D0**9)
+cmsw     WRITE(*,*)'DEVFB10 FLAT CASE : XDN*XKVERT',XDN*XKVERT
+         XFNX = 0.D0
+         XFNY = 0.D0
+         XFNZ = 0.D0
+         DO IPROF=1,NECH
+*           Calcul de la force normale : 
+            FNB(IPROF) = XDN*XKVERT/(REAL(NECH - 1))
+            IF (IIMPI.EQ.555) THEN
+*             write(IOIMP,*)'    FNB(',IPROF,') = ',FNB(IPROF)
+            ENDIF
+            IF (LNORSEUL) THEN 
+              XFNX = XFNX + (FNB(IPROF)*XNCONE(IPROF)*XDL) 
+              XFNY = XFNY + (FNB(IPROF)*YNCONE(IPROF)*XDL)
+              XFNZ = XFNZ + (FNB(IPROF)*ZNCONE(IPROF)*XDL)
+            ENDIF
+         ENDDO
+        
+        endif
+************************************************************************  
+*         TRANSMISSION DE LA RESUTANTE ET DU COUPLE A LA SS BASE 
+*                   DU CONE (ISBC diff. 0)
+************************************************************************  
+         IF (ISBC.GT.0) THEN
+cmsw       WRITE(*,*)'DEVFB10 : prise en compte forces sur CONE'
+*          Implementation de FTOTB au point de liason du cone :
+*          Fres_cone = - Fres_cercle
+           FTOTB(IPSOM,1) = FTOTB(IPSOM,1) - FTOTB(NPOI,1)   
+           FTOTB(IPSOM,2) = FTOTB(IPSOM,2) - FTOTB(NPOI,2)   
+           FTOTB(IPSOM,3) = FTOTB(IPSOM,3) - FTOTB(NPOI,3)   
+*          Transport du moment au sommet du cone :
+*            Gamma_cone(Scone) = - Gamma_cercle(Ccercle) + (SconeCcercle wedge (-Fres_cercle))
+*            Gamma_cone(Scone) = - Gamma_cercle(Ccercle) - (SconeCcercle wedge Fres_cercle)
+           FTOTB(IPSOM,4) = FTOTB(IPSOM,4) -
+     &                      GRES(1) -
+     &                      (XPTP2(2)*(FNBRES(3)+FTBRES(3)) -
+     &                       XPTP2(3)*(FNBRES(2)+FTBRES(2)))
+           FTOTB(IPSOM,5) = FTOTB(IPSOM,5) -
+     &                      GRES(2) -     
+     &                      (XPTP2(3)*(FNBRES(1)+FTBRES(1)) -
+     &                       XPTP2(1)*(FNBRES(3)+FTBRES(3)))
+           FTOTB(IPSOM,6) = FTOTB(IPSOM,6) -
+     &                      GRES(3) - 
+     &                      (XPTP2(2)*(FNBRES(1)+FTBRES(1)) -
+     &                       XPTP2(1)*(FNBRES(2)+FTBRES(2)))
+
+cmsw        WRITE(*,*)'DEVFB10 : FTOTB(IPSOM,1) = ',FTOTB(IPSOM,1) 
+cmsw        WRITE(*,*)'          FTOTB(IPSOM,2) = ',FTOTB(IPSOM,2) 
+cmsw        WRITE(*,*)'          FTOTB(IPSOM,3) = ',FTOTB(IPSOM,3) 
+cmsw        WRITE(*,*)'          FTOTB(IPSOM,4) = ',FTOTB(IPSOM,4) 
+cmsw        WRITE(*,*)'          FTOTB(IPSOM,5) = ',FTOTB(IPSOM,5) 
+cmsw        WRITE(*,*)'          FTOTB(IPSOM,6) = ',FTOTB(IPSOM,6) 
+         ENDIF
+
+************************************************************************  
+*                  FIN SI PENETRATION
+      ENDIF
+************************************************************************ 
+
+************************************************************************  
+*     SI PAS PENETRATION :               
+ 10   CONTINUE
+************************************************************************ 
+
+************************************************************************  
+*          REMPLISSAGE XVALB : s'aider de DYNE27
+*              ou les slots de sortie sont définis !
+************************************************************************  
+*     FORCE_DE_CHOC_NORMALE :
+*      XVALB(I,IND,1) = dsqrt(FTOTB(NPOI,1)**2 + FTOTB(NPOI,2)**2 +
+*     &                                         FTOTB(NPOI,3)**2)
+      XVALB(I,IND,1)=dsqrt(FNBRES(1)**2 + FNBRES(2)**2 + FNBRES(3)**2)
+*     FORCE_DE_CHOC_TANGENTIELLE :
+      XVALB(I,IND,10)=dsqrt(FTBRES(1)**2 + FTBRES(2)**2 + FTBRES(3)**2)
+
+      IF (LPENE) THEN
+        ICENTR = INT(REAL(NECH - 1) / 2.D0)
+        XVALB(I,IND,7) = VTB(1,ICENTR)
+        XVALB(I,IND,8) = VTB(2,ICENTR)
+        XVALB(I,IND,9) = VTB(3,ICENTR)
+*       PUISSANCE_USURE_INSTANTANEE
+        XVALB(I,IND,12) = XPUSTOT
+      ENDIF
+*     POURCENTAGE_GLISS_ADH
+      XVALB(I,IND,27) = XGLISADH
+*     Moment par rappor a la fibre neutre : 
+*     MX_POINT_FIBRE_NEUTRE :
+*     XVALB(I,IND,13) = FTOTB(NPOI,4)
+      XVALB(I,IND,13) = GRES(1)
+*     MY_POINT_FIBRE_NEUTRE :
+*     XVALB(I,IND,14) = FTOTB(NPOI,5)
+      XVALB(I,IND,14) = GRES(2)
+*     MZ_POINT_FIBRE_NEUTRE :
+*     XVALB(I,IND,15) = FTOTB(NPOI,6)
+      XVALB(I,IND,15) = GRES(3)
+
+      LSUP = .TRUE.
+      IF (LSUP) THEN
+*     Parametres rajoutes : 
+*     PENETRATION_NORMALE 
+      XVALB(I,IND,19) = XDN
+*     RAYON_COURBURE (cf. dyne12):
+      XVALB(I,IND,20) = RC/XRAYP
+*     NUTATION (cf. dyne12):
+      XVALB(I,IND,21) = XNUT*180./XPI
+*     LARGEUR_PROFILE (cf. dyne12):
+      XVALB(I,IND,22) = XTHMAX*180./XPI
+*     ANGLE_INCIDENCE (cf. dyne12):
+      XVALB(I,IND,23) = XINCID*180./XPI
+
+*			FX_BASE_B
+      XVALB(I,IND,24) = FNBRES(1) + FTBRES(1)
+**			FY_BASE_B
+      XVALB(I,IND,25) = FNBRES(2) + FTBRES(2)
+**			FZ_BASE_B
+      XVALB(I,IND,26) = FNBRES(3) + FTBRES(3)
+*     
+      WRITE(*,*)'DEVFB10 : XVALB(',I,IND,1,') = ',XVALB(I,IND,1)
+      WRITE(*,*)'DEVFB10 : XVALB(',I,IND,10,') = ',XVALB(I,IND,10)
+      WRITE(*,*)'DEVFB10 : XVALB(',I,IND,19,') = ',XVALB(I,IND,19)
+      WRITE(*,*)'DEVFB10 : XVALB(',I,IND,20,') = ',XVALB(I,IND,20)
+      WRITE(*,*)'DEVFB10 : XVALB(',I,IND,21,') = ',XVALB(I,IND,21)
+      WRITE(*,*)'DEVFB10 : XVALB(',I,IND,22,') = ',XVALB(I,IND,22)
+      WRITE(*,*)'DEVFB10 : XVALB(',I,IND,23,') = ',XVALB(I,IND,23)
+      WRITE(*,*)'       FORCES TOT CCONE BASE B :' 
+      WRITE(*,*)'DEVFB10 : XVALB(',I,IND,24,') = ',XVALB(I,IND,24)
+      WRITE(*,*)'DEVFB10 : XVALB(',I,IND,25,') = ',XVALB(I,IND,25)
+      WRITE(*,*)'DEVFB10 : XVALB(',I,IND,26,') = ',XVALB(I,IND,26)
+*     fin if LSUP : param supplementaires
+      ENDIF
+*
+*--------------------------------------------------------------------*
+* --- choc ...........
+*--------------------------------------------------------------------*
+*
+*     ELSE IF (ITYP.EQ.  ) THEN
+*        .......
+*        .......
+*
+      ENDIF
+*     
+*
+*     WRITE(*,*)'DEVFB10 : FIN. '
+      END

@@ -1,0 +1,401 @@
+C HBMFN2    SOURCE    BP208322  20/09/18    21:16:42     10718          
+
+        SUBROUTINE HBMFN2(NT,NHBM,NDDL,NFFT,KTQ,KTKAM,KTPHI,KTLIAA,
+     &                             KTLIAB,KTPAS,KTFEX,KOCLFA,KOCLB1,FNL)
+     
+*=======================================================================  
+*      Calcul de FNL(X) et dFNLdX par AFT (Alternating Frequency Time)
+*=======================================================================
+
+*----- Declarations ----------------------------------------------------
+
+        IMPLICIT INTEGER(I-N)
+        IMPLICIT REAL*8(A-H,O-Z)
+        INTEGER NP,NDDL,NT,NFFT
+        segment mwork
+          REAL*8 XT(NDDL,NFFT),FT(NDDL,NFFT),VT(NDDL,NFFT)
+          REAL*8 XAUX(NDDL,4),VAUX(NDDL,4),VCX(NFFT),VCV(NFFT)
+          REAL*8 MATJX(NDDL,NDDL,NFFT), MATJV(NDDL,NDDL,NFFT)
+          REAL*8 auxDL(2*NHBM+1,NFFT), JFR(2*NHBM+1,2*NHBM+1)
+          REAL*8 auxVDL(2*NHBM+1,NFFT), JVFR(2*NHBM+1,2*NHBM+1)
+          REAL*8 JACV(NT,NT),FNL2(NT)
+        endsegment
+c     segment to call fftpack5.1      
+        segment wfft51
+          real*8 work(lenwrk)
+          real*8 wwsave(lensav)
+          real*8 XX51(NCOU)
+          real*8 XV51(NCOU)
+        endsegment
+        REAL*8 PDT,FNL(NT),V1(NT)
+        LOGICAL RIGIDE
+*
+*-INC TMDYNC.INC
+************************** debut TMDYNC.INC ****************************
+
+*    TMDYNC : FUTUR INCLUDE POUR LES SEGMENTS DE L'OPERATEUR DYNC
+*    TODO   : a extraire dans un include des que stabilise
+*
+*     Segment des variables generalisees:
+*     -----------------------------------
+      SEGMENT MTQ
+         REAL*8 Q1(NT1)
+         REAL*8 OMEG,XPARA
+         REAL*8 JAC(NT1,NT1),ZZ(NT1,NT1),RX(NT1,NT1)
+         REAL*8 dX(NT1), dw, dv
+      ENDSEGMENT
+*     Q1   : vecteur des inconnues frequentielles de dimension (2h+1)*n
+*            Q1 = {q_0 q_c1 q_s1 ... q_sh}
+*            avec q_i vecteur de dimension n ou n=nombre de modes
+*     OMEG : frequence fondamentale de l'approximation
+*     XPARA: parametre de continuation (par defaut la frequence) 
+*            \in [PARINI,PARFIN]
+*     RX   : matrice jacobienne = ZZ + dFnl/dX
+*     JAC  : jacobienne des efforts non-lineaires  = dFnl/dX
+*     ZZ   : matrice dynamique associee aux matrices modales K, M et C 
+*            lineaires et constantes
+*     {dX,dw,(dv)} : vecteur tangent utilise pour la prediction
+*
+*
+*     Segment contenant les matrices XK, XASM et XM:
+*     ---------------------------------------------
+      SEGMENT MTKAM
+         REAL*8 XK(NA1,NB1K),XASM(NA1,NB1C),XM(NA1,NB1M)
+         REAL*8 GAM(NPC1,nl1),IGAM(nl1,NPC1),DL(nl1)
+*         REAL*8 GAMFIN(NPC2,nl1)
+      ENDSEGMENT
+*     XK,XASM et XM : matrices de raideur, amortissement et masse
+*     GAM et IGAM : matrices pour la FFT et son inverse
+*     GAMFIN      : 
+*
+*     Segment des deformees modales:
+*     ------------------------------
+*     (idem DYNE)
+      SEGMENT MTPHI
+         INTEGER IBASB(NPLB),IPLSB(NPLB),INMSB(NSB),IORSB(NSB)
+         INTEGER IAROTA(NSB)
+         REAL*8  XPHILB(NSB,NPLSB,NA2,IDIMB)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base A:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAA
+         INTEGER IPALA(NLIAA,NIPALA),IPLIA(NLIAA,NPLAA),JPLIA(NPLA)
+         REAL*8  XPALA(NLIAA,NXPALA)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base B:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAB
+         INTEGER IPALB(NLIAB,NIPALB),IPLIB(NLIAB,NPLBB),JPLIB(NPLB)
+         REAL*8  XPALB(NLIAB,NXPALB)
+         REAL*8  XABSCI(NLIAB,NIP),XORDON(NLIAB,NIP)
+      ENDSEGMENT
+*
+*     Segment representant les chargements exterieurs:
+*     -----------------------------------------------
+      SEGMENT MTFEX
+         REAL*8  FEXA(NT1)
+         REAL*8  FEXPSM(NPLB,NPC1,2,IDIMB)
+         INTEGER BAL
+      ENDSEGMENT
+*     FEXA : Vecteur des efforts ext. sous la forme de coefficients de
+*            Fourier et exprimes en base A
+*     FEXPSM: chargement/deplacement statique lie aux modes negliges
+*             (neglige aussi les Fnl). Dans DYNC toujours =0, cree pour
+*             compatibilite avec calcul des Fnl.
+*     BAL  : indique s'il s'agit d'un chargement de type balourd
+*            (cad proportionnel a OMEG**2)
+*
+*     Segment "local" pour DEVLFA:
+*     ----------------------------
+      SEGMENT LOCLFA
+         REAL*8 FTEST(NA1,4)
+      ENDSEGMENT
+*      
+*     Segment "local" pour DEVLB1:
+*     ----------------------------
+      SEGMENT LOCLB1
+         REAL*8 FTEST2(NPLB,6)
+      ENDSEGMENT
+*      
+*     Segment contenant les variables au cours d un pas de temps:
+*     ----------------------------------------------------------
+      SEGMENT MTPAS
+         REAL*8 FTOTA(NA1,4),FTOTB(NPLB,IDIMB),FTOTBA(NA1)
+         REAL*8 XPTB(NPLB,2,IDIMB),FINERT(NA1,4)
+         REAL*8 XVALA(NLIAA,4,NTVAR),XVALB(NLIAB,4,NTVAR)
+         REAL*8 FEXB(NPLB,2,IDIM),XCHPFB(2,NLIAB,4,NPLB)
+         REAL*8 KTOTXA(NA1,NA1),KTOTVA(NA1,NA1)
+         REAL*8 KTOTXB(NPLB,IDIMB,IDIMB), KTOTVB(NPLB,IDIMB,IDIMB) 
+      ENDSEGMENT
+*     FTOTA/B/BA : forces sur base A, B et B projetees sur A
+*     XPTB       : deplacement du point d'une liaison en base B
+*     XVALA/B    : grandeurs de la liaison en base A/B a stocker
+*     FEXB       : forces exterieures en base B (a priori uniquement 
+*                  pour les moments appliques aux rotations rigides ?)
+*     XCHPFB     : forces de contact en base B (lorsqu'on  considere un
+*                  maillage de contact dans certaines liaisons)
+*     KTOTXA/XB/VA/VB : Jacobienne par rapport au deplacement/vitesse en
+*                       base A/B (= contributions a dFnl/dX)
+*
+*
+*     Segment des points de reference des modes (base A):
+*     --------------------------------------------------
+      SEGMENT MPREF
+         INTEGER IPOREF(NPREF),IPORIG(NPRIG)
+      ENDSEGMENT
+*
+*     Segment des points en base B:
+*     -----------------------------
+      SEGMENT NCPR(XCOOR(/1)/(IDIM+1))
+*     NCRP(#global) = #local dans XPTB (1er indice)      
+*
+*     Segment des parametres numeriques pour la continuation: 
+*     ------------------------------------------------------
+      SEGMENT PARNUM
+         CHARACTER*4 TYPS
+         REAL*8   DS,DSMAX,DSMIN,ANGMIN,ANGMAX,ITERMOY,ISENS,TOLMIN
+         REAL*8   PARINI,PARFIN
+         INTEGER  ITERMAX,NBPAS
+         LOGICAL  JANAL
+      ENDSEGMENT
+*
+*     Segment des resultats:
+*     ---------------------
+      SEGMENT  PSORT
+        REAL*8 QSAVE(NT1,NPAS),WSAVE(NPAS),LSAVE(2,2*NA1,NPAS)
+        REAL*8 VSAVE(NPAS)
+        LOGICAL ZSAVE(NPAS)
+        CHARACTER*2 TYPBIF(NBIFU)
+        REAL*8 QBIFU(NT1,NBIFU),WBIFU(NBIFU),WBIF2(NBIFU)
+        REAL*8 QPSIR(NT1,NBIFU),QPSII(NT1,NBIFU)
+        INTEGER CBIF
+      ENDSEGMENT
+*     QSAVE(i,j) = Q harmonique i au pas j
+*     VSAVE(j)   = parametre de continuation (si non w) au j-eme pas
+*     ZSAVE(j)   = stabilite au j-eme pas
+*     LSAVE(1,j) : partie reelle de l'exposant de Floquet
+*     LSAVE(2,j) : partie imaginaire de l'exposant de Floquet
+*     TYPBIF = {LimitPoint, BranchPoint, NeimarkSacker, PeriodDoubling}
+*     QBIFU,WBIFU : vecteur Q et w au point de bifurcation
+*           WBIF2 : partie imaginaire de l'exposant de Floquet
+*     QPSIR,QPSII : vecteur propre au point de bifurcation
+      
+*     Segment des tableaux de travail:
+*     -------------------------------
+      SEGMENT  MTEMP
+         REAL*8 RW(NT1),A,T0(NT1+1),TP(NT1+1),AMPX,AUX
+         REAL*8 T02(NT1+2), TP2(NT1+2)
+         INTEGER IPIV(NT1),IPIV2(NT1+1),IPIV3(NT1+2)
+         REAL*8 res
+         REAL*8 RHS(NT1+1),Ja(NT1+1,NT1+1)
+         REAL*8 QOLD(NT1),OMEGOLD
+         REAL*8 MATJA(NT1+1,NT1+1),Rw2(NT1)
+         REAL*8 Jaa(NT1+2,NT1+2),RHS2(NT1+2),Ra(NT1),VV,VVOLD
+      ENDSEGMENT
+*     Jacobiennes augmentees 
+*     Ja : [ RX  Rw ; dX dw]
+*     Jaa: [ RX  Rw Ra; gx 0 0; dX dw da]
+
+*      SEGMENT  NNNN
+*         REAL*8 IGAM2(nl1,NPC2),DL2(nl1)
+*      ENDSEGMENT
+
+*************************** fin TMDYNC.INC *****************************
+
+-INC PPARAM
+-INC CCOPTIO
+
+       REAL*8 ZERO,ONE,TWO
+       PARAMETER (ZERO=0.D0, ONE=1.D0, TWO=2.D0)
+* MATT pas de rotas rigides dans HBM, pour appel D2VLFB: KTROT = 0
+        KTROT=0
+*
+        segini,MWORK
+*       Variables generalisees: coefficients de Fourier et frequence
+        MTQ=KTQ
+*       Matrices XK,KASM,XM,GAM,IGAM,DL      
+        MTKAM=KTKAM        
+*       Deformees modales
+        MTPHI = KTPHI   
+        NSB   = XPHILB(/1)
+        NPLSB = XPHILB(/2)
+        NA2   = XPHILB(/3)
+        IDIMB = XPHILB(/4)
+*       Liaisons sur base A
+        MTLIAA = KTLIAA
+        NLIAA = IPALA(/1)
+*       Liaisons sur base B
+        MTLIAB = KTLIAB
+        NLIAB  = IPALB(/1)
+        NIP    = XABSCI(/2)
+        NPLB   = JPLIB(/1)       
+*       Forces externes
+        MTFEX=KTFEX                
+*       Truc local base A
+        LOCLFA = KOCLFA
+*       Truc local base B
+        LOCLB1 = KOCLB1 
+*       Inconnues sur un pas de temps (AFT)         
+        MTPAS=KTPAS
+        RIGIDE =.FALSE.
+c       Initialisation FFT
+        IERRD=0
+        NCOU=NFFT
+        lenwrk = 2*NFFT
+        lensav = NFFT + INT(LOG(REAL(NFFT))/LOG(TWO)) + 4
+        segini,wfft51
+        
+        
+*------ Time-domain displacements and velocities: XT, VT ---------------
+
+        CALL HBMDVEC(NT,NHBM,NDDL,Q1,OMEG,V1)
+        CALL IFT(Q1,NT,NDDL,NHBM,NFFT,GAM,XT)  
+        CALL IFT(V1,NT,NDDL,NHBM,NFFT,GAM,VT) 
+
+        
+*------ Time-domain nonlinear forces, tangent matrix: FT, KTOTBA -------
+
+c   >>> Loop over time steps >>>
+        PDT = ONE/NFFT      
+        DO I = 1,NFFT
+
+c          initialisation des vecteurs du pas de temps
+           DO L=1,NDDL
+             XAUX(L,1) = XT(L,I)
+             VAUX(L,1) = VT(L,I) 
+             FTOTA(L,1)=ZERO
+           ENDDO    
+           DO JJ=1,NDDL 
+           DO IJ=1,NDDL 
+               KTOTXA(IJ,JJ) = ZERO 
+               KTOTVA(IJ,JJ) = ZERO
+           ENDDO
+           ENDDO
+           
+c        Fnl(x,v) en base A (ddls modaux)
+           IF (NLIAA.NE.0) THEN
+         CALL D2VLFA(XAUX,VAUX,FTOTA,NDDL,IPALA,IPLIA,XPALA,XVALA,
+     &               NLIAA,PDT,ZERO,I,1,FINERT,1,FTEST,
+     &               KTOTXA,KTOTVA,.TRUE.)
+           ENDIF
+
+c        Fnl(x,-) en base B (ddls physique)
+           IF (NLIAB.NE.0) THEN
+         CALL D2VLFB(XAUX,VAUX,FTOTA,NDDL,IPALB,IPLIB,XPALB,XVALB,NLIAB,
+     & XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,PDT,ZERO,I,IBASB,IPLSB,
+     &   INMSB,IORSB,NSB,NPLSB,NA2,1,FEXPSM,NPC1,IERRD,FTEST2,XABSCI,
+     &   XORDON,NIP,FEXB,KTROT,IAROTA,XCHPFB,
+     &   KTOTXA,KTOTVA,KTOTXB,KTOTVB,.TRUE.)
+           ENDIF
+
+c          stockage de la force + JAC au pas de temps I     
+           DO J=1,NDDL
+               FT(J,I) = FTOTA(J,1) 
+               DO K = 1,NDDL 
+                   MATJX(J,K,I) = KTOTXA(J,K)
+                   MATJV(J,K,I) = KTOTVA(J,K) 
+               ENDDO
+           ENDDO
+         
+        ENDDO
+c   <<< end of Loop over time steps <<<
+        
+ 
+c------ Fourier coefficients  ------------------
+c       Initialize the WWSAVE array.
+        CALL rfft1i (NFFT,wwsave,lensav,ier)
+        IF (IERR.ne.0) RETURN
+
+c------ Fourier coefficients of nonlinear forces: FNL ------------------
+*        CALL DFT(FT,NDDL,NHBM,NFFT,IGAM,FNL)
+        DO IM = 1,NDDL
+          DO KI = 1,NFFT
+            XX51(KI) = FT(IM,KI)
+          ENDDO
+          CALL rfft1f(NFFT,1,XX51,NFFT,wwsave,lensav,work,lenwrk,ier)
+          IA = 0 
+          DO KI = IM,NT-(NDDL-IM),NDDL
+           IA = IA+1
+           FNL(KI) = XX51(IA)
+          ENDDO
+        ENDDO
+
+c------ Fourier coefficients of nonlinear tangent matrix: dFNLdX -------
+        
+c   >>> Loop over modes I,J >>>
+        DO I = 1,NDDL
+        DO J = 1,NDDL
+        
+c           Extract row vectors for the (i,j)-th derivative term 
+            DO IK = 1,NFFT 
+              VCX(IK) = MATJX(I,J,IK) 
+              VCV(IK) = MATJV(I,J,IK) 
+            ENDDO
+c           First series of FFTs on the columns of diagonal dfdx matrix
+            DO II = 1,NFFT
+              DO KI = 1,NFFT
+                XX51(KI) = ZERO
+                XV51(KI) = ZERO
+              ENDDO
+              XX51(II) = VCX(II)
+              XV51(II) = VCV(II)
+             CALL rfft1f(NFFT,1,XX51,NFFT,wwsave,lensav,work,lenwrk,ier)
+             CALL rfft1f(NFFT,1,XV51,NFFT,wwsave,lensav,work,lenwrk,ier)
+              DO JK = 1,2*NHBM+1
+                auxDL(JK,II)  = NFFT*XX51(JK)
+                auxVDL(JK,II) = NFFT*XV51(JK)
+              ENDDO
+            ENDDO
+c           Second series of FFTs on the rows of auxDL
+            DO II = 1,2*NHBM+1
+              DO KI = 1,NFFT
+                  XX51(KI) = auxDL(II,KI)
+                  XV51(KI) = auxVDL(II,KI)
+              ENDDO
+             CALL rfft1f(NFFT,1,XX51,NFFT,wwsave,lensav,work,lenwrk,ier)
+             CALL rfft1f(NFFT,1,XV51,NFFT,wwsave,lensav,work,lenwrk,ier)
+                 JFR(II,1)  = XX51(1)
+                JVFR(II,1)  = XV51(1)
+              DO JK = 2,2*NHBM+1 
+                JFR(II,JK)  = XX51(JK)/2.
+                JVFR(II,JK) = XV51(JK)/2.
+              ENDDO
+            ENDDO
+            
+c           Assemble the total matrices JAC, JACV 
+            IL = 0
+            DO NI = I,NDDL*(2*NHBM)+I,NDDL 
+              IL = IL + 1
+              IC = 0
+              DO NJ = J,NDDL*(2*NHBM)+J,NDDL
+                IC = IC + 1
+                JAC(NI,NJ) = JFR(IL,IC)
+                JACV(NI,NJ)= JVFR(IL,IC)
+              ENDDO
+            ENDDO
+            
+        ENDDO
+        ENDDO
+c   <<< fin de la boucle sur les modes I,J <<<
+
+*       Derivative of the velocity term 
+        CALL HBMDMAT(NT,NDDL,OMEG,JACV)
+        
+*       Total nonlinear tangent stiffness: dFNLdX = JAC + w*JACV*Nabla
+        DO I = 1,NT 
+          DO J = 1,NT 
+              JAC(I,J) = JAC(I,J) + JACV(I,J)
+          ENDDO
+        ENDDO  
+        
+
+c------ Menage ------------------
+        segsup,MWORK
+        
+        END
+ 
+ 

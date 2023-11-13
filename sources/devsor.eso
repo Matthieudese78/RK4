@@ -1,0 +1,207 @@
+C DEVSOR    SOURCE    BP208322  20/09/18    21:15:44     10718          
+      SUBROUTINE DEVSOR(KPREF,KTQ,KTKAM,KTPHI,KTLIAA,KTLIAB,KTFEX,
+     &             KTPAS,KTRES,KTNUM,NINS,IPMAIL,REPRIS,ICHAIN,
+     &             KOCLFA,KOCLB1,LMODYN,ITDYN,KTROT)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNE : algorithme de Fu - de Vogelaere               *
+*     ________________________________________________               *
+*                                                                    *
+*     Sortie de la table resultat et nettoyage de la memoire.        *
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   KPREF   Segment des points de r�f�rence                        *
+* e   KTQ     Segment contenant les variables g�n�ralis�es
+*             (et les travaux)
+* e   KTKAM   Segment contenant les matrices XK, XASM et XM          *
+* e   KTPHI   Segment contenant les d�form�es modales                *
+* e   KTLIAA  Segment descriptif des liaisons en base A              *
+* e   KTLIAB  Segment descriptif des liaisons en base B              *
+* e   KTFEX   Segment contenant les chargements libres               *
+* e   KTPAS   Segment des variables au cours d'un pas de temps       *
+* e   KTRES   Segment de sauvegarde des r�sultats                    *
+* e   KTNUM   Segment contenant les param�tres num�riques            *
+* e   NINS    On veut une sortie tous les NINS pas de calcul         *
+* e   IPMAIL  Maillage de r�f�rence                                  *
+* e   REPRIS  Vrai si reprise de calcul, faux sinon                  *
+* e   ICHAIN  Segment MLENTI (ACTIF) contenant les adresses des      *
+*             chaines dans la pile des mots de CCNOYAU               *
+*                                                                    *
+*     Auteur, date de creation:                                      *
+*                                                                    *
+*     Denis ROBERT-MOUGIN, le 1er juin 1989.                         *
+*                                                                    *
+*--------------------------------------------------------------------*
+
+-INC PPARAM
+-INC CCOPTIO
+-INC SMTABLE
+-INC SMLREEL
+-INC SMLENTI
+-INC SMELEME
+*
+      SEGMENT,MTQ
+         REAL*8 Q1(NA1,4),Q2(NA1,4),Q3(NA1,4)
+         REAL*8 WEXT(NA1,2),WINT(NA1,2)
+      ENDSEGMENT
+      SEGMENT,MTKAM
+         REAL*8 XK(NA1,NB1K),XASM(NA1,NB1C),XM(NA1,NB1M)
+         REAL*8 XOPER(NB1,NB1,NOPER)
+      ENDSEGMENT
+      SEGMENT,MTPHI
+         INTEGER IBASB(NPLB),IPLSB(NPLB),INMSB(NSB),IORSB(NSB)
+         INTEGER IAROTA(NSB)
+         REAL*8 XPHILB(NSB,NPLSB,NA2,IDIMB)
+      ENDSEGMENT
+      SEGMENT,MTLIAA
+         INTEGER IPALA(NLIAA,NIPALA),IPLIA(NLIAA,NPLAA),JPLIA(NPLA)
+         REAL*8  XPALA(NLIAA,NXPALA)
+      ENDSEGMENT
+      SEGMENT,MTLIAB
+         INTEGER IPALB(NLIAB,NIPALB),IPLIB(NLIAB,NPLBB),JPLIB(NPLB)
+         REAL*8  XPALB(NLIAB,NXPALB)
+         REAL*8  XABSCI(NLIAB,NIP),XORDON(NLIAB,NIP)
+      ENDSEGMENT
+      SEGMENT,MTFEX
+         REAL*8  FEXA(NPFEXA,NPC1,2)
+         REAL*8  FEXPSM(NPLB,NPC1,2,IDIMB)
+         REAL*8  FTEXB(NPLB,NPC1,2,IDIM)
+*         INTEGER IFEXA(NPFEXA),IFEXB(NPFEXB)
+      ENDSEGMENT
+      SEGMENT,MTPAS
+         REAL*8 FTOTA(NA1,4),FTOTB(NPLB,IDIMB),FTOTBA(NA1)
+         REAL*8 XPTB(NPLB,2,IDIMB),FINERT(NA1,4)
+         REAL*8 XVALA(NLIAA,4,NTVAR),XVALB(NLIAB,4,NTVAR)
+         REAL*8 FEXB(NPLB,2,IDIM),XCHPFB(2,NLIAB,4,NPLB)
+      ENDSEGMENT
+      SEGMENT,MTRES
+         REAL*8  XRES(NRES,NCRES,NPRES),XREP(NREP,NCRES)
+         REAL*8  XRESLA(NLSA,NPRES,NVALA),XRESLB(NLSB,NPRES,NVALB)
+         REAL*8 XMREP(NLIAB,4,IDIMB),XRIG(NRES,NCRIG,NPRES)
+         INTEGER ICHRES(NVES),IPORES(NRESPO,NPRES),IPOREP(NREP)
+         INTEGER ILIRES(NRESLI,NCRES),ILIRIG(NRESLI,NCRIG)
+         INTEGER IPOLA(NLSA),INULA(NLSA),IPLRLA(NLSA,NVALA)
+         INTEGER IPOLB(NLSB),INULB(NLSB),IPLRLB(NLSB,NVALB)
+         INTEGER ILIREA(NLSA,NTVAR),ILIREB(NLSB,NTVAR)
+         INTEGER ILIRNA(NLSA,NTVAR),ILIRNB(NLSB,NTVAR)
+         INTEGER IPOLR(1),IMREP(NLIAB,2),IPPREP(NLIAB,4)
+         INTEGER ILPOLA(NLIAA,2)
+      ENDSEGMENT
+      SEGMENT,MTNUM
+         REAL*8 XDT(NPC1),XTEMPS(NPC1)
+      ENDSEGMENT
+      SEGMENT,MPREF
+         INTEGER IPOREF(NPREF),IPORIG(NPRIG)
+      ENDSEGMENT
+* Segment "local" pour DEVLFA ...
+      SEGMENT,LOCLFA
+         REAL*8 FTEST(NA1,4),FTOTA0(NA1,4)
+      ENDSEGMENT
+* Segment "local" pour DEVLB1 ...
+      SEGMENT,LOCLB1
+         REAL*8 FTEST2(NPLB,6)
+      ENDSEGMENT
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,2,NSB),OMEG2(3,2,NSB),OMEG3(3,2,NSB)
+         REAL*8 ROT(3,3,2,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,2,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+*
+      LOGICAL REPRIS,LMODYN,RIGIDE
+*
+      RIGIDE = (KTROT.NE.0)
+*
+*     Remplissage des CHPOINTs r�sultats:
+*
+* MATT: TEST
+      MTRES = KTRES
+*      DO I=1,8
+*        WRITE(*,*)'DEVSOR: ICHRES(',I,') = ',ICHRES(I)
+*      ENDDO
+* FIN TEST
+      CALL DEVSO2(KTRES,RIGIDE)
+      IF (IERR.NE.0) RETURN
+*
+*     Cr�ation et sous-typage de la table contenant les r�sultats:
+*
+      CALL DEVSO4(KPREF,KTRES,KTLIAA,KTLIAB,KTNUM,NINS,ICHAIN,
+     &            MTABLE,REPRIS,LMODYN,ITDYN,0,RIGIDE)
+      IF (IERR.NE.0) RETURN
+*
+*     Ecriture de la table r�sultat:
+*
+      if (.not.lmodyn) CALL ECROBJ('TABLE',MTABLE)
+      IF (IERR.NE.0) RETURN
+*
+*     Nettoyage de la m�moire:
+*
+      IF (IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)'DEVSOR: nettoyage de la m�moire'
+      ENDIF
+      MELEME = IPMAIL
+      SEGDES,MELEME
+*     
+      IF (RIGIDE) THEN
+        MTROT = KTROT
+        SEGSUP,MTROT
+      ENDIF
+*
+      MTQ = KTQ
+      SEGSUP,MTQ
+*
+      MTFEX = KTFEX
+      SEGSUP,MTFEX
+*
+      MTPHI = KTPHI
+      SEGSUP,MTPHI
+*
+      MTLIAA = KTLIAA
+      SEGSUP,MTLIAA
+*
+      MTLIAB = KTLIAB
+      SEGSUP,MTLIAB
+*
+      MTRES = KTRES
+      SEGSUP,MTRES
+*
+      MTNUM = KTNUM
+      SEGSUP,MTNUM
+      MPREF  = KPREF
+      SEGSUP,MPREF
+*
+      MTKAM  = KTKAM
+      SEGSUP,MTKAM
+*
+      MTPAS  = KTPAS
+      SEGSUP,MTPAS
+*
+      LOCLFA = KOCLFA
+      SEGSUP,LOCLFA
+      LOCLB1 = KOCLB1
+      SEGSUP,LOCLB1
+*
+      MLENTI = ICHAIN
+      SEGSUP,MLENTI
+      ICHAIN = 0
+*
+      RETURN
+      END
+
+
+
+
+ 
+ 
+ 
+ 
+ 
+ 

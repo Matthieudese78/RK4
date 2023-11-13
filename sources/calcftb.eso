@@ -1,0 +1,106 @@
+      SUBROUTINE CALCFTB(FNB,VTB,NECH,XGLISS,VLIM,FTB,XPUS,XPUSTOT,
+     &                   IDIM,XGLAD)
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+
+*     Calcul de ... 
+*     sur tous les points du profile de reaction dans le repere du cone
+*           (Ex, Ey, Ez)
+*     THM largeur angulaire du contact en radians
+*     VN = NPE = vect. radial au pt d'incidence plan de nutation (repere cercle)
+*     VT = TPE = vect. tangentiel au pt d'incidence plan de nutation (repere cercle)
+*     VXCE = EX = XN3 = EX plan de nutation (repere cercle)
+*     VYCE = EY = XN2 = Ey plan de nutation (repere cercle & cone)
+*     VXCO = Ex = XN5 = Ex repere cone
+*     VZCO = Ez = XPALB(I,ID1+ID) = axe du cone vers le haut
+*     XNC,YNC,ZNC = champ de vect. norm. au cone (repere )
+* -INC CCREEL
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettant de calculer                                 * 
+*     l'angle d'un vect. / axe (0x) via l'operateur ATAN                *
+*     Matthieu SERRE     : le 23/05/2023 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*      
+*     INTEGER NECH
+      REAL*8 VTB(3,NECH),FNB(NECH),FTB(3,NECH),XPUS(NECH),XPUSTOT
+*
+*     IGP = 1
+*     EPSI = XAMOT
+      XPUS = 0.D0
+      NGLIS = 0
+      NADH = 0
+************************************************************************ 
+*     LOOP ON PROFILE 
+************************************************************************  
+      XPUSTOT = 0.D0
+      DO IPROF=1,NECH
+        FTB(1,IPROF) = 0.D0
+        FTB(2,IPROF) = 0.D0
+        FTB(3,IPROF) = 0.D0
+*
+        XPUS(IRPOF) = 0.D0
+*       calcul du module  de la vitesse tangentielle :
+        PSV = 0.D0
+        DO ID = 1,3
+           PSV = PSV + VTB(ID,IPROF) * VTB(ID,IPROF)
+        ENDDO
+        VITT = dsqrt(PSV)
+cmsw    WRITE(*,*)'CALCFTB : VITT = ',VITT
+        IF (VITT.GT.VLIM) THEN
+          NGLIS = NGLIS + 1
+          IF (IIMPI.EQ.555) THEN
+            WRITE(IOIMP,*)'       DOMAINE COULOMB'
+          ENDIF
+          XFT = - XGLISS * dabs(FNB(IPROF))
+cmsw      WRITE(*,*)'   glissement : XFT = ',XFT
+*         par convention, on prend la force normale pour le calcul d'usure :
+*         XPUS(IPROF) = dabs(XFT * VITT)
+          XPUS(IPROF) = dabs(FNB(IPROF)) * VITT
+          XPUSTOT = XPUSTOT + XPUS(IPROF)
+          IF (VITT.GT.(0.D0)) THEN
+             DO ID = 1,IDIM
+                FTB(ID,IPROF) = XFT * VTB(ID,IPROF) / VITT
+cmsw            WRITE(*,*)'glissement : FTB(',ID,IPROF,') = ',
+cmsw  &                               FTB(ID,IPROF)
+             ENDDO
+          ELSE
+             DO ID = 1,IDIM
+                FTB(ID,IPROF) = 0.D0
+cmsw            WRITE(*,*)'glissement : FTB(',ID,IPROF,') = ',
+cmsw  &                               FTB(ID,IPROF)
+             ENDDO
+          ENDIF
+        ELSE
+          NADH = NADH + 1
+*         on est dans le domaine regularise
+          IF (IIMPI.EQ.555) THEN
+            WRITE(IOIMP,*)'       DOMAINE REGULARISE'
+          ENDIF
+          PSXFT = 0.D0
+          DO ID = 1,IDIM
+            XFTT = - XGLISS * dabs(FNB(IPROF))
+cmsw        WRITE(*,*)'   adherence : XFT = ',XFTT
+            FTB(ID,IPROF) = XFTT *
+     &                      (2.d0 - (VITT/VLIM)) * VTB(ID,IPROF)/VLIM
+            PSXFT = PSXFT + FTB(ID,IRPOF) * FTB(ID,IRPOF)
+cmsw        WRITE(*,*)'adherence : FTB(',ID,IPROF,') = ',
+cmsw  &                              FTB(ID,IPROF)
+          ENDDO
+          XFT = dsqrt(PSXFT)
+*         Dans le domaine regularise, on considere l'usure comme nulle : 
+*         XPUS(IPROF) = dabs(XFT * VITT) * (VITT/VLIM)
+        ENDIF
+*       DO ID=1,3
+*         WRITE(*,*)'CALCFTB : FTB(',ID,IPROF,') = ',FTB(ID,IPROF)
+*       ENDDO
+************************************************************************ 
+*     END LOOP ON PROFILE
+************************************************************************ 
+      ENDDO
+*     Calcul du pourcentage glissement / adherence :
+      XGLAD = 100. * (REAL(NADH) / REAL(NECH))
+*     WRITE(*,*)'CALCFTB : XGLAD = ',XGLAD
+*
+      END

@@ -1,0 +1,52 @@
+C EXTRA10    SOURCE    MS264315  30/09/2021    13:28:43     10792          
+      SUBROUTINE EXTRA10(ICHP,MPOINT,IRET)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+************************************************************************
+*
+*                             E X T R A 10 (EXTRA9 simplifie)
+*
+* FONCTION:
+* ---------
+*
+*   s  IRET = 0 : MPOINT n'appartient pas au CHPOINT ICHP
+*   s  IRET = 1 : MPOINT appartient au CHPOINT ICHP
+*
+*     Auteur: Matthieu Serre 09/2021
+************************************************************************
+*
+-INC SMCHPOI
+-INC SMELEME
+
+*-INC PPARAM
+*-INC CCOPTIO
+*
+      IRET=0
+      MCHPOI=ICHP
+      SEGACT,MCHPOI
+* --- BOUCLE SUR LES ZONES DU CHPOINT
+      NBSOUS = IPCHP(/1)
+      DO 11 I = 1,NBSOUS
+         MSOUPO = IPCHP(I)
+         SEGACT,MSOUPO
+*      - RECHERCHE DU NOEUD
+         MELEME = IGEOC
+         SEGACT,MELEME
+         MPOVAL = IPOVAL
+         SEGACT,MPOVAL
+         DO 14 KJ = 1,NUM(/2)
+            IF (NUM(1,KJ).EQ.MPOINT) THEN
+               IF (IIMPI.EQ.333) 
+     &           WRITE(IOIMP,*)'EXTRA10: point ',MPOINT,' trouve'
+               IRET=1
+               RETURN
+            ENDIF
+ 14      CONTINUE
+*         SEGDES,MPOVAL,MELEME,MSOUPO
+ 11   CONTINUE
+      SEGDES,MCHPOI
+      END
+
+ 
+ 
+ 

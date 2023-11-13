@@ -1,0 +1,512 @@
+      SUBROUTINE EVORIG2(ITDYNE,IBOO,ILEX,ILEN1,ILEN2,ITYP,
+     &             ICDR,IPTROT,IDEFROT,RECOELA,LTRIG,ITRIG)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*-----------------------------------------------------------------------*
+*                                                                       *
+*    Sous-programme appelé par EVRECO de l'opérateur EVOL option RECO   *
+*    En presence de rotations rigides.                                  *
+*    La RECO rigide necessite les depl. elastiques dans es 3 dimensions *
+*    - la RECO des depl. necessite les depl. elastiques                 *
+*    - la RECO des vite. necessite depl. + vite. elastiques             *
+*    - la RECO des vite. necessite depl. + vite. + acce. elastiques     *
+*                                                                       *
+*   es IBOO: segment LISTREEL de sortie                                 *
+*   e  ILEX: indexe des indices des PDTs a sortir                       *
+*   e  ILEN1: LISTENT des deformee modales                              *
+*   e  ILEN2: LISTENT des ptreps pointant sur les listreels             *
+*   e  ITYP:  que recombine-t-on? depl ou vite ou acce                  *   
+*   e  ICDR:  centre de rotation                                        *
+*   e  IPTROT: ptreps des rotas rigides                                 *
+*   e  IDEFROT: pointeur CHPOINT de la deformee modale de rotation      *
+*   e  RECOELA: logique, y a t il des modes elastiques ?                *      
+*-----------------------------------------------------------------------*
+-INC PPARAM
+-INC CCOPTIO
+-INC SMLENTI
+-INC SMLREEL
+-INC SMCHPOI
+-INC SMELEME
+-INC SMCOORD
+*
+      SEGMENT NUMOO
+       INTEGER NUMO(N),KLIST(N)
+       CHARACTER*4 NUDDL(N)
+      ENDSEGMENT
+*
+      SEGMENT/IDEPEL/(DEPEL(N,3)*D)
+      SEGMENT/IVITEL/(VITEL(N,3)*D)
+      SEGMENT/IACCEL/(ACCEL(N,3)*D)
+*
+      SEGMENT/IDEPTR/(DEPTR(N,3)*D)
+      SEGMENT/IVITTR/(VITTR(N,3)*D)
+      SEGMENT/IACCTR/(ACCTR(N,3)*D)
+*
+      LOGICAL L0,L1,RECOELA,LTRIG
+      CHARACTER*4 NOMTRI(3)
+      CHARACTER*8 TYPRET,MOTCOM,COMPEL
+      CHARACTER*12 MOCLE2(3),MODYN
+      INTEGER IPTROT(4),ITRIG(3,2)
+      REAL*8 XXGP(3),Utemp(3,3),XP0(3)
+      REAL*8 UXEL(3),VXEL(3),AXEL(3),UXEL0(3)
+      REAL*8 UXTR(3),VXTR(3),AXTR(3)
+      REAL*8 WANG(3),AANG(3),QUAT(4),QUAT0(4),ROT(3,3),ROT0(3,3)
+      REAL*8 VLOCAL(3),ANORM(3),ATANG(3),ACORIO(3)
+*
+      DATA NOMTRI/'UX','UY','UZ'/
+      DATA MOCLE2/'DEPLACEMENT','VITESSE','ACCELERATION'/
+*
+      segact mcoord
+      
+      NUMOO = IBOO
+*
+* Plus besoin de detecter les rotas rigides car contenues dans IPTROT
+
+*
+*   Creation de la listreel des instants de recombinasion:
+*     
+*
+*     Indice des instants de recombinaisons: ILEX.
+*        - ILEX liste des indices ds la table de sortie DYNE
+*           correspondants aux PDTs a recombiner.
+*        - MLREE1: Listreel SORTIE 
+*        - MLREE2: Listreel depl elastiques
+*        - MLREE3: Listreel vite elastiques
+*
+*-----------------------------------------------------------------------*
+*     Activation des segments NUMOO et ILEX
+*-----------------------------------------------------------------------*
+* Listentier des pas de temps:
+      MLENTI = ILEX
+      SEGACT MLENTI
+      LTEMP=LECT(/1)
+*      WRITE(*,*)'EVORIG2: longueur ILEX LTEM = ',LTEMP
+      SEGDES MLENTI
+* Segment des couples point / composante a reco:
+      NUMOO = IBOO
+      SEGACT NUMOO
+      N=NUMO(/1)
+*-----------------------------------------------------------------------*
+*     Reccombinaison elastique necessaires a la RECO rigide 
+*-----------------------------------------------------------------------*
+* Si seulement rota + transla rigide (mm si pas de modes elastiques) 
+*     il faut passer par la reco en evol24: 
+      IF ((RECOELA).OR.(LTRIG)) THEN
+      DO IP=1,N
+        MPOINT=NUMO(IP)
+* Ona besoin de la reco des delps dans tous les cas (ITYP = 0, 1 ou -1):
+        SEGINI IDEPEL
+*         On veut la table des deplacements:
+        MODYN = MOCLE2(1)
+        TYPRET = ' '
+        CALL ACCTAB (ITDYNE ,'MOT',I0,X0,MODYN,L0,IRET0,
+     &                      TYPRET,I1,X1,' ',L1,IDYN1)
+*         On recupere les listentiers des coord modales elastiques: alpha_i(t)
+        MLENT2=ILEN2
+        SEGACT,MLENT2
+        JG=MLENT2.LECT(/1)
+        SEGINI,MLENT3
+        ILEN3=MLENT3
+        DO I=1,JG
+          IPREP2=MLENT2.LECT(I)
+          CALL ACCTAB (IDYN1,'POINT',I0,X0,' ',L0,IPREP2,
+     &                       'LISTREEL',I1,X1,' ',L1,IRET1)
+          MLENT3.LECT(I)=IRET1
+        ENDDO
+        
+*         RECO depl elastique:
+*        WRITE(*,*)'EVORIG2: appel evol24 comp UX'
+        COMPEL = 'UX'
+        CALL EVOL24(IDEPELX,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
+     &                  ITRIG,IDEPTRX,IDYN1)
+*        WRITE(*,*)'EVORIG2: appel evol24 comp UY'
+        COMPEL = 'UY'
+        CALL EVOL24(IDEPELY,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
+     &                  ITRIG,IDEPTRY,IDYN1)
+*        WRITE(*,*)'EVORIG2: appel evol24 comp UZ'
+        COMPEL = 'UZ'
+        CALL EVOL24(IDEPELZ,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
+     &                  ITRIG,IDEPTRZ,IDYN1)
+*         On obtient les 3 listreels:          
+        DEPEL(IP,1) = IDEPELX
+        DEPEL(IP,2) = IDEPELY
+        DEPEL(IP,3) = IDEPELZ
+        IF (LTRIG) THEN
+          SEGINI IDEPTR
+          DEPTR(IP,1) = IDEPTRX
+          DEPTR(IP,2) = IDEPTRY
+          DEPTR(IP,3) = IDEPTRZ
+        ENDIF
+        SEGDES,MLENT2
+        SEGDES,MLENT3 
+*
+        IF ((ITYP.EQ.1).OR.(ITYP.EQ.-1)) THEN
+          SEGINI IVITEL
+*         On veut la table des vitesses:
+          MODYN = MOCLE2(2)
+          TYPRET = ' '
+          CALL ACCTAB (ITDYNE ,'MOT',I0,X0,MODYN,L0,IRET0,
+     &                      TYPRET,I1,X1,' ',L1,IDYN1)
+*         On recupere les listentiers des coord modales elastiques: alpha_i(t)
+          MLENT2=ILEN2
+          SEGACT,MLENT2
+          JG=MLENT2.LECT(/1)
+          SEGINI,MLENT3
+          ILEN3=MLENT3
+          DO I=1,JG
+            IPREP2=MLENT2.LECT(I)
+            CALL ACCTAB (IDYN1,'POINT',I0,X0,' ',L0,IPREP2,
+     &                         'LISTREEL',I1,X1,' ',L1,IRET1)     
+            MLENT3.LECT(I)=IRET1
+          ENDDO
+*         RECO vitesses elastiques (en plus des depl. elastiques):
+          COMPEL = 'UX'
+          CALL EVOL24(IVITELX,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
+     &                  ITRIG,IVITTRX,IDYN1)
+          COMPEL = 'UY'
+          CALL EVOL24(IVITELY,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
+     &                  ITRIG,IVITTRY,IDYN1)
+          COMPEL = 'UZ'
+          CALL EVOL24(IVITELZ,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
+     &                  ITRIG,IVITTRZ,IDYN1)
+*         On obtient les 3 listreels:
+          VITEL(IP,1) = IVITELX
+          VITEL(IP,2) = IVITELY
+          VITEL(IP,3) = IVITELZ
+          IF (LTRIG) THEN
+            SEGINI IVITTR
+            VITTR(IP,1) = IVITTRX
+            VITTR(IP,2) = IVITTRY
+            VITTR(IP,3) = IVITTRZ
+          ENDIF
+          SEGDES,MLENT2
+          SEGSUP,MLENT3
+        ENDIF
+*         Acceleration elastique dans les 3 directions:
+        IF (ITYP.EQ.-1) THEN
+          SEGINI IACCEL
+*         On veut la table des accelerations:
+          MODYN = MOCLE2(3)
+          TYPRET = ' '
+          CALL ACCTAB (ITDYNE ,'MOT',I0,X0,MODYN,L0,IRET0,
+     &                      TYPRET,I1,X1,' ',L1,IDYN1)
+*         On recupere les listentiers des coord modales elastiques: alpha_i(t)
+          MLENT2=ILEN2
+          SEGACT,MLENT2
+          JG=MLENT2.LECT(/1)
+          SEGINI,MLENT3
+          ILEN3=MLENT3
+          DO I=1,JG
+            IPREP2=MLENT2.LECT(I)
+            CALL ACCTAB (IDYN1,'POINT',I0,X0,' ',L0,IPREP2,
+     &                         'LISTREEL',I1,X1,' ',L1,IRET1)     
+            MLENT3.LECT(I)=IRET1
+          ENDDO
+*         RECO vitesses elastiques (en plus des depl. elastiques):
+          COMPEL = 'UX'          
+          CALL EVOL24(IACCELX,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
+     &                  ITRIG,IACCTRX,IDYN1)
+          COMPEL = 'UY'
+          CALL EVOL24(IACCELY,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
+     &                  ITRIG,IACCTRY,IDYN1)
+          COMPEL = 'UZ'
+          CALL EVOL24(IACCELZ,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
+     &                  ITRIG,IACCTRZ,IDYN1)
+*         On obtient les 3 listreels:
+          ACCEL(IP,1) = IACCELX
+          ACCEL(IP,2) = IACCELY
+          ACCEL(IP,3) = IACCELZ
+          IF (LTRIG) THEN
+            SEGINI IACCTR
+            ACCTR(IP,1) = IACCTRX
+            ACCTR(IP,2) = IACCTRY
+            ACCTR(IP,3) = IACCTRZ
+          ENDIF
+          SEGDES,MLENT2
+          SEGSUP,MLENT3
+        ENDIF
+      ENDDO
+*     fin IF (RECOELA).OR.(LTRIG)
+      ENDIF
+*      WRITE(*,*)'Evorig2: fin de la reco elastique'
+*-----------------------------------------------------------------------*
+*     Reccombinaison rigide 
+*-----------------------------------------------------------------------*
+      MLENTI = ILEX
+      SEGACT MLENTI
+*     On boucle sur les points:
+      DO IP=1,N
+        IPOINT = NUMO(IP)
+*       On boucle sur les PDT a reco:
+        DO IT=1,LTEMP
+          IPOS = LECT(IT)
+*         Acquisition des depl / vite elastiques au point IP a l'instant IT: 
+          UXEL(1) = 0.D0
+          UXEL(2) = 0.D0
+          UXEL(3) = 0.D0
+          UXTR(1) = 0.D0
+          UXTR(2) = 0.D0
+          UXTR(3) = 0.D0
+          VXTR(1) = 0.D0
+          VXTR(2) = 0.D0
+          VXTR(3) = 0.D0
+          AXTR(1) = 0.D0
+          AXTR(2) = 0.D0
+          AXTR(3) = 0.D0          
+*          UXEL0(1) = 0.D0
+*          UXEL0(2) = 0.D0
+*          UXEL0(3) = 0.D0
+          XP0(1) = 0.D0
+          XP0(2) = 0.D0
+          XP0(3) = 0.D0
+          IF (RECOELA) THEN 
+             MLREE1 = DEPEL(IP,1)
+             SEGACT MLREE1
+*             UXEL0(1) = MLREE1.PROG(1)
+             UXEL(1) = MLREE1.PROG(IT)
+             MLREE2 = DEPEL(IP,2)
+             SEGACT MLREE2
+*             UXEL0(2) = MLREE2.PROG(1)
+             UXEL(2) = MLREE2.PROG(IT)
+             MLREE3 = DEPEL(IP,3)
+             SEGACT MLREE3
+*             UXEL0(3) = MLREE3.PROG(1)
+             UXEL(3) = MLREE3.PROG(IT)
+*             SEGDES  MLREE1,MLREE2,MLREE3
+*             WRITE(*,*)'evorig2: UXEL(1) = ',UXEL(1) 
+*             WRITE(*,*)'evorig2: UXEL(2) = ',UXEL(2)
+*             WRITE(*,*)'evorig2: UXEL(3) = ',UXEL(3)
+          ENDIF
+*
+          IF (LTRIG) THEN 
+             MLREE1 = DEPTR(IP,1)
+             SEGACT MLREE1
+             UXTR(1) = MLREE1.PROG(IT)
+             MLREE2 = DEPTR(IP,2)
+             SEGACT MLREE2
+             UXTR(2) = MLREE2.PROG(IT)
+             MLREE3 = DEPTR(IP,3)
+             SEGACT MLREE3
+             UXTR(3) = MLREE3.PROG(IT)
+             SEGDES  MLREE1,MLREE2,MLREE3
+*             WRITE(*,*)'evorig2: UXTR(1) = ',UXTR(1) 
+*             WRITE(*,*)'evorig2: UXTR(2) = ',UXTR(2)
+*             WRITE(*,*)'evorig2: UXTR(3) = ',UXTR(3)
+          ENDIF
+*
+          IF ((ITYP.EQ.1).OR.(ITYP.EQ.-1)) THEN
+            VXEL(1) = 0.D0
+            VXEL(2) = 0.D0
+            VXEL(3) = 0.D0
+            IF (RECOELA) THEN
+             MLREE1 = VITEL(IP,1)
+             SEGACT MLREE1
+             VXEL(1) = MLREE1.PROG(IT)
+             MLREE2 = VITEL(IP,2)
+             SEGACT MLREE2
+             VXEL(2) = MLREE2.PROG(IT)
+             MLREE3 = VITEL(IP,3)
+             SEGACT MLREE3
+             VXEL(3) = MLREE3.PROG(IT)
+             SEGDES  MLREE1,MLREE2,MLREE3
+*             WRITE(*,*)'evorig2: VXEL(1) = ',VXEL(1) 
+*             WRITE(*,*)'evorig2: VXEL(2) = ',VXEL(2)
+*             WRITE(*,*)'evorig2: VXEL(3) = ',VXEL(3)
+            ENDIF
+            IF (LTRIG) THEN
+             MLREE1 = VITTR(IP,1)
+             SEGACT MLREE1
+             VXTR(1) = MLREE1.PROG(IT)
+             MLREE2 = VITTR(IP,2)
+             SEGACT MLREE2
+             VXTR(2) = MLREE2.PROG(IT)
+             MLREE3 = VITTR(IP,3)
+             SEGACT MLREE3
+             VXTR(3) = MLREE3.PROG(IT)
+             SEGDES  MLREE1,MLREE2,MLREE3
+*             WRITE(*,*)'evorig2: VXTR(1) = ',VXTR(1) 
+*             WRITE(*,*)'evorig2: VXTR(2) = ',VXTR(2)
+*             WRITE(*,*)'evorig2: VXTR(3) = ',VXTR(3)
+           ENDIF
+          ENDIF
+*           
+          IF (ITYP.EQ.-1) THEN
+            AXEL(1) = 0.D0
+            AXEL(2) = 0.D0
+            AXEL(3) = 0.D0
+            IF (RECOELA) THEN
+             MLREE1 = ACCEL(IP,1)
+             SEGACT MLREE1
+             AXEL(1) = MLREE1.PROG(IT)
+             MLREE2 = ACCEL(IP,2)
+             SEGACT MLREE2
+             AXEL(2) = MLREE2.PROG(IT)
+             MLREE3 = ACCEL(IP,3)
+             SEGACT MLREE3
+             AXEL(3) = MLREE3.PROG(IT)
+             SEGDES  MLREE1,MLREE2,MLREE3
+*             WRITE(*,*)'evorig2: AXEL(1) = ',AXEL(1) 
+*             WRITE(*,*)'evorig2: AXEL(2) = ',AXEL(2)
+*             WRITE(*,*)'evorig2: AXEL(3) = ',AXEL(3)
+            ENDIF
+            IF (LTRIG) THEN 
+             MLREE1 = ACCTR(IP,1)
+             SEGACT MLREE1
+             AXTR(1) = MLREE1.PROG(IT)
+             MLREE2 = ACCTR(IP,2)
+             SEGACT MLREE2
+             AXTR(2) = MLREE2.PROG(IT)
+             MLREE3 = ACCTR(IP,3)
+             SEGACT MLREE3
+             AXTR(3) = MLREE3.PROG(IT)
+             SEGDES  MLREE1,MLREE2,MLREE3
+*             WRITE(*,*)'evorig2: AXTR(1) = ',AXTR(1) 
+*             WRITE(*,*)'evorig2: AXTR(2) = ',AXTR(2)
+*             WRITE(*,*)'evorig2: AXTR(3) = ',AXTR(3)
+           ENDIF
+          ENDIF
+          CALL RECANG(ITDYNE,IPOS,IPTROT,QUAT,QUAT0)
+          CALL QUAT2MAT(QUAT,ROT)
+          CALL QUAT2MAT(QUAT0,ROT0)
+          IF (ITYP.EQ.1) THEN
+            CALL RECVIT(ITDYNE,IPOS,IPTROT,WANG)
+          ELSEIF (ITYP.EQ.-1) THEN
+            CALL RECVIT(ITDYNE,IPOS,IPTROT,WANG)
+            CALL RECACC(ITDYNE,IPOS,IPTROT,AANG)
+          ENDIF
+*         Calcul vecteur centre de rotation --> pt reco
+          CALL DYNE44(IPOINT,ICDR,XXGP)
+*         Calcul de la position initiale du point 
+*         (on veut les deplacements pas la position)
+            DO I=1,3
+*              XP0(I) = 0.D0
+*              DO J=1,3
+*                XP0(I) = XP0(I) + ROT0(I,J)*(XXGP(J) + UXEL0(J))
+*              ENDDO
+              XP0(I) = XXGP(I)
+            ENDDO
+*            WRITE(*,*)'evorig2: XP0(1) = ',XP0(1) 
+*            WRITE(*,*)'evorig2: XP0(2) = ',XP0(2)
+*            WRITE(*,*)'evorig2: XP0(3) = ',XP0(3)
+*           Activation Listreel de sortie:
+            MLREE1=KLIST(IP)
+*            WRITE(*,*)'evorig2: listreel de sortie MLREE1 = ',
+*     &                                             MLREE1
+            SEGACT MLREE1*MOD
+*            WRITE(*,*)'         PROG(/1) = ',MLREE1.PROG(/1)
+*            WRITE(*,*)'         IPOS = ',IPOS
+*           Selection composante de sortie:
+            MOTCOM=NUDDL(IP)
+            CALL PLACE5(NOMTRI,IDIM,IPOSI,MOTCOM)
+            IF (IPOSI.NE.0) THEN
+*           Recombinaison:
+             IF (ITYP.EQ.0) THEN
+              Utemp(1,IPOSI) = 0.D0
+              DO J=1,3
+                Utemp(1,IPOSI) = Utemp(1,IPOSI) + 
+     &                  ROT(IPOSI,J)*(XXGP(J)  + UXEL(J))
+              ENDDO
+*             ajout depl. du aux transl. rig.
+              Utemp(1,IPOSI) = Utemp(1,IPOSI) + UXTR(IPOSI) - 
+     &                                          XP0(IPOSI)
+*
+              MLREE1.PROG(IT) = Utemp(1,IPOSI)
+*              WRITE(*,*)'evorig2: Utemp(',1,IPOSI,') = ',
+*     &                            Utemp(1,IPOSI)
+*             
+* Reco vitesse:
+             ELSEIF (ITYP.EQ.1) THEN
+*              
+              VLOCAL(1) = WANG(2)*(XXGP(3)+UXEL(3)) - 
+     &                    WANG(3)*(XXGP(2)+UXEL(2))
+              VLOCAL(2) = WANG(3)*(XXGP(1)+UXEL(1)) - 
+     &                    WANG(1)*(XXGP(3)+UXEL(3))
+              VLOCAL(3) = WANG(1)*(XXGP(2)+UXEL(2)) - 
+     &                    WANG(2)*(XXGP(1)+UXEL(1))
+              
+              Utemp(2,IPOSI) = 0.D0
+              DO J=1,3
+                Utemp(2,IPOSI)= Utemp(2,IPOSI) + 
+     &              ROT(IPOSI,J)*(VLOCAL(J) + VXEL(J))
+              ENDDO
+*             ajout vitesse due aux transl. rigides:
+              Utemp(2,IPOSI) = Utemp(2,IPOSI) + VXTR(IPOSI)
+* VPOCHA + Utemp dans une autre boucle pour ne pas ecraser
+*              WRITE(*,*)'EVORIG2: IPOSI = ',IPOSI
+*              WRITE(*,*)'         Utemp(',2,IPOSI,') = ',
+*     &                            Utemp(2,IPOSI)
+*              WRITE(*,*)'         PROG(/1) = ',MLREE1.PROG(/1)
+*              WRITE(*,*)'         IPOS = ',IPOS
+              MLREE1.PROG(IT) = Utemp(2,IPOSI)
+              
+*****   Reco acceleration: *****************
+             ELSEIF (ITYP.EQ.-1) THEN
+* On a besoin du champp des vitesses elastiques:                 
+              VLOCAL(1) = WANG(2)*(XXGP(3)+UXEL(3)) - 
+     &                    WANG(3)*(XXGP(2)+UXEL(2))
+              VLOCAL(2) = WANG(3)*(XXGP(1)+UXEL(1)) - 
+     &                    WANG(1)*(XXGP(3)+UXEL(3))
+              VLOCAL(3) = WANG(1)*(XXGP(2)+UXEL(2)) - 
+     &                    WANG(2)*(XXGP(1)+UXEL(1))
+* Calcul de la comp. normal de l'acceleration ss defo elastique:
+*                  (repere du solide)
+              ANORM(1)  = WANG(2)*VLOCAL(3) - WANG(3)*VLOCAL(2) 
+              ANORM(2)  = WANG(3)*VLOCAL(1) - WANG(1)*VLOCAL(3)
+              ANORM(3)  = WANG(1)*VLOCAL(2) - WANG(2)*VLOCAL(1)
+* Calcul de la comp. tangentielle de l'acceleration ss defo elastique:
+*                  (repere du solide)
+              ATANG(1) = AANG(2)*(XXGP(3)+UXEL(3)) - 
+     &                   AANG(3)*(XXGP(2)+UXEL(2))
+              ATANG(2) = AANG(3)*(XXGP(1)+UXEL(1)) - 
+     &                   AANG(1)*(XXGP(3)+UXEL(3))
+              ATANG(3) = AANG(1)*(XXGP(2)+UXEL(2)) - 
+     &                   AANG(2)*(XXGP(1)+UXEL(1))
+*
+* Calcul de la comp. de coriolis de l'acceleration:
+*             (repere du solide)
+              ACORIO(1) = 2.D0*(WANG(2)*VXEL(3) - 
+     &                          WANG(3)*VXEL(2))
+              ACORIO(2) = 2.D0*(WANG(3)*VXEL(1) - 
+     &                          WANG(1)*VXEL(3))
+              ACORIO(3) = 2.D0*(WANG(1)*VXEL(2) - 
+     &                          WANG(2)*VXEL(1))
+*
+* On multiplie tous ces termes par la matrice de rotation pour 
+*        obtenir les deplacements dans le repere global:
+* VPOCHA a ce stade = ddot(Uelastique).
+              Utemp(3,IPOSI) = 0.D0
+              DO J=1,3
+            Utemp(3,IPOSI) = Utemp(3,IPOSI) + ROT(IPOSI,J)*
+     &   (ANORM(J) + ATANG(J) + ACORIO(J) + AXEL(J))
+              ENDDO
+*             ajout accel du aux transl. rig.
+              Utemp(3,IPOSI) = Utemp(3,IPOSI) + AXTR(IPOSI)
+*
+              MLREE1.PROG(IT) = Utemp(3,IPOSI)
+*            fin if ITYP.EQ ...
+             ENDIF
+*           fin IF (IPOSI.NE.0)
+            ENDIF
+*       fin boucle PDT
+        ENDDO
+*        SEGDES MLREE1
+*     fin boucle pts reco
+      ENDDO
+      SEGDES MLENTI
+*
+*************************************************************************
+*                    Supression des segments                                        
+*************************************************************************
+      IF ((RECOELA).AND.(ITYP.EQ.0)) SEGSUP IDEPEL
+      IF ((RECOELA).AND.(ITYP.EQ.1)) SEGSUP IDEPEL,IVITEL
+      IF ((RECOELA).AND.(ITYP.EQ.-1)) SEGSUP IDEPEL,IVITEL,IACCEL
+      IF ((LTRIG).AND.(ITYP.EQ.0)) SEGSUP IDEPTR
+      IF ((LTRIG).AND.(ITYP.EQ.1)) SEGSUP IDEPTR,IVITTR
+      IF ((LTRIG).AND.(ITYP.EQ.-1)) SEGSUP IDEPTR,IVITTR,IACCTR    
+*************************************************************************
+*                           FIN SUBROUT                                        
+*************************************************************************
+      END
+
+
+

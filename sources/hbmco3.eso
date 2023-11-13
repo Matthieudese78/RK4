@@ -1,0 +1,587 @@
+C HBMCO3    SOURCE    BP208322  20/10/06    21:15:06     10743          
+
+      SUBROUTINE HBMCO3(KTKAM,KTQ,KTFEX,KTPAS,KTLIAA,KTEMP,KTLIAB,KTPHI
+     &            ,KCPR,KOCLFA,KOCLB1,NHBM,NFFT,KPARNUM,KSORT,SPAS,ITER) 
+     
+*=======================================================================
+*             Continuation par pseudo longueur d'arc
+*======================================================================= 
+
+       IMPLICIT INTEGER (I-N)
+       IMPLICIT REAL*8 (A-H,O-Z)
+       
+       INTEGER SPAS, IREDU, METSTB, CPOSRE, CBIF,IREMAX,INFO
+       LOGICAL CHECK,CHECKBIF
+       LOGICAL ZINIT,ZSTAB
+       CHARACTER*8 FLAG
+       REAL*8 FTEST(4), FTEST0(4)
+       REAL*8 XAUX(NFFT),nrmR,dw0,Q1NRM2,TVN
+       PARAMETER(IREMAX=6)
+       segment mwork
+         REAL*8 Rco(NT,NT)
+         REAL*8 fvec(NT),Vii(NT+2),QOLD1(NT)         
+       ENDSEGMENT
+*     
+-INC PPARAM    
+-INC CCOPTIO    
+*-INC TMDYNC.INC
+************************** debut TMDYNC.INC ****************************
+
+*    TMDYNC : FUTUR INCLUDE POUR LES SEGMENTS DE L'OPERATEUR DYNC
+*    TODO   : a extraire dans un include des que stabilise
+*
+*     Segment des variables generalisees:
+*     -----------------------------------
+      SEGMENT MTQ
+         REAL*8 Q1(NT1)
+         REAL*8 OMEG,XPARA
+         REAL*8 JAC(NT1,NT1),ZZ(NT1,NT1),RX(NT1,NT1)
+         REAL*8 dX(NT1), dw, dv
+      ENDSEGMENT
+*     Q1   : vecteur des inconnues frequentielles de dimension (2h+1)*n
+*            Q1 = {q_0 q_c1 q_s1 ... q_sh}
+*            avec q_i vecteur de dimension n ou n=nombre de modes
+*     OMEG : frequence fondamentale de l'approximation
+*     XPARA: parametre de continuation (par defaut la frequence mais ici energie) 
+*            \in [PARINI,PARFIN]
+*     RX   : matrice jacobienne = ZZ + dFnl/dX
+*     JAC  : jacobienne des efforts non-lineaires  = dFnl/dX
+*     ZZ   : matrice dynamique associee aux matrices modales K, M et C 
+*            lineaires et constantes
+*     {dX,dw,(dv)} : vecteur tangent utilise pour la prediction
+*
+*
+*     Segment contenant les matrices XK, XASM et XM:
+*     ---------------------------------------------
+      SEGMENT MTKAM
+         REAL*8 XK(NA1,NB1K),XASM(NA1,NB1C),XM(NA1,NB1M)
+         REAL*8 GAM(NPC1,nl1),IGAM(nl1,NPC1),DL(nl1)
+*         REAL*8 GAMFIN(NPC2,nl1)
+      ENDSEGMENT
+*     XK,XASM et XM : matrices de raideur, amortissement et masse
+*     GAM et IGAM : matrices pour la FFT et son inverse
+*     GAMFIN      : 
+*
+*     Segment des deformees modales:
+*     ------------------------------
+*     (idem DYNE)
+      SEGMENT MTPHI
+         INTEGER IBASB(NPLB),IPLSB(NPLB),INMSB(NSB),IORSB(NSB)
+         INTEGER IAROTA(NSB)
+         REAL*8  XPHILB(NSB,NPLSB,NA2,IDIMB)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base A:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAA
+         INTEGER IPALA(NLIAA,NIPALA),IPLIA(NLIAA,NPLAA),JPLIA(NPLA)
+         REAL*8  XPALA(NLIAA,NXPALA)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base B:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAB
+         INTEGER IPALB(NLIAB,NIPALB),IPLIB(NLIAB,NPLBB),JPLIB(NPLB)
+         REAL*8  XPALB(NLIAB,NXPALB)
+         REAL*8  XABSCI(NLIAB,NIP),XORDON(NLIAB,NIP)
+      ENDSEGMENT
+*
+*     Segment representant les chargements exterieurs:
+*     -----------------------------------------------
+      SEGMENT MTFEX
+         REAL*8  FEXA(NT1)
+         REAL*8  FEXPSM(NPLB,NPC1,2,IDIMB)
+         INTEGER BAL
+      ENDSEGMENT
+*     FEXA : Vecteur des efforts ext. sous la forme de coefficients de
+*            Fourier et exprimes en base A
+*     FEXPSM: chargement/deplacement statique lie aux modes negliges
+*             (neglige aussi les Fnl). Dans DYNC toujours =0, cree pour
+*             compatibilite avec calcul des Fnl.
+*     BAL  : indique s'il s'agit d'un chargement de type balourd
+*            (cad proportionnel a OMEG**2)
+*
+*     Segment "local" pour DEVLFA:
+*     ----------------------------
+      SEGMENT LOCLFA
+         REAL*8 FTEST(NA1,4)
+      ENDSEGMENT
+*      
+*     Segment "local" pour DEVLB1:
+*     ----------------------------
+      SEGMENT LOCLB1
+         REAL*8 FTEST2(NPLB,6)
+      ENDSEGMENT
+*      
+*     Segment contenant les variables au cours d un pas de temps:
+*     ----------------------------------------------------------
+      SEGMENT MTPAS
+         REAL*8 FTOTA(NA1,4),FTOTB(NPLB,IDIMB),FTOTBA(NA1)
+         REAL*8 XPTB(NPLB,2,IDIMB),FINERT(NA1,4)
+         REAL*8 XVALA(NLIAA,4,NTVAR),XVALB(NLIAB,4,NTVAR)
+         REAL*8 FEXB(NPLB,2,IDIM),XCHPFB(2,NLIAB,4,NPLB)
+         REAL*8 KTOTXA(NA1,NA1),KTOTVA(NA1,NA1)
+         REAL*8 KTOTXB(NPLB,IDIMB,IDIMB), KTOTVB(NPLB,IDIMB,IDIMB) 
+      ENDSEGMENT
+*     FTOTA/B/BA : forces sur base A, B et B projetees sur A
+*     XPTB       : deplacement du point d'une liaison en base B
+*     XVALA/B    : grandeurs de la liaison en base A/B a stocker
+*     FEXB       : forces exterieures en base B (a priori uniquement 
+*                  pour les moments appliques aux rotations rigides ?)
+*     XCHPFB     : forces de contact en base B (lorsqu'on  considere un
+*                  maillage de contact dans certaines liaisons)
+*     KTOTXA/XB/VA/VB : Jacobienne par rapport au deplacement/vitesse en
+*                       base A/B (= contributions a dFnl/dX)
+*
+*
+*     Segment des points de reference des modes (base A):
+*     --------------------------------------------------
+      SEGMENT MPREF
+         INTEGER IPOREF(NPREF),IPORIG(NPRIG)
+      ENDSEGMENT
+*
+*     Segment des points en base B:
+*     -----------------------------
+      SEGMENT NCPR(XCOOR(/1)/(IDIM+1))
+*     NCRP(#global) = #local dans XPTB (1er indice)      
+*
+*     Segment des parametres numeriques pour la continuation: 
+*     ------------------------------------------------------
+      SEGMENT PARNUM
+         CHARACTER*4 TYPS
+         REAL*8   DS,DSMAX,DSMIN,ANGMIN,ANGMAX,ITERMOY,ISENS,TOLMIN
+         REAL*8   PARINI,PARFIN
+         INTEGER  ITERMAX,NBPAS,INDNNM
+         LOGICAL  JANAL
+         REAL*8   E0
+      ENDSEGMENT
+*
+*     Segment des resultats:
+*     ---------------------
+      SEGMENT  PSORT
+        REAL*8 QSAVE(NT1,NPAS),WSAVE(NPAS),LSAVE(2,2*NA1,NPAS)
+        REAL*8 VSAVE(NPAS)
+        LOGICAL ZSAVE(NPAS)
+        CHARACTER*2 TYPBIF(NBIFU)
+        REAL*8 QBIFU(NT1,NBIFU),WBIFU(NBIFU),WBIF2(NBIFU)
+        REAL*8 QPSIR(NT1,NBIFU),QPSII(NT1,NBIFU)
+        INTEGER CBIF
+      ENDSEGMENT
+*     QSAVE(i,j) = Q harmonique i au pas j
+*     VSAVE(j)   = parametre de continuation (si non w) au j-eme pas
+*     ZSAVE(j)   = stabilite au j-eme pas
+*     LSAVE(1,j) : partie reelle de l'exposant de Floquet
+*     LSAVE(2,j) : partie imaginaire de l'exposant de Floquet
+*     TYPBIF = {LimitPoint, BranchPoint, NeimarkSacker, PeriodDoubling}
+*     QBIFU,WBIFU : vecteur Q et w au point de bifurcation
+*           WBIF2 : partie imaginaire de l'exposant de Floquet
+*     QPSIR,QPSII : vecteur propre au point de bifurcation
+      
+*     Segment des tableaux de travail:
+*     -------------------------------
+      SEGMENT  MTEMP
+         REAL*8 RW(NT1),A,T0(NT1+1),TP(NT1+1),AMPX,AUX
+         REAL*8 T02(NT1+2), TP2(NT1+2)
+         INTEGER IPIV(NT1),IPIV2(NT1+1),IPIV3(NT1+2)
+         REAL*8 res
+         REAL*8 RHS(NT1+1),Ja(NT1+1,NT1+1)
+         REAL*8 QOLD(NT1),OMEGOLD
+         REAL*8 MATJA(NT1+1,NT1+1),Rw2(NT1)
+         REAL*8 Jaa(NT1+2,NT1+2),RHS2(NT1+2),Ra(NT1),VV,VVOLD
+      ENDSEGMENT
+*     Jacobiennes augmentees 
+*     Ja : [ RX  Rw ; dX dw]
+*     Jaa: [ RX  Rw Ra; gx 0 0; dX dw da]
+
+*      SEGMENT  NNNN
+*         REAL*8 IGAM2(nl1,NPC2),DL2(nl1)
+*      ENDSEGMENT
+
+*************************** fin TMDYNC.INC *****************************
+
+       REAL*8 ZERO,ONE,TWO
+       PARAMETER (ZERO=0.D0, ONE=1.D0, TWO=2.D0)
+
+*     .. External Functions ..
+       REAL*8 DNRM2
+       
+*      Variables generalisees
+       MTQ = KTQ 
+*      Partie lineaire
+       MTKAM = KTKAM
+*      Parametres numeriques
+       PARNUM = KPARNUM 
+*      Reste des segments 
+       MTPHI  = KTPHI
+       MTFEX  = KTFEX
+       MTPAS  = KTPAS
+       MTLIAA = KTLIAA
+       MTLIAB = KTLIAB
+       LOCLFA = KOCLFA
+       LOCLB1 = KOCLB1     
+       MTEMP  = KTEMP
+*      Tableau des resultats
+       PSORT  = KSORT    
+*
+       NT = Q1(/1)
+       NDDL = NT/(2*NHBM+1)
+       PDT = 1./NFFT
+       CBIF = 0
+       segini,MWORK
+       
+*======================================================================= 
+*===   INITIALISATION 
+*======================================================================= 
+*   On introduit un terme additionnel aux equations d'equilibre:
+*     
+*      R(Q,w,a) = Z(w)*Q - FNL(Q) + a*(LoIn)*Q = 0
+*
+*   Ce dernier etant dissipatif, on a un cycle si et seulement si a=0.
+*   Le vecteur vitesse, (LoIn)*Q, est le vecteur propre associe a la 
+*   valeur propre triviale de Rx (du a l'invariance par translation). 
+*   Ainsi, son inclusion ne modifie pas le spectre de cette matrice.
+*   Le probleme est desormais bien pose et on continue les solutions par 
+*   rapport a l'energie totale du systeme.
+*-----------------------------------------------------------------------
+       II=1
+       
+       CALL HBMRW(NT,NDDL,1,Q1,OMEG,XM,XASM,XK,Rw,.false.)
+       CALL COPYMAT(NT,RX,Rco)
+       CALL DGESV(NT,1,Rco,NT,IPIV,Rw,NT,INFO)
+       DO I=1,NT
+          dX(I) = -Rw(I)
+       ENDDO 
+       a = dnrm2(NT,dX,1)
+       dw = ONE/sqrt(a**2+ONE)  
+       DO J=1,NT
+          dX(J) = dX(J)*dw
+          t0(J) = dX(J)
+       ENDDO
+       t0(NT+1) = dw
+       
+*      Sauvegarde des donnees de sortie
+       DO I=1,NT
+         QSAVE(I,II)=Q1(I)
+       ENDDO
+       WSAVE(II)=OMEG  
+         
+*-----------------------------------------------------------------------         
+* A IMPLEMENTER
+*      Stabilite de la solution initiale
+*       ZINIT = .TRUE.
+*       CALL HBMHNNM(NT,NHBM,NDDL,OMEG,Q1,RX,XM,XASM,ONE,ONE,ZINIT,
+*     &                        LSAVE(1,1,II),ZSAVE(II),CPOSRE,FLAG,ZSTAB)
+*       ZINIT = .FALSE.
+*----------------------------------------------------------------------- 
+       
+*      Message relatif au pas #0 (solution initiale)
+       IF (IIMPI.GE.1) THEN
+         WRITE(IOIMP,667) 
+         WRITE(IOIMP,660)
+         WRITE(IOIMP,667) 
+         Q1NRM2=dnrm2(NT,Q1,1)
+         WRITE(IOIMP,666) (II-1),ITER,OMEG,Q1NRM2
+         IF (IIMPI.GE.2) WRITE(IOIMP,667) 
+       ENDIF
+       
+*=======================================================================  
+*      1ere prediction
+*======================================================================= 
+       CALL HBMDVEC(NT,NHBM,NDDL,Q1,ONE,Ra)   
+       DO I = 1,NT
+         DO J = 1,NT
+           Jaa(I,J) = RX(I,J)
+         ENDDO
+         Jaa(I,NT+1)  = Rw(I)
+         Jaa(I,NT+2)  = Ra(I)
+         Jaa(NT+2,I) = dX(I)
+         Jaa(NT+1,I) = -Ra(I)
+       ENDDO
+       Jaa(NT+1,NT+1) = ZERO
+       Jaa(NT+1,NT+2) = ZERO
+       Jaa(NT+2,NT+1) = dw
+       Jaa(NT+2,NT+2) = ZERO
+       DO I = 1,NT+2
+         Vii(I) = ZERO
+       ENDDO
+       Vii(NT+2) = ONE       
+       CALL DGESV(NT+2,1,Jaa,NT+2,IPIV3,Vii,NT+2,INFO)
+       tvn = dnrm2(NT+2,Vii,1)
+       DO I=1,NT
+          dX(I) = ISENS*Vii(I)/tvn
+       ENDDO 
+       dw = ISENS*Vii(NT+1)/tvn
+*       
+       DO I = 1,NT+1
+          tP(I) = Vii(I)
+       ENDDO
+*       
+       OMEG = OMEG + DS*dw
+       DO J=1,NT
+         QOLD(J) = Q1(J)
+           Q1(J) = Q1(J)+DS*dX(J)
+       ENDDO        
+       
+
+       IREDU = 0
+       II = 2
+         
+*=======================================================================  
+*======================= Boucle sur la frequence =======================        
+*=======================================================================  
+       DO WHILE (II .LE. NBPAS)
+*       === Correction =================================================
+        CALL HBMNEWT(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTEMP,PARNUM,
+     &       MTLIAA,MTLIAB,MTFEX,MTPAS,LOCLFA,LOCLB1,CHECK,'CN',ITER)   
+     
+*       -----------------------------
+*       -----------------------------
+*       ---- si NEWT a converge, ----
+*       -----------------------------
+*       -----------------------------
+        IF (.NOT.CHECK) THEN
+        
+*          Sauvegarde des donnees de sortie
+*          Frequence, coeffs de Fourier, Norme des coeffs de Fourier           
+           DO I=1,NT
+             QSAVE(I,II)=Q1(I)
+           ENDDO
+           WSAVE(II)=OMEG           
+* 
+*          === Prediction ==============================================
+*          Pas tangent a la courbe 
+           DO I = 1,NT+2
+             Vii(I) = ZERO
+           ENDDO
+           Vii(NT+2) = ONE       
+           CALL DGESV(NT+2,1,Jaa,NT+2,IPIV3,Vii,NT+2,INFO)
+           tvn = dnrm2(NT+1,Vii,1)
+           DO I=1,NT
+             dX(I) = Vii(I)/tvn
+           ENDDO 
+           dw = Vii(NT+1)/tvn
+           DO I = 1,NT+1
+             tP(I) = Vii(I)/tvn
+           ENDDO
+
+*-----------------------------------------------------------------------
+* A IMPLEMENTER
+*          === Stabilite pour la solution convergee ====================
+*          via Methode de Hill
+*           IF (METSTB.EQ.0) THEN
+*             FTEST0 = FTEST
+*             CALL STBHILL(NT,NHBM,NDDL,OMEG,Q1,Rco,XM,XASM,t0,ZINIT,
+*     &                    LSAVE(1,1,II),ZSAVE(II),FTEST,FLAG,ZSTAB)
+*             DO J=1,NT
+*             DO I=1,NT
+*                 RX(I,J) = ZZ(I,J)-JAC(I,J)
+*             ENDDO           
+*             ENDDO
+*             CALL HBMHILL(NT,NHBM,NDDL,OMEG,Q1,RX,XM,XASM,dw0,dw,ZINIT,
+*     &                        LSAVE(1,1,II),ZSAVE(II),CPOSRE,FLAG,ZSTAB)
+*          via Matrice de Monodromie    
+*           ELSE 
+*             CALL STBMONO(NT,NDDL,NFFT,NHBM,MTQ,MTKAM,MTPHI,MTLIAA,                   
+*    &          MTLIAB,MTFEX,MTPAS,LOCLFA,LOCLB1,FLAG)
+*           ENDIF           
+*          Sauvegarde des donnees de sortie: LSAVE et ZSTAB rempli par STBHILL
+*          WRITE(*,*) 'Pas ',II,', w=',OMEG,'STAB =',ZSTAB
+*-----------------------------------------------------------------------
+
+*          === Message relatif au pas #II ==============================
+           IF (IIMPI.GE.1) THEN
+              Q1NRM2=dnrm2(NT,Q1,1)
+c               WRITE(IOIMP,666) (II-1),ITER,OMEG,Q1NRM2,ZSTAB
+              WRITE(IOIMP,666) (II-1),ITER,OMEG,Q1NRM2
+              IF (IIMPI.GE.2) WRITE(IOIMP,667) 
+           ENDIF
+*  
+*-----------------------------------------------------------------------
+* A IMPLEMENTER
+*=== Bifurcation? ============================================
+*           IF ((FLAG.NE.'S')) THEN 
+*             WRITE(IOIMP,*) 'Bifurcation detectee! Type :',FLAG
+*               CALL HBMBIF(NT,NHBM,NDDL,NFFT,KTQ,KTKAM,MTPHI,KTEMP,
+*     &         MTLIAA,MTLIAB,MTFEX,MTPAS,LOCLFA,LOCLB1,CHECKBIF,FLAG,
+*     &         PARNUM,PSORT)
+*               IF (.NOT.CHECKBIF) THEN
+*                   WRITE(IOIMP,*) 'Bifurcation localisee :)'
+*               ELSE
+*                   WRITE(IOIMP,*) 'Bifurcation non localisee :('
+*               ENDIF
+*           ENDIF
+*-----------------------------------------------------------------------
+           
+*          === Tests d'arret ===========================================        
+*          On verifie la condition d'arret par rapport a OMEG
+*           IF ((OMEG.GE.PARFIN).OR.(OMEG.LE.PARINI)) THEN
+           XPARA = (dnrm2(NT,Q1,1))**2
+cbp : incoherence avec la maniere de calculer l'energie dans hbmnewt?
+           IF ((XPARA-PARFIN)*(PARFIN-PARINI).GE.0) THEN
+               WRITE(IOIMP,*) 'Fin de la continuation apres',II,' pas.'
+               IF (II.LT.NBPAS) THEN
+*                  WRITE(*,*) 'NPAS sera egal a:',II
+                  NT1 = QSAVE(/1)
+                  NA1 = LSAVE(/2)/2
+*                  NPAS = QSAVE(/2)
+                  NBIFU = QBIFU(/2)
+*                  write(*,*) NT1,NA1,NPAS,NBIFU
+                  NPAS = II
+                  SEGADJ, PSORT
+               ENDIF
+               KSORT = PSORT
+               RETURN
+           ENDIF
+           
+*          === prediction + donnees pour le prochain pas ===============
+*          ajustement automatique de la longueur du pas
+c            if(II.ge.62) write(*,*) '>>>t0=',(t0(iou),iou=1,NT+1)
+c            if(II.ge.62) write(*,*) '>>>tp=',(tp(iou),iou=1,NT+1)
+           CALL ADPAS(DS,DSMIN,DSMAX,ITER,ITERMOY,ANGMIN,ANGMAX,
+     &                NT+1,t0,tp)
+c            WRITE(*,*) '>>> DS=',DS
+*          stockage des donnees de fin de pas utiles (dans *OLD)
+*          pas predictif : Q1, OMEG
+           DO I=1,NT+1
+              t0(I) = tp(I)
+           ENDDO
+c            DSREDU=MAX(0.25*DS,DSMIN)
+           DO KK = 1,NT
+c c             ici, on anticipe la reduction du pas predicteur 
+c c             en maintenant la direction dX fixe
+c               QOLD(KK) = Q1(KK)+DSREDU*dX(KK)
+c             et ici, on laisse la possibilite a DX d'evoluer
+              QOLD(KK) = Q1(KK)
+              Q1(KK)   = Q1(KK)+DS*dX(KK)
+           ENDDO
+c          idem pour OMEGOLD que QOLD
+c            OMEGOLD = OMEG + DSREDU*dw
+           OMEGOLD = OMEG
+           OMEG    = OMEG + DS*dw
+           IREDU = 0
+           ISTRA2=0
+cdebug           
+c            if(II.ge.62.and.II.le.68) then
+c            write(*,*) 'prediction Q=',(Q1(iou),iou=1,NT)
+c            write(*,*) 'DS, OMEG=',DS,OMEG
+c            endif
+         
+*       -----------------------------------
+*       -----------------------------------
+*       ---- si NEWT n'a pas converge, ----
+*       -----------------------------------
+*       -----------------------------------
+        ELSE
+        
+*          === Message relatif au pas non converge #II =================
+           IF (IIMPI.GE.1) THEN
+              Q1NRM2=dnrm2(NT,Q1,1)
+              WRITE(IOIMP,665) (II-1),ITER,OMEG,Q1NRM2
+              IF (IIMPI.GE.2) WRITE(IOIMP,667) 
+           ENDIF
+           
+*          === strategie 2 (non-convergence alors qu'on a deja ========= 
+*          ===              atteint DSMIN) : on quitte !       =========
+           IF (DS.LE.DSMIN) THEN
+             DS=DSMIN
+             DO I=1,NT
+               Q1(I) = QOLD1(I)
+             ENDDO
+             OMEG = OMEGOLD           
+c            et on arrete
+             IREDU=IREMAX
+             II = II-1
+             
+*          === strategie 1 : Recommencer le pas en diminuant DS ======== 
+c          test sur II>1 car pour l'instant on n'a pas branche la recup d'une solution initiale
+           ELSEIF (II.GT.1) THEN
+c c            en maintenant la direction dX fixe 
+c c            (attention : DS doit etre = DSREDU !!!)
+c              DS = MAX(0.25*DS,DSMIN)
+c              DO I=1,NT
+c                Q1(I) = QOLD(I)
+c              ENDDO
+c              OMEG = OMEGOLD
+*            mise a jour de la prediction avec nouveau DS (dX et dw n'ont pas change)
+             DS = MAX(0.25D0*DS,DSMIN)
+             DO I=1,NT
+               Q1(I) = QOLD(I)+DS*dX(I)
+             ENDDO
+             OMEG = OMEGOLD + DS*dw
+             II = II-1
+             IREDU = IREDU + 1
+*            message
+             IF (IIMPI.GE.2) WRITE(IOIMP,668) IREDU,DS
+             
+           ENDIF
+           
+           
+ 888       continue                  
+c          apres reduction de 0.25**10 = 1.E-6 , echec !
+c                             0.25**5  = 1.E-3
+           IF (IREDU.GE.IREMAX) THEN        
+*             message interne
+              IF (IIMPI.GE.1) WRITE(IOIMP,669) DS
+c             Pas de convergence apres %i1 iterations. L'execution continue
+              INTERR(1)=ITERMAX              
+              CALL ERREUR(151)
+*             ajustement des tableaux de sorties
+              IF (II.LT.NBPAS) THEN
+                  NT1 = QSAVE(/1)
+                  NA1 = LSAVE(/2)/2
+*                  NPAS = QSAVE(/2)
+                  NBIFU = QBIFU(/2)
+                  NPAS = II
+                  SEGADJ, PSORT
+              ENDIF
+              KSORT = PSORT
+              RETURN
+           ENDIF
+                  
+        ENDIF 
+*       ----------------------------------------------
+*       ----------------------------------------------
+*       ---- fin distinction NEWT converge ou pas ----  
+*       ----------------------------------------------
+*       ----------------------------------------------
+
+*        incrementation du compteur
+         II = II+1
+        
+        ENDDO
+*=======================================================================  
+*       fin de la boucle sur l'energie        
+*=======================================================================  
+        
+        
+*       message
+c         IF(IIMPI.GE.1) WRITE(IOIMP,667) 
+c       WRITE(IOIMP,*) NBPAS, 'pas de continuation realises!' 
+        KSORT = PSORT
+      
+        segsup,MWORK
+        
+*=======================================================================
+*      Mise en forme des messages
+*=======================================================================  
+*      dernier message pour fermer le tableau dans le cas iimpi=1
+       IF (IIMPI.EQ.1) WRITE(IOIMP,667) 
+        
+c  660   FORMAT(' |  Pas  | Iter |     w     |     Q     | Stab |')
+ 660   FORMAT(' |  Pas  | Iter |     w     |     Q     | ')
+ 665   FORMAT(' | ',I5,' | ',I4,' | ',F9.5,' | ',F9.5,' | ')
+c  666   FORMAT(' | ',I5,' | ',I4,' | ',F9.5,' | ',F9.5,' | ',L3,'  |')
+ 666   FORMAT(' | ',I5,' | ',I4,' | ',F9.5,' | ',F9.5,' | ')
+ 667   FORMAT(' +-------+------+-----------+-----------+')
+ 668   FORMAT(' + cont : ds=ds_initial/4**',I2,'=',F13.9)
+ 669   FORMAT(' + cont : pas de convergence avec ds=dsmin=',F13.9)
+      
+      
+      END
+
+ 
+ 
+ 
+ 

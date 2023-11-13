@@ -1,0 +1,261 @@
+C HBMZ      SOURCE    BP208322  20/10/05    21:15:21     10742          
+
+       SUBROUTINE HBMZ(NT,NHBM,NDDL,KTQ,KTKAM,LOGAMO)
+       
+*=======================================================================
+*      Calcule la matrice de raideur dynamique Z
+*
+*      Z = [ Z0  0   0  ... ]
+*          [    Z1   0  ... ]
+*          [        ...     ]
+*          [             Zh ]
+*
+* avec Zj = | [ K-(jw)²M     jwC   ]   si LOGAMO
+*           | [ -jwC      K-(jw)²M ]
+*           |
+*           | [ K-(jw)²M           ]   si .not.LOGAMO
+*           | [           K-(jw)²M ]
+*            
+*      TODO : prevoir le cas des matrices non diagonales
+*=======================================================================
+*
+*----- Declarations ----------------------------------------------------
+*       
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+      
+      INTEGER NT,NHBM,NDDL,I,J,K,L,M,P,PK,KM,KK,KASM
+      REAL*8  AA,BB
+      LOGICAL LOGAMO
+*       
+*-INC TMDYNC.INC
+************************** debut TMDYNC.INC ****************************
+
+*    TMDYNC : FUTUR INCLUDE POUR LES SEGMENTS DE L'OPERATEUR DYNC
+*    TODO   : a extraire dans un include des que stabilise
+*
+*     Segment des variables generalisees:
+*     -----------------------------------
+      SEGMENT MTQ
+         REAL*8 Q1(NT1)
+         REAL*8 OMEG,XPARA
+         REAL*8 JAC(NT1,NT1),ZZ(NT1,NT1),RX(NT1,NT1)
+         REAL*8 dX(NT1), dw, dv
+      ENDSEGMENT
+*     Q1   : vecteur des inconnues frequentielles de dimension (2h+1)*n
+*            Q1 = {q_0 q_c1 q_s1 ... q_sh}
+*            avec q_i vecteur de dimension n ou n=nombre de modes
+*     OMEG : frequence fondamentale de l'approximation
+*     XPARA: parametre de continuation (par defaut la frequence) 
+*            \in [PARINI,PARFIN]
+*     RX   : matrice jacobienne = ZZ + dFnl/dX
+*     JAC  : jacobienne des efforts non-lineaires  = dFnl/dX
+*     ZZ   : matrice dynamique associee aux matrices modales K, M et C 
+*            lineaires et constantes
+*     {dX,dw,(dv)} : vecteur tangent utilise pour la prediction
+*
+*
+*     Segment contenant les matrices XK, XASM et XM:
+*     ---------------------------------------------
+      SEGMENT MTKAM
+         REAL*8 XK(NA1,NB1K),XASM(NA1,NB1C),XM(NA1,NB1M)
+         REAL*8 GAM(NPC1,nl1),IGAM(nl1,NPC1),DL(nl1)
+*         REAL*8 GAMFIN(NPC2,nl1)
+      ENDSEGMENT
+*     XK,XASM et XM : matrices de raideur, amortissement et masse
+*     GAM et IGAM : matrices pour la FFT et son inverse
+*     GAMFIN      : 
+*
+*     Segment des deformees modales:
+*     ------------------------------
+*     (idem DYNE)
+      SEGMENT MTPHI
+         INTEGER IBASB(NPLB),IPLSB(NPLB),INMSB(NSB),IORSB(NSB)
+         INTEGER IAROTA(NSB)
+         REAL*8  XPHILB(NSB,NPLSB,NA2,IDIMB)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base A:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAA
+         INTEGER IPALA(NLIAA,NIPALA),IPLIA(NLIAA,NPLAA),JPLIA(NPLA)
+         REAL*8  XPALA(NLIAA,NXPALA)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base B:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAB
+         INTEGER IPALB(NLIAB,NIPALB),IPLIB(NLIAB,NPLBB),JPLIB(NPLB)
+         REAL*8  XPALB(NLIAB,NXPALB)
+         REAL*8  XABSCI(NLIAB,NIP),XORDON(NLIAB,NIP)
+      ENDSEGMENT
+*
+*     Segment representant les chargements exterieurs:
+*     -----------------------------------------------
+      SEGMENT MTFEX
+         REAL*8  FEXA(NT1)
+         REAL*8  FEXPSM(NPLB,NPC1,2,IDIMB)
+         INTEGER BAL
+      ENDSEGMENT
+*     FEXA : Vecteur des efforts ext. sous la forme de coefficients de
+*            Fourier et exprimes en base A
+*     FEXPSM: chargement/deplacement statique lie aux modes negliges
+*             (neglige aussi les Fnl). Dans DYNC toujours =0, cree pour
+*             compatibilite avec calcul des Fnl.
+*     BAL  : indique s'il s'agit d'un chargement de type balourd
+*            (cad proportionnel a OMEG**2)
+*
+*     Segment "local" pour DEVLFA:
+*     ----------------------------
+      SEGMENT LOCLFA
+         REAL*8 FTEST(NA1,4)
+      ENDSEGMENT
+*      
+*     Segment "local" pour DEVLB1:
+*     ----------------------------
+      SEGMENT LOCLB1
+         REAL*8 FTEST2(NPLB,6)
+      ENDSEGMENT
+*      
+*     Segment contenant les variables au cours d un pas de temps:
+*     ----------------------------------------------------------
+      SEGMENT MTPAS
+         REAL*8 FTOTA(NA1,4),FTOTB(NPLB,IDIMB),FTOTBA(NA1)
+         REAL*8 XPTB(NPLB,2,IDIMB),FINERT(NA1,4)
+         REAL*8 XVALA(NLIAA,4,NTVAR),XVALB(NLIAB,4,NTVAR)
+         REAL*8 FEXB(NPLB,2,IDIM),XCHPFB(2,NLIAB,4,NPLB)
+         REAL*8 KTOTXA(NA1,NA1),KTOTVA(NA1,NA1)
+         REAL*8 KTOTXB(NPLB,IDIMB,IDIMB), KTOTVB(NPLB,IDIMB,IDIMB) 
+      ENDSEGMENT
+*     FTOTA/B/BA : forces sur base A, B et B projetees sur A
+*     XPTB       : deplacement du point d'une liaison en base B
+*     XVALA/B    : grandeurs de la liaison en base A/B a stocker
+*     FEXB       : forces exterieures en base B (a priori uniquement 
+*                  pour les moments appliques aux rotations rigides ?)
+*     XCHPFB     : forces de contact en base B (lorsqu'on  considere un
+*                  maillage de contact dans certaines liaisons)
+*     KTOTXA/XB/VA/VB : Jacobienne par rapport au deplacement/vitesse en
+*                       base A/B (= contributions a dFnl/dX)
+*
+*
+*     Segment des points de reference des modes (base A):
+*     --------------------------------------------------
+      SEGMENT MPREF
+         INTEGER IPOREF(NPREF),IPORIG(NPRIG)
+      ENDSEGMENT
+*
+*     Segment des points en base B:
+*     -----------------------------
+      SEGMENT NCPR(XCOOR(/1)/(IDIM+1))
+*     NCRP(#global) = #local dans XPTB (1er indice)      
+*
+*     Segment des parametres numeriques pour la continuation: 
+*     ------------------------------------------------------
+      SEGMENT PARNUM
+         CHARACTER*4 TYPS
+         REAL*8   DS,DSMAX,DSMIN,ANGMIN,ANGMAX,ITERMOY,ISENS,TOLMIN
+         REAL*8   PARINI,PARFIN
+         INTEGER  ITERMAX,NBPAS
+         LOGICAL  JANAL
+      ENDSEGMENT
+*
+*     Segment des resultats:
+*     ---------------------
+      SEGMENT  PSORT
+        REAL*8 QSAVE(NT1,NPAS),WSAVE(NPAS),LSAVE(2,2*NA1,NPAS)
+        REAL*8 VSAVE(NPAS)
+        LOGICAL ZSAVE(NPAS)
+        CHARACTER*2 TYPBIF(NBIFU)
+        REAL*8 QBIFU(NT1,NBIFU),WBIFU(NBIFU),WBIF2(NBIFU)
+        REAL*8 QPSIR(NT1,NBIFU),QPSII(NT1,NBIFU)
+        INTEGER CBIF
+      ENDSEGMENT
+*     QSAVE(i,j) = Q harmonique i au pas j
+*     VSAVE(j)   = parametre de continuation (si non w) au j-eme pas
+*     ZSAVE(j)   = stabilite au j-eme pas
+*     LSAVE(1,j) : partie reelle de l'exposant de Floquet
+*     LSAVE(2,j) : partie imaginaire de l'exposant de Floquet
+*     TYPBIF = {LimitPoint, BranchPoint, NeimarkSacker, PeriodDoubling}
+*     QBIFU,WBIFU : vecteur Q et w au point de bifurcation
+*           WBIF2 : partie imaginaire de l'exposant de Floquet
+*     QPSIR,QPSII : vecteur propre au point de bifurcation
+      
+*     Segment des tableaux de travail:
+*     -------------------------------
+      SEGMENT  MTEMP
+         REAL*8 RW(NT1),A,T0(NT1+1),TP(NT1+1),AMPX,AUX
+         REAL*8 T02(NT1+2), TP2(NT1+2)
+         INTEGER IPIV(NT1),IPIV2(NT1+1),IPIV3(NT1+2)
+         REAL*8 res
+         REAL*8 RHS(NT1+1),Ja(NT1+1,NT1+1)
+         REAL*8 QOLD(NT1),OMEGOLD
+         REAL*8 MATJA(NT1+1,NT1+1),Rw2(NT1)
+         REAL*8 Jaa(NT1+2,NT1+2),RHS2(NT1+2),Ra(NT1),VV,VVOLD
+      ENDSEGMENT
+*     Jacobiennes augmentees 
+*     Ja : [ RX  Rw ; dX dw]
+*     Jaa: [ RX  Rw Ra; gx 0 0; dX dw da]
+
+*      SEGMENT  NNNN
+*         REAL*8 IGAM2(nl1,NPC2),DL2(nl1)
+*      ENDSEGMENT
+
+*************************** fin TMDYNC.INC *****************************
+ 
+*       
+*      Segment des variables       
+       MTQ=KTQ
+*      Segment des proprietes mecaniques       
+       MTKAM=KTKAM  
+       
+*----- Initialisation --------------------------------------------------
+*      
+       DO J = 1,NT
+       DO I = 1,NT
+            ZZ(I,J)=0.D0
+       ENDDO
+       ENDDO
+       
+
+*----- Remplissage (cas K, C et M diagonales uniquement) ---------------
+
+*      test ici mais a replacer an amont + tard
+       if(XK(/2).ne.1) call erreur(5)
+       
+c      harmonique 0
+       DO M=1,NDDL           
+         ZZ(M,M) = XK(M,1)
+       ENDDO  
+
+c      harmoniques > 0
+c     -cas non conservatif (i.e. avec amortissement)
+       IF (LOGAMO) THEN
+          DO J=2,2*NHBM,2
+            DO I=1,NDDL            
+                AA = XK(I,1) - ((OMEG*J/2)**2)*XM(I,1)
+                BB = (OMEG*J/2)*XASM(I,1)            
+                ZZ(NDDL*(1+(J-2))+I,NDDL*(1+(J-2))+I) = AA
+                ZZ(NDDL*(1+(J-2))+I,NDDL*(1+(J-1))+I) = BB
+                ZZ(NDDL*(1+(J-1))+I,NDDL*(1+(J-2))+I) = -BB
+                ZZ(NDDL*(1+(J-1))+I,NDDL*(1+(J-1))+I) = AA            
+            ENDDO              
+          ENDDO
+c     -cas conservatif (i.e. sans amortissement)
+       ELSE
+          DO J=2,2*NHBM,2
+            DO I=1,NDDL            
+                AA = XK(I,1) - ((OMEG*J/2)**2)*XM(I,1)
+                ZZ(NDDL*(1+(J-2))+I,NDDL*(1+(J-2))+I) = AA
+                ZZ(NDDL*(1+(J-2))+I,NDDL*(1+(J-1))+I) = 0.D0
+                ZZ(NDDL*(1+(J-1))+I,NDDL*(1+(J-2))+I) = 0.D0
+                ZZ(NDDL*(1+(J-1))+I,NDDL*(1+(J-1))+I) = AA            
+            ENDDO              
+          ENDDO
+       ENDIF
+       
+       END
+ 
+ 
+ 

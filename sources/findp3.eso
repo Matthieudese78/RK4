@@ -1,0 +1,326 @@
+      SUBROUTINE FINDP3(XA,XB,XC,YC,CRIT,MAXIT,XS,YS,XDMIN,IT,XRES)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+
+-INC CCREEL   
+
+* -INC CCREEL
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettant de calculer :                               *
+*     XS, YS : les coordonnees du point d'incidence dans le repere de   * 
+*              l'ellipse.                                               *
+*     SCRIPT PYTHON : newton_findp_pvec.py                              *
+*     Le residu est le produit vectoriel entre CP 
+*              (centre du cercle - pt incidence) et                     * 
+*     la normal a l'ellipse au point d'incidence                        *
+*     qui a pour expression :
+*             XRES =  XA1*(dsqrt(1. - ((X/XA)**2))) +
+*                     XB1*(dsqrt(1. - ((X/XA)**2)))/X + XC1
+*
+*     Matthieu SERRE     : le 05/08/2023 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*      
+      REAL*8 XA,XB,XC,YC,CRIT,XS,YS,XDMIN,DELTA_X,critp
+      logical lauto
+*
+*          WRITE(*,*)'FINDP2 : XA = ',XA
+*          WRITE(*,*)'FINDP2 : XB = ',XB
+*          WRITE(*,*)'FINDP2 : XC = ',XC
+*          WRITE(*,*)'FINDP2 : YC = ',YC
+
+*     IF 
+*       CALL FINDP(XA,XB,XC,YC,XS,YS,XDMIN)
+*     Signes de XC et YC pour savoir dans quel cadran on se situe :
+      write(*,*)'xgrand = ',xgrand
+      write(*,*)'xpetit = ',xpetit
+      if (xc.ne.0.d0) then
+        XSIG = dsign(1.d0,xc) 
+      endif
+      if (yc.ne.0.d0) then
+        YSIG = dsign(1.d0,yc) 
+      endif
+*     COEFFICIENTS DU RESIDU :
+      if (ysig.ge.0.d0) then
+        XA1 = XB * (((XA**2)/(XB**2)) - 1.d0)
+        XB1 = XB * (-1.d0)*((XA**2)/(XB**2))*XC
+      endif
+      if (ysig.lt.0.d0) then
+        XA1 = -XB * (((XA**2)/(XB**2)) - 1.d0)
+        XB1 = -XB * (-1.d0)*((XA**2)/(XB**2))*XC
+      endif
+      XC1 = YC
+      write(*,*)'xa1 = ',xa1
+      write(*,*)'xb1 = ',xb1
+      write(*,*)'xc1 = ',xc1
+*     PREDICTION POUR LE NEWTON :
+*       On prendg le projeté du centre du cercle sur l'ellipse
+*       (YC/XC) = tan(theta_i) ou theta_i est l'angle / (Ox) / centre de l'ellipse
+      X0 = XSIG * dsqrt(1.d0 / ((1.d0/(XA**2)) + (((YC/XC)/XB)**2)))
+      Y0 = (YC/XC) * X0
+      write(*,*)'findp3 : initialisation : '
+      write(*,*)'   a = ',xa
+      write(*,*)'   b = ',xb
+      write(*,*)'   xc = ',xc
+      write(*,*)'   yc = ',yc
+      write(*,*)'   x0 = ',x0
+      write(*,*)'   y0 = ',y0
+*     on evite le premier NaN :
+      XRES =  XA1*(dsqrt(dabs(1.d0 - ((X0/XA)**2)))) + 
+     &          XB1*(dsqrt(dabs(1.d0 - ((X0/XA)**2))))/X0 + XC1
+      XFOD = (-1.d0)*(XA1*(X0**3) + XB1*(XA**2)*(1.d0 - (X0/XA)**2) +
+     &  XB1*(X0**2)) / ((XA**2)*(X0**2)*dsqrt(dabs(1.d0 - (X0/XA)**2)))
+*
+*     point sur un axe?
+      if (dabs(dabs(x0)-xa).le.xzprec) then
+       xs = dsign(1.d0,xc)*xa 
+       ys = 0.d0
+       xdmin = dsqrt(((xs-xc)**2)+((ys-yc)**2))
+       goto 10
+      endif
+      if (dabs(dabs(y0)-xb).le.xzprec) then
+       xs = 0.d0
+       ys = dsign(1.d0,yc)*xb 
+       xdmin = dsqrt(((xs-xc)**2)+((ys-yc)**2))
+       goto 10
+      endif
+*     point dams le domaine double precision ? --> projection horizontale
+*       critere sur le terme quadrqtique : 1 - (x0/xa)^2
+*               --> x0 >= xa*sqrt(1-xzprec)
+*     --> non : on va attendre le 2eme rebond :
+*      if (dabs(x0).ge.(a*dsqrt(1.d0-xzprec))) then
+*       if (dsign(1.d0,yc).ge.0.d0) ys = yc
+*       if (dsign(1.d0,yc).lt.0.d0) ys = -yc
+*       xs = dsign(1.d0,xc)*xa*dsqrt(1.d0-((y0/xb)**2))
+*       xdmin = dsqrt(((xs-xc)**2)+((ys-yc)**2))
+*       goto 10
+*      endif
+*     convergence d'entree?
+      if (dabs(xres).le.crit) then
+        xs = x0
+        xs = dsign(1.d0,xa) 
+        ys = y0
+        xdmin = dsqrt(((xs-xc)**2)+((ys-yc)**2))
+        write(*,*)'       convergence --> goto 10'
+        goto 10
+      endif
+*     sinon infinity, NaN?
+      if ((xres.ne.xres).or.(xfod.ne.xfod).or.
+     &    (dabs(xres).gt.xgrand).or.(dabs(xfod).gt.xgrand)) then
+        write(*,*)'findp3 : le premier xres ou xfod = NaN!!'
+        write(*,*)'           xres = ',xres
+        write(*,*)'           xfod = ',xfod
+        call exit(1)
+      endif
+*     NEWTON
+*     nombre de rebalancement a droite ou a gauche : ndg
+      nd = 0
+      ng = 0
+      DO IT=1,MAXIT
+        write(*,*)'findp3 : IT = ',it
+        write(*,*)'   x0 = ',x0
+        write(*,*)'   y0 = ',y0
+*       Pour se premunir des boules infifnies :
+*       WRITE(*,*)'FINDP2 : ITERATION : ',IT
+*       XALPH = (-1.) * ((XB/XA)**2)*X0/Y0
+* 20     continue
+*           CALCUL DU RESIDU :
+        XRES =  XA1*(dsqrt(dabs(1.d0 - ((X0/XA)**2)))) + 
+     &          XB1*(dsqrt(dabs(1.d0 - ((X0/XA)**2))))/X0 + XC1
+        write(*,*)'       xres = ',xres
+        IF (dabs(XRES).LE.CRIT) THEN
+          XS = X0
+          YS = Y0
+          XDMIN = dsqrt(((XS-XC)**2)+((YS-YC)**2))
+          write(*,*)'       convergence --> goto 10'
+          GOTO 10
+        ENDIF
+*           DERIVEE DU RESIDU : 
+        XFOD = -(XA1*(X0**3) + XB1*(XA**2)*(1.d0 - (X0/XA)**2) +
+     &  XB1*(X0**2)) / ((XA**2)*(X0**2)*dsqrt(dabs(1.d0 - (X0/XA)**2)))
+*       if (nd.gt.0) then
+*         write(*,*)'matrice tangente automatique :'
+*         write(*,*)'   xres = ',xres
+*         write(*,*)'   xresprec = ',xresprec
+*         write(*,*)'   (xres - xresprec) = ',(xres - xresprec)
+*         xfod = (xres - xresprec)/(delta_x)
+*         xresprec = xres
+*         write(*,*)'       delta_x = ',delta_x
+*         write(*,*)'       xfod = ',xfod
+*       endif
+        write(*,*)'       xfod = ',xfod
+*       delta_x
+        DELTA_X = - (XRES/XFOD)
+        write(*,*)'       delta_x = ',delta_x
+        if (dabs(delta_x).gt.xgrand) call exit(1)
+*       relaxation : 
+ 20     continue
+*       X1 provisoire : 
+        X1 = X0 + DELTA_X
+        write(*,*)'       x1 = ',x1
+*       si il est hors limite on le rebalance au plus proche de la 
+*       limite dans l'espoir qu'il passe a droite de la solution :
+        if (dabs(x1).gt.xa) then
+          write(*,*)'   |x1| > a :'
+          if (nd.gt.0) then
+            nd = nd + 1
+***** old : projection horizontale :
+            write(*,*)'   yc = ',yc
+            if (dsign(1.d0,yc).ge.0.d0) y0 = yc
+            if (dsign(1.d0,yc).lt.0.d0) y0 = -yc
+            write(*,*)' dsign(1.d0,yc) = ',dsign(1.d0,yc)
+            write(*,*)' y0 = ',y0
+            if (dsign(1.d0,xc).ge.0.d0) x0=xa*dsqrt(1.d0-((y0/xb)**2))
+            if (dsign(1.d0,xc).lt.0.d0) x0=-xa*dsqrt(1.d0-((y0/xb)**2))
+            write(*,*)'   x0 = ',x0
+            xalf = -(xb**2)*x0/((xa**2)*y0) 
+            write(*,*)'   xalf = ',xalf
+            xnpe = dsign(1.d0,yc)*(-1.d0)*xalf
+            write(*,*)'   xnpe = ',xnpe
+            ynpe = dsign(1.d0,yc)*1.d0
+            write(*,*)'   ynpe = ',ynpe
+            psxnpe = dsqrt(xnpe**2 + ynpe**2)
+            write(*,*)'   psxnpe = ',psxnpe
+            xs = x0 
+            write(*,*)'   xs = ',xs
+            ys = y0 
+            write(*,*)'   ys = ',ys
+            xdmin = dsqrt(((xs-xc)**2)+((ys-yc)**2))
+            write(*,*)'   xdmin = ',xdmin
+            xres = dabs((xnpe*(y0-yc) - ynpe*(x0-xc))/psxnpe)
+            write(*,*)'   ypne*(x0-xc)/psxnpe = ',ynpe*(x0-xc)/psxnpe 
+            write(*,*)'   xres = ',xres
+*            if ((xres.gt.crit).or.(xres.ne.xres)) call exit(1)
+            write(*,*)'       convergence ou non --> goto 10'
+*           call exit(1)
+            goto 10
+***** old : findp :
+**            critp = (xzprec/(1.d2-1.d0))
+**            critp = (xzprec*101.d-2)
+*            critp = 1.d-7
+*            xdiscr = 1.d6
+*            write(*,*)'       call findp'
+*            call FINDP(XA,XB,XC,YC,X0,XS,YS,XDMIN,CRITP,xdiscr)
+*            XRES =  XA1*(dsqrt(dabs(1.d0 - ((XS/XA)**2)))) + 
+*     &              XB1*(dsqrt(dabs(1.d0 - ((XS/XA)**2))))/XS + XC1
+*            write(*,*)'       post-findp xres = ',xres
+*            if (xres.gt.1.d-8) call exit(1)
+*            write(*,*)'       convergence ou non --> goto 10'
+*            goto 10
+*            if (xres.lt.crit) then
+*              write(*,*)'       convergence --> goto 10'
+*              goto 10
+*            endif
+*            x1 = xs1
+*            y1 = ys1
+*           goto 20
+***** old : relaxation :
+**           x0 = xsig*(xa - (xzprec/(2.d0**ndg)))
+**           x0 = xsig*(xa - (xzprec/real(ndg+1)))
+**           delta_x = delta_x/2.d0
+*            delta_x = delta_x/dsqrt(real(nd+1))
+*            write(*,*)'     relax x1 = ',x1
+*            write(*,*)'     goto 20 '
+*            nd = nd + 1
+**           lauto = .true.
+*            goto 20
+***** old : along the axe assignment :
+*            write(*,*)'   solution trop a droite goto 10'
+*            xs = dsign(1.d0,xc)*xa
+*            ys = 0.d0
+*            xdmin = dsqrt(((xs-xc)**2)+((ys-yc)**2))
+*            xres =  xa1*(dsqrt(dabs(1.d0 - ((xs/xa)**2)))) + 
+*     &          xb1*(dsqrt(dabs(1.d0 - ((xs/xa)**2))))/xs + xc1
+*            write(*,*)'xres = ',xres
+*            write(*,*)'|yc| = ',dabs(yc)
+*            if (dabs(xres).gt.crit) call exit(1)
+*            goto 10
+          endif
+*          x1 = xsig*(xa - xzprec)
+*         x2 = x1
+          if (dsign(1.d0,xc).ge.0.d0) x1 = xa*dsqrt(1.d0 - xzprec)
+          if (dsign(1.d0,xc).lt.0.d0) x1 = -xa*dsqrt(1.d0 - xzprec)
+*         write(*,*)'     maj x1 = ',x1
+*         write(*,*)'x2 - x1 / x2 * 100 = ', ((x2 - x1) / x2) * 100 
+*         write(*,*)'xresprec = ',xresprec
+          nd = nd + 1
+*          xresprec = xres
+*          lauto = .true.
+        endif 
+*
+        if (dsign(1.,(xc*x1)).lt.0.d0) then
+          write(*,*)'   sign(x1*xc) < 0 :'
+          if (ng.gt.0) then
+            write(*,*)'   solution trop a gauche goto 10'
+*           vertical projection :
+            xs = x_c
+            if (ysig.ge.0.d0) YS = XB*dsqrt(1.d0 - ((XS/XA)**2))
+            if (ysig.lt.0.d0) YS = -XB*dsqrt(1.d0 - ((XS/XA)**2))
+            xdmin = dsqrt(((xs-xc)**2)+((ys-yc)**2))
+            xres =  xa1*(dsqrt(dabs(1.d0 - ((xs/xa)**2)))) + 
+     &          xb1*(dsqrt(dabs(1.d0 - ((xs/xa)**2))))/xs + xc1
+            write(*,*)'xres = ',xres
+            goto 10
+          endif
+          x1 = xsig*xzprec
+          write(*,*)'     maj x1 = ',x1
+          ng = ng + 1
+        endif
+*       Residu provisoire :
+        XRES =  XA1*(dsqrt(dabs(1.d0 - ((X1/XA)**2)))) + 
+     &          XB1*(dsqrt(dabs(1.d0 - ((X1/XA)**2))))/X1 + XC1
+        write(*,*)'       2eme xres = ',xres
+*       residu derivative en ce point :
+        XFOD = 
+     &  (-1.d0)*(XA1*(X1**3) + XB1*(XA**2)*(1.d0 - (X1/XA)**2) +
+     &  XB1*(X1**2)) / ((XA**2)*(X1**2)*dsqrt(dabs(1.d0 - (X1/XA)**2)))
+*       if (lauto) then
+*         write(*,*)'matrice tangente automatique :'
+*         write(*,*)'     xresprec = ',xresprec
+*         write(*,*)'     x1 - x0 = ',x1 - x0
+*         write(*,*)'     delta_x = ',delta_x
+*         write(*,*)'     xres - xresprec = ',xres - xresprec
+*         xfod = (xres - xresprec)/delta_x
+*         if (xfod.gt.xgrand) call exit(1)
+*       endif
+        write(*,*)'       2eme xfod = ',xfod
+*       NaN ?
+*        if ((xres.ne.xres).or.(xfod.ne.xfod).or.
+*     &      (xres.eq.infinity()).or.(xfod.eq.infinity())) then
+        if ((xres.ne.xres).or.(xfod.ne.xfod).or.
+     &    (abs(xres).gt.xgrand).or.(abs(xfod).gt.xgrand)) then
+          write(*,*)'findp3 : le 2eme xres ou xfod'
+          write(*,*)'         de l iteration : ',it
+          write(*,*)'         = NaN!!'
+          write(*,*)'         xres = ',xres
+          write(*,*)'         xfod = ',xfod
+          call exit(1)
+        endif
+*       Convergence ? 
+        IF (dabs(XRES).LE.CRIT) THEN
+          XS = X1
+          YS = YSIG*XB*dsqrt(dabs(1.d0 - ((X1/XA)**2)))
+          XDMIN = dsqrt(((XS-XC)**2)+((YS-YC)**2))
+          write(*,*)'       convergence --> goto 10'
+          GOTO 10
+        ENDIF
+        Y1 = YSIG*XB*dsqrt(1.d0 - ((X1/XA)**2))
+*       Si jamais ne converge pas : sorties 
+        XS = X1
+        YS = Y1
+        XDMIN = dsqrt(((X1-XC)**2)+((Y1-YC)**2))
+*       pour le pas suivant :
+        X0 = X1
+        Y0 = Y1
+      ENDDO
+* 20   continue
+       write(*,*)'findp3 : non convergence'
+       call exit(1)
+
+ 10   CONTINUE
+
+       write(*,*)'findp3 : convergence'
+       write(*,*)'         residu = ',xres
+       write(*,*)'         niter = ',it
+
+      END

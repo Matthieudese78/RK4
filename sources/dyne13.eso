@@ -1,0 +1,293 @@
+C DYNE13    SOURCE    CB215821  20/11/25    13:26:20     10792          
+      SUBROUTINE DYNE13(ITBAS,ITKM,KPREF,KCPR,LMODYN,KCPRIG)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNE : algorithme de Fu - de Vogelaere               *
+*     ________________________________________________               *
+*                                                                    *
+*     Verification des objets TBAS, TKM, et notamment de             *
+*     leurs supports. Liste des points de reference.                 *
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   ITBAS   Table representant une base modale                     *
+* e   ITKM    Table contenant les matrices de raideur et de masse    *
+*  s  KPREF   Segment des points de reference                        *
+*  s  KCPR    Segment des points                                     *
+*                                                                    *
+*                                                                    *
+* - grâce à DYNE25 ICPR(I)                                           *
+*                > 0 si le mode I est elastique                      *
+*                < 0 si le mode I est une rota rigide                *
+*                                                                    *
+*  ex: le Ieme mode de la table a pour point repere le noeud 6410    *
+*   - si mode I elastique, alors IK1 = IK1 + 1 puis ICPR(6410) = IK1 *
+*   - si mode I rigide, alors IK2 = IK2 + 1 puis ICPR(6410) = -IK2   *
+*   a la fin: IK1 = nbr mode elastique et IK2 = nbr modes rigides    *
+*                                                                    *
+*   - IPOREF et IPORIG "renumerote" les modes elastiques resp. rigi  *
+*        ex: base modale de 5 mode                                   *
+*                                                                    *
+* mode1 elastique      ICPR(ptrep1)= 1   IPOREF(1) = ptrep1          *
+* mode2 rigide         ICPR(ptrep2)= -1  IPORIG(1) = ptrep2          *  
+* mode3 elastique      ICPR(ptrep3)= 2   IPOREF(2) = ptrep3          *
+* mode4 elastique      ICPR(ptrep4)= 3   IPOREF(3) = ptrep4          *
+* mode5 rigide         ICPR(ptrep5)= -2  IPORIG(2) = ptrep5          *
+*                                                                    *
+* Remarque: les ptreps stockes par ICPRIG sont les 'nouveaux' ptreps *
+*           crees par RECTMOD (appelee par DYNE25).                  *
+* (avec ptrep1 = KNOE sortant du ACCTAB POINT_REPERE)                *
+*--------------------------------------------------------------------*
+
+-INC PPARAM
+-INC CCOPTIO
+-INC SMRIGID
+-INC SMCHPOI
+-INC SMELEME
+-INC SMCOORD
+-INC SMMODEL
+*
+      SEGMENT,ICPR(nbpts)
+      SEGMENT,ICPRIG(nbpts)
+*
+      SEGMENT,MPREF
+         INTEGER IPOREF(NPREF),IPORIG(NPRIG)
+      ENDSEGMENT
+*
+      LOGICAL L0,L1,LMODYN
+      CHARACTER*4  MO2
+      CHARACTER*8  TYPRET,CHARRE
+      CHARACTER*40 MONMOT
+*
+*     IK1/2 = compteur des modes elastiques/rotations_rigides
+      IK1   = 0
+      IK2   = 0
+      IRIG  = 0
+      IMAS  = 0
+      IMESS = 0
+      SEGINI,ICPR
+      KCPR = ICPR
+      KCPRIG = 0
+*
+      LCPR = nbpts
+*
+      WRITE(*,*)'DYNE13 : LCPR',LCPR
+*--------------------------------------------------------------------*
+*    1/ Cas ou la base modale est definie seule
+*--------------------------------------------------------------------*
+*
+      IF (ITBAS.NE.0 .AND.ITKM.EQ.0.and.(.not.lmodyn)) THEN
+         CALL ACCTAB(ITBAS,'MOT',IMODE,X0,'SOUSTYPE',L0,IP0,
+     &                     'MOT',I1,X1,MONMOT,L1,IP1)
+         IF (IERR.NE.0) RETURN
+*
+*        Cas ou la base est unique
+*
+         IF (MONMOT(1:11).EQ.'BASE_MODALE') THEN
+*
+*           On recupere la base de modes
+*
+*            CALL ACCTAB(ITBAS,'MOT',IMODE,X0,'MODES',L0,IP0,
+*     &                        'TABLE',I1,X1,' ',L1,IBAS)
+*            IF (IERR.NE.0) RETURN
+            CALL DYNE25(ITBAS,KCPR,KCPRIG,IK1,IK2,1)
+            IF (IERR.NE.0) RETURN
+*
+*--------------------------------------------------------------------*
+*        Cas ou on a un ensemble de bases
+*--------------------------------------------------------------------*
+*
+         ELSE IF (MONMOT(1:17).EQ.'ENSEMBLE_DE_BASES') THEN
+*
+*           On boucle sur le nombre de bases
+*
+            IB = 0
+ 10         CONTINUE
+            IB = IB + 1
+            TYPRET = ' '
+            CALL ACCTAB(ITBAS,'ENTIER',IB,X0,' ',L0,IP0,
+     &                          TYPRET,I1,X1,CHARRE,L1,ITTBAS)
+            IF (IERR.NE.0) RETURN
+            IF (ITTBAS.NE.0) THEN
+               IF (TYPRET.EQ.'TABLE   ') THEN
+*                  CALL ACCTAB(ITTBAS,'MOT',I0,X0,'MODES',L0,IP0,
+*     &                             'TABLE',I1,X1,' ',L1,IBAS)
+*                  IF (IERR.NE.0) RETURN
+                  CALL DYNE25(ITTBAS,KCPR,KCPRIG,IK1,IK2,IB)
+                  IF (IERR.NE.0) RETURN
+                  GOTO 10
+               ELSE
+                  CALL ERREUR(491)
+                  RETURN
+               ENDIF
+            ENDIF
+*
+*        Cas ou le SOUSTYPE est incorrect
+*
+         ELSE
+            CALL ERREUR(482)
+            RETURN
+         ENDIF
+*
+*--------------------------------------------------------------------*
+*     2/ Cas ou les matrices raideur et de masse sont definies seules
+*--------------------------------------------------------------------*
+*
+      ELSE IF (ITBAS.EQ.0 .AND. ITKM.NE.0.and.(.not.lmodyn)) THEN
+         TYPRET = ' '
+         CALL ACCTAB(ITKM,'MOT',I0,X0,'RAIDEUR',L0,IP0,
+     &                   TYPRET,I1,X1,CHARRE,L1,IRIG)
+         IF (IERR.NE.0) RETURN
+         IF (IRIG.NE.0 .AND. TYPRET.EQ.'RIGIDITE') THEN
+            MRIGID = IRIG
+            SEGACT,MRIGID
+            NRIG = IRIGEL(/2)
+            DO 20 I=1,NRIG
+               MELEME = IRIGEL(1,I)
+               SEGACT,MELEME
+               NBEL = NUM(/2)
+               NBNN = NUM(/1)
+               DO 25 J=1,NBEL
+                  DO 26 K=1,NBNN
+                     KNOE = NUM(K,J)
+                     IF (ICPR(KNOE).EQ.0) THEN
+                        IK1 = IK1 + 1
+                        ICPR(KNOE) = IK1
+      IF (IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)'DYNE13 : raideur ICPR(',KNOE,')=',ICPR(KNOE)
+      ENDIF
+                     ENDIF
+ 26                  CONTINUE
+*                 end do
+ 25               CONTINUE
+*              end do
+               SEGDES,MELEME
+ 20            CONTINUE
+*           end do
+            SEGDES,MRIGID
+*
+*        Cas ou le SOUSTYPE est incorrect
+*
+         ELSE
+            CALL ERREUR(483)
+            RETURN
+         ENDIF
+*
+         TYPRET = ' '
+         CALL ACCTAB(ITKM,'MOT',I0,X0,'MASSE',L0,IP0,
+     &                   TYPRET,I1,X1,CHARRE,L1,IMAS)
+         IF (IERR.NE.0) RETURN
+         IF (IMAS.NE.0 .AND. TYPRET.EQ.'RIGIDITE') THEN
+            MRIGID = IMAS
+            SEGACT,MRIGID
+            NMAS = IRIGEL(/2)
+            DO 30 I=1,NMAS
+               MELEME = IRIGEL(1,I)
+               SEGACT,MELEME
+               NBEL = NUM(/2)
+               NBNN = NUM(/1)
+               DO 35 J=1,NBEL
+                  DO 36 K=1,NBNN
+                     KNOE = NUM(K,J)
+                     IF (ICPR(KNOE).EQ.0) THEN
+                        IK1 = IK1 + 1
+                        ICPR(KNOE) = IK1
+      IF (IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)'DYNE13 : masse ICPR(',KNOE,')=',ICPR(KNOE)
+      ENDIF
+                     ENDIF
+ 36                  CONTINUE
+*                 end do
+ 35               CONTINUE
+*              end do
+               SEGDES,MELEME
+ 30            CONTINUE
+*           end do
+            SEGDES,MRIGID
+*
+*        Cas ou le SOUSTYPE est incorrect
+*
+         ELSE
+            CALL ERREUR(484)
+            RETURN
+         ENDIF
+*
+*--------------------------------------------------------------------*
+*     3/ Cas ou la base modale est definie
+*               et les matrices masse et rigidite sont definies
+*--------------------------------------------------------------------*
+*
+      ELSE IF (ITBAS.NE.0 .AND. ITKM.NE.0.and.(.not.lmodyn)) THEN
+         CALL ERREUR(478)
+         RETURN
+*
+* table pasapas
+      ELSE IF (LMODYN) THEN
+        mmodel = itbas
+        segact mmodel
+        do im = 1,kmodel(/1)
+          imodel = kmodel(im)
+          segact imodel
+          if (nefmod.ne.45) goto 45
+          meleme = imamod
+          segact meleme
+          do ip = 1,num(/2)
+            knoe = num(1,ip)
+            IF (KNOE.NE.0) THEN
+               IF (ICPR(KNOE).EQ.0) THEN
+                  IK1 = IK1 + 1
+                  ICPR(KNOE) = IK1
+      IF (IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)'DYNE13 : basemo. ICPR(',KNOE,')=',ICPR(KNOE)
+      ENDIF
+               ENDIF
+            ENDIF
+          enddo
+         segdes meleme
+ 45      continue
+         segdes imodel
+        enddo
+        segdes mmodel
+      ENDIF
+*--------------------------------------------------------------------*
+*     5/ Creation du segment definissant les points supports:
+*--------------------------------------------------------------------*
+*
+      NPREF = IK1
+      NPRIG = IK2
+      WRITE(*,*)'DYNE13: NPREF = ',NPREF
+      WRITE(*,*)'DYNE13: NPRIG = ',NPRIG
+      SEGINI,MPREF
+      KPREF = MPREF
+* test debugg hbm: on retire: LCPR = nbpts deja defini au debut
+      IF (IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)'DYNE13 : NPRIG',NPRIG
+      WRITE(IOIMP,*)'DYNE13 : IPORIG(/1)',IPORIG(/1)
+      WRITE(IOIMP,*)'DYNE13 : LCPR',LCPR
+      WRITE(IOIMP,*)'DYNE13 : KPREF=',KPREF,NPREF
+      ENDIF
+* En cas de rotations rigides, la longueur de ICPR a ete modifiee!! (cf RECTMOD)
+* on boucle donc sur ICPR(/1)
+      DO 100 I=1,ICPR(/1)
+         IF (ICPR(I).NE.0) THEN
+            IREF = ICPR(I)
+c          -modes elastiques
+            if(IREF.gt.0) then
+              IPOREF(IREF) = I
+c          -modes rotations rigides
+            elseif(IREF.lt.0) then
+              IPORIG(-1*IREF) = I             
+            else
+              CALL ERREUR(5)
+            endif
+         ENDIF
+ 100  CONTINUE
+*
+      END
+
+
+
+ 
+ 

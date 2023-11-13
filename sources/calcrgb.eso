@@ -1,0 +1,76 @@
+      SUBROUTINE CALCRGB(FNB,FTB,XPRB,NECH,VXNCB,IP,
+     &                   FNBRES,FTBRES,GRES)
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+
+*     Calcul de la resultante et du couple resistant en base B. 
+*     XPRB : coord. pts du profile : centre du cercle en base B
+*     VXNCB : coord. vect. normaux du profile : en base B
+*     FNB & FTB : profiles de force normales et tangentielles en base B
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettant de calculer                                 * 
+*     l'angle d'un vect. / axe (0x) via l'operateur ATAN                *
+*     Matthieu SERRE     : le 23/05/2023 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*      
+*     INTEGER NECH
+      REAL*8 FNB(NECH),FTB(3,NECH),XPRB(3,NECH),VXNCB(3,NECH)
+      REAL*8 VXCO(3),VYCO(3),VZCO(3)
+      REAL*8 FNBRES(3),FTBRES(3)
+      REAL*8 GRES(3)
+*
+************************************************************************ 
+*           LOOP ON REACTION PROFILE
+************************************************************************  
+      DO ID=1,3
+         FNBRES(ID) = 0.D0
+         FTBRES(ID) = 0.D0
+         GRES(ID) = 0.D0
+      ENDDO
+*
+      DO IPROF=1,NECH 
+*       Resultante cercle_cone seul : 
+        FNBRES(1) = FNBRES(1) + FNB(IPROF)*VXNCB(1,IPROF)
+        FNBRES(2) = FNBRES(2) + FNB(IPROF)*VXNCB(2,IPROF)
+        FNBRES(3) = FNBRES(3) + FNB(IPROF)*VXNCB(3,IPROF)
+*  
+        FTBRES(1) = FTBRES(1) + FTB(1,IPROF)
+        FTBRES(2) = FTBRES(2) + FTB(2,IPROF)
+        FTBRES(3) = FTBRES(3) + FTB(3,IPROF)
+
+*       Couple resistant : 
+*       Couple resisitant cercle_cone seul : 
+        GRES(1) = GRES(1) + 
+     &  XPRB(2,IPROF)*(FNB(IPROF)*VXNCB(3,IPROF)+FTB(3,IPROF)) - 
+     &  XPRB(3,IPROF)*(FNB(IPROF)*VXNCB(2,IPROF)+FTB(2,IPROF))
+        GRES(2) = GRES(2) + 
+     &  XPRB(3,IPROF)*(FNB(IPROF)*VXNCB(1,IPROF)+FTB(1,IPROF)) - 
+     &  XPRB(1,IPROF)*(FNB(IPROF)*VXNCB(3,IPROF)+FTB(3,IPROF))
+        GRES(3) = GRES(3) + 
+     &  XPRB(1,IPROF)*(FNB(IPROF)*VXNCB(2,IPROF)+FTB(2,IPROF)) - 
+     &  XPRB(2,IPROF)*(FNB(IPROF)*VXNCB(1,IPROF)+FTB(1,IPROF))
+
+************************************************************************ 
+*              Fin boucle sur le profil : 
+************************************************************************ 
+       ENDDO
+************************************************************************ 
+*              Implementation FTOTB : se fait apres l'appel a calcrgb
+************************************************************************ 
+
+cmsw  WRITE(*,*)'CALCRGB : FNBRES(1) = ',FNBRES(1)
+cmsw  WRITE(*,*)'CALCRGB : FNBRES(2) = ',FNBRES(2)
+cmsw  WRITE(*,*)'CALCRGB : FNBRES(3) = ',FNBRES(3)
+
+cmsw  WRITE(*,*)'CALCRGB : FTBRES(1) = ',FTBRES(1)
+cmsw  WRITE(*,*)'CALCRGB : FTBRES(2) = ',FTBRES(2)
+cmsw  WRITE(*,*)'CALCRGB : FTBRES(3) = ',FTBRES(3)
+
+cmsw  WRITE(*,*)'FNBRES(1) + FTBRES(1) = ',FNBRES(1) + FTBRES(1)
+cmsw  WRITE(*,*)'FNBRES(2) + FTBRES(2) = ',FNBRES(2) + FTBRES(2)
+cmsw  WRITE(*,*)'FNBRES(3) + FTBRES(3) = ',FNBRES(3) + FTBRES(3)
+************************************************************************ 
+*
+      END

@@ -1,0 +1,456 @@
+C DEVTR1    SOURCE    BP208322  20/03/26    21:15:36     10562          
+      SUBROUTINE DEVTR1(Q1,Q2,Q3,NA1,IINS2,NINS,FTOTA,XRES,ICHRES,NRES,
+     &                  NCRES,NPRES,XREP,NREP,XVALA,INULA,NLIAA,NLSA,
+     &                  XRESLA,XVALB,INULB,NLIAB,NLSB,XRESLB,ILIREA,
+     &                  ILIREB,NTVAR,XPALB,IPALB,XMREP,IMREP,IDIMB,
+     &                  WEXT,WINT,XCHPFB,NPLB,NCRIG,XRIG,KTROT,IAROTA)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Op�rateur DYNE :                                               *
+*     Transfert des quantit�s calcul�es durant le pas dans le        *
+*     tableau de sauvegarde, si l'on souhaite les garder ...         *
+*                                                                    *
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Param�tres:                                                    *
+*                                                                    *
+* e   Q1(.,.) Vecteur de d�placements g�n�ralis�s                    *
+* e   Q2(.,.) Vecteur de vitesses g�n�ralis�s                        *
+* e   Q3(.,.) Vecteur de acc�l�rations g�n�ralis�s                   *
+* e   NA1     Nombre total d'inconnues en base A                     *
+* e   IINS2   Num�ro du pas de sortie                                *
+* e   NINS    On veut une sortie tous les NINS pas de calcul         *
+* e   FTOTA   Forces ext�rieures totalis�es en base A                *
+* es  XRES    Valeurs des variables sauvegard�es                     *
+* e   ICHRES  Indique quelles variables seront sauvegard�es          *
+* e   NRES    Nombre de variables ( principales et auxilliaires )    *
+* e   NCRES   Nombre de valeurs prises par les variables             *
+* e   NPRES   Nombre de pas de sortie                                *
+* es  XREP    Valeurs des variables de reprise de calcul             *
+* e   NREP    Nombre de variables de reprise                         *
+* e   XMREP   Param�tres de liaison n�cessaire @ une reprise         *
+* e   IMREP   Param�tres de liaison n�cessaire @ une reprise         *
+* e   XPALB   Param�tres de liaison                                  *
+* e   IPALB   Param�tres de liaison                                  *
+* e   XVALA   Tableau contenant les variables internes de liaison A  *
+* e   INULA   Tableau contenant les rep�res des liaisons             *
+* e   NLIAA   Nombre de liaisons sur la base A                       *
+* e   NLSA    Nombre de liaisons en sortie base A                    *
+* es  XRESLA  Valeurs de variables de liaisons sauvegard�es base A   *
+* e   XVALB   Tableau contenant les variables internes de liaison B  *
+* e   INULB   Tableau contenant les rep�res des liaisons             *
+* e   NLIAB   Nombre de liaisons sur la base B                       *
+* e   NLSB    Nombre de liaisons en sortie base B                    *
+* es  XRESLB  Valeurs de variables de liaisons sauvegard�es base B   *
+* e,s WEXT   travail des forces exterieures                          *
+* e,s WINT   travail des forces interieures (rigidite et             *
+*            amortissement et forces de liaison )                    *
+*                                                                    *
+* Rq rotas rigides: la condition de remplissage de XRIG est:         *
+*                  IF ((4*IB).LE.NCRIG)                              *
+*    ss entendu: si la sous base comporte des rotas rigides,         *
+*                alors on remplit XRIG.                              *
+*    Attention: solution provisoire, il faudrait inclure IAROTA puis *
+*               IF (IAROTA(IB).NE.0) THEN                            *
+*                  XRIG(KRES,I+4*(IB-1),IINS2) = ...                 *
+*--------------------------------------------------------------------*
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,2,NSB),OMEG2(3,2,NSB),OMEG3(3,2,NSB)
+         REAL*8 ROT(3,3,2,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,2,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+*      
+      REAL*8 Q1(NA1,*),Q2(NA1,*),Q3(NA1,*)
+      REAL*8 XVALA(NLIAA,4,*),XRESLA(NLSA,NPRES,*)
+      REAL*8 XVALB(NLIAB,4,*),XRESLB(NLSB,NPRES,*)
+      REAL*8 FTOTA(NA1,*),XRES(NRES,NCRES,*),XREP(NREP,*)
+      REAL*8 XPALB(NLIAB,*),XMREP(NLIAB,4,*)
+      INTEGER ICHRES(*),INULA(*),INULB(*),IAROTA(*)
+      INTEGER ILIREA(NLSA,*),ILIREB(NLSB,*)
+      INTEGER IPALB(NLIAB,*),IMREP(NLIAB,*)
+      REAL*8 WEXT(NA1,2),WINT(NA1,2),XCHPFB(2,NLIAB,4,*)
+* Ajout Matt (rotas rigides):
+      REAL*8 XRIG(NRES,NCRIG,*)
+      LOGICAL RIGIDE
+*
+      RIGIDE = (KTROT.NE.0)
+      IF (RIGIDE) THEN
+        MTROT  = KTROT
+        NSB = OMEG1(/3)
+*        WRITE(*,*)'DEVTR1: NSB = ',NSB
+*        WRITE(*,*)'        NCRIG = ',NCRIG
+      ENDIF
+* 
+*--------------------------------------------------------------------
+*     Sauvegarde pour un pas courant :
+*--------------------------------------------------------------------
+*
+      IF (NRES.NE.0) THEN
+         KRES = 0
+c       +deplacement 
+*         WRITE(*,*)'DEVTR1: sauv depl. ICHRES(1) =',ICHRES(1)
+         IF (ICHRES(1).GE.1) THEN
+            KRES = KRES + 1
+* Stockage des depl. modes elastiques:
+            DO 10 I=1,NA1
+               XRES(KRES,I,IINS2) = Q1(I,1)
+ 10         CONTINUE
+* Si rotas rigides: 
+            IF (RIGIDE) THEN
+              IBRIG = 0
+              DO IB=1,NSB
+                IF (IAROTA(IB).NE.0) THEN
+                  IBRIG = IBRIG + 1
+                  DO I=1,4
+*                    XRIG(KRES,I+4*(IB-1),IINS2) = OMEG1(I,1,IB) 
+                   XRIG(KRES,I+4*(IBRIG-1),IINS2) = OMEG1(I,1,IB)
+*                   WRITE(*,*)'        ID = ',I
+*                   WRITE(*,*)'        IPDT = ',1
+*                   WRITE(*,*)'        IB = ',IB
+*                   WRITE(*,*)'        KRES = ',KRES
+*                   WRITE(*,*)'        I+4*(IB-IBRIG-1) = ',
+*     &                                I+4*(IB-IBRIG-1)
+*                   WRITE(*,*)'        IINS2 = ',IINS2
+*      WRITE(*,*)'XRIG(KRES,I+4*(IB-1),IINS2) = OMEG1(',I,1,IB,') = ',
+*     &                                 OMEG1(I,1,IB)
+                  ENDDO
+                ENDIF
+              ENDDO
+            ENDIF
+         ENDIF
+*
+c       +vitesse 
+*         WRITE(*,*)'DEVTR1: sauv vite. ICHRES(2) =',ICHRES(2)
+         IF (ICHRES(2).GE.1) THEN
+            KRES = KRES + 1
+            DO 12 I=1,NA1
+               XRES(KRES,I,IINS2) = Q2(I,1)
+ 12            CONTINUE
+* Si rotas rigides: 
+            IF (RIGIDE) THEN
+              IBRIG = 0
+              DO IB=1,NSB
+                IF (IAROTA(IB).NE.0) THEN
+                 IBRIG = IBRIG + 1
+                 DO I=1,3
+*                    WRITE(*,*)'DEVTR1 (vite): KRES = ',KRES
+*                    WRITE(*,*)'        ss base = ',IB
+*      WRITE(*,*)'XRIG(KRES,I+3*(IB-1),IINS2) = OMEG2(',I,1,IB,') = ',
+*     &                                 OMEG2(I,1,IB)
+*                    XRIG(KRES,I+4*(IB-1),IINS2) = OMEG2(I,1,IB)
+                   XRIG(KRES,I+4*(IBRIG-1),IINS2) = OMEG2(I,1,IB)
+                 ENDDO
+                 XRIG(KRES,4*(IBRIG),IINS2) = 0.D0
+                ENDIF
+              ENDDO
+            ENDIF
+         ENDIF
+*
+c       +deplacement demi-pas 
+         IF (ICHRES(3).GE.1) THEN
+            KRES = KRES + 1
+            DO 14 I=1,NA1
+               XRES(KRES,I,IINS2) = Q1(I,2)
+ 14         CONTINUE
+         ENDIF
+
+
+c       +vitesse demi-pas 
+         IF (ICHRES(4).GE.1) THEN
+            KRES = KRES + 1
+            DO 16 I=1,NA1
+               XRES(KRES,I,IINS2) = Q2(I,2)
+ 16         CONTINUE
+         ENDIF
+         
+         
+c       +acceleration 
+*         WRITE(*,*)'DEVTR1: sauv acce. ICHRES(5) =',ICHRES(5)
+         IF (ICHRES(5).GE.1) THEN
+            KRES = KRES + 1
+            DO 18 I=1,NA1
+               XRES(KRES,I,IINS2) = Q3(I,1)
+ 18         CONTINUE
+* Si rotas rigides: 
+            IF (RIGIDE) THEN
+              IBRIG = 0            
+              DO IB=1,NSB
+                IF (IAROTA(IB).NE.0) THEN
+                 IBRIG = IBRIG + 1
+                 DO I=1,3
+*                    WRITE(*,*)'DEVTR1 (acce): KRES = ',KRES
+*                    WRITE(*,*)'        ss base = ',IB
+*      WRITE(*,*)'XRIG(KRES,I+3*(IB-1),IINS2) = OMEG3(',I,1,IB,') = ',
+*     &                                 OMEG3(I,1,IB)                 
+*                  XRIG(KRES,I+4*(IB-1),IINS2) = OMEG3(I,1,IB)
+                   XRIG(KRES,I+4*(IBRIG-1),IINS2) = OMEG3(I,1,IB)
+                 ENDDO
+                 XRIG(KRES,4*(IBRIG),IINS2) = 0.D0
+                ENDIF
+              ENDDO
+            ENDIF
+         ENDIF
+*
+c       +acceleration demi-pas
+         IF (ICHRES(6).GE.1) THEN
+            KRES = KRES + 1
+            DO 20 I=1,NA1
+               XRES(KRES,I,IINS2) = Q3(I,2)
+ 20         CONTINUE
+         ENDIF
+
+c       +travail exterieur
+         IF (ICHRES(7).GE.1) THEN
+            KRES = KRES + 1
+            DO 60 I=1,NA1
+               XRES(KRES,I,IINS2) = WEXT(I,1)
+ 60         CONTINUE
+* Si rotas rigides: energie cinetique T_cin
+            IF (RIGIDE) THEN
+              IBRIG = 0
+              DO IB=1,NSB
+                IF (IAROTA(IB).NE.0) THEN      
+                  IBRIG = IBRIG + 1
+                  XRIG(KRES,1+4*(IBRIG-1),IINS2) = TCIN(IB)
+                  XRIG(KRES,2+4*(IBRIG-1),IINS2) = 0.D0
+                  XRIG(KRES,3+4*(IBRIG-1),IINS2) = 0.D0
+                  XRIG(KRES,4*IBRIG,IINS2) = 0.D0
+                ENDIF
+              ENDDO
+            ENDIF
+         ENDIF
+*
+c       +travail interieur
+         IF (ICHRES(8).GE.1) THEN
+            KRES = KRES + 1
+            DO 70 I=1,NA1
+               XRES(KRES,I,IINS2) = WINT(I,1)
+ 70         CONTINUE
+* Si rotas rigides: moment cinetique PICIN
+            IF (RIGIDE) THEN
+              IBRIG = 0
+              DO IB=1,NSB
+                IF (IAROTA(IB).NE.0) THEN        
+                  IBRIG = IBRIG + 1
+                  DO I=1,3
+                   XRIG(KRES,I+4*(IBRIG-1),IINS2)=PICIN(IB,I)
+                  ENDDO
+                  XRIG(KRES,4*(IBRIG),IINS2)=0.D0
+                ENDIF
+              ENDDO
+            ENDIF
+         ENDIF
+
+      ENDIF
+      
+c    +liaisons_A
+      IF (ICHRES(9).GE.1) THEN
+         DO 30 IL = 1,NLSA
+            IIL = INULA(IL)
+            II = 0
+            DO 32 IV = 1,NTVAR
+               IF (ILIREA(IL,IV).EQ.1) THEN
+                  II = II + 1
+                  XRESLA(IL,IINS2,II) = XVALA(IIL,1,IV)
+               ENDIF
+ 32         CONTINUE
+ 30      CONTINUE
+      ENDIF
+      
+c    +liaisons_B
+*      WRITE(*,*)'devtr1: LIAISON B ICHRES(10) = ',ICHRES(10)
+      IF (ICHRES(10).GE.1) THEN
+c        boucle sur les liaisons B
+         DO 40 IL = 1,NLSB
+*           INULB = indice dans la table de liaison B : TLB . i
+            IIL = INULB(IL)
+            II = 0
+c           boucle sur les grandeurs a sortir pour cette liaison
+cmsw            WRITE(*,*)'devtr1 : ecriture XRESLB :'
+cmsw            WRITE(*,*)'         NTVAR = ',NTVAR
+            DO 42 IV = 1,NTVAR
+*             -sortie d'un LISTREEL
+               IF (ILIREB(IL,IV).EQ.1) THEN
+                  II = II + 1
+                  XRESLB(IL,IINS2,II) = XVALB(IIL,1,IV)
+cmsw                  WRITE(*,*)'    XVALB(',IIL,1,IV,') :',XVALB(IIL,1,IV)
+                  
+c *              --- bp debut du write ---
+c                    if(IINS2.le.2) then
+c                     write(*,*) '--------- liaison B',IL,'-------'
+c                     write(*,*) 'grandeur  ',II,'issue de XVALB',IIL,IV
+c                    endif
+c *              --- --- --- --- --- --- 
+*             -sortie d'un CHPOINT
+               ELSEIF (ILIREB(IL,IV).EQ.2) THEN
+                   DO 43 IP=1,NPLB
+                    DO 44 ID=1,2
+                      II = II + 1
+                      XRESLB(IL,IINS2,II) = XCHPFB(ID,IIL,1,IP)
+ 44                 CONTINUE
+ 43                CONTINUE
+               ENDIF
+ 42          CONTINUE
+ 40       CONTINUE
+      ENDIF
+      
+*
+*--------------------------------------------------------------------
+*     Sauvegarde pour une reprise
+*--------------------------------------------------------------------
+*
+*      DO IRES=1,8
+*            WRITE(*,*)'DEVTR1 test ICHRES(',IRES,') = ',
+*     &                      ICHRES(IRES)
+*      ENDDO
+*      WRITE(*,*)'devtr1: NPRES = ',NPRES
+      IF (IINS2.EQ.NPRES) THEN
+         DO 50 I=1,NA1
+            XREP(1,I) = Q1(I,1)
+            XREP(2,I) = Q2(I,1)
+            XREP(3,I) = Q1(I,2)
+            XREP(4,I) = Q2(I,2)
+            XREP(5,I) = Q3(I,1)
+            XREP(6,I) = Q3(I,2)
+            XREP(7,I) = FTOTA(I,1)
+            XREP(8,I) = FTOTA(I,2)
+            XREP(9,I) = WEXT(I,1)
+            XREP(10,I)= WINT(I,1)
+ 50      CONTINUE 
+         IF (NLIAB.NE.0) THEN
+            DO 51 I = 1,NLIAB
+               ITYP = IPALB(I,1)
+               IMREP(I,1) = ITYP
+               IMREP(I,2) = IPALB(I,2)
+*
+* ------ choc �l�mentaire POINT_PLAN_FROTTEMENT
+               IF (ITYP.EQ.3 .OR. ITYP.EQ.103 ) THEN
+                  IDIM = IPALB(I,3)
+                  ID0 = 9 + 5*IDIM
+                  ID1 = 9 + 6*IDIM
+                  ID2 = 9 + 7*IDIM
+*
+c * ------ choc �l�mentaire POINT_CERCLE_FROTTEMENT sans amortissement
+c                ELSEIF (ITYP.EQ.23.OR.ITYP.EQ.123) THEN
+c                   IDIM = IPALB(I,3)
+c                   ID0 = 6 + 6*IDIM
+c                   ID1 = 6 + 7*IDIM
+c                   ID2 = 6 + 8*IDIM
+cbp,2020
+*
+* ------ choc �l�mentaire POINT_CERCLE_FROTTEMENT avec amortissement
+               ELSE IF (ITYP.EQ.24.OR.ITYP.EQ.124) THEN
+                  IDIM = IPALB(I,3)
+c                   ID0 = 7 + 6*IDIM
+c                   ID1 = 7 + 7*IDIM
+c                   ID2 = 7 + 8*IDIM
+                  ID0 = 10 + 6*IDIM
+                  ID1 = 10 + 7*IDIM
+                  ID2 = 10 + 8*IDIM
+               
+* ------ choc �l�mentaire CERCLE_PLAN_FROTTEMENT avec amortissement
+* ------ choc �l�mentaire POINT_POINT_FROTTEMENT
+               ELSE IF (ITYP.EQ.13.OR. ITYP.EQ.113 .OR. ITYP.EQ.-13
+     &              .OR.ITYP.EQ.6) THEN
+                  IDIM = IPALB(I,3)
+                  ID0 = 7 + 4*IDIM
+                  ID1 = 7 + 5*IDIM
+                  ID2 = 7 + 6*IDIM
+
+* ------ choc �l�mentaire CERCLE_PLAN_FROTTEMENT sans amortissement
+               ELSE IF (ITYP.EQ.5 ) THEN
+                  IDIM = IPALB(I,3)
+                  ID0 = 6 + 4*IDIM
+                  ID1 = 6 + 5*IDIM
+                  ID2 = 6 + 6*IDIM
+*
+* ------ choc �l�mentaire LIGNE_LIGNE_FROTTEMENT
+*
+*               ELSE IF (ITYP.EQ.35 .OR. ITYP.EQ.36) THEN
+*
+* Ne sert pas pour l 'instant car  modele d'ODEN de frottement
+              ELSE IF (ITYP.EQ.35 .OR. ITYP.EQ.36) THEN
+*                WRITE(*,*)'DEVTR1: LIGNE_LIGNE_FROTTEMENT'
+*                 DO IRES=1,8
+*            WRITE(*,*)'DEVTR1 test ICHRES(',IRES,') = ',
+*     &                      ICHRES(IRES)
+*                 ENDDO
+* ------ choc �l�mentaire CERCLE_CERCLE_FROTTEMENT
+
+              ELSE IF (ITYP.EQ.25  .OR. ITYP.EQ.26 
+     &            .or. ITYP.EQ.125 .OR. ITYP.EQ.126) THEN
+                  IDIM = IPALB(I,3)
+                  IF (ITYP.EQ.25) THEN
+                      IDD = 6
+                  ELSE
+                      IDD = 7
+                  ENDIF
+                  ID0 = IDD + 6*IDIM
+                  ID1 = IDD + 7*IDIM
+                  ID2 = IDD + 8*IDIM
+                  ID3 = IDD + 2*IDIM
+               DO 82 ID = 1,IDIMB
+                  XMREP(I,1,ID) = XPALB(I,ID0+ID)
+                  XMREP(I,2,ID) = XPALB(I,ID1+ID)
+                  XMREP(I,3,ID) = XPALB(I,ID2+ID)
+                  XMREP(I,4,ID) = XPALB(I,ID3+ID)
+  82              CONTINUE
+*              end do
+                  GOTO 51
+
+* ------ choc �l�mentaire POINT_PLAN_FLUIDE
+*
+               ELSE IF (ITYP.EQ.7) THEN
+                  IDIM = IPALB(I,3)
+                  ID1 = 6 + IDIM
+                  XMREP(I,1,1) = XPALB(I,ID1+1)
+                  XMREP(I,2,1) = XPALB(I,ID1+2)
+                  XMREP(I,3,1) = XPALB(I,ID1+3)
+                  GOTO 51
+C   si ityp = 100, on sauvegarde le depl. plastique
+C                  directement dans devso4
+C   NW idem si ITYP = 50/51 ou 16/17  --> dans devso4
+C
+*
+*
+* ------ choc ....
+*
+*              ELSE IF (ITYP.EQ.  ) THEN
+*                 ...
+*
+               ELSE
+                  GOTO 51
+               ENDIF
+
+c  ID0+j : x_adhe  
+c  ID1+j : Vglissement
+c  ID2+j : Fglissement
+               DO 52 ID = 1,IDIMB
+                  XMREP(I,1,ID) = XPALB(I,ID0+ID)
+                  XMREP(I,2,ID) = XPALB(I,ID1+ID)
+                  XMREP(I,3,ID) = XPALB(I,ID2+ID)
+  52              CONTINUE
+*              end do
+  51           CONTINUE
+*           end do
+         ENDIF
+      ENDIF
+*
+      END
+
+
+
+
+
+
+ 
+ 
+ 

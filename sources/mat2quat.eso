@@ -1,0 +1,192 @@
+      SUBROUTINE MAT2QUAT(ROT1,QUAT1)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettantde passer d'un vect de rotation (3,1) à      *
+*                un quaternion (4,1)                                    *                                                         *    Rappel quaternion:                                                 *
+* X0 = cos(theta/2)                                                     *    
+* X1 = sin(theta/2)*V1                                                  * 
+* X2 = sin(theta/2)*V2                                                  *
+* X3 = sin(theta/2)*V3                                                  *
+* ou V = (V1,V2,V3) est le vecteur unitaire de rotation                 *
+* et theta = angle de la rotation                                       *
+*     Matthieu SERRE     : le 04/05/2021 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*
+-INC CCREEL
+*
+      REAL*8 ROT1(3,3),QUAT1(4)
+      REAL*8 NQ
+      LOGICAL SPUR,KLUMP
+
+*      WRITE(*,*)'MAT2QUAT: START'
+*
+      SPUR = .TRUE.
+      KLUMP = .FALSE.
+*
+      X0 = QUAT1(1)
+      X1 = QUAT1(2)
+      X2 = QUAT1(3)
+      X3 = QUAT1(4)
+********** ALGO SPURRIER
+      IF (SPUR) THEN
+* 
+      IMAX = 0
+      CRIT = MAX(ABS(ROT1(1,1)),ABS(ROT1(2,2)),ABS(ROT1(3,3)))
+*      WRITE(*,*)'MAT2QUAT: CRIT = ',CRIT
+      IF (ABS(ROT1(1,1)).GE.CRIT) IMAX=1
+      IF (ABS(ROT1(2,2)).GE.CRIT) IMAX=2
+      IF (ABS(ROT1(3,3)).GE.CRIT) IMAX=3
+      IF (IMAX.EQ.0) THEN
+*        WRITE(*,*)'MAT2QUAT: max de la diag non trouve!!'
+        RETURN
+      ENDIF
+*
+      TRACE = ROT1(1,1) + ROT1(2,2) + ROT1(3,3) 
+*      WRITE(*,*)'MAT2QUAT: TRACE = ',TRACE
+*      
+      
+      IF (ABS(TRACE).GE.CRIT) THEN
+        QUAT1(1) = SQRT(ABS(1+TRACE))/2.D0
+        IF (QUAT1(1).LE.XSZPRE) GOTO 1
+*        WRITE(*,*)'MAT2QUAT: CAS1'
+        QUAT1(2) = (ROT1(3,2) - ROT1(2,3))/(4.D0*QUAT1(1))
+        QUAT1(3) = (ROT1(1,3) - ROT1(3,1))/(4.D0*QUAT1(1))
+        QUAT1(4) = (ROT1(2,1) - ROT1(1,2))/(4.D0*QUAT1(1))
+      ELSE 
+*        WRITE(*,*)'MAT2QUAT: CAS2'
+ 1      CONTINUE
+        IF (IMAX.EQ.1) THEN
+          X1 = SQRT(ABS(ROT1(1,1)/2.D0 + (1 - TRACE)/4.D0))
+          IF ((ROT1(3,2)-ROT1(2,3)).LT.0.D0) THEN
+            QUAT1(2) = -1.D0*X1
+          ELSE
+            QUAT1(2) = X1
+          ENDIF
+          
+          QUAT1(1) = (ROT1(3,2)-ROT1(2,3))/(4.D0*QUAT1(2))
+          
+          QUAT1(3) = (ROT1(2,1) + ROT1(1,2))/(4.D0*QUAT1(2))
+          QUAT1(4) = (ROT1(3,1) + ROT1(1,3))/(4.D0*QUAT1(2))
+        ELSEIF (IMAX.EQ.2) THEN
+          X2 = SQRT(ABS(ROT1(2,2)/2.D0 + (1 - TRACE)/4.D0))
+          IF ((ROT1(1,3)-ROT1(3,1)).LT.0.D0) THEN
+                 QUAT1(3)=-1.D0*X2
+          ELSE
+                 QUAT1(3)=X2
+          ENDIF
+          QUAT1(1) = (ROT1(1,3)-ROT1(3,1))/(4.D0*QUAT1(3))
+          
+          QUAT1(4) = (ROT1(3,2) + ROT1(2,3))/(4.D0*QUAT1(3))
+          QUAT1(2) = (ROT1(1,2) + ROT1(2,1))/(4.D0*QUAT1(3))
+        ELSEIF (IMAX.EQ.3) THEN
+          X3 = SQRT(ABS(ROT1(3,3)/2.D0 + (1 - TRACE)/4.D0))
+          IF ((ROT1(2,1)-ROT1(1,2)).LT.0.D0) THEN
+                 QUAT1(4)=-1.D0*X3
+          ELSE
+                 QUAT1(4)=X3
+          ENDIF
+          QUAT1(1) = (ROT1(2,1)-ROT1(1,2))/(4.D0*QUAT1(4))
+          
+          QUAT1(3) = (ROT1(2,3) + ROT1(3,2))/(4.D0*QUAT1(4))
+          QUAT1(2) = (ROT1(1,3) + ROT1(3,1))/(4.D0*QUAT1(4))
+        ENDIF
+      ENDIF
+* NORMALISATION
+      NQ = SQRT(QUAT1(1)**2  + QUAT1(2)**2 + QUAT1(3)**2 + QUAT1(4)**2)
+*      DO I =1,4
+*        QUAT1(I) = QUAT1(I)/NQ
+*      ENDDO
+* Fin algo de Spurrier
+      ENDIF
+
+****** ALGO KLUMP
+      IF (KLUMP) THEN
+* Calcul de la trace de la matrice de rotation:
+      TRACE = ROT1(1,1) + ROT1(2,2) + ROT1(3,3) ;
+* Valeur de Q0: (on la choisit > 0):
+      X0 = SQRT(ABS((1+TRACE)/4.D0))
+      QUAT1(1) = X0
+* Valeurs absolues des composantes du quaternion:
+      X1 = SQRT( ABS( ROT1(1,1)/2.D0 + (1 - TRACE)/4.D0 ) )
+      X2 = SQRT( ABS( ROT1(2,2)/2.D0 + (1 - TRACE)/4.D0 ) )
+      X3 = SQRT( ABS( ROT1(3,3)/2.D0 + (1 - TRACE)/4.D0 ) )
+* Rq: ABS protege contre les valeurs negatives dues a une eventuelle
+*     erreur numerique tres proche de 0.
+* On trouve la composantes de valeurs absolue maximale:
+      IMAX = 0
+      CRIT = MAX(X1,X2,X3)
+      IF (X1.EQ.CRIT) IMAX=1
+      IF (X2.EQ.CRIT) IMAX=2
+      IF (X3.EQ.CRIT) IMAX=3
+      
+* On attribut les signes:
+      IF (IMAX.EQ.1) THEN
+        IF ((ROT1(3,2)-ROT1(2,3)).LT.0.D0) THEN
+          QUAT1(2)=-1.D0*X1
+        ELSE
+          QUAT1(2) = X1
+        ENDIF
+        IF ((QUAT1(2)*(ROT1(2,1)+ROT1(1,2))).LT.0.D0) THEN
+                 QUAT1(3)=-1.D0*X2
+        ELSE
+                 QUAT1(3) = X2
+        ENDIF
+        IF ((QUAT1(2)*(ROT1(3,1)+ROT1(1,3))).LT.0.D0) THEN
+                 QUAT1(4)=-1.D0*X3
+        ELSE
+                 QUAT1(4)=X3
+        ENDIF
+      ELSEIF (IMAX.EQ.2) THEN
+        IF ((ROT1(1,3)-ROT1(3,1)).LT.0.D0) THEN
+                 QUAT1(3)=-1.D0*X2
+        ELSE
+                 QUAT1(3)=X2
+        ENDIF
+        IF ((QUAT1(3)*(ROT1(3,2)+ROT1(2,3))).LT.0.D0) THEN
+                 QUAT1(4)=-1.D0*X3
+        ELSE 
+                 QUAT1(4)=X3
+        ENDIF
+        IF ((QUAT1(3)*(ROT1(1,2)+ROT1(2,1))).LT.0.D0) THEN
+                 QUAT1(2)=-1.D0*X1
+        ELSE
+                 QUAT1(2)=-1.D0*X1
+        ENDIF
+      ELSEIF (IMAX.EQ.3) THEN
+        IF ((ROT1(2,1)-ROT1(1,2)).LT.0.D0) THEN
+                 QUAT1(4)=-1.D0*X3
+        ELSE
+                 QUAT1(4)=X3
+        ENDIF
+        IF ((QUAT1(4)*(ROT1(1,3)+ROT1(3,1))).LT.0.D0) THEN
+                 QUAT1(2)=-1.D0*X1
+        ELSE
+                 QUAT1(2)=X1
+        ENDIF
+        IF ((QUAT1(4)*(ROT1(2,3)+ROT1(3,2))).LT.0.D0) THEN
+                 QUAT1(3)=-1.D0*X2
+        ELSE
+                 QUAT1(3)=X2
+        ENDIF
+      ENDIF
+*
+* NORMALISATION
+      
+      NQ = SQRT(X0**2  + X1**2 + X2**2 + X3**2)
+      DO I =1,4
+        QUAT1(I) = QUAT1(I)/NQ
+      ENDDO
+      
+* Fin algo Klump
+      ENDIF
+*      WRITE(*,*)'IMAX = ',IMAX
+*      WRITE(*,*)'MAT2QUAT: NQ = ',NQ
+      
+*      WRITE(*,*)'MAT2QUAT: '
+*      DO I=1,4
+*        WRITE(*,*)'         QUAT(',I,') = ',QUAT1(I)
+*      ENDDO
+****
+      END

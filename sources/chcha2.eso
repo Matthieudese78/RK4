@@ -1,0 +1,275 @@
+C CHCHA2    SOURCE    CB215821  20/11/10    09:45:24     10766          
+      SUBROUTINE CHCHA2 (IBAS,ILEN1,ILEN2,ICONT,ICDR,
+     &                   IPTROT,IDEFROT,RECOELA,LTRIG,ITRIG,ITBAS)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+C====================================================================
+C     SUBROUTINE  POUR CHERCHER DANS UNE TABLE DE SOUSTYPE
+C    "BASE_DE_MODES" LES DEFORMEES MODALES ET LES POINTS REPERES ASSOCIE
+C     UTILISE PR EVRECO
+C       IBAS     (E) POINTEUR SUR LA TABLE DONT ON PART
+C       ILEN1    (S) POINTEUR SUR LA LISTE DES DEFORMEE-MODALES
+C       ILEN2    (S) POINTEUR SUR LA LISTE DES POINTS REPERE
+C
+C Remarque: les rotations rigide ne recoive pas le même traitement:
+C   (autrement dit, elles ne doivent pas passer dans la reco élastique
+C   d evol24.eso)
+C           - pas de stockage dans MLENT1: 
+C             on sort simplement sous IDEFROT une des defs modales 
+C             des rotas rigide 
+C           - pas de stockage dans MLENT2:
+C             on sort simplement dans la table IPTROT les 4 ptreps
+C             rigides
+C           En présence de rotations rigides, les translations rigides 
+C           doivent égalemetn etre traitees a part!
+C           - si RIGIDE, les def modales des transations rigide sont 
+C             stockee sont IDEFTR(3)
+C======================================================================
+      LOGICAL L0,L1,RIGIDE,RECOELA,LTRIG
+      CHARACTER*8 TYPRET,MORIGI,CMOT,CMOT1,CMOT2
+*     IPTROT: Pour ptreps rotas rigides
+*     ITRIG: Pour ptreps et defs modales translas rigides
+      INTEGER IPTROT(4),ITRIG(3,2)
+
+-INC PPARAM
+-INC CCOPTIO
+-INC SMTABLE
+-INC SMLENTI
+*
+      ILEN1 = 0
+      ILEN2 = 0
+
+*
+      IPTROT(1) = 0
+      IPTROT(2) = 0
+      IPTROT(3) = 0
+      IPTROT(4) = 0
+      ICDR = 0
+      ITRIG(1,1) = 0
+      ITRIG(2,1) = 0
+      ITRIG(3,1) = 0
+      ITRIG(1,2) = 0
+      ITRIG(2,2) = 0
+      ITRIG(3,2) = 0
+      
+*
+*     Acquisition de la table IBAS = Tmode . Modes :
+*
+*      CALL ACCTAB(ITBAS,'MOT',I0,X0,'MODES',L0,IP0,
+*     &                  'TABLE',I1,X1,' ',L1,IBAS)
+*      IF (IERR.NE.0) RETURN
+*
+*     Inititalisation:
+*
+      MTABLE = IBAS
+      SEGACT MTABLE
+*     NINDIC = nombre de tables de modes.
+*                       Le premier indice est le SOUSTYPE
+*                       Le deuxi}me indice est le MAILLAGE
+      NINDIC = MLOTAB-2
+      SEGDES MTABLE
+      JG     = NINDIC
+      SEGINI MLENT1,MLENT2
+      ILEN1  = MLENT1
+      ILEN2  = MLENT2
+*     RIGIDE: presence de modes elastiques ?
+      RIGIDE = .false.
+*     LTRIG: presence de translations rigides ? (declanche qu en presence de rotas rigides)
+      LTRIG = .FALSE.
+*     RECOELA: presence de modes elastiques ?
+      RECOELA = .false.           
+* On fais un premier scann de la base (ou ss base modale) 
+* a la recherche d une rota rigide
+*      IN = 0
+* 101  CONTINUE
+      DO 101 IN=1,NINDIC
+*      IN = IN + 1
+      TYPRET=' '
+      CALL ACCTAB(IBAS,'ENTIER',IN,X0,' ',L0,IP0,
+     &                  TYPRET,I1,X1,' ',L1,ITMOD)
+      IF(IERR.NE.0) RETURN
+      IF (ITMOD.NE.0) THEN
+       IF(TYPRET.EQ.'TABLE') THEN
+         MORIGI = ' '
+*         WRITE(*,*)'chcha2: ACCTAB scann rotas rigides'
+         CALL ACCTAB(ITMOD,'MOT',I0,X0,'ROTATION_RIGIDE',
+     &              L0,IP0,MORIGI,I1,X1,CMOT1,L1,IP1)
+        IF (IERR.NE.0) RETURN 
+        IF (MORIGI.EQ.'MOT') THEN
+          IF (CMOT1(1:4).EQ.'VRAI') THEN
+            RIGIDE = .true.
+            GOTO 102
+          ENDIF
+        ENDIF
+       ELSE
+         CALL ERREUR(491)
+         RETURN
+       ENDIF   
+      ENDIF
+    
+ 101  CONTINUE
+      
+ 102  CONTINUE     
+*
+*
+*     on boucle sur les modes
+*
+      JG=0
+      IRIG = 0
+      ITRANS = 0
+*      IN = 0
+*  100 CONTINUE
+      DO 100 IN=1,NINDIC
+*      IN = IN + 1
+      TYPRET=' '
+      CALL ACCTAB(IBAS,'ENTIER',IN,X0,' ',L0,IP0,
+     &                  TYPRET,I1,X1,' ',L1,ITMOD)
+      IF(IERR.NE.0) RETURN
+      IF(TYPRET.ne.'TABLE') GOTO 100
+*      IF (ITMOD.NE.0) THEN
+*       IF(TYPRET.EQ.'TABLE') THEN
+**** Detection rotas rigides:
+        MORIGI = ' '
+*        WRITE(*,*)'chcha2: acctab rotas rigides boucle modes'
+        CALL ACCTAB(ITMOD,'MOT',I0,X0,'ROTATION_RIGIDE',
+     &              L0,IP0,MORIGI,I1,X1,CMOT,L1,IP1)
+        IF (IERR.NE.0) RETURN 
+        IF (MORIGI.EQ.'MOT') THEN
+          IF (CMOT(1:4).EQ.'VRAI') THEN
+            RIGIDE = .true.
+            IF (IRIG.LT.3) THEN
+              IRIG = IRIG + 1
+            ELSEIF (IRIG.EQ.3) THEN
+              WRITE(*,*)
+     &  'CHACH2: seulement 3 rotas rigides MAX par sous-base'
+              CALL ERREUR(90)
+              RETURN
+            ENDIF
+            GOTO 100
+          ENDIF
+        ENDIF
+**** Detection translations rigides:
+        MORIGI = ' '
+*        WRITE(*,*)'chcha2: acctab transl rigide'
+        CALL ACCTAB(ITMOD,'MOT',I0,X0,'TRANSLATION_RIGIDE',
+     &              L0,IP0,MORIGI,I1,X1,CMOT2,L1,IP1)
+        IF (IERR.NE.0) RETURN 
+        IF (MORIGI.EQ.'MOT') THEN
+          IF (CMOT2(1:4).EQ.'VRAI') THEN
+* En presence de rota rigide on active alors le traitement special des translations rigides
+            IF (RIGIDE) THEN
+              LTRIG = .TRUE.
+*              WRITE(*,*)'CHCHA2: LTRIG = ',LTRIG
+              IF (ITRANS.LT.3) THEN
+*               On remplit ITRIG:
+                ITRANS = ITRANS + 1
+                CALL ACCTAB(ITMOD,'MOT',I0,X0,'POINT_REPERE',
+     &                   L0,IP0,'POINT',I1,X1,' ',L1,IPTR1)
+                IF(IERR.NE.0) RETURN
+                ITRIG(ITRANS,1) = IPTR1
+*                WRITE(*,*)'        ITRIG(',ITRANS,1,') = ',
+*     &                     ITRIG(ITRANS,1)
+                CALL ACCTAB(ITMOD,'MOT',I0,X0,'DEFORMEE_MODALE',
+     &                   L0,IP0,'CHPOINT',I1,X1,' ',L1,ICDEP1)
+                IF(IERR.NE.0) RETURN
+                ITRIG(ITRANS,2) = ICDEP1
+*                WRITE(*,*)'        ITRIG(',ITRANS,2,') = ',
+*     &                     ITRIG(ITRANS,2)                
+              ELSEIF (ITRANS.EQ.3) THEN
+                WRITE(*,*)
+     &  'CHACH2: seulement 3 transl. rigides MAX par sous-base'
+                CALL ERREUR(90)
+                RETURN
+              ENDIF
+              GOTO 100
+            ENDIF
+          ENDIF
+        ENDIF        
+****
+        JG=JG+1
+        IF (ICONT.EQ.0) THEN
+          CALL ACCTAB(ITMOD,'MOT',I0,X0,'DEFORMEE_MODALE',L0,IP0,
+     &                   'CHPOINT',I1,X1,' ',L1,ICDEP)
+          IF(IERR.NE.0) RETURN
+          CALL ACTOBJ('CHPOINT ',ICDEP,1)
+        ELSE IF (ICONT.EQ.2) THEN
+          CALL ACCTAB(ITMOD,'MOT',I0,X0,'REACTION_MODALE',L0,IP0,
+     &                   'CHPOINT',I1,X1,' ',L1,ICDEP)
+          IF(IERR.NE.0) RETURN
+          CALL ACTOBJ('CHPOINT ',ICDEP,1)
+        ELSE
+          CALL ACCTAB(ITMOD,'MOT',I0,X0,'CONTRAINTE_MODALE',L0,IP0,
+     &                  'MCHAML',I1,X1,' ',L1,ICHAM)
+          IF(IERR.NE.0) RETURN
+          CALL ACTOBJ('MCHAML  ',ICHAM,1)
+          CALL CHAMPO(ICHAM,1,ICDEP,IRET)
+          IF ( IRET .NE. 1) RETURN
+        ENDIF
+        IF ((IN - IRIG - ITRANS).NE.0) THEN
+          MLENT1.LECT(IN-IRIG-ITRANS) = ICDEP
+*          WRITE(*,*)'CHCHA2: MLENT1.LECT(',IN-IRIG-ITRANS,') = ',
+*     &                       MLENT1.LECT(IN-IRIG-ITRANS)
+        ENDIF
+        CALL ACCTAB(ITMOD,'MOT',I0,X0,'POINT_REPERE',L0,IP0,
+     &                   'POINT',I1,X1,' ',L1,IPTR)
+        IF(IERR.NE.0) RETURN
+        IF ((IN - IRIG - ITRANS).NE.0) THEN
+          MLENT2.LECT(IN-IRIG-ITRANS) = IPTR
+*          WRITE(*,*)'CHCHA2: MLENT2.LECT(',IN-IRIG-ITRANS,') = ',
+*     &                       MLENT2.LECT(IN-IRIG-ITRANS)
+          RECOELA = .true.
+*          WRITE(*,*)'     RECOELA = ',RECOELA
+        ENDIF
+*       On passe au mode suivant:
+*        GOTO 100
+*       ELSE
+*       CALL ERREUR(491)
+*       RETURN
+*      fin if (TYPRET.EQ.'TABLE') :
+*       ENDIF
+*     fin if (ITMOD.EQ.0) :       
+*      ENDIF
+  100 CONTINUE
+    
+*     On ajuste la longueur de MLENT1 et MLENT2.
+      IF (JG .NE. NINDIC) SEGADJ,MLENT1,MLENT2
+  
+*
+*     On prend en compte les rotations rigides:
+*
+      IF (RIGIDE) THEN
+        
+        CALL ACCTAB(ITBAS,'MOT',IMODE,X0,'ROTAS',L0,IP0,
+     &                  'TABLE',I1,X1,' ',L1,IBROT)
+        IF(IERR.NE.0) RETURN
+        DO IR = 1 , 4
+          TYPRET=' '
+          CALL ACCTAB(IBROT,'ENTIER',IR,X0,' ',L0,IP0,
+     &                  TYPRET,I1,X1,' ',L1,ITROTA)
+          IF (IERR.NE.0) RETURN
+          IF (ITROTA.NE.0) THEN
+            IF (TYPRET.EQ.'TABLE') THEN
+              CALL ACCTAB(ITROTA,'MOT',I0,X0,'CENTRE_DE_ROTATION',
+     &                    L0,IP0,'POINT',I1,X1,'  ',L1,ICDRI)
+              IF(IERR.NE.0) RETURN
+              IF (ICDRI.NE.0) THEN
+                ICDR = ICDRI
+              ENDIF
+              CALL ACCTAB(ITROTA,'MOT',I0,X0,'DEFORMEE_MODALE',L0,IP0,
+     &                   'CHPOINT',I1,X1,' ',L1,IDEFROT)
+              IF(IERR.NE.0) RETURN
+*              CALL ACTOBJ('CHPOINT ',IDEFROT,1)
+*              MLENT1.LECT(JG) = IDEFROT
+              CALL ACCTAB(ITROTA,'MOT',I0,X0,'POINT_REPERE',
+     &                    L0,IP0,'POINT',I1,X1,' ',L1,IPTR)
+              IF(IERR.NE.0) RETURN
+* les rota rigide ne vont pas dans MLENT2: old: MLENT2.LECT(JG) = IPTR
+               IPTROT(IR) = IPTR
+            ENDIF
+          ENDIF
+        ENDDO
+      ENDIF
+      
+****  Fin traitement rotas rigides.
+      END
+ 

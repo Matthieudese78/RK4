@@ -1,0 +1,79 @@
+      SUBROUTINE ADCOMP(ICHPT)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*     Utile pour la recombinaison des rotations rigides              *
+*     Ajoute a un chpoint les composantes manquantes parmis:         *
+*         UX,UY,UZ                                                   *
+*     Les composantes manquantes sont rajoutees dans l'ordre en:     *
+*     NC+1, NC+2, NC+3                                               *
+*--------------------------------------------------------------------*      
+-INC PPARAM
+-INC CCOPTIO
+-INC SMCOORD
+-INC SMCHPOI
+-INC SMELEME
+*
+      CHARACTER*8 MOTCOMP(3),MOTLAG
+      INTEGER URECO(3)
+      LOGICAL RIGRECO
+      DATA MOTCOMP/'UX','UY','UZ'/
+*
+*  URECO(J) = numero de la comp du Soupo = MOTCOMP(J)
+*      (sert surtout de marqueur pour voir les comp absentes)
+*
+      MOTLAG = 'LX'
+*
+      MCHPOI = ICHPT
+      SEGACT MCHPOI
+      NSOUPO = IPCHP(/1)
+      DO 30 ISOU = 1,NSOUPO
+        MSOUPO = IPCHP(ISOU)
+        URECO(1) = 0
+        URECO(2) = 0
+        URECO(3) = 0
+        SEGACT MSOUPO
+* on saute les multiplicateurs de Lagrange:
+        DO I = 1,NC
+          IF (NOCOMP(I).EQ.MOTLAG) THEN
+            GOTO 30
+          ENDIF
+        ENDDO
+        RIGRECO = .false.
+        DO I=1,NC
+          DO J=1,3
+            IF (NOCOMP(I).EQ.MOTCOMP(J)) THEN
+              RIGRECO = .true.
+              URECO(J) = I
+            ENDIF
+          ENDDO
+        ENDDO
+        IF (RIGRECO) THEN
+          DO J = 1,3
+            IF (URECO(J).EQ.0) THEN
+              NC = NC + 1
+              SEGADJ MSOUPO
+              URECO(J) = NC+1
+              NOCOMP(NC+1) = MOTCOMP(J)
+              MPOVAL = IPOVAL
+              SEGACT MPOVAL
+              N = VPOCHA(/1)
+              DO IN = 1,N
+                VPOCHA(IN,NC+1) = 0.D0
+              ENDDO
+              SEGDES MPOVAL
+             ENDIF
+           ENDDO
+        ENDIF
+        IF (IIMPI.EQ.333) THEN
+          DO I = 1,NC
+            WRITE(IOIMP,*)'ADCOMP: NOCOMP(',I,') = ',NOCOMP(I)
+          ENDDO
+        ENDIF
+        SEGDES MSOUPO
+ 30   CONTINUE
+      SEGDES MCHPOI
+*
+      END
+ 
+ 
+ 

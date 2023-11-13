@@ -1,0 +1,30 @@
+      SUBROUTINE MAJINERT(XCG,XMASSE,INERT)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*     Utile pour la recombinaison des rotations rigides              *
+*     Ajoute a un chpoint les composantes manquantes parmis:         *
+*         UX,UY,UZ                                                   *
+*     Les composantes manquantes sont rajoutees dans l'ordre en:     *
+*     NC+1, NC+2, NC+3                                               *
+*--------------------------------------------------------------------*      
+*
+      REAL*8 INERT(3,3),XCG(3)
+*
+      INERT(1,1) = INERT(1,1) + XMASSE*(XCG(3)**2 + XCG(2)**2)
+      INERT(2,2) = INERT(2,2) + XMASSE*(XCG(3)**2 + XCG(1)**2)
+      INERT(3,3) = INERT(3,3) + XMASSE*(XCG(2)**2 + XCG(1)**2)
+*     La matrice INERT2 est symétrique:
+      INERT(1,2) = -1.D0*XMASSE*(XCG(1)*XCG(2))
+      INERT(2,1) = INERT(1,2)
+      INERT(1,3) = -1.D0*XMASSE*(XCG(3)*XCG(1))
+      INERT(3,1) = INERT(1,3)
+      INERT(2,3) = -1.D0*XMASSE*(XCG(2)*XCG(3))
+      INERT(3,2) = INERT(2,3)
+*
+*      WRITE(*,*)'MAJINERT : tenseur J'
+*      write(*,'(20F15.5)')((INERT(k,j),j= 1,3),k= 1,3)
+*
+      END
+ 
+ 
+ 

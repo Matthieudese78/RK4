@@ -1,0 +1,126 @@
+#!/bin/bash
+NORMAL="\\033[0;39m"
+BLEU="\\033[1;34m"
+JAUN="\\033[1;33m"
+ORAN="\\033[0;33m"
+ROUG="\\033[1;31m"
+# 
+# en 1 ligne :
+# for i in `ls $rep1*.dgibi`; do fullfilename=$(basename $i); fic2=${fullfilename%.*}${npc1}.res ; echo 'running: castem ' $i ' > ' $fic2 ; castem $i | tee $fic2; done
+# 
+rep1=./
+fullnpc1=`uname -n`
+npc1=_${fullnpc1%%.*}
+kastem=castem21
+
+echo " "
+echo " ================= Debut Analyse  ================= "
+echo " "
+
+# quels cas test lancer ?
+if [ -n "$1" ]
+then
+#   $fic1=${1/%.dgibi/*.dgibi} &&
+  fic1=$rep1${1%%.dgibi}*.dgibi &&
+  echo '=> on lance les cas tests ' $fic1
+else
+  fic1=`ls $rep1*.dgibi` &&
+  echo '=> on lance tous les cas tests ' $fic1
+fi
+
+# il faut se placer dans le rep ou le cast (+ UTILPROC) a été compilé
+# en local
+# rep2=runcastests${npc1}
+# mkdir $rep2
+# cd $rep2
+# ln -s ../cast      cast
+# ln -s "../cast$npc1"      cast
+# ln -s ../UTILPROC 
+
+# Nombre de fichier .dgibi
+nb_dgibi=$(\ls -1 $fic1 | wc -l)
+iOK=0
+iPASOK=0
+
+# on lance les cas test sus-cités 
+for i in $fic1
+do
+#   cp -p $i .   # inutile car rep1=./
+#   fic2=${i%%.dgibi}_${npc1}.res  &&
+  fullfilename=$(basename $i)
+  fic2=${fullfilename%.*}${npc1}.res
+  rm -f $fic2
+  echo " "
+  echo -e "$JAUN" "----- running: $kastem $i >  $fic2 " "$NORMAL"
+#   $kastem $i | tee $fic2
+# on ajoute FIN au cas ou + on supprime le tee (+ lisible) 
+  echo "FIN;" | $kastem $i > $fic2 2> /dev/null
+  
+# test en direct
+  mon_test=$(tail --lines=5 $fic2 | fgrep -c 'ERREUR:   0')
+  if [ $mon_test = "0" ] ; then
+    iPASOK=$((iPASOK+1))
+    echo -e "$ROUG" "Echec de $i" "$NORMAL"
+  else
+    iOK=$((iOK+1))
+    echo -e "$NORMAL" "Succes de $i" "$NORMAL"
+  fi
+  echo " Cas-tests reussis :" $iOK"/"$nb_dgibi
+  if [ $iPASOK != 0 ]; then
+    echo " Cas-tests echoues :" $iPASOK"/"$nb_dgibi
+  fi
+
+  echo " "
+
+done
+
+
+# dans le cas ou on s'est arrete en cours et qu'on veut relancer les derniers
+# for i in `ls *.dgibi`; do j=$(basename $i .dgibi).res; if [ -f $j ]; then echo "$j existe"; else; $kastem $i |  tee $j ;fi ; done
+
+
+
+# 
+# echo " "
+# echo " ================= Synthese  ================= "
+# echo " "
+# 
+# # on ecrit les fichiers et resultats dans DGIBI _ERREUR0 et _ERREUR
+# rm -f DGIBI RES ERREUR0 ERREUR2
+# ls -1 *.dgibi     > DGIBI
+# ls -1 *${npc1}.res> RES
+# grep --binary-files=text -n "ARRET DU PROGRAMME .* NIVEAU D'ERREUR:   0" *${npc1}.res | cut -d: -f1 > ERREUR0
+# grep --binary-files=text -n "ARRET DU PROGRAMME .* NIVEAU D'ERREUR:   2" *${npc1}.res | cut -d: -f1 > ERREUR2
+# 
+# # on compte leur nombre
+# # nbdgibi=`cat DGIBI | wc -l`
+# # nbres=`cat RES     | wc -l`
+# # nbok=`cat ERREUR0  | wc -l`
+# # nberr2=`cat ERREUR2| wc -l`
+# nbdgibi=$(cat DGIBI | wc -l)
+# nbres=$(cat RES     | wc -l)
+# nbok=$(cat ERREUR0  | wc -l)
+# nberr2=$(cat ERREUR2| wc -l)
+# 
+# # message
+# echo "nombre de *.dgibi      : $nbdgibi"; echo "nombre de *${npc1}.res : $nbres";echo "nombre OK (ERREUR 0)   : $nbok";echo "nombre ERREUR 2        : $nberr2";
+# 
+# echo "voulez-vous voir les fichier en ERREUR 2 ? (o/n)"
+# read affich
+# if [ $affich == 'o' ]; then
+#   cat ERREUR2
+# fi
+# 
+# echo "voulez-vous voir les fichier n'ayant pas atteint ERREUR 0 ? (o/n)"
+# read affich
+# if [ $affich == 'o' ]; then
+#   colordiff RES ERREUR0
+# fi
+# 
+# # echo "voulez-vous voir les fichier n'ayant pas atteint de res ? (o/n)"
+# # read affich
+# # if [ $affich == 'o' ]; then 
+# #   colordiff DGIBI RES
+# # fi
+
+

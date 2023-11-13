@@ -1,0 +1,137 @@
+
+      SUBROUTINE CALCINC(X,Y,XANG,laxe,NPE,TPE,XCE,YCE,
+     &                   XRAY,XA,XB,RC,IDIM)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+
+-INC CCREEL
+
+cms : pour detecter les Nan
+      LOGICAL DISNAN
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettant de calculer                                 * 
+*     l'angle d'un vect. / axe (0x) via l'operateur ATAN                *
+*     Matthieu SERRE     : le 23/05/2023 : Création                     *
+*                                                                       *
+* Rq 1 : si X & Y sont parfaitement nuls : 
+*           - le cercle ne touchera pas l'ellipse
+*           - peut importe l'incidence calculee 
+* Rq 2 : on est sur un point de l'ellipse 
+*         --> X et Y ne peuvent pas etre nuls simultanement !
+* Rq 3 : on ne re-iinitialise pas les valeurs !
+*-----------------------------------------------------------------------*      
+      LOGICAL Laxe
+      REAL*8  YCE(3),XCE(3)
+      REAL*8  NPE(3),TPE(3)
+
+*     A priori le point d'incidence ne se trouve pas sur un axe : 
+*      LAXE = .FALSE.
+*
+*      WRITE(*,*)'CALCINC : X = ',X
+*      WRITE(*,*)'CALCINC : Y = ',Y
+*      IF (dabs(X).LE.1.D-18) THEN
+*            WRITE(*,*)'CALCINC : CAS AXE (0Y)'
+*            XANG = XPI - (Y/dabs(Y))*(XPI/2.D0)
+*           XANG = XPI/2.D0
+*            IF (Y.GE.0.) THEN
+*              L90=.TRUE.
+*              WRITE(*,*)'CALCINC : L90'
+*            ELSE
+*              L270 = .TRUE.
+*              WRITE(*,*)'CALCINC : L270'
+*            ENDIF
+*            DO ID=1,IDIM
+*               NPE(ID) =(Y/dabs(Y))*YCE(ID)
+*               TPE(ID) =(Y/dabs(Y))*XCE(ID)
+*            ENDDO
+*           X = 0.D0
+*           Y = XB
+*            RC = ((XA**2)/XB)
+*            LAXE = .TRUE.
+*      ENDIF
+
+*      IF (dabs(Y).LE.1.D-18) THEN
+*            WRITE(*,*)'CALCINC : CAS AXE (0X)'
+*            XANG = (XPI/2.D0) - (X/dabs(X))*(XPI/2.D0)
+*            IF (X.GE.0.) THEN
+*              L0=.TRUE.
+*              WRITE(*,*)'CALCINC : L0'
+*            ELSE
+*              L180 = .TRUE.
+*              WRITE(*,*)'CALCINC : L180'
+*            ENDIF
+*            DO ID=1,IDIM
+*               NPE(ID) =(X/dabs(X))*XCE(ID)
+*               TPE(ID) =(X/dabs(X))*YCE(ID)
+*            ENDDO
+*           X = XA
+*           Y = 0.D0
+*            RC = ((XB**2)/XA)
+*            LAXE = .TRUE.
+*      ENDIF
+*     Si le point est sur un axe de l'ellipse on saute l'arctangente :
+*      IF (LAXE) GOTO 10
+
+cms : dans tous les cas suivants vont passer par un calul de NPE,TPE,RC etc ... :
+*
+*      IF ((X.GT.0.D0).AND.(Y.GT.0.D0)) THEN
+*            WRITE(*,*)'CALCINC : CADRAN 1'
+*            XANG = ATAN(dabs(Y/X))
+*      ELSEIF ((X.LT.0.D0).AND.(Y.GT.0.D0)) THEN
+*            WRITE(*,*)'CALCINC : CADRAN 2'
+*            XANG = XPI - ATAN(dabs(Y/X))
+*      ELSEIF ((X.LT.0.D0).AND.(Y.LT.0.D0)) THEN
+*            WRITE(*,*)'CALCINC : CADRAN 3'
+*            XANG = XPI + ATAN(dabs(Y/X))
+*      ELSEIF ((X.GT.0.D0).AND.(Y.LT.0.D0)) THEN
+*            WRITE(*,*)'CALCINC : CADRAN 4'
+*            XANG = 2.D0*XPI - ATAN(dabs(Y/X))
+*      ENDIF
+*
+*10   CONTINUE
+*
+      XANG = DATAN2(Y,X)
+*     WRITE(*,*)'CALCINC : XANG = ',XANG*180.D0/XPI
+*     WRITE(*,*)'CALCINC : dabs(x) = ',dabs(x)
+*     WRITE(*,*)'CALCINC : dabs(y) = ',dabs(y)
+*     WRITE(*,*)'CALCINC : xray = ',xray
+* todo on est oblige de controler deux choses :
+* - que l'angle est non nul
+* - que l'angle n'est pas un NaN
+*     - angle nn nul : 
+*     if ((xang.eq.0.d0).or.(xang.eq.xpi)) then
+      if ((dabs(xang).le.1.e-4) .or. 
+     &    (dabs(dabs(xang)-xpi).le.1.e-4)) then
+        write(*,*)'calcinc : angle modulo pi!'
+        laxe = .true.
+        DO ID=1,IDIM
+           NPE(ID) = dsign(1.d0,x)*XCE(ID)
+           TPE(ID) = dsign(1.d0,x)*YCE(ID)
+        ENDDO
+        RC = ((XB**2)/XA)
+*       XDR = XA - dabs(x) - XRAY
+*       write(*,*)'     xdr = ',xdr
+      endif
+*     if ((xang.eq.(xpi/2.d0)).or.(xang.eq.(3.d0*xpi/2.d0))) then
+      if ((dabs(dabs(xang)-(xpi/2.d0)).le.1.e-4) .or. 
+     &    (dabs(dabs(xang)-(3.*xpi/2.)).le.1.e-4)) then
+        write(*,*)'calcinc : angle modulo pi/2!'
+        laxe = .true.
+        DO ID=1,IDIM
+           NPE(ID) = dsign(1.d0,y)*YCE(ID)
+           TPE(ID) = dsign(1.d0,y)*XCE(ID)
+        ENDDO
+        RC = ((XA**2)/XB)
+*       XDR = XB - dabs(y) - XRAY
+*       write(*,*)'     xdr = ',xdr
+      endif
+*     - angle nn NaN : 
+      DISNAN = (XANG.NE.XANG)
+      IF (DISNAN) THEN 
+        WRITE(*,*)'CALCINC : Angle = NaN'
+        CALL EXIT(1)
+        RETURN
+      ENDIF
+*
+      END

@@ -1,0 +1,35 @@
+      SUBROUTINE QUAT2MAT(QUAT1,MAT)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettantde passer d'un quaternion (4,1) à            *
+*                une matrice de rotation (3,3)                          *                                                         *    Rappel quaternion:                                                 *
+* X0 = cos(theta/2)                                                     *    
+* X1 = sin(theta/2)*V1                                                  * 
+* X2 = sin(theta/2)*V2                                                  *
+* X3 = sin(theta/2)*V3                                                  *
+* ou V = (V1,V2,V3) est le vecteur unitaire de rotation                 *
+* et theta = angle de la rotation                                       *
+*     Matthieu SERRE     : le 04/05/2021 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*      
+      REAL*8 QUAT1(4),MAT(3,3)
+      REAL*8 X0,X1,X2,X3
+      X0 = QUAT1(1)
+      X1 = QUAT1(2)
+      X2 = QUAT1(3)
+      X3 = QUAT1(4)
+      
+      MAT(1,1) = 2.D0*(X0**2.D0 + X1**2.D0 - 0.5)
+      MAT(2,2) = 2.D0*(X0**2.D0 + X2**2.D0 - 0.5)
+      MAT(3,3) = 2.D0*(X0**2.D0 + X3**2.D0 - 0.5)
+      
+      MAT(1,2) = 2.D0*(X1*X2 - X3*X0)
+      MAT(2,1) = 2.D0*(X1*X2 + X3*X0)
+      MAT(1,3) = 2.D0*(X1*X3 + X2*X0)
+      MAT(3,1) = 2.D0*(X1*X3 - X2*X0)
+      MAT(2,3) = 2.D0*(X2*X3 - X1*X0)
+      MAT(3,2) = 2.D0*(X2*X3 + X1*X0)
+
+      END

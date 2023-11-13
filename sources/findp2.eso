@@ -1,0 +1,192 @@
+      SUBROUTINE FINDP2(XA,XB,XC,YC,CRIT,MAXIT,XS,YS,XDMIN)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+
+* -INC CCREEL
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettant de calculer :                               *
+*     XS, YS : les coordonnees du point d'incidence dans le repere de   * 
+*              l'ellipse.                                               *
+*     SCRIPT PYTHON : newton_findp_pvec.py                              *
+*     Le residu est le produit vectoriel entre CP 
+*              (centre du cercle - pt incidence) et                     * 
+*     la normal a l'ellipse au point d'incidence                        *
+*     qui a pour expression :
+*             XRES =  XA1*(dsqrt(1. - ((X/XA)**2))) +
+*                     XB1*(dsqrt(1. - ((X/XA)**2)))/X + XC1
+*
+*     Matthieu SERRE     : le 05/08/2023 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*      
+      REAL*8 XA,XB,XC,YC,CRIT,XS,YS,XDMIN,DELTA_X 
+*
+*          WRITE(*,*)'FINDP2 : XA = ',XA
+*          WRITE(*,*)'FINDP2 : XB = ',XB
+*          WRITE(*,*)'FINDP2 : XC = ',XC
+*          WRITE(*,*)'FINDP2 : YC = ',YC
+
+*     IF 
+*       CALL FINDP(XA,XB,XC,YC,XS,YS,XDMIN)
+*     Signes de XC et YC pour savoir dans quel cadran on se situe :
+      if (xc.ne.0.d0) then
+*       XSIG = XC/dabs(XC)  
+        XSIG = dsign(1.d0,xc) 
+      endif
+      if (yc.ne.0.d0) then
+*       YSIG = YC/dabs(YC)  
+        YSIG = dsign(1.d0,yc) 
+      endif
+      if (xc.eq.0.d0) then
+        xsig = 0.d0
+      endif
+      if (yc.eq.0.0) then
+        ysig = 0.d0
+      endif
+*     COEFFICIENTS DU RESIDU :
+      XA1 = YSIG * XB * (((XA**2)/(XB**2)) - 1.d0)
+      XB1 = YSIG * XB * (-1.d0)*((XA**2)/(XB**2))*XC
+      XC1 = YC
+*     PREDICTION POUR LE NEWTON :
+*       On prend le projeté du centre du cercle sur l'ellipse
+*       (YC/XC) = tan(theta_i) ou theta_i est l'angle / (Ox) / centre de l'ellipse
+      X0 = XSIG * dsqrt(1.d0 / ((1.d0/(XA**2)) + (((YC/XC)/XB)**2)))
+      Y0 = (YC/XC) * X0
+*     Si la prediction se trouve dans un domaine critique,
+*      on utilise une fonction min traditionnelle : 
+*     CRITP = 1.D-8
+      CRITP = 1.D-7
+      IF ((dabs(X0).LE.CRITP).OR.(dabs(X0).GE.(XA-CRITP))) THEN
+        CALL FINDP(XA,XB,XC,YC,X0,XS,YS,XDMIN,CRITP,1.d5)
+*
+        XRES =  XA1*(dsqrt(dabs(1.d0 - ((XS/XA)**2)))) + 
+     &          XB1*(dsqrt(dabs(1.d0 - ((XS/XA)**2))))/XS + XC1
+*            WRITE(*,*)'post-FINDP : Residu = ',XRES
+        IF (dabs(XRES).LT.CRIT) THEN
+          XDMIN = dsqrt(((XS-XC)**2)+((YS-YC)**2))
+          GOTO 10
+        ELSE
+          X0 = XS
+          Y0 = YS
+        ENDIF
+	    ENDIF
+*     WRITE(*,*)'FINDP2 : INITIALISATION : '
+*     WRITE(*,*)'   X0 = ',X0
+*     WRITE(*,*)'   Y0 = ',Y0
+*     NEWTON
+      DO IT=1,MAXIT
+*       Pour se premunir des boules infifnies :
+        LOOP_INF = 0
+*       WRITE(*,*)'FINDP2 : ITERATION : ',IT
+*       WRITE(*,*)'   X0 = ',X0
+*       WRITE(*,*)'   Y0 = ',Y0
+*       XALPH = (-1.) * ((XB/XA)**2)*X0/Y0
+*           CALCUL DU RESIDU :
+        XRES =  XA1*(dsqrt(dabs(1.d0 - ((X0/XA)**2)))) + 
+     &          XB1*(dsqrt(dabs(1.d0 - ((X0/XA)**2))))/X0 + XC1
+*               WRITE(*,*)'         1st XRES = ',XRES
+*           CONDITION CONVERGENCE :
+        IF (dabs(XRES).LE.CRIT) THEN
+          XS = X0
+          YS = Y0
+          XDMIN = dsqrt(((XS-XC)**2)+((YS-YC)**2))
+*                  WRITE(*,*)'       CONVERGENCE'
+          GOTO 10
+        ENDIF
+*           DERIVEE DU RESIDU : 
+        XFOD = (-1.d0)*(XA1*(X0**3) + XB1*(XA**2)*(1.d0 - (X0/XA)**2) +
+     &  XB1*(X0**2)) / ((XA**2)*(X0**2)*dsqrt(dabs(1.d0 - (X0/XA)**2)))
+*        WRITE(*,*)' (1. - (X0**2/XA**2)) = ',dabs(1.d0 - X0**2/XA**2)
+*        WRITE(*,*)' 1st XFOD = ',XFOD
+*
+        DELTA_X = - (XRES/XFOD)
+* 
+ 20     CONTINUE
+*       X1 provisoire : 
+        X1 = X0 + DELTA_X
+*       Residu provisoire :
+        XRES =  XA1*(dsqrt(dabs(1.d0 - ((X1/XA)**2)))) + 
+     &          XB1*(dsqrt(dabs(1.d0 - ((X1/XA)**2))))/X1 + XC1
+*                WRITE(*,*)'       2eme XRES = ',XRES
+*       Convergence ? 
+        IF (dabs(XRES).LE.CRIT) THEN
+          XS = X1
+          YS = YSIG*XB*dsqrt(dabs(1.d0 - ((X1/XA)**2)))
+          XDMIN = dsqrt(((XS-XC)**2)+((YS-YC)**2))
+*                  WRITE(*,*)'       CONVERGENCE'
+          GOTO 10
+        ENDIF
+*       residu derivative en ce point :
+        XFOD = 
+     &  (-1.d0)*(XA1*(X1**3) + XB1*(XA**2)*(1.d0 - (X1/XA)**2) +
+     &  XB1*(X1**2)) / ((XA**2)*(X1**2)*dsqrt(dabs(1.d0 - (X1/XA)**2)))
+*        WRITE(*,*)' (1. - (X1**2/XA**2)) = ',dabs(1.d0 - (X0/XA)**2)
+*        WRITE(*,*)' recalcule XFOD = ',XFOD
+*       check sur la residu derivative :
+*       IF ((dabs(DELTA_X).LT.1.D-18).OR.(XFOD.NE.XFOD)) THEN
+        IF (XFOD.NE.XFOD) THEN
+          IF (LOOP_INF.GT.10) THEN
+*                   WRITE(*,*)' INFINITE LOOP FOD'
+            GOTO 30
+          ENDIF
+          DELTA_X = DELTA_X / 2.D0
+*          WRITE(*,*)'correction FOD : DELTA_X = ',DELTA_X 
+          LOOP_INF = LOOP_INF + 1
+          GOTO 20
+        ENDIF
+ 30     CONTINUE
+*       check sur le domaine de definition
+        IF ((((X1/dabs(X1))*XSIG).LT.0.D0).OR.
+     &      ((XA-dabs(X1)).LT.0.D0)) THEN 
+          IF (LOOP_INF.GT.20) THEN
+*            WRITE(*,*)'INFINITE LOOP DOMAIN'
+            GOTO 40
+          ENDIF
+*          WRITE(*,*)'FINDP2 : domain limit reached'
+          DELTA_X = DELTA_X / 2.D0
+          LOOP_INF  = LOOP_INF + 1
+          GOTO 20
+        ENDIF
+ 40     CONTINUE
+*       On a vérifié que X1 est une bonne valeur :
+        Y1 = YSIG*XB*dsqrt(1.d0 - ((X1/XA)**2))
+*       Si jamais on atteingait pas la convergence au bout de 
+*         MAXITER iterations :
+        XS = X1
+        YS = Y1
+        XDMIN = dsqrt(((X1-XC)**2)+((Y1-YC)**2))
+*
+*       precaution 
+*
+        if ((x1.ne.x1).or.(y1.ne.y1)) then 
+          XS = X0
+          YS = Y0
+          XDMIN = dsqrt(((X0-XC)**2)+((Y0-YC)**2))
+*          write(*,*)'findp2 : emergency exit!!'
+*         call exit(1)
+          goto 10
+        endif 
+*
+        X0 = X1
+        Y0 = Y1
+      ENDDO
+
+*      WRITE(*,*)'FINDP2 : NON CONVERGENCE'
+*      WRITE(*,*)'         RESIDU = ',XRES
+*      WRITE(*,*)'         NITER = ',IT
+
+ 10   CONTINUE
+
+*      WRITE(*,*)'FINDP2 : XDMIN = ',XDMIN
+*      WRITE(*,*)'         XS = ',XS
+*      WRITE(*,*)'         YS = ',YS
+*      WRITE(*,*)'         RESIDU = ',XRES
+*      WRITE(*,*)'         NITER = ',IT
+
+      END
+
+*       MESSAGE D'ERREUR SUR LA DERIVEE :
+*       IF ((XFOD.NE.XFOD).OR.(XFOD.EQ.0.D0)) THEN
+*         WRITE(*,*)'FINDP2 : Newton : residu derivative = NaN or 0 !'
+*         CALL EXIT(1)
+*       ENDIF

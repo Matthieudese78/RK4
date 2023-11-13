@@ -1,0 +1,94 @@
+      SUBROUTINE EXPTHR(DTHETA,EXPTHETA)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*-----------------------------------------------------------------------*
+*                                                                       *
+*    Sous-programme appelé par d2vpas pour calcul d'une matrice de      *
+*    3x3 a partir d'un pseudo-vecteur 3x1 de la forme:                  *
+*             theta(scalaire) x u(vecteur unitaire de raotaion)         *
+*                                                                       *
+*     Paramètres                                                        *
+*                                                                       *
+* e   DTHETA   vecteur de rotation (3x1)                                *
+* s   EXPTHETA   matrice de rotation = exp(DTHETA)                      *
+*     theta = norme2(DTHETA) = angle de rotation                        *
+*     v = DTHETA/norme2(DTHETA) = vecteur unitaire de rotation          *
+* exp(dtheta) = Id + sin(theta)*chap(v) + 2*sin^2(theta/2)(chap(v)^2)   *
+*                                                                       *
+*     Matthieu SERRE     : le 28/04/2021 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*
+-INC CCREEL
+      REAL*8 XANGLE,XSIN,XSIN2
+      REAL*8 DTHETA(3),VCHAP(3,3),VCHAP2(3,3),EXPTHETA(3,3)
+
+*            
+      IDIM = 3
+      IF (IDIM.NE.3) THEN
+        CALL erreur(832)
+        RETURN
+      ENDIF
+* Critère de prise en compte de la rotation (sinon EXPTHETA = Id)
+      CRIT = 0.0001
+*
+* Calcul de l'angle de rotation:
+      XANGLE = 0
+      DO I=1,IDIM
+        XANGLE = XANGLE + DTHETA(I)**2
+      ENDDO
+      XANGLE = SQRT(XANGLE)
+      XSIN   = SIN(XANGLE)
+      XSIN2  = SIN(XANGLE/2.D0)**2
+*
+* Calcul du vecteur unitaire:
+*      V = DTHETA/XANGLE
+*      
+      DO I=1,IDIM
+        DO J=1,IDIM
+          VCHAP(I,J)=0.d0
+        ENDDO
+      ENDDO
+*  
+      IF (XANGLE.NE.(0.D0)) THEN
+        VCHAP(1,1) =  0.D0
+        VCHAP(1,2) = -DTHETA(3)/XANGLE 
+        VCHAP(1,3) =  DTHETA(2)/XANGLE
+        VCHAP(2,1) =  DTHETA(3)/XANGLE
+        VCHAP(2,2) =  0.D0
+        VCHAP(2,3) = -DTHETA(1)/XANGLE
+        VCHAP(3,1) = -DTHETA(2)/XANGLE
+        VCHAP(3,2) =  DTHETA(1)/XANGLE
+        VCHAP(3,3) =  0.D0
+      ELSE
+        VCHAP(1,1) =  0.D0
+        VCHAP(1,2) =  0.D0
+        VCHAP(1,3) =  0.D0
+        VCHAP(2,1) =  0.D0
+        VCHAP(2,2) =  0.D0
+        VCHAP(2,3) =  0.D0
+        VCHAP(3,1) =  0.D0
+        VCHAP(3,2) =  0.D0
+        VCHAP(3,3) =  0.D0
+      ENDIF
+* Calcul de vchap^2 pour formule de Rodrigues:        
+      DO I = 1,IDIM
+         DO J = 1,IDIM
+           VCHAP2(I,J)=0.D0
+           DO K = 1,IDIM
+             VCHAP2(I,J) = VCHAP2(I,J) + VCHAP(I,K)*VCHAP(K,J)
+           ENDDO
+        ENDDO
+      ENDDO
+        
+* Calcul EXPTH via formule de Rodrigues:
+* exp(dtheta) = Id + sin(theta)*chap(v) + 2*sin^2(theta/2)(chap(v)^2)
+      DO I=1,IDIM
+          DO J=1,IDIM
+            EXPTHETA(I,J)= XSIN*VCHAP(I,J) + 2.D0*XSIN2*VCHAP2(I,J)
+          ENDDO
+          EXPTHETA(I,I)= EXPTHETA(I,I) + 1.d0
+      ENDDO
+      
+      END
+      
+      

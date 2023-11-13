@@ -1,0 +1,104 @@
+C D2NE16    SOURCE    BP208322  20/09/18    21:15:11     10718          
+C DYNE16    SOURCE    PLAF      91/03/27    21:15:13     174
+      SUBROUTINE D2NE16(Q1,Q2,Q3,NA1,FTOTA,XPTB,NPLB,IDIMB,FINERT,
+     &                  WEXT,WINT,KTROT)
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNE : algorithme de Fu - de Vogelaere               *
+*     ________________________________________________               *
+*                                                                    *
+*     Decalage ou mise a zero dans les tableaux pour le pas suivant. *
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* es  Q1( , )    Vecteur des deplacements generalises                *
+* es  Q2( , )    Vecteur des vitesses generalisees                   *
+* es  Q3( , )    Vecteur des accelerations generalisees              *
+* e   NA1        Nombre total d'inconnues sur la base A              *
+* es  FTOTA      Forces exterieures totalisees, sur la base A        *
+* es  XPTB       Tableau des deplacements des points de liaisons     *
+* e   NPLB       Nombre maxi de points de liaisons                   *
+* e   IDIMB      Nombre maxi de ddl par liaisons                     *
+*                                                                    *
+*     Auteur, date de creation:                                      *
+*                                                                    *
+*     Denis ROBERT-MOUGIN, le 16 juin 1989.                          *
+*                                                                    *
+*--------------------------------------------------------------------*
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,2,NSB),OMEG2(3,2,NSB),OMEG3(3,2,NSB)
+         REAL*8 ROT(3,3,2,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,2,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+      LOGICAL RIGIDE
+      REAL*8 Q1(NA1,*),Q2(NA1,*),Q3(NA1,*),FTOTA(NA1,*)
+      REAL*8 XPTB(NPLB,2,*),FINERT(NA1,*),WEXT(NA1,*),WINT(NA1,*)
+      
+      
+      RIGIDE = KTROT.NE.0
+      IF (RIGIDE) THEN
+        MTROT = KTROT
+      ENDIF
+*
+*     Boucle sur les inconnues de la base A
+*
+      DO 10 I=1,NA1
+         Q1(I,2) = Q1(I,1)
+         Q2(I,2) = Q2(I,1)
+         Q3(I,2) = Q3(I,1)
+         FTOTA(I,2) = FTOTA(I,1)
+         FINERT(I,2) = FINERT(I,1)
+         WEXT(I,2) =  WEXT(I,1)
+         WINT(I,2) =  WINT(I,1)
+
+ 10   CONTINUE
+ 
+* Cas corps rigides:
+      IF (RIGIDE) THEN
+        NSB = ROT(/4)
+*
+        DO IIB=1,NSB
+          DO I=1,4
+            OMEG1(I,2,IIB) = OMEG1(I,1,IIB)
+          ENDDO
+          DO I=1,3 
+            OMEG2(I,2,IIB) = OMEG2(I,1,IIB)          
+            OMEG3(I,2,IIB) = OMEG3(I,1,IIB)
+            FMOMTOT(I,2,NSB) = FMOMTOT(I,1,NSB)
+            
+            DO J =1,3
+              ROT(I,J,2,IIB) = ROT(I,J,1,IIB)
+              EXPTH(I,J,2,IIB) = EXPTH(I,J,1,IIB) 
+            ENDDO
+          ENDDO
+          DO IP = 1,NPLB 
+            UFLEX(IP,IIB,1,2) = UFLEX(IP,IIB,1,1)
+            UFLEX(IP,IIB,2,2) = UFLEX(IP,IIB,2,1)
+            UFLEX(IP,IIB,3,2) = UFLEX(IP,IIB,3,1)
+          ENDDO
+        ENDDO  
+      ENDIF 
+      
+cbp2020-09 : ci dessous devenu inutile (cf devrco) 
+cbp2020-09      DO 20 IP = 1,NPLB
+cbp2020-09         DO 22 ID = 1,IDIMB
+cbp2020-09            XPTB(IP,2,ID) = XPTB(IP,1,ID)
+cbp2020-09 22      CONTINUE
+cbp2020-09 20   CONTINUE
+*
+      END
+
+
+
+
+ 
+ 

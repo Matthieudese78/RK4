@@ -1,0 +1,463 @@
+C DEVLB2    SOURCE    BP208322  20/09/18    21:15:37     10718          
+      SUBROUTINE DEVLB2(IPLIB,IPALB,XPALB,XPTB,NLIAB,IND,IDIMB,
+     &                  NPLB,XABSCI,XORDON,NIP,IBASB,KTROT)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Op�rateur DYNE :                                               *
+*     Initialisation du tableau contenant les param�tres de liaison  *
+*                                                                    *
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Param�tres:                                                    *
+*                                                                    *
+* e   IPALB   Renseigne sur la liaison.                              *
+* e/s XPALB   Tableau contenant les param�tres de la liaison.        *
+* e   NLIAB   Nombre de liaisons sur la base B.                      *
+* e   IDIMB   Nombre de directions.                                  *
+* e   IND     Indice du pas.                                         *
+*                                                                    *
+*--------------------------------------------------------------------*
+-INC CCREEL
+*
+* Matthieu: Segment rotas rigides:
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,2,NSB),OMEG2(3,2,NSB),OMEG3(3,2,NSB)
+         REAL*8 ROT(3,3,2,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,2,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+*
+      INTEGER IPALB(NLIAB,*),IPLIB(NLIAB,*),IBASB(*)
+      REAL*8  XPALB(NLIAB,*),XPTB(NPLB,2,*),XPTP2(3)
+      REAL*8  XABSCI(NLIAB,*),XORDON(NLIAB,*)
+      REAL*8  XN1(3),XN2(3),XN3(3),XN4(3)
+      REAL*8  VROT(3),ROT2(3,3)
+*
+
+      IF (KTROT.NE.0) MTROT = KTROT
+      IF ((KTROT.EQ.0).AND.((ITYP.EQ.65).OR.(ITYP.EQ.66))) THEN
+      WRITE(*,*)'CERCLE_PLAN_3D dispo qu avec rotas rigides!!'
+      CALL ERREUR(490)
+      RETURN
+      ENDIF
+      WRITE(*,*)'DEVLB2:  IND = ',IND
+*
+      IND2  = IND + 1
+*
+*     Boucle sur le nombre de liaisons
+*
+      DO 10 I = 1,NLIAB
+         ITYP = IPALB(I,1)
+*
+* ------ choc �l�mentaire POINT_CERCLE_FROTTEMENT
+*
+cbp,2020         IF (ITYP.EQ.23 .OR. ITYP.EQ.24) THEN
+cbp,2020 : rem : il n'y avait pas 123 et 124 ???
+         IF (ITYP.EQ.24 .OR. ITYP.EQ.124) THEN
+            NPOI   = IPLIB(I,1)
+            IDIM   = IPALB(I,3)
+cbp,2020            IF (ITYP.EQ.23) THEN
+cbp,2020               ID1 = 6
+cbp,2020            ELSE
+cbp,2020               ID1 = 7
+               ID1 = 10
+cbp,2020            ENDIF
+            ID7 = ID1 + 6*IDIM
+            DO 230 ID=1,IDIM
+*   d�j� effectu� dans devcoi , avec prise en compte de
+*  la rotation initiale
+*               XPTB(NPOI,2,ID) = XPTB(NPOI,1,ID)
+               XPALB(I,ID7+ID) = XPTB(NPOI,1,ID)
+ 230           CONTINUE
+*           end do
+
+
+*
+* ------ choc �l�mentaire POINT_CERCLE_MOBILE
+*
+         ELSE IF (ITYP.EQ. 33 .OR. ITYP.EQ. 34 
+     &       .OR. ITYP.EQ.133 .OR. ITYP.EQ.134) THEN
+            NPOA   = IPLIB(I,1)
+            NPOB   = IPLIB(I,2)
+            IDIM   = IPALB(I,3)
+            IF (ITYP.EQ.33) THEN
+               ID1 = 6
+            ELSE
+               ID1 = 7
+            ENDIF
+            ID7 = ID1 + 6*IDIM
+            DO 330 ID=1,IDIM
+*               XPTB(NPOa,2,ID) = XPTB(NPOa,1,ID)
+*               XPTB(NPOb,2,ID) = XPTB(NPOb,1,ID)
+               XPALB(I,ID7+ID) = XPTB(NPOa,1,ID)
+     &                         - XPTB(NPOb,1,ID)
+ 330           CONTINUE
+
+*
+* ------ choc �l�mentaire CERCLE_CERCLE_FROTTEMENT
+*
+         ELSE IF (ITYP.EQ. 25 .OR. ITYP.EQ. 26
+     &       .OR. ITYP.EQ.125 .OR. ITYP.EQ.126) THEN
+            NPOI   = IPLIB(I,1)
+            IDIM   = IPALB(I,3)
+            IF (ITYP.EQ.25) THEN
+               ID1 = 6
+            ELSE
+               ID1 = 7
+            ENDIF
+            ID2  = ID1 + IDIM
+            ID3  = ID1 + 2*IDIM
+            ID7  = ID1 + 6*IDIM
+            ID10 = ID1 + 9*IDIM
+            XRAYT = XPALB(I,ID10+1)
+*  Calcul du d�placement du point fibre neutre dans le plan du cercle
+*  Calcul de la normale de choc
+            PSXPN = 0.D0
+            DO 250 ID = 1,IDIM
+               PSXPN = PSXPN + ( XPTB(NPOI,1,ID) * XPALB(I,ID1+ID) )
+ 250           CONTINUE
+*           end do
+            PSXPME = 0.D0
+            DO 252 ID = 1,IDIM
+            XXPME = ( XPTB(NPOI,1,ID) - ( PSXPN * XPALB(I,ID1+ID) ) )
+     &                                  - XPALB(I,ID2+ID)
+               XPALB(I,ID3+ID) = XXPME
+               PSXPME = PSXPME + ( XXPME * XXPME )
+ 252            CONTINUE
+*           end do
+            PSXPME = SQRT(PSXPME)
+            IF (PSXPME.GT.1D-20) THEN
+               DO 254 ID = 1,IDIM
+                  XPALB(I,ID3+ID) = XPALB(I,ID3+ID) / PSXPME
+ 254              CONTINUE
+*              end do
+            ENDIF
+*  Calcul du d�placement du point de contact au pas courant
+            XPTP2(1) = XPTB(NPOI,1,1) +
+     &               (                      XPALB(I,ID3+1) * XRAYT )
+            XPTP2(2) = XPTB(NPOI,1,2) +
+     &               (                      XPALB(I,ID3+2) * XRAYT )
+            XPTP2(3) = XPTB(NPOI,1,3) +
+     &               (                      XPALB(I,ID3+3) * XRAYT )
+*  Initialisation de la position origine adherence
+            DO 256 ID=1,IDIM
+*               XPTB(NPOI,2,ID) = XPTB(NPOI,1,ID)
+               XPALB(I,ID7+ID) = XPTP2(ID)
+ 256           CONTINUE
+*           end do
+
+*
+* ------ choc �l�mentaire CERCLE_PLAN_3D
+*
+         ELSEIF (ITYP.EQ.65 .OR. ITYP.EQ.66) THEN
+            NPOI   = IPLIB(I,1)
+            ISB = IBASB(NPOI)
+            IDIM   = IPALB(I,3)
+            IF (ITYP.EQ.65) THEN
+               ID1 = 6
+            ELSE
+               ID1 = 7
+            ENDIF
+            ID2  = ID1 + IDIM
+            ID3  = ID1 + 2*IDIM
+            ID7  = ID1 + 6*IDIM
+            ID10 = ID1 + 9*IDIM
+            XRAYT = XPALB(I,ID10+1)
+* Calcul des angles d'Euler a partir des composantes du quaternion:
+*        Nutation:
+            THETA = ACOS(2.D0*(OMEG1(1,IND,ISB)**2 + 
+     &                       OMEG1(4,IND,ISB)**2) - 1.D0) 
+            WRITE(*,*)'DEVLB2: THETA = ',THETA
+*
+* Normale de choc = XPALB(I,ID1+ID) ne change pas, c est la normale au plan
+* La normale doit etre rentrante (vers l interieur du solide). 
+*
+* Matthieu: inversion de la normale au plan jusqu'au calcul de XN4 + discussion sur le signe de theta.
+*       jusqu a maintenant rentrante: 
+*       on la passe sortante pour avoir une bonne orientation de XN2 dans le plan de nutation 
+*       (faire une dessin).
+*       On la reinverse apres le calcul de XN4.
+         DO ID=1,3
+           XPALB(I,ID1+ID) = -1.d0*XPALB(I,ID1+ID)
+         ENDDO
+*
+* XN1 = n_cercle = normale au cercle:
+            PSXPM1 = 0.D0
+            DO ID=1,3
+              XN1(ID) = 0.D0
+              WRITE(*,*)'DEVLB2: -1*normale plan XPALB(',I,ID1+ID,')= ',
+     &     XPALB(I,ID1+ID)
+              DO J=1,3
+                XN1(ID) = XN1(ID) + ROT(ID,J,IND,ISB)*XPALB(I,ID1+J)
+                WRITE(*,*)'DEVLB2: ROT(',ID,J,IND,ISB,') = ',
+     &                          ROT(ID,J,IND,ISB)
+              ENDDO
+            PSXPM1 = PSXPM1 + XN1(ID)**2
+            ENDDO
+            PSXPM1 = SQRT(PSXPM1)
+            XN1(1) = XN1(1)/PSXPM1
+            XN1(2) = XN1(2)/PSXPM1
+            XN1(3) = XN1(3)/PSXPM1
+            WRITE(*,*)'DEVLB2: normale au cercle:'
+            WRITE(*,*)'DEVLB2: XN1(1) = ',XN1(1)
+            WRITE(*,*)'DEVLB2: XN1(2) = ',XN1(2)
+            WRITE(*,*)'DEVLB2: XN1(3) = ',XN1(3)
+* XN2 = n_cercle - (n_cercle . n_plan)n_plan 
+*     = vecteur orthogonal � n_plan dans le plan de nutation:         
+            PSXPM2 = 0.D0
+            DO ID=1,3
+              PSXPM2 = PSXPM2 + XN1(ID)*XPALB(I,ID1+ID)
+            ENDDO
+         WRITE(*,*)'DEVLB2: produit scal. n_plan * n_cercle = ',
+     &   PSXPM2
+            PSXPM3 = 0.D0
+            DO ID=1,3
+              XN2(ID) = XN1(ID) - PSXPM2*XPALB(I,ID1+ID)
+              PSXPM3 = PSXPM3 + XN2(ID)**2
+            ENDDO
+            PSXPM3 = SQRT(PSXPM3)
+         WRITE(*,*)'DEVLB2: PSXPM3 = ',PSXPM3
+            IF (PSXPM3.GT.xpetit) THEN
+             XN2(1) = XN2(1)/PSXPM3
+             XN2(2) = XN2(2)/PSXPM3
+             XN2(3) = XN2(3)/PSXPM3
+            ELSE
+             WRITE(*,*)'  attention XN2 < ',xpetit
+            ENDIF
+* Rq XN2: Dans le plan de nutation:
+*          - si theta > 0 XN2 oriente vers la gauche
+*          - si theta < 0 XN2 oriente vers la droite
+*         L orientation est donc bonne.
+*
+         WRITE(*,*)'DEVLB2: XN2(1) = ',XN2(1)
+         WRITE(*,*)'DEVLB2: XN2(2) = ',XN2(2)
+         WRITE(*,*)'DEVLB2: XN2(3) = ',XN2(3)
+* XN3 = n_plan xvect XN2 
+*     = troisieme vecteur de la BON (n_plan, XN2, XN3) 
+            XN3(1) = XPALB(I,ID1+2)*XN2(3) - XPALB(I,ID1+3)*XN2(2)
+            XN3(2) = XPALB(I,ID1+3)*XN2(1) - XPALB(I,ID1+1)*XN2(3)
+            XN3(3) = XPALB(I,ID1+1)*XN2(2) - XPALB(I,ID1+2)*XN2(1)
+            PSXPM4=SQRT((XN3(1)**2)+(XN3(2)**2)+(XN3(3)**2))
+            IF (PSXPM4.GT.xpetit) THEN
+              XN3(1) = XN3(1)/PSXPM4
+              XN3(2) = XN3(2)/PSXPM4
+              XN3(3) = XN3(3)/PSXPM4
+            ENDIF
+*        Si theta < 0, XN3 est oriente negativement (vers l interieur de la feuille). 
+*        On veut une rotation de theta < 0 autour d un axe oriente vers l observateur (faire un dessin):
+*            IF (THETA.LT.0.D0) THEN
+*             XN3(1) = -1.D0*XN3(1)
+*             XN3(2) = -1.D0*XN3(2)
+*             XN3(3) = -1.D0*XN3(3)           
+*            ENDIF
+*         WRITE(*,*)'DEVLB2: XN3(1) = ',XN3(1)
+*         WRITE(*,*)'DEVLB2: XN3(2) = ',XN3(2)
+*         WRITE(*,*)'DEVLB2: XN3(3) = ',XN3(3)    
+***** OLD: avant utilisation du produit vectoriel pour calcul de XN4:
+*                 (calcul de la matrice de rotation ROT2)
+* Enfin, calcul du deplacement du point de contact en appliquant la nutation autour de XN3:
+*            VROT(1) = THETA*XN3(1)
+*            VROT(2) = THETA*XN3(2)
+*            VROT(3) = THETA*XN3(3)
+*         WRITE(*,*)'DEVLB2: VROT(1) = ',VROT(1)
+*         WRITE(*,*)'DEVLB2: VROT(2) = ',VROT(2)
+*         WRITE(*,*)'DEVLB2: VROT(3) = ',VROT(3)
+* Calcul de la matrice de rotation de vecteur THETA*XN3:
+*            CALL EXPTHR(VROT,ROT2)
+* Calcul de XN4 = vecteur centre du cercle --> point de contact:
+*            DO ID=1,3
+*              XN4(ID) = 0.D0
+*              DO J=1,3
+*                WRITE(*,*)'DEVFB9: ROT2(',ID,J,') = ',ROT2(ID,J)
+*                XN4(ID) = XN4(ID) + ROT2(ID,J)*XRAYT*XN2(J)
+*              ENDDO
+*              WRITE(*,*)'DEVFB9: XN4(',ID,') = ',XN4(ID)
+*            ENDDO
+* Calcul de XN4 par produit vectoriel: XN3 * n_cercle :
+         XN4(1) = ( XN3(2)*XN1(3) - XN3(3)*XN1(2) )
+         XN4(2) = ( XN3(3)*XN1(1) - XN3(1)*XN1(3) )
+         XN4(3) = ( XN3(1)*XN1(2) - XN3(2)*XN1(1) )
+*
+*        Calcul de XN4 termine: on reinverse la normale au plan
+*          desormais --> normale de nouveau rentrante
+            DO ID=1,3
+             XPALB(I,ID1+ID) = -1.d0*XPALB(I,ID1+ID)
+            ENDDO
+*
+* Rq: on va se resservir d XN4 = OM pour le calul des moments.
+            XPTP2(1) =  XPTB(NPOI,1,1) + XRAYT*XN4(1)
+            XPTP2(2) =  XPTB(NPOI,1,2) + XRAYT*XN4(2)
+            XPTP2(3) =  XPTB(NPOI,1,3) + XRAYT*XN4(3)        
+         WRITE(*,*)'DEVLB2: XPTB(NPOI,1,1) = ',XPTB(NPOI,1,1)
+         WRITE(*,*)'DEVLB2: XPTB(NPOI,1,2) = ',XPTB(NPOI,1,2)
+         WRITE(*,*)'DEVLB2: XPTB(NPOI,1,3) = ',XPTB(NPOI,1,3)
+         WRITE(*,*)'DEVLB2: XPTP2(1) = ',XPTP2(1)
+         WRITE(*,*)'DEVLB2: XPTP2(2) = ',XPTP2(2)  
+         WRITE(*,*)'DEVLB2: XPTP2(3) = ',XPTP2(3)         
+* On le met � jour:
+            XPALB(I,ID3+1) = XPTP2(1)
+            XPALB(I,ID3+2) = XPTP2(2)
+            XPALB(I,ID3+3) = XPTP2(3)
+*  Initialisation de la position origine adherence
+            DO ID=1,IDIM
+              XPALB(I,ID7+ID) = XPTP2(ID)
+            ENDDO
+*
+*
+* ------ choc �l�mentaire POINT_POINT_FROTTEMENT
+*
+         ELSE IF ((abs(ITYP)).EQ.13 .OR. ITYP.EQ.113) THEN
+            NPOa   = IPLIB(I,1)
+            NPOb   = IPLIB(I,2)
+            IDIM   = IPALB(I,3)
+            ID1 = 7
+            ID5 = ID1 + 4*IDIM
+            DO 31 ID=1,IDIM
+*               XPTB(NPOa,2,ID) = XPTB(NPOa,1,ID)
+*               XPTB(NPOb,2,ID) = XPTB(NPOb,1,ID)
+               XPALB(I,ID5+ID) = XPTB(NPOa,1,ID)
+     &                         - XPTB(NPOb,1,ID)
+ 31            CONTINUE
+ 
+*
+* ------ choc �l�mentaire POINT_PLAN_FROTTEMENT
+*
+         ELSE IF (ITYP.EQ.3  .OR. ITYP.EQ.103 ) THEN
+            NPOI   = IPLIB(I,1)
+            IDIM   = IPALB(I,3)
+c             ID1 = 7
+c             ID5 = ID1 + 4*IDIM
+            ID1 = 9
+            ID5 = ID1 + 5*IDIM
+c           position au debut de l'adherence ?
+            DO 30 ID=1,IDIM
+*               XPTB(NPOI,2,ID) = XPTB(NPOI,1,ID)
+               XPALB(I,ID5+ID) = XPTB(NPOI,1,ID)
+ 30            CONTINUE
+*           end do
+*
+* ------ choc �l�mentaire CERCLE_PLAN_FROTTEMENT
+*
+         ELSE IF (ITYP.EQ.5 .OR. ITYP.EQ.6) THEN
+            NPOI   = IPLIB(I,1)
+            IDIM   = IPALB(I,3)
+            IF (ITYP.EQ.5) THEN
+               ID1 = 6
+            ELSE
+               ID1 = 7
+            ENDIF
+            ID5 = ID1 + 4*IDIM
+            ID8 = ID1 + 7*IDIM
+            XRAYT = XPALB(I,ID8+1)
+* calcul du d�placement du point de contact au pas courant
+            XPTP2(1) = XPTB(NPOI,1,1) +
+     &               ( ( XPTB(NPOI,1,5) * XPALB(I,ID1+3) * XRAYT ) -
+     &                 ( XPTB(NPOI,1,6) * XPALB(I,ID1+2) * XRAYT ) )
+            XPTP2(2) = XPTB(NPOI,1,2) +
+     &               ( ( XPTB(NPOI,1,6) * XPALB(I,ID1+1) * XRAYT ) -
+     &                 ( XPTB(NPOI,1,4) * XPALB(I,ID1+3) * XRAYT ) )
+            XPTP2(3) = XPTB(NPOI,1,3) +
+     &               ( ( XPTB(NPOI,1,4) * XPALB(I,ID1+2) * XRAYT ) -
+     &                 ( XPTB(NPOI,1,5) * XPALB(I,ID1+1) * XRAYT ) )
+            DO 50 ID = 1,IDIM
+*               XPTB(NPOI,2,ID) = XPTB(NPOI,1,ID)
+               XPALB(I,ID5+ID) = XPTP2(ID)
+ 50            CONTINUE
+*           end do
+*
+* ------ choc �l�mentaire POINT_PLAN_FLUIDE
+*
+         ELSE IF (ITYP.EQ.7) THEN
+            IDIM   = IPALB(I,3)
+            ID1 = 6 + IDIM
+            XPALB(I,ID1+1) = 0.D0
+            XPALB(I,ID1+2) = 0.D0
+            XPALB(I,ID1+3) = 0.D0
+
+* ------ choc �l�mentaire POINT_PLAN avec SEUIL_PLASTIQUE ?
+**  ianis
+         ELSE IF (ITYP.EQ.100) THEN
+            XPALB(I,(5 + IDIMB)) = 0.D0
+            
+*
+* ------ choc elementaire POINT_POINT_ ... _PLASTIQUE
+*
+         ELSE IF (ITYP.EQ.16 .OR. ITYP.EQ.50) THEN
+            IDIM   = IPALB(I,3)
+            XPALB(I,2+IDIM) = 0.D0
+            XPALB(I,3+IDIM) = XABSCI(I,2)
+            XPALB(I,4+IDIM) = 0.D0
+*
+         ELSE IF (ITYP.EQ.17 .OR. ITYP.EQ.51) THEN
+            IDIM   = IPALB(I,3)
+            XPALB(I,3+IDIM) = 0.D0
+            XPALB(I,4+IDIM) = XABSCI(I,2)
+            XPALB(I,5+IDIM) = 0.D0
+            
+*
+* ------ choc �l�mentaire LIGNE_LIGNE_FROTTEMENT
+*
+         ELSE IF (ITYP.EQ.35.OR.ITYP.EQ.36) THEN
+            NNOEMA = IPALB(I,21)
+            NNOEES = IPALB(I,22)
+*   Initialisation de la recherche du noeud maitre voisin
+            IGLOBA = 1
+            DO 340 INOE=1,NNOEES
+               CALL DYVOIS(IPALB,IPLIB,XPALB,XPTB,IND,I,NLIAB,
+     &                  NPLB,IGLOBA,0)
+ 340        CONTINUE
+            DO 342 INOE=1,NNOEMA
+               CALL DYVOIS(IPALB,IPLIB,XPALB,XPTB,IND,I,NLIAB,
+     &             NPLB,IGLOBA,1)
+ 342        CONTINUE
+
+*
+* ------ choc �l�mentaire LIGNE_CERCLE
+*
+         ELSE IF (ITYP.EQ.37.OR.ITYP.EQ.38
+     & .OR. ITYP.EQ.39.OR.ITYP.EQ.40) THEN
+            NNOEMA = IPALB(I,21)
+            NNOEES = IPALB(I,22)
+*   Initialisation de la recherche du noeud maitre voisin
+            IGLOBA = 1
+            DO 440 INOE=1,NNOEES
+               CALL DYVOIS(IPALB,IPLIB,XPALB,XPTB,IND,I,NLIAB,
+     &                  NPLB,IGLOBA,0)
+ 440        CONTINUE
+            DO 442 INOE=1,NNOEMA
+               CALL DYVOIS(IPALB,IPLIB,XPALB,XPTB,IND,I,NLIAB,
+     &             NPLB,IGLOBA,1)
+ 442        CONTINUE
+
+
+* ------ choc ...........
+*
+*        ELSE IF (ITYP.EQ.  ) THEN
+*              .......
+*              .......
+*
+         ENDIF
+ 10      CONTINUE
+
+*     end do
+*
+      END
+
+
+
+
+
+
+
+
+
+ 
+ 
+ 

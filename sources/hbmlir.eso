@@ -1,0 +1,192 @@
+C HBMLIR    SOURCE    BP208322  20/09/18    21:16:46     10718          
+c
+C DEVLIR    SOURCE    CB215821  16/12/05    21:15:17     9237           
+      SUBROUTINE HBMLIR(ITBAS,ITKM,ITA,ITLIA,ITCHAR,ITINIT,ITOPT,
+     &            NINS,ITREDU,IPARNUM,KPREF,KCPR,NHBM,NFFT,KCPRIG)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNC : continuation par longueur d'arc               *
+*     ________________________________________________               *
+*                                                                    *
+*     Lecture et coherence des operandes, verification des supports  *
+*     objets TBAS, TKM, TA et TINIT.                                 *
+*     Obtention de la liste des points de reference.                 *
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   ITBAS   Table representant une base modale                     *
+* e   ITKM    Table contenant les matrices de raideur et de masse    *
+* e   ITA     Table contenant la matrice des amortissements          *
+* e   ITLIA   Table rassemblant la description des liaisons          *
+* e   ITCHAR  Table contenant les chargements                        *
+* e   ITINIT  Table donnant les conditions initiales                 *
+* e   ITOPT
+* e   NP      Nombre de pas de temps                                 *
+* e   NINS    On veut un resultat tous les NINS pas de calcul        *
+* e   ITREDU  Table contenant les noms d'inconnues de la base B      *
+*             auxquelles on se restreint                             *
+* s   KPREF   Segment des points de reference                        *
+* s   KCPR    Segment des points                                     *
+*                                                                    *
+*--------------------------------------------------------------------*
+-INC PPARAM
+-INC CCOPTIO
+-INC SMMODEL
+      segment mwinit
+        integer jpdep,jpvit,jrepr
+      endsegment
+      segment mtbas
+        integer itbmod,lsstru(np1),nsstru
+      endsegment
+*
+      PARAMETER ( ZERO=0.D0 )
+      LOGICAL  LOAMOR,L0,L1
+      CHARACTER*8 TYPOBJ
+      CHARACTER*72 CHARRE,CHARRI
+* 
+      NINS = 1
+*
+      ITBAS  = 0
+      ITKM   = 0
+      ITA    = 0
+      ITLIA  = 0
+      ITCHAR = 0
+      ITINIT = 0
+      ITOPT  = 0
+      ITREDU = 0
+      IPARNUM= 0
+      ITINV = 0
+* Matt: pour rotas rigides:
+      KCPRIG = 0
+*
+*     A/ Lecture des operandes, les tables puis les autres:
+*
+      CALL MESLIR(-261)
+      CALL LIRTAB('BASE_MODALE',ITBAS,0,IRET)
+      IF (IRET.EQ.0) THEN
+         CALL LIRTAB('ENSEMBLE_DE_BASES',ITBAS,0,IRET)
+      ENDIF
+      IF (IERR.NE.0) RETURN
+      IF (ITBAS.NE.0 .AND. IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)'   on a lu la table definissant la base modale.'
+      ENDIF
+*
+      CALL MESLIR(-262)
+      CALL LIRTAB('RAIDEUR_ET_MASSE',ITKM,0,IRET)
+      IF (IERR.NE.0) RETURN
+      IF (ITKM.NE.0 .AND. IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)
+     & '   on a lu la table definissant les matrices de raideurs.'
+      ENDIF
+*      
+      IF (ITKM.EQ.0 .AND. ITBAS.eq.0) THEN
+        WRITE(IOIMP,*) 'Absence de base modale ou de matrice K et M'
+        MOTERR(1:8)='TABLE'
+        CALL ERREUR(37)
+        RETURN
+      ENDIF
+*
+      CALL MESLIR(-263)
+      CALL LIRTAB('AMORTISSEMENT',ITA,0,IRET)
+      IF (IERR.NE.0) RETURN
+      IF (ITA.NE.0 .AND. IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)
+     & '   on a lu la table definissant une matrice d''amortissement.'
+      ENDIF
+*
+      CALL MESLIR(-264)
+      CALL LIRTAB('LIAISON',ITLIA,0,IRET)
+      IF (IERR.NE.0) RETURN
+      IF (ITLIA.NE.0 .AND. IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)'   on a lu la table definissant les liaisons.'
+      ENDIF
+*
+      CALL MESLIR(-265)
+cbp      CALL LIRTAB('CHARFREQ',ITCHAR,0,IRET)
+      CALL LIRTAB('CHARGEMENT',ITCHAR,0,IRET)
+      IF (IERR.NE.0) RETURN
+      IF (ITCHAR.NE.0 .AND. IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)'   on a lu la table definissant les chargements.'
+      ENDIF
+*
+      CALL MESLIR(-266)
+      CALL LIRTAB('INITIAL',ITINIT,0,IRET)
+      IF (IERR.NE.0) RETURN
+      IF (ITINIT.NE.0 .AND. IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)
+     &'   on a lu la table definissant les conditions initiales.'
+      ENDIF
+*      
+      CALL MESLIR(-267)
+cbp      CALL LIRTAB('PAR_CONT',IPARNUM,0,IRET)
+      CALL LIRTAB('PARAMETRES_NUMERIQUES',IPARNUM,0,IRET)
+      IF (IERR.NE.0) RETURN
+      IF (IPARNUM.NE.0 .AND. IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)
+     &'   on a lu la table definissant les parametres de continuation.'
+      ENDIF
+*      
+      CALL MESLIR(-268)
+      CALL LIRTAB('REPRISE',IREP,0,IRET)
+      IF (IERR.NE.0) RETURN
+      IF (IREP.NE.0 .AND. IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)
+     &'   on a lu la table definissant la reprise'
+      ENDIF
+*
+      CALL MESLIR(-270)
+      CALL LIRTAB('RESTRICTION',ITREDU,0,IRET)
+      IF (IERR.NE.0) RETURN
+*
+*      CALL MESLIR(-269)
+*      CALL LIRENT(NP,1,IRET)
+*      IF (IERR.NE.0) RETURN
+      CALL MESLIR(-271)
+      CALL LIRENT(NHBM,1,IRET)
+      IF (IERR.NE.0) RETURN
+      IF (NHBM.NE.0 .AND. IIMPI.EQ.333) THEN
+      WRITE(IOIMP,*)'   On a lu le nombre d''harmoniques.'
+      ENDIF
+*      
+      CALL MESLIR(-272)
+      CALL LIRENT(NFFT,1,IRET)
+      IF (IERR.NE.0) RETURN
+*
+      CALL MESLIR(-273)
+      CALL LIRENT(NINS,0,IRET)
+      IF (IERR.NE.0) RETURN       
+*
+*     B/ Coherence des operandes
+*
+      IF (ITBAS.EQ.0 .AND. ITKM.EQ.0) THEN
+         CALL ERREUR(478)
+         RETURN
+      ENDIF
+      IF (ITCHAR.EQ.0 .AND. ITINIT.EQ.0 .AND. IREP.EQ.0) THEN
+         CALL ERREUR(479)
+         RETURN
+      ENDIF
+*
+      IF (NINS.LE.0) THEN
+         IF(LANGUE.EQ.'ANGL') THEN
+           MOTERR(1:40)='calculation steps between two outputs'
+         ELSE
+           MOTERR(1:40)='pas de calcul entre deux sorties'
+         ENDIF
+         CALL ERREUR(480)
+         RETURN
+      ENDIF
+*
+*     C/ Verification des supports des objets TBAS, TKM, TA et TINIT
+*        et obtention de la liste des points de reference
+*
+          it1 = itbas
+      CALL DYNE13(IT1,ITKM,KPREF,KCPR,.false.,KCPRIG)
+      IF (IERR.NE.0) RETURN
+      END
+
+ 
+ 
+ 

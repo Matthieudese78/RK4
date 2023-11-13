@@ -1,0 +1,1198 @@
+C HBMBIF    SOURCE    BP208322  20/10/05    21:15:10     10742          
+ 
+      SUBROUTINE HBMBIF(NT,NHBM,NDDL,NFFT,KTQ,KTKAM,MTPHI,KTEMP,MTLIAA,
+     & MTLIAB,MTFEX,MTPAS,LOCLFA,LOCLB1,CHECK,TYPC,KPARNUM,KSORT)
+*
+*=======================================================================  
+* Calcul des points de bifurcation par une methode de Newton-Raphson
+*=======================================================================  
+* TYPC indique le type de calcul a realiser
+*      = 'L' pour un point limite
+*      = 'B' pour un point de branchement
+*      = 'P' pour un doublement de periode
+*      = 'N' pour une bifurcation de Neimark-Sacker
+*=======================================================================     
+        IMPLICIT INTEGER(I-N)
+        IMPLICIT REAL*8(A-H,O-Z)
+ 
+        CHARACTER*1 TYPC
+        LOGICAL CHECK,CANAL
+        INTEGER MAXITS,MAXVCP,INFO
+ 
+*     segment local (a nettoyer et faire remonter dans l'include TMDYNC.INC + tard)
+c       SEGMENT MWORK        
+        INTEGER IPIV33(2*NT+2),INDEIG(2*NT),I4(3*NT+2),I5(2*NT+1)
+        REAL*8 fvec(NT),AVVP(NT),AVVP2(NT+1),V1(NT)
+        REAL*8 EIGRE(NT),EIGIM(NT),QIN(NT),OMEGIN,KAPPA,KAPPA2
+        REAL*8 EIGRE2(NT+1),EIGIM2(NT+1)
+        REAL*8 VR(NT,NT),VL(NT,NT),WORK(8*NT)
+        REAL*8 VR2(NT+1,NT+1),VL2(NT+1,NT+1),WORK2(8*(NT+1))
+        REAL*8 JAC1(NT,NT),JAC2(NT,NT),fvec0(NT)
+        REAL*8 dZw(NT,NT),RxwPhi(NT),RXXPHI(NT,NT),RwwPhi
+        REAL*8 vA1(NT), vA2(NT),vA3(NT),vB1(NT),vB2(NT),vB3(NT)
+        REAL*8 RX2(NT,NT),SS,EI(NT)
+        REAL*8 AA(3,3),sol(3),arrRes(3),arrRes2(4),arrRes3(5)
+        REAL*8 JBP(2*NT+2,2*NT+2),solBP(2*NT+2)
+        REAL*8 dWB, dXB(NT),dPHIR(NT),dPHII(NT),WORK2w(16*NT)
+        REAL*8 res2(NT),Rco(NT,NT),PHIR(NT),PHII(NT),DPsiPsi(NT,NT)
+        REAL*8 MREG(NT+1,NT+1),DEL1(NT,NT),DEL2(NT),Mi,Ci,JH(2*NT,2*NT)
+        REAL*8 EXRE2w(2*NT),EXIM2w(2*NT),VL2w(2*NT,2*NT),VR2w(2*NT,4*NT)
+        REAL*8 dRxDdk1(NT),dRxDdk2(NT)
+        REAL*8 Rxmk2D(NT,NT),D10(NT,NT),D1w(NT,NT),D2(NT,NT),VQ(NT)
+        REAL*8 RxxPHIR(NT,NT),RxxPHII(NT,NT),RxwPhiR(NT),RxwPhiI(NT)
+        REAL*8 JNS(3*NT+2,3*NT+2),solNS(3*NT+2),resV1(NT),resV2(NT)
+        REAL*8 JPD(3*NT+1,3*NT+1),solPD(3*NT+1),D1wP(NT,NT)
+c       ENDSEGMENT
+ 
+*-----------------------------------------------------------------------        
+* BIF: contient les coefficients de Fourier au point de bifurcation, 
+* ainsi que les deux fréquences correspondantes (KAPPA = 0. pour LP,BP)              
+* et les parties reelle/imaginaire du vecteur propre associe. 
+*-----------------------------------------------------------------------
+-INC PPARAM
+-INC CCOPTIO
+*-INC TMDYNC.INC
+************************** debut TMDYNC.INC ****************************
+ 
+*    TMDYNC : FUTUR INCLUDE POUR LES SEGMENTS DE L'OPERATEUR DYNC
+*    TODO   : a extraire dans un include des que stabilise
+*
+*     Segment des variables generalisees:
+*     -----------------------------------
+      SEGMENT MTQ
+         REAL*8 Q1(NT1)
+         REAL*8 OMEG,XPARA
+         REAL*8 JAC(NT1,NT1),ZZ(NT1,NT1),RX(NT1,NT1)
+         REAL*8 dX(NT1), dw, dv
+      ENDSEGMENT
+*     Q1   : vecteur des inconnues frequentielles de dimension (2h+1)*n
+*            Q1 = {q_0 q_c1 q_s1 ... q_sh}
+*            avec q_i vecteur de dimension n ou n=nombre de modes
+*     OMEG : frequence fondamentale de l'approximation
+*     XPARA: parametre de continuation (par defaut la frequence) 
+*            \in [PARINI,PARFIN]
+*     RX   : matrice jacobienne = ZZ + dFnl/dX
+*     JAC  : jacobienne des efforts non-lineaires  = dFnl/dX
+*     ZZ   : matrice dynamique associee aux matrices modales K, M et C 
+*            lineaires et constantes
+*     {dX,dw,(dv)} : vecteur tangent utilise pour la prediction
+*
+*
+*     Segment contenant les matrices XK, XASM et XM:
+*     ---------------------------------------------
+      SEGMENT MTKAM
+         REAL*8 XK(NA1,NB1K),XASM(NA1,NB1C),XM(NA1,NB1M)
+         REAL*8 GAM(NPC1,nl1),IGAM(nl1,NPC1),DL(nl1)
+*         REAL*8 GAMFIN(NPC2,nl1)
+      ENDSEGMENT
+*     XK,XASM et XM : matrices de raideur, amortissement et masse
+*     GAM et IGAM : matrices pour la FFT et son inverse
+*     GAMFIN      : 
+*
+*     Segment des deformees modales:
+*     ------------------------------
+*     (idem DYNE)
+      SEGMENT MTPHI
+         INTEGER IBASB(NPLB),IPLSB(NPLB),INMSB(NSB),IORSB(NSB)
+         INTEGER IAROTA(NSB)
+         REAL*8  XPHILB(NSB,NPLSB,NA2,IDIMB)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base A:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAA
+         INTEGER IPALA(NLIAA,NIPALA),IPLIA(NLIAA,NPLAA),JPLIA(NPLA)
+         REAL*8  XPALA(NLIAA,NXPALA)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base B:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAB
+         INTEGER IPALB(NLIAB,NIPALB),IPLIB(NLIAB,NPLBB),JPLIB(NPLB)
+         REAL*8  XPALB(NLIAB,NXPALB)
+         REAL*8  XABSCI(NLIAB,NIP),XORDON(NLIAB,NIP)
+      ENDSEGMENT
+*
+*     Segment representant les chargements exterieurs:
+*     -----------------------------------------------
+      SEGMENT MTFEX
+         REAL*8  FEXA(NT1)
+         REAL*8  FEXPSM(NPLB,NPC1,2,IDIMB)
+         INTEGER BAL
+      ENDSEGMENT
+*     FEXA : Vecteur des efforts ext. sous la forme de coefficients de
+*            Fourier et exprimes en base A
+*     FEXPSM: chargement/deplacement statique lie aux modes negliges
+*             (neglige aussi les Fnl). Dans DYNC toujours =0, cree pour
+*             compatibilite avec calcul des Fnl.
+*     BAL  : indique s'il s'agit d'un chargement de type balourd
+*            (cad proportionnel a OMEG**2)
+*
+*     Segment "local" pour DEVLFA:
+*     ----------------------------
+      SEGMENT LOCLFA
+         REAL*8 FTEST(NA1,4)
+      ENDSEGMENT
+*      
+*     Segment "local" pour DEVLB1:
+*     ----------------------------
+      SEGMENT LOCLB1
+         REAL*8 FTEST2(NPLB,6)
+      ENDSEGMENT
+*      
+*     Segment contenant les variables au cours d un pas de temps:
+*     ----------------------------------------------------------
+      SEGMENT MTPAS
+         REAL*8 FTOTA(NA1,4),FTOTB(NPLB,IDIMB),FTOTBA(NA1)
+         REAL*8 XPTB(NPLB,2,IDIMB),FINERT(NA1,4)
+         REAL*8 XVALA(NLIAA,4,NTVAR),XVALB(NLIAB,4,NTVAR)
+         REAL*8 FEXB(NPLB,2,IDIM),XCHPFB(2,NLIAB,4,NPLB)
+         REAL*8 KTOTXA(NA1,NA1),KTOTVA(NA1,NA1)
+         REAL*8 KTOTXB(NPLB,IDIMB,IDIMB), KTOTVB(NPLB,IDIMB,IDIMB) 
+      ENDSEGMENT
+*     FTOTA/B/BA : forces sur base A, B et B projetees sur A
+*     XPTB       : deplacement du point d'une liaison en base B
+*     XVALA/B    : grandeurs de la liaison en base A/B a stocker
+*     FEXB       : forces exterieures en base B (a priori uniquement 
+*                  pour les moments appliques aux rotations rigides ?)
+*     XCHPFB     : forces de contact en base B (lorsqu'on  considere un
+*                  maillage de contact dans certaines liaisons)
+*     KTOTXA/XB/VA/VB : Jacobienne par rapport au deplacement/vitesse en
+*                       base A/B (= contributions a dFnl/dX)
+*
+*
+*     Segment des points de reference des modes (base A):
+*     --------------------------------------------------
+      SEGMENT MPREF
+         INTEGER IPOREF(NPREF),IPORIG(NPRIG)
+      ENDSEGMENT
+*
+*     Segment des points en base B:
+*     -----------------------------
+      SEGMENT NCPR(XCOOR(/1)/(IDIM+1))
+*     NCRP(#global) = #local dans XPTB (1er indice)      
+*
+*     Segment des parametres numeriques pour la continuation: 
+*     ------------------------------------------------------
+      SEGMENT PARNUM
+         CHARACTER*4 TYPS
+         REAL*8   DS,DSMAX,DSMIN,ANGMIN,ANGMAX,ITERMOY,ISENS,TOLMIN
+         REAL*8   PARINI,PARFIN
+         INTEGER  ITERMAX,NBPAS
+         LOGICAL  JANAL
+      ENDSEGMENT
+*
+*     Segment des resultats:
+*     ---------------------
+      SEGMENT  PSORT
+        REAL*8 QSAVE(NT1,NPAS),WSAVE(NPAS),LSAVE(2,2*NA1,NPAS)
+        REAL*8 VSAVE(NPAS)
+        LOGICAL ZSAVE(NPAS)
+        CHARACTER*2 TYPBIF(NBIFU)
+        REAL*8 QBIFU(NT1,NBIFU),WBIFU(NBIFU),WBIF2(NBIFU)
+        REAL*8 QPSIR(NT1,NBIFU),QPSII(NT1,NBIFU)
+        INTEGER CBIF
+      ENDSEGMENT
+*     QSAVE(i,j) = Q harmonique i au pas j
+*     VSAVE(j)   = parametre de continuation (si non w) au j-eme pas
+*     ZSAVE(j)   = stabilite au j-eme pas
+*     LSAVE(1,j) : partie reelle de l'exposant de Floquet
+*     LSAVE(2,j) : partie imaginaire de l'exposant de Floquet
+*     TYPBIF = {LimitPoint, BranchPoint, NeimarkSacker, PeriodDoubling}
+*     QBIFU,WBIFU : vecteur Q et w au point de bifurcation
+*           WBIF2 : partie imaginaire de l'exposant de Floquet
+*     QPSIR,QPSII : vecteur propre au point de bifurcation
+ 
+*     Segment des tableaux de travail:
+*     -------------------------------
+      SEGMENT  MTEMP
+         REAL*8 RW(NT1),A,T0(NT1+1),TP(NT1+1),AMPX,AUX
+         REAL*8 T02(NT1+2), TP2(NT1+2)
+         INTEGER IPIV(NT1),IPIV2(NT1+1),IPIV3(NT1+2)
+         REAL*8 res
+         REAL*8 RHS(NT1+1),Ja(NT1+1,NT1+1)
+         REAL*8 QOLD(NT1),OMEGOLD
+         REAL*8 MATJA(NT1+1,NT1+1),Rw2(NT1)
+         REAL*8 Jaa(NT1+2,NT1+2),RHS2(NT1+2),Ra(NT1),VV,VVOLD
+      ENDSEGMENT
+*     Jacobiennes augmentees 
+*     Ja : [ RX  Rw ; dX dw]
+*     Jaa: [ RX  Rw Ra; gx 0 0; dX dw da]
+ 
+*      SEGMENT  NNNN
+*         REAL*8 IGAM2(nl1,NPC2),DL2(nl1)
+*      ENDSEGMENT
+ 
+*************************** fin TMDYNC.INC *****************************
+ 
+       REAL*8 ZERO,ONE,TWO,XEPS
+       PARAMETER (ZERO=0.D0, ONE=1.D0, TWO=2.D0, XEPS=1.D-6)
+ 
+*-----------------------------------------------------------------------
+       PARAMETER(MAXITS=40)
+*       TOLF=1.e-4
+*       TOLMIN=1.e-6
+*       STPMX=100.  
+*
+       MTQ   = KTQ
+       MTKAM = KTKAM
+       MTEMP = KTEMP
+       PSORT = KSORT
+       PARNUM = KPARNUM
+       CANAL = JANAL
+ 
+c        SEGINI,MWORK
+ 
+*      sauvegarde du point de la courbe de reponse
+       OMEGIN = OMEG
+       DO I = 1,NT 
+         QIN(I) = Q1(I)
+       ENDDO       
+*        
+       CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &            MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec0,fref0,
+     &            .false.)
+       CALL HBMZ(NT,NHBM,NDDL,MTQ,MTKAM,.true.)  
+ 
+c      ----------------------------------------------------------------       
+c      !!! Localisation NeimarkSacker et PeriodDoubling a debugger !!!
+c       if(TYPC.eq.'N'.or.TYPC.eq.'P') then
+c          WRITE(IOIMP,*) 'Localisation bifurcation ',TYPC,'non prevue !'
+c          CHECK = .true.
+c          return
+c       endif
+c      ---------------------------------------------------------------- 
+ 
+c      message
+       IF (IIMPI.GE.2) WRITE(IOIMP,*) 'Localisation bifurcation ',TYPC
+       IF (IIMPI.GE.3) WRITE(IOIMP,990) 0,dnrm2(NT,fvec0,1),fref0
+ 990   FORMAT('+ hbmbif : iter ',I2,' -> |R|=',E10.3,' ref=',E10.3) 
+ 
+ 
+*=======================================================================     
+*                            Initialisation                              
+*======================================================================= 
+ 
+* La Jacobienne augmentee a la structure de base suivante: 
+*   JJ = [    Rx      O      Rw  ]
+*        [ (RxPhi)x   Rx   RxwPhi]
+*        [   0'     2Phi'    0   ]
+* qui est a adapter selon la bifurcation traitee.
+*
+* Il faut initialiser le vecteur propre Phi.
+* Calcul de la Jacobienne Rx = Z(OMEGA) - dFNLdX
+c        DO I=1,NT
+       DO J=1,NT
+       DO I=1,NT
+           RX(I,J) = ZZ(I,J)-JAC(I,J)
+       ENDDO
+       ENDDO
+       CALL COPYMAT(NT,Rx,Rco)
+       
+ 
+*-----------------------------------------------------------------------               
+*      Bifurcation statique: le vecteur propre annule la Jacobienne
+*----------------------------------------------------------------------- 
+ 
+       IF (TYPC.EQ.'L') THEN
+ 
+         CALL DGEEV('N','V',NT,Rco,NT,EIGRE,EIGIM,VL,1,VR,NT,
+     &                                                   WORK,8*NT,INFO)
+*        On prend le vecteur associe a la partie reelle la plus petite.     
+         MINVP=1
+         XMINVP=ABS(EIGRE(1))
+         DO I = 1,NT
+           AVVP(I) = ABS(EIGRE(I))
+           IF(AVVP(I).LT.XMINVP) THEN
+             MINVP=I
+             XMINVP=AVVP(I)
+           ENDIF
+         ENDDO           
+c          MINVP = MINLOC(AVVP,NT)
+*        Les vecteurs propres sont purement reels dans ce cas.         
+         DO I = 1,NT
+            PHIR(I) = VR(I,MINVP)
+            PHII(I) = ZERO
+         ENDDO
+*        Pas de nouvelle frequence pour les cycles bifurques          
+         KAPPA = ZERO
+         MAXVCP=1
+         XMAXVCP=ABS(PHIR(1))
+         DO I = 1,NT
+           AVVP(I) = ABS(PHIR(I))
+           IF(AVVP(I).GT.XMAXVCP) THEN
+             MAXVCP=I
+             XMAXVCP=AVVP(I)
+           ENDIF
+         ENDDO
+c          MAXVCP = MAXLOC(AVVP,NT)
+*        Elements pour la resolution par blocs          
+         SS = ZERO
+         DO I=1,NT
+           SS = SS + abs(RX(I,I))
+         ENDDO         
+         SS = SS/NT
+*        Penalisation de la Jacobienne (evite mauvais conditionnement)
+         CALL COPYMAT(NT,RX,RX2)
+         DO I=1,NT
+          EI(I) = ZERO
+         ENDDO
+         RX2(MAXVCP,MAXVCP) = RX2(MAXVCP,MAXVCP) + SS
+         EI(MAXVCP) = ONE
+       ENDIF
+ 
+*-----------------------------------------------------------------------  
+*      Branch point ?
+*-----------------------------------------------------------------------               
+       IF (TYPC.EQ.'B') THEN
+ 
+         CALL HBMRW(NT,NDDL,1,Q1,OMEG,XM,XASM,XK,Rw,.true.)  
+         IF (BAL.EQ.1) THEN
+           DO I=1,NT
+             Rw(I) = Rw(I) - TWO*OMEG*FEXA(I)
+           ENDDO
+         END IF 
+*        Regularisation de la Jacobienne
+         CALL HBMDVEC(NT,NHBM,NDDL,Q1,ONE,V1)         
+         DO I = 1,NT
+           MREG(I,NT+1) = Rw(I)
+           MREG(NT+1,I) = Rw(I)
+         ENDDO
+         znormV1 = dnrm2(NT,V1,1)
+         DO I = 1,NT 
+            V1(I) = V1(I)/znormV1
+         ENDDO
+         DO I = 1,NT
+           DO J = 1,NT
+             RX2(I,J) = RX(I,J) + V1(I)*V1(J)  
+             MREG(I,J) = RX2(I,J)
+           ENDDO
+         ENDDO    
+         MREG(NT+1,NT+1) = ZERO
+         CALL DGEEV('N','V',NT+1,MREG,NT+1,EIGRE2,EIGIM2,VL2,1,VR2,NT+1,
+     &                                              WORK2,8*(NT+1),INFO)         
+*        On prend le vecteur associe a partie reelle la plus petite.     
+         MINVP=1
+         XMINVP=ABS(EIGRE2(1))
+         DO I = 1,NT+1
+           AVVP2(I) = ABS(EIGRE2(I))
+           IF(AVVP2(I).LT.XMINVP) THEN
+             MINVP=I
+             XMINVP=AVVP2(I)
+           ENDIF
+         ENDDO           
+c          MINVP = MINLOC(AVVP2,NT+1)
+*        Les vecteurs propres sont purement reels dans ce cas.         
+         DO I = 1,NT
+            PHIR(I) = VR2(I,MINVP)
+            PHII(I) = ZERO
+         ENDDO
+*        Pas de nouvelle frequence pour les cycles bifurques          
+         KAPPA = ZERO                 
+       ENDIF
+ 
+*-----------------------------------------------------------------------               
+*      Bifurcations dynamiques (Period doubling ou Neimark Sacker)
+*-----------------------------------------------------------------------               
+*      Construction de la matrice de Hill, JJ
+       IF ((TYPC.EQ.'P').OR.(TYPC.EQ.'N')) THEN
+         DO I = 1,NT
+            DO J = 1,NT
+              D10(I,J)=ZERO
+              D1w(I,J)=ZERO    
+              D2(I,J) =ZERO
+             ENDDO
+         ENDDO
+         DO I=1,2*NHBM+1
+           DO J=1,NDDL
+              DEL2(NDDL*(I-1)+J) = ONE/XM(J,1)
+              D2(NDDL*(I-1)+J,NDDL*(I-1)+J) = XM(J,1)
+           ENDDO
+         ENDDO
+         DO I=1,NDDL
+             D10(I,I) = XASM(I,1)      
+         ENDDO       
+         DO J = 2,2*NHBM,2
+           DO I=1,NDDL
+               D10(NDDL*(1+(J-2))+I,NDDL*(1+(J-2))+I) = XASM(I,1)
+               D1w(NDDL*(1+(J-2))+I,NDDL*(1+(J-1))+I) = J*XM(I,1)
+               D1w(NDDL*(1+(J-1))+I,NDDL*(1+(J-2))+I) = -J*XM(I,1)
+               D10(NDDL*(1+(J-1))+I,NDDL*(1+(J-1))+I) = XASM(I,1)
+           ENDDO             
+         ENDDO
+*        DEL1 = DEL10 + OMEG*DEL1w
+         CALL COLIMA(NT,NT,D10,D1w,ONE,OMEG,DEL1)
+*     JJ = [DEL2\DEL1   DEL2\Rx]
+*          [     -I         0  ] 
+* 
+         DO  I=1,NT
+           DO  J=1,NT
+*            JJ_11 = DEL2\DEL1
+             JH(I,J) = -DEL1(I,J)*DEL2(J) 
+*            JJ_12 = DEL2\Rx 
+             JH(I,NT+J) = -RX(I,J)*DEL2(J)           
+*            JJ_21 = [I]           
+             IF (I.EQ.J) THEN
+               JH(NT+I,J) = ONE
+             ELSE
+               JH(NT+I,J) = ZERO
+             ENDIF
+*            JJ_22 = [0]
+             JH(NT+I,NT+J) = ZERO         
+           ENDDO
+         ENDDO
+         CALL DGEEV('N','V',2*NT,JH,2*NT,EXRE2w,EXIM2w,VL2w,1,VR2w,2*NT,
+     &                                                 WORK2,16*NT,INFO)
+         CALL HBMORDO(2*NT,NDDL,OMEG,EXIM2w,INDEIG)
+*         WRITE(*,*) '   REAL   ', '   IMAG   ', '   INDX   '
+*         DO I = 1,2*NT
+*           WRITE(*,*) EXRE2w(INDEIG(I)),EXIM2w(I),INDEIG(I)
+*         ENDDO         
+*        WRITE(*,*) 'INDXS:',(INDEIG(IOU),IOU=1,2*NDDL)
+*
+*        On choisit le vecteur associe a la valeur propre avec partie
+*        imaginaire positive du mode instable
+         MINVP=1
+         DO I=1,2*NDDL
+           IF ((EXRE2w(INDEIG(I)).GT.ZERO).AND.(EXIM2w(I).GT.ZERO)) THEN
+              MINVP=INDEIG(I)
+              INDK =I
+*             WRITE(*,*) 'Mode instable:',MINVP
+            ENDIF
+         ENDDO
+         DO I=1,NT 
+           PHIR(I) = VR2w(I,MINVP)
+           PHII(I) = VR2w(I,MINVP+1)  
+         ENDDO  
+*         WRITE(*,*) 'PHI_R  ', '  PHI_I'
+*         DO IOU = 1,NT 
+*           WRITE(*,*) PHIR(IOU),PHII(IOU)
+*         ENDDO
+*         STOP
+         MAXVCP=1
+         XMAXVCP=ABS(PHII(1))
+         DO I = 1,NT
+           AVVP(I) = ABS(PHII(I))
+           IF (AVVP(I).GT.XMAXVCP) THEN
+             MAXVCP=I
+             XMAXVCP=AVVP(I)
+           ENDIF
+         ENDDO
+c          MAXVCP = MAXLOC(AVVP,NT)
+         DO I = 1,NT
+             VQ(I) = ZERO
+         ENDDO
+         VQ(MAXVCP) = ONE
+*        ---------------------         
+         IF (TYPC.EQ.'P') THEN
+*        Nouvelle frequence fixee a OMEGA/2     
+           KAPPA = OMEG/TWO
+         ENDIF              
+*        ---------------------
+         IF (TYPC.EQ.'N') THEN
+*        Nouvelle frequence incommensurable KAPPA   
+            KAPPA = ABS(EXIM2w(INDK))  
+*            write(*,*) 'KAPPA^0=',KAPPA
+         ENDIF
+*         STOP
+       ENDIF
+*=======================================================================     
+*                              Iterations                                   
+*=======================================================================     
+        DO its=1,MAXITS
+*-----------------------------------------------------------------------                   
+*        CAS L: POINT LIMITE 
+*-----------------------------------------------------------------------                   
+         IF (TYPC.EQ.'L') THEN 
+***      Calcul des derivees
+*        RxxPhi
+         EPS1 = XEPS*(dnrm2(NT,Q1,1)/dnrm2(NT,PHIR,1) + XEPS)         
+*        Perturbation de la Jacobienne: +EPS         
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS1*PHIR(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)
+         CALL COPYMAT(NT,JAC,JAC1)
+*        Perturbation de la Jacobienne: -EPS
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) - TWO*EPS1*PHIR(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC2)
+*        retour a la valeur initiale
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS1*PHIR(JJ)
+         ENDDO
+*        Differences centrees         
+         DO I = 1,NT
+           DO J = 1,NT
+             RxxPHI(I,J) = (JAC2(I,J)-JAC1(I,J))/(TWO*EPS1) 
+           ENDDO
+         ENDDO
+*        RxwPhi
+         CALL HBMZW(NT,NHBM,NDDL,MTQ,MTKAM,dZw)
+         DO I=1,NT
+           RxwPhi(I) = ZERO
+           DO J = 1,NT
+             RxwPhi(I) = RxwPhi(I) + dZw(I,J)*PHIR(J)
+           ENDDO 
+         ENDDO
+*        Rw
+         CALL HBMRW(NT,NDDL,1,Q1,OMEG,XM,XASM,XK,Rw,.true.)  
+         IF (BAL.EQ.1) THEN
+           DO I=1,NT
+             Rw(I) = Rw(I) - TWO*OMEG*FEXA(I)
+           ENDDO
+         END IF        
+*        Resolution par blocs 
+*        A1
+         DO I = 1,NT
+           vA1(I) = -fvec0(I)
+         ENDDO
+         CALL COPYMAT(NT,RX2,Rco)
+         CALL DGESV(NT,1,Rco,NT,IPIV,vA1,NT,INFO)
+*        A2
+         DO I = 1,NT
+           vA2(I) = -Rw(I)
+         ENDDO
+         CALL COPYMAT(NT,RX2,Rco)
+         CALL DGESV(NT,1,Rco,NT,IPIV,vA2,NT,INFO)
+*        A3 
+         DO I = 1,NT
+           vA3(I) = EI(I)
+         ENDDO
+         CALL COPYMAT(NT,RX2,Rco)
+         CALL DGESV(NT,1,Rco,NT,IPIV,vA3,NT,INFO)
+*        B1
+         DO I = 1,NT
+           vB1(I) = ZERO
+           DO J = 1,NT
+             vB1(I) = vB1(I) + RxxPHI(I,J)*vA1(J) + RX(I,J)*PHIR(J)
+           ENDDO
+           vB1(I) = -vB1(I) 
+         ENDDO
+         CALL COPYMAT(NT,RX2,Rco)
+         CALL DGESV(NT,1,Rco,NT,IPIV,vB1,NT,INFO)
+*        B2
+         DO I = 1,NT
+           vB2(I) = ZERO
+           DO J = 1,NT
+             vB2(I) = vB2(I) + RxxPHI(I,J)*vA2(J)
+           ENDDO
+           vB2(I) = -(vB2(I) + RxwPhi(I))
+         ENDDO
+         CALL COPYMAT(NT,RX2,Rco)
+         CALL DGESV(NT,1,Rco,NT,IPIV,vB2,NT,INFO)
+*        B3
+         DO I = 1,NT
+           vB3(I) = ZERO
+           DO J = 1,NT
+             vB3(I) = vB3(I) + RxxPHI(I,J)*vA3(J)
+           ENDDO
+           vB3(I) = -vB3(I)
+         ENDDO
+         CALL COPYMAT(NT,RX2,Rco)
+         CALL DGESV(NT,1,Rco,NT,IPIV,vB3,NT,INFO)         
+*        
+*        Construction de la matrice du probleme
+         AA(1,1) = vA2(MAXVCP)
+         AA(1,2) = SS*vA3(MAXVCP)-ONE
+         AA(1,3) = ZERO 
+         AA(2,1) = vB2(MAXVCP)
+         AA(2,2) = SS*vB3(MAXVCP) 
+         AA(2,3) = SS*vA3(MAXVCP)-ONE
+         AA(3,1) = DDOT(NT,PHIR,1,vB2,1)
+         AA(3,2) = SS*(DDOT(NT,PHIR,1,vB3,1))
+         AA(3,3) = SS*(DDOT(NT,PHIR,1,vA3,1))
+*        Construction du cote droit 
+         sol(1) = -vA1(MAXVCP)
+         sol(2) = -vB1(MAXVCP)
+         sol(3) = 0.5D0*(ONE-DDOT(NT,PHIR,1,PHIR,1))
+     &          -DDOT(NT,PHIR,1,vB1,1)
+*        Resolution
+         CALL DGESV(3,1,AA,3,IPIV,sol,3,INFO) 
+*        Corrections 
+         dWB = sol(1)
+         beta1 = sol(2) 
+         beta2 = sol(3)
+         DO I = 1,NT
+          dXB(I) = vA1(I) + dWB*vA2(I) +SS*beta1*vA3(I)
+          dPHIR(I)= vB1(I)+ dWB*vB2(I) +SS*beta1*vB3(I) +SS*beta2*vA3(I)          
+          Q1(I) = Q1(I) + dXB(I)
+          PHIR(I) = PHIR(I) + dPHIR(I)
+         ENDDO
+         OMEG = OMEG + dWB        
+         ENDIF
+*-----------------------------------------------------------------------        
+*        CAS B: POINT DE BRANCHEMENT
+*-----------------------------------------------------------------------                   
+         IF (TYPC.EQ.'B') THEN
+***      Calcul des derivees
+*        RxxPhi
+         EPS1 = XEPS*(dnrm2(NT,Q1,1)/dnrm2(NT,PHIR,1) + XEPS)         
+*        Perturbation de la Jacobienne: +EPS         
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS1*PHIR(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC1)
+*        Perturbation de la Jacobienne: -EPS
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) - TWO*EPS1*PHIR(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC2)
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS1*PHIR(JJ)
+         ENDDO
+c        DPsiPsi
+         CALL HBMDPP(NT,NDDL,Q1,PHIR,DPsiPsi)
+*        Differences centrees         
+         DO I = 1,NT
+           DO J = 1,NT
+           RxxPHI(I,J)=((JAC2(I,J)-JAC1(I,J))/(TWO*EPS1)) + DPsiPsi(I,J)
+           ENDDO
+         ENDDO
+*        RxwPhi
+         CALL HBMZW(NT,NHBM,NDDL,MTQ,MTKAM,dZw)
+         DO I=1,NT
+           RxwPhi(I) = ZERO
+           DO J = 1,NT
+             RxwPhi(I) = RxwPhi(I) + dZw(I,J)*PHIR(J)
+           ENDDO 
+         ENDDO
+*        Rw
+         CALL HBMRW(NT,NDDL,1,Q1,OMEG,XM,XASM,XK,Rw,.true.)  
+         IF (BAL.EQ.1) THEN
+           DO I=1,NT
+             Rw(I) = Rw(I) - TWO*OMEG*FEXA(I)
+           ENDDO
+         END IF      
+*        Rww*Phi
+         CALL HBMRWW(NT,NDDL,Q1,PHIR,XM,RwwPhi) 
+         IF (BAL.EQ.1) THEN
+           DO I=1,NT
+             Rw(I) = Rw(I) - TWO*OMEG*FEXA(I)
+             RwwPhi = RwwPhi - TWO*FEXA(I)*PHIR(I)
+           ENDDO
+         END IF   
+*        Construction de la matrice du probleme et du cote droit
+         solBP(2*NT+1) = ZERO
+         DO I = 1,NT 
+           solBP(NT+I) = ZERO
+           DO J = 1,NT
+             JBP(I,J) = RX(I,J) 
+             JBP(NT+I,J) = RxxPHI(I,J) 
+             JBP(I,NT+J) = ZERO 
+             JBP(NT+I,NT+J) = RX2(I,J) 
+             solBP(NT+I) = solBP(NT+I) + RX2(I,J)*PHIR(J)
+           ENDDO 
+           JBP(2*NT+1,NT+I) = RxwPhi(I) 
+           JBP(2*NT+1,I) = Rw(I)
+           JBP(2*NT+2,I) = ZERO 
+           JBP(2*NT+2,NT+I) = TWO*PHIR(I) 
+           JBP(I,2*NT+1) = Rw(I) 
+           JBP(NT+I,2*NT+1) =  RxwPhi(I) 
+           JBP(I,2*NT+2) = PHIR(I) 
+           JBP(NT+I,2*NT+2) = ZERO
+           solBP(I) = -fvec0(I)
+           solBP(NT+I) = -solBP(NT+I) 
+         ENDDO
+         solBP(2*NT+1) = -(DDOT(NT,Rw,1,PHIR,1))
+         solBP(2*NT+2) = -(DDOT(NT,PHIR,1,PHIR,1)-ONE)
+         JBP(2*NT+1,2*NT+1) = RwwPhi
+         JBP(2*NT+1,2*NT+2) = ZERO
+         JBP(2*NT+2,2*NT+1) = ZERO
+         JBP(2*NT+2,2*NT+2) = ZERO
+*
+*        Resolution
+         CALL DGESV(2*NT+2,1,JBP,2*NT+2,IPIV33,solBP,2*NT+2,INFO) 
+*        Corrections 
+         dWB = solBP(2*NT+1)
+         DO I = 1,NT
+          dXB(I) = solBP(I)
+          dPHIR(I)= solBP(NT+I)          
+          Q1(I) = Q1(I) + dXB(I)
+          PHIR(I) = PHIR(I) + dPHIR(I)
+         ENDDO
+         OMEG = OMEG + dWB        
+         ENDIF
+*-----------------------------------------------------------------------        
+*        CAS P: DOUBLEMENT DE PERIODE 
+*-----------------------------------------------------------------------                   
+         IF (TYPC.EQ.'P') THEN
+***      Calcul des derivees
+*        RxxPhiR
+         EPS1 = XEPS*(dnrm2(NT,Q1,1)/dnrm2(NT,PHIR,1) + XEPS)         
+*        Perturbation de la Jacobienne: +EPS1         
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS1*PHIR(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC1)
+*        Perturbation de la Jacobienne: -EPS1
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) - TWO*EPS1*PHIR(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC2)
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS1*PHIR(JJ)
+         ENDDO
+*        Differences centrees         
+         DO I = 1,NT
+           DO J = 1,NT
+             RxxPHIR(I,J) = (JAC2(I,J)-JAC1(I,J))/(TWO*EPS1) 
+           ENDDO
+         ENDDO
+*        RxxPhiI
+         EPS2 = XEPS*(dnrm2(NT,Q1,1)/dnrm2(NT,PHII,1) + XEPS)         
+*        Perturbation de la Jacobienne: +EPS2         
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS2*PHII(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC1)
+*        Perturbation de la Jacobienne: -EPS2
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) - TWO*EPS2*PHII(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC2)
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS2*PHII(JJ)
+         ENDDO
+*        Differences centrees         
+         DO I = 1,NT
+           DO J = 1,NT
+             RxxPHII(I,J) = (JAC2(I,J)-JAC1(I,J))/(TWO*EPS2) 
+           ENDDO
+         ENDDO
+*        Rw
+         CALL HBMRW(NT,NDDL,1,Q1,OMEG,XM,XASM,XK,Rw,.true.)  
+         IF (BAL.EQ.1) THEN
+           DO I=1,NT
+             Rw(I) = Rw(I) - TWO*OMEG*FEXA(I)
+           ENDDO
+         END IF  
+*        Calcul de: (Rxw-(OMEG/2)*D2)*PhiR-(0.5*D10+OMEG*D1w)*PhiI et
+*                   (Rxw-(OMEG/2)*D2)*PhiI+(0.5*D10+OMEG*D1w)*PhiR 
+         CALL HBMZW(NT,NHBM,NDDL,MTQ,MTKAM,dZw)
+         CALL COLIMA(NT,NT,DEL1,D10,ONE,-0.5D0,D1wP)
+         DO I=1,NT
+          RxwPhiR(I) = ZERO
+          RxwPhiI(I) = ZERO
+          DO J = 1,NT
+           RxwPhiR(I)=RxwPhiR(I)+(dZw(I,J)-KAPPA*D2(I,J))*PHIR(J)
+     &                                               - D1wP(I,J)*PHII(J)
+           RxwPhiI(I)=RxwPhiI(I)+(dZw(I,J)-KAPPA*D2(I,J))*PHII(J)
+     &                                               + D1wP(I,J)*PHIR(J)
+          ENDDO 
+         ENDDO
+*        Rxmk2D = Rx-(KAPPA**2)*D2
+         CALL COLIMA(NT,NT,RX,D2,ONE,-1.D0*KAPPA**2,Rxmk2D)
+*        Construction de la matrice du probleme et du cote droit
+         DO I = 1,NT 
+           solPD(NT+I) = ZERO
+           solPD(2*NT+I) = ZERO
+           DO J = 1,NT
+             JPD(I,J) = RX(I,J) 
+             JPD(NT+I,J) = RxxPHIR(I,J)
+             JPD(2*NT+I,J) = RxxPHII(I,J)             
+             JPD(I,NT+J) = ZERO
+             JPD(I,2*NT+J) = ZERO             
+             JPD(NT+I,NT+J) = Rxmk2D(I,J)
+             JPD(NT+I,2*NT+J) = -KAPPA*DEL1(I,J)
+             JPD(2*NT+I,NT+J) = KAPPA*DEL1(I,J)
+             JPD(2*NT+I,2*NT+J) = Rxmk2D(I,J)    
+             solPD(NT+I)=solPD(NT+I)+Rxmk2D(I,J)*PHIR(J)
+     &                                          -KAPPA*DEL1(I,J)*PHII(J)             
+             solPD(2*NT+I)=solPD(2*NT+I)+Rxmk2D(I,J)*PHII(J)
+     &                                          +KAPPA*DEL1(I,J)*PHIR(J)
+           ENDDO
+           JPD(     I,3*NT+1) = Rw(I) 
+           JPD(  NT+I,3*NT+1) = RxwPhiR(I)
+           JPD(2*NT+I,3*NT+1) = RxwPhiI(I)
+           JPD(3*NT+1,I)      = ZERO
+           JPD(3*NT+1,2*NT+1) = VQ(I)
+           JPD(3*NT+1,NT+1)   = ZERO           
+           solPD(I)           = -fvec0(I)
+           solPD(NT+I)        = -solNS(NT+I)
+           solPD(2*NT+I)      = -solNS(2*NT+I)
+         ENDDO
+         solPD(3*NT+1) = -(DDOT(NT,VQ,1,PHII,1)-0.5D0)
+         JNS(3*NT+1,3*NT+1) = ZERO
+*        Resolution
+         CALL DGESV(3*NT+1,1,JPD,3*NT+1,I5,solPD,3*NT+1,INFO) 
+*        Corrections 
+         dWB = solPD(3*NT+1)
+         DO I = 1,NT
+          dXB(I) = solPD(I)
+          dPHIR(I)= solPD(NT+I)    
+          dPHII(I)= solPD(2*NT+I)    
+          Q1(I) = Q1(I) + dXB(I)
+          PHIR(I) = PHIR(I) + dPHIR(I)
+          PHII(I) = PHII(I) + dPHII(I)
+         ENDDO
+         OMEG = OMEG + dWB     
+         KAPPA= OMEG/TWO
+         END IF 
+*-----------------------------------------------------------------------        
+*        CAS N: BIFURCATION DE NEIMARK-SACKER 
+*-----------------------------------------------------------------------        
+         IF (TYPC.EQ.'N') THEN
+***      Calcul des derivees
+*        RxxPhiR
+         EPS1 = XEPS*(dnrm2(NT,Q1,1)/dnrm2(NT,PHIR,1) + XEPS)         
+*        Perturbation de la Jacobienne: +EPS1         
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS1*PHIR(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC1)
+*        Perturbation de la Jacobienne: -EPS1
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) - TWO*EPS1*PHIR(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC2)
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS1*PHIR(JJ)
+         ENDDO
+*        Differences centrees         
+         DO I = 1,NT
+           DO J = 1,NT
+             RxxPHIR(I,J) = (JAC2(I,J)-JAC1(I,J))/(TWO*EPS1) 
+           ENDDO
+         ENDDO
+*        RxxPhiI
+         EPS2 = XEPS*(dnrm2(NT,Q1,1)/dnrm2(NT,PHII,1) + XEPS)         
+*        Perturbation de la Jacobienne: +EPS2         
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS2*PHII(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC1)
+*        Perturbation de la Jacobienne: -EPS2
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) - TWO*EPS2*PHII(JJ)
+         ENDDO
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec,fref,
+     &            .false.)     
+         CALL COPYMAT(NT,JAC,JAC2)
+         DO JJ = 1,NT
+           Q1(JJ) = Q1(JJ) + EPS2*PHII(JJ)
+         ENDDO
+*        Differences centrees         
+         DO I = 1,NT
+           DO J = 1,NT
+             RxxPHII(I,J) = (JAC2(I,J)-JAC1(I,J))/(TWO*EPS2) 
+           ENDDO
+         ENDDO
+*        RxwPhiR-KAPPA*D1w*PhiI, RxwPhiI+KAPPA*D1w*PhiR 
+         CALL HBMZW(NT,NHBM,NDDL,MTQ,MTKAM,dZw)
+         DO I=1,NT
+          RxwPhiR(I) = ZERO
+          RxwPhiI(I) = ZERO
+          dRxDdk1(I) = ZERO
+          dRxDdk2(I) = ZERO
+          DO J = 1,NT
+           RxwPhiR(I)=RxwPhiR(I)+dZw(I,J)*PHIR(J)-KAPPA*D1w(I,J)*PHII(J)
+           RxwPhiI(I)=RxwPhiI(I)+dZw(I,J)*PHII(J)+KAPPA*D1w(I,J)*PHIR(J)
+           dRxDdk1(I)=dRxDdk1(I)-TWO*KAPPA*D2(I,J)*PHIR(J)
+     &                                                -DEL1(I,J)*PHII(J)
+           dRxDdk2(I)=dRxDdk2(I)-TWO*KAPPA*D2(I,J)*PHII(J)
+     &                                                +DEL1(I,J)*PHIR(J)
+          ENDDO 
+         ENDDO
+*        Rxmk2D = Rx-(KAPPA**2)*D2
+         CALL COLIMA(NT,NT,RX,D2,ONE,-1.D0*KAPPA**2,Rxmk2D)
+*        Rw
+         CALL HBMRW(NT,NDDL,1,Q1,OMEG,XM,XASM,XK,Rw,.true.)  
+         IF (BAL.EQ.1) THEN
+           DO I=1,NT
+             Rw(I) = Rw(I) - TWO*OMEG*FEXA(I)
+           ENDDO
+         END IF   
+*        Construction de la matrice du probleme et du cote droit
+         DO I = 1,NT 
+           solNS(NT+I) = ZERO
+           solNS(2*NT+I) = ZERO
+           DO J = 1,NT
+             JNS(I,J) = RX(I,J) 
+             JNS(NT+I,J) = RxxPHIR(I,J)
+             JNS(2*NT+I,J) = RxxPHII(I,J)             
+             JNS(I,NT+J) = ZERO
+             JNS(I,2*NT+J) = ZERO             
+             JNS(NT+I,NT+J) = Rxmk2D(I,J)
+             JNS(NT+I,2*NT+J) = -KAPPA*DEL1(I,J)
+             JNS(2*NT+I,NT+J) = KAPPA*DEL1(I,J)
+             JNS(2*NT+I,2*NT+J) = Rxmk2D(I,J)    
+             solNS(NT+I)=solNS(NT+I)+Rxmk2D(I,J)*PHIR(J)
+     &                                          -KAPPA*DEL1(I,J)*PHII(J)             
+             solNS(2*NT+I)=solNS(2*NT+I)+Rxmk2D(I,J)*PHII(J)
+     &                                          +KAPPA*DEL1(I,J)*PHIR(J)
+           ENDDO
+           JNS(     I,3*NT+1) = ZERO 
+           JNS(  NT+I,3*NT+1) = dRxDdk1(I)
+           JNS(2*NT+I,3*NT+1) = dRxDdk2(I)
+           JNS(     I,3*NT+2) = Rw(I) 
+           JNS(  NT+I,3*NT+2) = RxwPhiR(I)
+           JNS(2*NT+I,3*NT+2) = RxwPhiI(I)
+           JNS(3*NT+1,I)      = ZERO
+           JNS(3*NT+1,NT+I)   = VQ(I)
+           JNS(3*NT+1,2*NT+I) = ZERO           
+           JNS(3*NT+2,I)      = ZERO
+           JNS(3*NT+2,NT+I)   = ZERO
+           JNS(3*NT+2,2*NT+I) = VQ(I)
+           solNS(I)           = -fvec0(I)
+           solNS(NT+I)        = -solNS(NT+I)
+           solNS(2*NT+I)      = -solNS(2*NT+I)
+         ENDDO
+         
+         solNS(3*NT+1) = -(DDOT(NT,VQ,1,PHIR,1)-ONE)
+         solNS(3*NT+2) = -(DDOT(NT,VQ,1,PHII,1))
+         JNS(3*NT+1,3*NT+1) = ZERO
+         JNS(3*NT+1,3*NT+2) = ZERO
+         JNS(3*NT+2,3*NT+1) = ZERO
+         JNS(3*NT+2,3*NT+2) = ZERO 
+*        Resolution
+         CALL DGESV(3*NT+2,1,JNS,3*NT+2,I4,solNS,3*NT+2,INFO) 
+         DO IOU=1,3*NT+2
+         ENDDO
+*        Corrections 
+         dWB = solNS(3*NT+2)
+         dK  = solNS(3*NT+1)
+         DO I = 1,NT
+          dXB(I) = solNS(I)
+          dPHIR(I)= solNS(NT+I)    
+          dPHII(I)= solNS(2*NT+I)    
+          Q1(I) = Q1(I) + dXB(I)
+          PHIR(I) = PHIR(I) + dPHIR(I)
+          PHII(I) = PHII(I) + dPHII(I)
+         ENDDO
+         OMEG = OMEG + dWB     
+         KAPPA= KAPPA+ dK
+*         write(*,*) 'w +',dWB,'=',OMEG
+*         write(*,*) 'kappa +',dK,'=',KAPPA
+         END IF
+*=======================================================================     
+*          Evaluation du residu       
+*======================================================================= 
+ 
+*          a) R
+         CALL funcv(NT,NHBM,NDDL,NFFT,MTQ,MTKAM,MTPHI,MTLIAA,
+     &              MTLIAB,MTPAS,MTFEX,LOCLFA,LOCLB1,CANAL,fvec0,fref,
+     &            .false.)     
+ 
+*-----------------------------------------------------------------------
+         IF (TYPC.EQ.'L') THEN
+*-----------------------------------------------------------------------
+*          b) Rxs*Phi     
+           CALL HBMZ(NT,NHBM,NDDL,MTQ,MTKAM,.true.)  
+           DO I=1,NT
+             res2(I) = ZERO
+             DO J=1,NT
+               RX(I,J) = ZZ(I,J) - JAC(I,J)
+               res2(I) = res2(I) + RX(I,J)*PHIR(J)
+             ENDDO         
+           ENDDO
+*          c) norm(Phi)= 1.
+           res3 = DDOT(NT,PHIR,1,PHIR,1)-ONE
+*          Y = ( R  ;  RQ * \phi  ;  \phi*\phi-1 )
+           arrRes(1) = dnrm2(NT,fvec0,1)
+           arrRes(2) = dnrm2(NT,res2,1)
+           arrRes(3) = abs(res3)
+           res = MAXVAL(arrRes,1)
+           IF (IIMPI.GE.3)
+     &     WRITE(IOIMP,991) its,(arrRes(iou),iou=1,3),res
+ 991       FORMAT('+ hbmbif : iter ',I2,' Y={',E10.3,';',E10.3,';',
+     &     E10.3,';','} -> res=',E10.3)        
+         ENDIF
+ 
+*-----------------------------------------------------------------------
+         IF (TYPC.EQ.'B') THEN
+*-----------------------------------------------------------------------        
+*          b) Rxs*Phi 
+           CALL HBMZ(NT,NHBM,NDDL,MTQ,MTKAM,.true.)  
+           CALL HBMDVEC(NT,NHBM,NDDL,Q1,ONE,V1)    
+           znormV1 = dnrm2(NT,V1,1)
+           DO I = 1,NT 
+             V1(I) = V1(I)/znormV1
+           ENDDO
+           DO I = 1,NT
+             res2(I) = ZERO
+             DO J = 1,NT
+               RX(I,J) = ZZ(I,J) - JAC(I,J) 
+               RX2(I,J) = RX(I,J) + V1(I)*V1(J) 
+               res2(I) = res2(I) + RX2(I,J)*PHIR(J)
+             ENDDO
+           ENDDO    
+*          c) Rw'*Phi
+           CALL HBMRW(NT,NDDL,1,Q1,OMEG,XM,XASM,XK,Rw,.true.)  
+           IF (BAL.EQ.1) THEN
+             DO I=1,NT
+               Rw(I) = Rw(I) - TWO*OMEG*FEXA(I)
+             ENDDO
+           END IF 
+           res3 = DDOT(NT,Rw,1,PHIR,1)
+*          d) norm(Phi) = 1
+           res4 = DDOT(NT,PHIR,1,PHIR,1)-ONE
+*          Y = ( R  ;  RQ * \phi  ;  Rw\phi  ;  \phi*\phi-1 )
+           arrRes2(1) = dnrm2(NT,fvec0,1)
+           arrRes2(2) = dnrm2(NT,res2,1)
+           arrRes2(3) = abs(res3)
+           arrRes2(4) = abs(res4)
+           res = MAXVAL(arrRes2,1)           
+           IF (IIMPI.GE.3)
+     &     WRITE(IOIMP,992) its,(arrRes2(iou),iou=1,4),res
+ 992       FORMAT('+ hbmbif : iter ',I2,' Y={',E10.3,';',E10.3,';',
+     &     E10.3,';',E10.3,'} -> res=',E10.3)        
+         ENDIF
+ 
+*-----------------------------------------------------------------------
+         IF (TYPC.EQ.'P') THEN
+*-----------------------------------------------------------------------        
+           CALL HBMZ(NT,NHBM,NDDL,MTQ,MTKAM,.true.)  
+           DO I = 1,NT
+             DO J = 1,NT
+               RX(I,J) = ZZ(I,J) - JAC(I,J) 
+             ENDDO
+           ENDDO    
+           CALL COLIMA(NT,NT,RX,D2,ONE,-1.D0*KAPPA**2,Rxmk2D)
+           CALL COLIMA(NT,NT,D10,D1w,ONE,OMEG,DEL1)
+*          b) (Rx-((OMEG/2)**2)*D2)*PhiR - KAPPA*D1*PhiI     
+*          c) (Rx-((OMEG/2)**2)*D2)*PhiI + KAPPA*D1*PhiR   
+           DO I = 1,NT
+             resV1(I) = ZERO 
+             resV2(I) = ZERO
+             DO J = 1,NT 
+               resV1(I)=resV1(I)+Rxmk2D(I,J)*PHIR(J)
+     &                          -KAPPA*DEL1(I,J)*PHII(J)
+               resV2(I)=resV2(I)+Rxmk2D(I,J)*PHII(J)
+     &                          +KAPPA*DEL1(I,J)*PHIR(J)
+             ENDDO
+           ENDDO
+*          d) (VQ'*PHIR) - 1
+           res4 = DDOT(NT,VQ,1,PHIR,1)-ONE
+*          Y = ( R  ;  [D0-k²*D2]*\phi_R - k*D1*\phi_I  ; 
+*                      [D0-k²*D2]*\phi_I + k*D1*\phi_R  ; Q*\phi_I-1 )
+           arrRes2(1) = dnrm2(NT,fvec0,1)
+           arrRes2(2) = dnrm2(NT,resV1,1)
+           arrRes2(3) = dnrm2(NT,resV2,1)
+           arrRes2(4) = abs(res4)
+           res = MAXVAL(arrRes2,1)           
+           IF (IIMPI.GE.3)
+     &     WRITE(IOIMP,993) its,(arrRes2(iou),iou=1,4),res
+ 993       FORMAT('+ hbmbif : iter ',I2,' Y={',E10.3,';',E10.3,';',
+     &     E10.3,';',E10.3,'} -> res=',E10.3)        
+         ENDIF
+ 
+*-----------------------------------------------------------------------
+         IF (TYPC.EQ.'N') THEN
+*-----------------------------------------------------------------------        
+           CALL HBMZ(NT,NHBM,NDDL,MTQ,MTKAM,.true.)  
+           DO J = 1,NT
+             DO I = 1,NT
+               RX(I,J) = ZZ(I,J) - JAC(I,J) 
+             ENDDO
+           ENDDO    
+           CALL COLIMA(NT,NT,RX,D2,ONE,-1.D0*KAPPA**2,Rxmk2D)
+           CALL COLIMA(NT,NT,D10,D1w,ONE,OMEG,DEL1)
+*          b) (Rx-(KAPPA**2)*D2)*PhiR - KAPPA*D1*PhiI     
+*          c) (Rx-(KAPPA**2)*D2)*PhiI + KAPPA*D1*PhiR     
+           DO I = 1,NT
+             resV1(I) = ZERO 
+             resV2(I) = ZERO
+             DO J = 1,NT 
+               resV1(I)=resV1(I)+Rxmk2D(I,J)*PHIR(J)
+     &                          -KAPPA*DEL1(I,J)*PHII(J)
+               resV2(I)=resV2(I)+Rxmk2D(I,J)*PHII(J)
+     &                          +KAPPA*DEL1(I,J)*PHIR(J)
+             ENDDO
+           ENDDO
+*          d) (VQ'*PHIR) - 1
+           res4 = DDOT(NT,VQ,1,PHIR,1)-ONE
+*          e) VQ'*PHII
+           res5 = DDOT(NT,VQ,1,PHII,1)
+*          Y = ( R  ;  [D0-k²*D2]*\phi_R - k*D1*\phi_I  ; 
+*                      [D0-k²*D2]*\phi_I + k*D1*\phi_R  ; 
+*                                            vQ*\phi_R-1 ; vQ*\phi_I)
+           arrRes3(1) = dnrm2(NT,fvec0,1)
+           arrRes3(2) = dnrm2(NT,resV1,1)
+           arrRes3(3) = dnrm2(NT,resV2,1)
+           arrRes3(4) = abs(res4)
+           arrRes3(5) = abs(res5)
+           res = MAXVAL(arrRes3,1)            
+           IF (IIMPI.GE.3)
+     &     WRITE(IOIMP,994) its,(arrRes3(iou),iou=1,5),res
+c      &     WRITE(IOIMP,994) its,KAPPA,(arrRes3(iou),iou=1,4),res
+ 994       FORMAT('+ hbmbif : iter ',I2,' Y={',E10.3,';',E10.3,';',
+     &     E10.3,';',E10.3,';',E10.3,'} -> res=',E10.3)        
+         ENDIF 
+*-----------------------------------------------------------------------        
+c            IF (IIMPI.GE.3) WRITE(IOIMP,*) 'Iter ',its,' -> res =',res
+           IF (res.LE.TOLMIN) THEN             
+             CHECK=.false.
+             CBIF = CBIF + 1
+             TYPBIF(CBIF) = TYPC
+             DO I=1,NT
+               QBIFU(I,CBIF) = Q1(I)
+               QPSIR(I,CBIF) = PHIR(I)
+               QPSII(I,CBIF) = PHII(I)
+               Q1(NT) = QIN(I)
+             ENDDO
+             WBIFU(CBIF) = OMEG 
+             WBIF2(CBIF) = KAPPA
+             OMEG = OMEGIN
+c              RETURN
+             GOTO 666
+           ELSE
+             CHECK = .true.
+           ENDIF           
+       ENDDO 
+       DO I = 1,NT 
+         Q1(I) = QIN(I)
+       ENDDO
+       OMEG = OMEGIN
+c      message
+       IF (CHECK) THEN
+c          Pas de convergence apres %i1 iterations. L'execution continue
+           INTERR(1)=MAXITS
+           CALL ERREUR(151) 
+c            RETURN
+             GOTO 666
+       ELSEIF (IIMPI.GE.2) THEN
+           WRITE(IOIMP,*) '--> convergence apres ',its,'iterations'
+       ENDIF 
+*      MENAGE       
+ 666   CONTINUE
+c        SEGSUP,MWORK
+       END       
+ 
+ 

@@ -1,0 +1,393 @@
+C HBMSOR    SOURCE    BP208322  20/10/05    21:15:19     10742          
+        
+        SUBROUTINE HBMSOR(KSORT,KPREF,NOTYPS,NHBM) 
+ 
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+       
+        INTEGER NOTYPS
+        LOGICAL ZPLUS
+-INC PPARAM    
+-INC CCOPTIO    
+-INC SMTABLE
+      POINTEUR MTAB4.MTABLE,MTAB5.MTABLE,MTAB6.MTABLE                           
+-INC SMLREEL  
+-INC SMLENTI     
+-INC SMLMOTS         
+*
+*
+***** extrait du futur include TMDYNC.INC :
+*
+*     Segment des resultats:
+*     ---------------------
+      SEGMENT  PSORT
+        REAL*8 QSAVE(NT1,NPAS),WSAVE(NPAS),LSAVE(2,2*NA1,NPAS)
+        REAL*8 VSAVE(NPAS)
+        LOGICAL ZSAVE(NPAS)
+        CHARACTER*2 TYPBIF(NBIFU)
+        REAL*8 QBIFU(NT1,NBIFU),WBIFU(NBIFU),WBIF2(NBIFU)
+        REAL*8 QPSIR(NT1,NBIFU),QPSII(NT1,NBIFU)
+        INTEGER CBIF
+      ENDSEGMENT
+*     QSAVE(i,j) = Q harmonique i au pas j
+*     VSAVE(j)   = parametre de continuation (si non w) au j-eme pas
+*     ZSAVE(j)   = stabilite au j-eme pas
+*     LSAVE(1,j) : partie reelle de l'exposant de Floquet
+*     LSAVE(2,j) : partie imaginaire de l'exposant de Floquet
+*     TYPBIF = {LimitPoint, BranchPoint, NeimarkSacker, PeriodDoubling}
+*     QBIFU,WBIFU : vecteur Q et w au point de bifurcation
+*           WBIF2 : partie imaginaire de l'exposant de Floquet
+*     QPSIR,QPSII : vecteur propre au point de bifurcation
+
+*     Segment des points de reference des modes (base A):
+*     --------------------------------------------------
+      SEGMENT MPREF
+         INTEGER IPOREF(NPREF),IPORIG(NPRIG)
+      ENDSEGMENT
+*      
+***** fin extrait du futur include TMDYNC.INC
+      
+*     recup      
+      PSORT=KSORT
+      MPREF=KPREF
+      NT1  = QSAVE(/1)
+      NPAS = QSAVE(/2)
+      NA1x2= LSAVE(/2)
+      NA1  = NA1x2 / 2
+      
+************************************************************************
+*     CREATION DE LA TABLE RESULTAT 
+************************************************************************
+      M = 3
+      SEGINI,MTABLE
+      MLOTAB = M
+*
+*     Sous-typage de la table resultat:
+*
+      CALL POSCHA('SOUSTYPE',IRET)
+      MTABTI(1) = 'MOT     '
+      MTABII(1) = IRET
+      MTABTV(1) = 'MOT     '
+      CALL POSCHA('RESULTAT_DYNC',IRET)
+      MTABIV(1) = IRET
+*
+*   + Sous-table REPONSE 
+*
+      CALL POSCHA('REPONSE',IRET)
+      MTABTI(2) = 'MOT     '
+      MTABII(2) = IRET
+      MTABTV(2) = 'TABLE   '
+      IF (NOTYPS.EQ.1) THEN 
+        M=7
+      ELSE 
+        M=6
+      ENDIF
+      SEGINI,MTAB1
+      MTAB1.MLOTAB = M
+      MTABIV(2) = MTAB1 
+*
+*   +-+ Remplissage de la Sous-table REPONSE 
+        CALL POSCHA('NORME_DEPLACEMENT',IRET)
+        MTAB1.MTABTI(1) = 'MOT     '
+        MTAB1.MTABII(1) = IRET
+        MTAB1.MTABTV(1) = 'LISTREEL'
+        JG=NPAS
+        SEGINI, MLREEL
+        MTAB1.MTABIV(1) = MLREEL
+*        
+        CALL POSCHA('FREQUENCE',IRET)
+        MTAB1.MTABTI(2) = 'MOT     '
+        MTAB1.MTABII(2) = IRET
+        MTAB1.MTABTV(2) = 'LISTREEL'
+        JG=NPAS
+        SEGINI, MLREE2
+        MTAB1.MTABIV(2) = MLREE2
+*        
+        CALL POSCHA('STABILITE',IRET)
+        MTAB1.MTABTI(3) = 'MOT     '
+        MTAB1.MTABII(3) = IRET
+        MTAB1.MTABTV(3) = 'LISTENTI'
+        JG=NPAS
+        SEGINI, MLENT3
+        MTAB1.MTABIV(3) = MLENT3  
+        
+*       remplissage de MLREEL = NORME_DEPLACEMENT
+*                      MLREE2 = FREQUENCE
+*                   et MLENT3 = STABILITE
+*
+c       boucle sur les pas
+        DO I=1,NPAS
+c          NORME_DEPLACEMENT
+           PROG(I)         = dnrm2(NT1,QSAVE(1,I),1)
+           IF (IERR.NE.0) RETURN
+c          FREQUENCE
+           MLREE2.PROG(I)  = WSAVE(I)
+c          (in)STABILITE
+           IF (ZSAVE(I)) THEN
+             MLENT3.LECT(I) = 0
+           ELSE
+             MLENT3.LECT(I) = 1
+           ENDIF
+        END DO 
+        SEGDES,MLREEL,MLREE2,MLENT3
+*        
+c       Remplissage de la table COEFFICIENTS
+*
+        CALL POSCHA('COEFFICIENTS',IRET)
+        MTAB1.MTABTI(4) = 'MOT     '
+        MTAB1.MTABII(4) = IRET
+        MTAB1.MTABTV(4) = 'TABLE   '
+cbp        M=NT1
+cbp        SEGINI,MTAB4
+cbp        MTAB4.MLOTAB = M
+cbp        MTAB1.MTABIV(4) = MTAB4
+cbp        DO J = 1,NT1 
+cbp          MTAB4.MTABTI(J) = 'ENTIER   '
+cbp          MTAB4.MTABII(J) = J
+cbp          MTAB4.MTABTV(J) = 'LISTREEL'
+cbp          JG = NPAS 
+cbp          SEGINI,MLREE2
+cbp          MTAB4.MTABIV(J) = MLREE2
+cbp          DO I = 1,NPAS
+cbp            MLREE2.PROG(I) = QSAVE(J,I)
+cbp          ENDDO
+cbp        ENDDO
+cbp        SEGDES,MTAB4,MLREE2
+
+*       rem :  Q1 et QSAVE sont ranges dans l'ordre : 
+*              ( Q1^{j=0}    Q1^{j=+1}     Q1^{j=-1}  ... Q1^{j=-nhbm} )
+*                constant     cos(wt)       sin(wt)   ...  sin(nwt)
+*           J1 =   1           2             3        ...  2*nhbm+1
+ 
+*       sous-table des harmoniques        
+        M=2*NHBM+1
+        SEGINI,MTAB4
+        MTAB4.MLOTAB = M
+        MTAB1.MTABIV(4) = MTAB4
+        JQ1=0
+        J  =0
+        ZPLUS=.true.
+*       boucle sur les harmoniques    
+        DO J1=1,2*NHBM+1
+*         sous-sous-table des modes
+          M=NA1
+          SEGINI,MTAB5
+          MTAB5.MLOTAB = M
+          MTAB4.MTABTI(J1) = 'ENTIER   '
+          MTAB4.MTABII(J1) = J
+          MTAB4.MTABTV(J1) = 'TABLE    '
+          MTAB4.MTABIV(J1) = MTAB5
+*         boucle sur les modes
+          DO IA1=1,NA1
+            JG = NPAS
+            SEGINI,MLREEL
+c             MTAB5.MTABTI(IA1) = 'ENTIER   '
+c             MTAB5.MTABII(IA1) = IA1
+cbp : par coherence avec DYNE, l'indice est le point_repere du mode
+            MTAB5.MTABTI(IA1) = 'POINT   '
+            MTAB5.MTABII(IA1) = IPOREF(IA1)
+            MTAB5.MTABTV(IA1) = 'LISTREEL'
+            MTAB5.MTABIV(IA1)   = MLREEL
+            JQ1=JQ1+1
+            DO I = 1,NPAS
+               MLREEL.PROG(I) = QSAVE(JQ1,I)
+            ENDDO          
+            SEGDES,MLREEL
+          ENDDO
+*         prochaine valeur de J
+          IF(ZPLUS) THEN 
+            J=J+J1
+          ELSE 
+            J=J-J1
+          ENDIF
+          ZPLUS=.not.ZPLUS
+          SEGDES,MTAB5
+        ENDDO          
+        SEGDES,MTAB4
+*       
+        CALL POSCHA('EXPOSANT_REEL',IRET)
+        MTAB1.MTABTI(5) = 'MOT     '
+        MTAB1.MTABII(5) = IRET
+        MTAB1.MTABTV(5) = 'TABLE   '
+        M=NA1x2
+        SEGINI,MTAB5
+        MTAB5.MLOTAB=M
+        MTAB1.MTABIV(5) = MTAB5
+*        
+        CALL POSCHA('EXPOSANT_IMAGINAIRE',IRET)
+        MTAB1.MTABTI(6) = 'MOT     '
+        MTAB1.MTABII(6) = IRET
+        MTAB1.MTABTV(6) = 'TABLE   '
+        M=NA1x2
+        SEGINI,MTAB6
+        MTAB6.MLOTAB=M
+        MTAB1.MTABIV(6) = MTAB6  
+*        
+c       remplissage des tables EXPOSANT_REEL et EXPOSANT_IMAGINAIRE
+        DO J=1,NA1x2
+          MTAB5.MTABTI(J) = 'ENTIER   '
+          MTAB5.MTABII(J) = J
+          MTAB5.MTABTV(J) = 'LISTREEL'
+          MTAB6.MTABTI(J) = 'ENTIER   '
+          MTAB6.MTABII(J) = J
+          MTAB6.MTABTV(J) = 'LISTREEL'
+          JG=NPAS
+          SEGINI,MLREE1,MLREE2
+          MTAB5.MTABIV(J) = MLREE1
+          MTAB6.MTABIV(J) = MLREE2
+*         remplissage des listreels µR et µI
+          DO I=1,NPAS
+            MLREE1.PROG(I)=LSAVE(1,J,I) 
+            MLREE2.PROG(I)=LSAVE(2,J,I) 
+          ENDDO
+        ENDDO
+        SEGDES,MTAB5,MTAB6,MLREE1,MLREE2
+
+*
+c     cas autonome: on sauvegarde la valeur du parametre de continuation
+        IF (NOTYPS.EQ.1) THEN 
+          CALL POSCHA('PARAMC',IRET)
+          MTAB1.MTABTI(7) = 'MOT     '
+          MTAB1.MTABII(7) = IRET
+          MTAB1.MTABTV(7) = 'LISTREEL'
+          JG=NPAS
+          SEGINI, MLREE3
+          MTAB1.MTABIV(7) = MLREE3
+          DO I = 1,NPAS
+            MLREE3.PROG(I) = VSAVE(I)
+          ENDDO
+          SEGDES,MLREE3
+        ENDIF            
+*
+*   + Sous-table BIFURCATION
+*
+      MTABTI(3) = 'MOT     '
+      CALL POSCHA('BIFURCATION',IRET)
+      MTABII(3) = IRET
+      MTABTV(3) = 'TABLE   '
+      M=7
+      SEGINI,MTAB2
+      MTAB2.MLOTAB = M
+      MTABIV(3) = MTAB2   
+*      
+*   +-+ Remplissage de la Sous-table BIFURCATION 
+      CALL POSCHA('TYPE',IRET)
+      MTAB2.MTABTI(1) = 'MOT     '
+      MTAB2.MTABII(1) = IRET
+      MTAB2.MTABTV(1) = 'LISTMOTS'
+      JGN = 2
+      JGM=CBIF
+      SEGINI, MLMOTS
+      MTAB2.MTABIV(1) = MLMOTS
+*
+      CALL POSCHA('NORME_DEPLACEMENT',IRET)
+      MTAB2.MTABTI(2) = 'MOT     '
+      MTAB2.MTABII(2) = IRET
+      MTAB2.MTABTV(2) = 'LISTREEL'
+      JG=CBIF
+      SEGINI, MLREEL
+      MTAB2.MTABIV(2) = MLREEL
+*
+      CALL POSCHA('FREQUENCE',IRET)
+      MTAB2.MTABTI(3) = 'MOT     '
+      MTAB2.MTABII(3) = IRET
+      MTAB2.MTABTV(3) = 'LISTREEL'
+      JG=CBIF
+      SEGINI, MLREE2
+      MTAB2.MTABIV(3) = MLREE2
+*
+      CALL POSCHA('KAPPA',IRET)
+      MTAB2.MTABTI(4) = 'MOT     '
+      MTAB2.MTABII(4) = IRET
+      MTAB2.MTABTV(4) = 'LISTREEL'
+      JG=CBIF
+      SEGINI, MLREE3
+      MTAB2.MTABIV(4) = MLREE3
+*
+*     Remplissage de MLMOTS, MLREEL, MLREE2 et MLENT3
+c     Boucle sur les bifurcations
+      DO I=1,CBIF
+c     TYPE 
+        IF (TYPBIF(I).EQ.'L') THEN 
+          MOTS(I) = 'LP'        
+        ENDIF
+        IF (TYPBIF(I).EQ.'B') THEN 
+          MOTS(I) = 'BP'        
+        ENDIF
+        IF (TYPBIF(I).EQ.'P') THEN 
+          MOTS(I) = 'PD'        
+        ENDIF
+        IF (TYPBIF(I).EQ.'N') THEN 
+          MOTS(I) = 'NS'        
+        ENDIF
+c     NORME_DEPLACEMENT
+        PROG(I)         = dnrm2(NT1,QBIFU(1,I),1)
+        IF (IERR.NE.0) RETURN
+c     FREQUENCE
+        MLREE2.PROG(I)  = WBIFU(I)
+c     KAPPA
+        MLREE3.PROG(I)  = WBIF2(I)
+      ENDDO
+      SEGDES,MLREEL,MLREE2,MLREE3,MLMOTS
+*      
+        CALL POSCHA('VECTEUR_REEL',IRET)
+        MTAB2.MTABTI(5) = 'MOT     '
+        MTAB2.MTABII(5) = IRET
+        MTAB2.MTABTV(5) = 'TABLE   '
+        M=CBIF
+        SEGINI,MTAB4
+        MTAB4.MLOTAB=M
+        MTAB2.MTABIV(5) = MTAB4
+*        
+        CALL POSCHA('VECTEUR_IMAGINAIRE',IRET)
+        MTAB2.MTABTI(6) = 'MOT     '
+        MTAB2.MTABII(6) = IRET
+        MTAB2.MTABTV(6) = 'TABLE   '
+        M=CBIF
+        SEGINI,MTAB5
+        MTAB5.MLOTAB=M
+        MTAB2.MTABIV(6) = MTAB5  
+*
+        CALL POSCHA('COEFFICIENTS',IRET)
+        MTAB2.MTABTI(7) = 'MOT     '
+        MTAB2.MTABII(7) = IRET
+        MTAB2.MTABTV(7) = 'TABLE   '
+        M=CBIF
+        SEGINI,MTAB6
+        MTAB6.MLOTAB=M
+        MTAB2.MTABIV(7) = MTAB6          
+*        
+c       Remplissage des tables VECTEUR_REEL, VECTEUR_IMAGINAIRE et 
+c       COEFFICIENTS
+        DO J=1,CBIF
+          MTAB4.MTABTI(J) = 'ENTIER   '
+          MTAB4.MTABII(J) = J
+          MTAB4.MTABTV(J) = 'LISTREEL'
+          MTAB5.MTABTI(J) = 'ENTIER   '
+          MTAB5.MTABII(J) = J
+          MTAB5.MTABTV(J) = 'LISTREEL'
+          MTAB6.MTABTI(J) = 'ENTIER   '
+          MTAB6.MTABII(J) = J
+          MTAB6.MTABTV(J) = 'LISTREEL'
+          JG=NPAS
+          SEGINI,MLREE1,MLREE2,MLREE3
+          MTAB4.MTABIV(J) = MLREE1
+          MTAB5.MTABIV(J) = MLREE2
+          MTAB6.MTABIV(J) = MLREE3
+*         Remplissage des listreels 
+          DO I=1,NT1
+            MLREE1.PROG(I)= QPSIR(I,J)
+            MLREE2.PROG(I)= QPSII(I,J)
+            MLREE3.PROG(I)= QBIFU(I,J)            
+          ENDDO
+        ENDDO    
+        
+************************************************************************
+*     FIN NORMALE : ON ECRIT LA TABLE RESULTAT
+************************************************************************
+      CALL ECROBJ('TABLE',MTABLE)  
+      
+      END 
+ 
+ 
+ 

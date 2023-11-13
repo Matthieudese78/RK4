@@ -1,0 +1,173 @@
+      SUBROUTINE CALCVTB(IP,THM,VN,VT,VXCE,VYCE,VXCO,VZCO,
+     &                  XRAY,NUT,ALPHA,
+     &                  XNC,YNC,ZNC,XDTH,NECH,KTROT,IB,IND,
+     &                  XVNB,XVTB,XXPRB,XNCB,XPTB,NPLB,SCE,IBCO)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+
+*     Calcul de ... 
+*     sur tous les points du profile de raction dans le repere du cone
+*           (Ex, Ey, Ez)
+*     THM largeur angulaire du contact en radians
+*     VN = NPE = vect. radial au pt d'incidence plan de nutation (repere cercle)
+*     VT = TPE = vect.  tangentiel au pt d'incidence plan de nutation (repere cercle)
+*     VXCE = EX = XN3 = EX plan de nutation (repere cercle)
+*     VYCE = EY = XN2 = Ey plan de nutation (repere cercle & cone)
+*     VXCO = Ex = XN5 = Ex repere cone
+*     VZCO = Ez = XPALB(I,ID1+ID) = axe du cone vers le haut
+*     XNC,YNC,ZNC = champ de vect. norm. au cone (repere )
+* -INC CCREEL
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettant de calculer                                 * 
+*     l'angle d'un vect. / axe (0x) via l'operateur ATAN                *
+*     Matthieu SERRE     : le 23/05/2023 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*      
+*     INTEGER NECH
+      REAL*8 THM,NUT,ALPHA,XRAY,XXGC,YYGC,XXD,XDTH,XDL 
+      REAL*8 VN(3),VT(3),VXCE(3),VYCE(3),VXCO(3),VZCO(3)
+*     REAL*8 XPR(NECH),YPR(NECH),ZPR(NECH)
+      REAL*8 XXPRB(3,NECH),XPRA(3,NECH),VLOCAL(2,NECH)
+      REAL*8 VB(3,NECH),XVNB(NECH),XVTB(3,NECH)
+      REAL*8 XNC(NECH),YNC(NECH),ZNC(NECH),XNCB(3,NECH)
+      REAL*8 XPTB(NPLB,2,*)
+*     vect. SconeCcercle en base B :
+      REAL*8 SCE(3)
+*
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,2,NSB),OMEG2(3,2,NSB),OMEG3(3,2,NSB)
+         REAL*8 ROT(3,3,2,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,2,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+
+      IF (KTROT.NE.0) THEN 
+        MTROT = KTROT
+      ELSE
+        WRITE(*,*)'CALCVT : Seulement dispo avec RIGIDE, or KTROT = 0 !'
+        CALL ERREUR(491)
+        RETURN
+      ENDIF
+
+cmsw  WRITE(*,*)'CALCVT : IND = ',IND 
+cmsw  WRITE(*,*)'CALCVT : IB = ',IB 
+cmsw  WRITE(*,*)'         OMEG2(',1,IND,IB,') = ',OMEG2(1,IND,IB) 
+cmsw  WRITE(*,*)'         OMEG2(',2,IND,IB,') = ',OMEG2(2,IND,IB) 
+cmsw  WRITE(*,*)'         OMEG2(',3,IND,IB,') = ',OMEG2(3,IND,IB) 
+
+************************************************************************ 
+*        POSITIONS PTS DU PROFIL :  
+*           REPERE DU CERCLE (EX,EY) ie. (VXCE,VYCE) / centre du cercle 
+************************************************************************  
+*        1. : Calcul : coordonnees des points du profils :
+*           Dans le repere (C,EX,EY) 
+*           (ou G = intersection axe du cone / plan de l'ellipse)
+*           1.a : XPROF_X = R*dcos(theta)*(VN . EX) + R*dsin(theta)*(VT . EX)
+*                 XPROF_Y = R*dcos(theta)*(VN . EY) + R*dsin(theta)*(VT . EY)
+*           1.b : puis passage en base B : *VXCE(ID) & *VYCE(ID)
+         PSNPEX = 0.D0
+         PSTPEX = 0.D0
+         PSNPEY = 0.D0
+         PSTPEY = 0.D0
+         DO ID=1,3   
+            PSNPEX = PSNPEX + (VN(ID)*VXCE(ID))
+            PSTPEX = PSTPEX + (VT(ID)*VXCE(ID))
+            PSNPEY = PSNPEY + (VN(ID)*VYCE(ID))
+            PSTPEY = PSTPEY + (VT(ID)*VYCE(ID))
+         ENDDO
+*        Dans l'hypothese d'un profil symetrique 
+*           de part et d'autre du point d'incidence :
+         DO IPROF=1,NECH 
+            THPROF = ((-1.)*(THM/2.D0)) + REAL(IPROF-1)*XDTH
+            DO ID=1,3
+             IF (IBCO.GT.0) THEN
+             XXPRB(ID,IPROF)= (((XRAY*dcos(THPROF)) * PSNPEX)
+     &                     + ((XRAY*dsin(THPROF)) * PSTPEX))*VXCE(ID) + 
+     &                       (((XRAY*dcos(THPROF)) * PSNPEY)
+     &                     + ((XRAY*dsin(THPROF)) * PSTPEY))*VYCE(ID) +
+*            On rajoute l'offset SconeCcercle :
+     &                        SCE(ID)
+             ELSE
+             XXPRB(ID,IPROF)= (((XRAY*dcos(THPROF)) * PSNPEX)
+     &                     + ((XRAY*dsin(THPROF)) * PSTPEX))*VXCE(ID) + 
+     &                       (((XRAY*dcos(THPROF)) * PSNPEY)
+     &                     + ((XRAY*dsin(THPROF)) * PSTPEY))*VYCE(ID)
+             ENDIF
+cms : on rajoute le deplacement du centre du cercle en base B :
+*     NON : il contient aussi les translations rigides : il suffit de rajouter UFLEX
+*           (fait dans le calcul de XPRA)
+*     &                     + XPTB(IP,1,ID)
+            ENDDO
+         ENDDO
+
+************************************************************************ 
+*        PASSAGE DE CES POSITIONS EN BASE A 
+*          --> Rn+1^T * (mult. a gauche)
+*                 + Uflex + (XCOOLB - XCENT) 
+************************************************************************  
+         DO IPROF=1,NECH 
+           DO ID=1,3
+             XPRA(ID,IPROF) = 0.D0
+             DO J=1,3
+               XPRA(ID,IPROF) = XPRA(ID,IPROF) + 
+     &                          ROT(J,ID,IND,IB)*(XXPRB(J,IPROF))
+             ENDDO
+             XPRA(ID,IPROF) = XPRA(ID,IPROF) + UFLEX(IP,IB,ID,IND) +
+     &                        (XCOOLB(ID,IB,IP) - XCENT(ID,IB)) 
+
+           ENDDO
+************************************************************************ 
+*          Calcule de VLOCAL tjrs en base A :
+************************************************************************  
+           VLOCAL(1,IPROF) = VFLEX(IP,IB,1,IND) + 
+     &                 OMEG2(2,IND,IB)*XPRA(3,IPROF) - 
+     &                 OMEG2(3,IND,IB)*XPRA(2,IPROF)
+           VLOCAL(2,IPROF) = VFLEX(IP,IB,2,IND) + 
+     &                 OMEG2(3,IND,IB)*XPRA(1,IPROF) - 
+     &                 OMEG2(1,IND,IB)*XPRA(3,IPROF)
+           VLOCAL(3,IPROF) = VFLEX(IP,IB,3,IND) + 
+     &                 OMEG2(1,IND,IB)*XPRA(2,IPROF) - 
+     &                 OMEG2(2,IND,IB)*XPRA(1,IPROF)
+************************************************************************ 
+*           Passage en base B 
+************************************************************************  
+          XVNB(IPROF) = 0.D0
+          PSVBNCB = 0.D0
+          DO ID=1,3
+            VB(ID,IPROF) = 0.D0
+            DO J=1,3
+              VB(ID,IPROF) = VB(ID,IPROF) + 
+     &                       ROT(ID,J,IND,IB)*VLOCAL(J,IPROF)
+            ENDDO
+*           On rajoute la vitesse d'entrainement :
+            VB(ID,IPROF) = VB(ID,IPROF) + XPTB(IP,2,ID) 
+************************************************************************ 
+*                 Passage des vecteurs normaux aux cone en base B
+*           (XNC,YNC,ZNC originellement exprimes dans le repere du cone)
+************************************************************************  
+            XNCB(ID,IPROF) = XNC(IPROF)*VXCO(ID)+YNC(IPROF)*VYCE(ID) +
+     &                 ZNC(IPROF)*VZCO(ID)
+*           Calcul vitesse normale en base B : 
+            XVNB(IPROF) = XVNB(IPROF) + (VB(ID,IPROF)*XNCB(ID,IPROF))
+            PSVBNCB  = PSVBNCB + (VB(ID,IPROF)*XNCB(ID,IPROF)) 
+          ENDDO
+*           Calcul vitesse tanegentielle en base B : 
+*         WRITE(*,*)'CALCT : vitesses normales et tangentielles:'
+          DO ID=1,3
+            XVTB(ID,IPROF) = VB(ID,IPROF) - PSVBNCB*XNCB(ID,IPROF)
+cmsw         WRITE(*,*)'       XVTB(',ID,IPROF,') = ',XVTB(ID,IPROF)
+          ENDDO
+*           WRITE(*,*)'       XVNB(',IPROF,') = ',XVNB(IPROF)
+************************************************************************ 
+*              Fin boucle sur le profil : 
+************************************************************************ 
+        ENDDO
+************************************************************************ 
+*
+      END

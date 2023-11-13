@@ -1,0 +1,279 @@
+C EVOL23    SOURCE    CB215821  20/11/25    13:28:16     10792          
+C 
+      SUBROUTINE EVOL24(IDEPELX,ILEX,ILEN1,ILEN3,IP,NUJ,IBOO,LTRIG,
+     &                  ITRIG,IDEPTRX,IDYN1)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+C=======================================================================
+C     Subroutine quasi-identique a EVOL23. Sauf que:
+C     On recombine uniquement les depl / vite / acce ELASTIQUES!
+C     s IDEPELX: listreel deplacements elastiques ds la direction NUJ  
+C     s IDEPTRX: listreel du depl (ou vite ou acce) d'ensemble (transaltion rigide)
+C               de la ss base du point a recombiner ds la direction NUJ
+C=======================================================================
+C
+
+-INC PPARAM
+-INC CCOPTIO
+-INC SMCHPOI
+-INC SMLREEL
+-INC SMLENTI
+-INC SMELEME
+-INC SMTABLE
+-INC SMCOORD
+
+*     ITRAV1, ITRAV2: pour les depl elastiques.
+      SEGMENT/ITRAV1/(TRAV(LDEPL,N)*D)
+      SEGMENT/ITRAV2/(TRAVV(LDEPL,LTEMP)*D)
+*     ITRAV3, ITRAV4: pour les translations rigides.
+      SEGMENT/ITRAV3/(TRAV1(3)*D)
+      SEGMENT/ITRAV4/(TRAVV1(3,LTEMP)*D)
+*
+      SEGMENT NUMOO
+       INTEGER NUMO(N),KLIST(N)
+       CHARACTER*4 NUDDL(N)
+      ENDSEGMENT
+      CHARACTER*4 NUJ
+      LOGICAL LTRIG,L0,L1
+      INTEGER ITRIG(3,2)
+C
+      LDEPL=0
+      NUMOO=IBOO
+      SEGACT NUMOO*MOD
+      N=NUMO(/1)
+*
+* Activation de la listreel des temps à sortir:
+      MLENTI=ILEX
+      SEGACT MLENTI
+*     LTEMP: pour ITRAV1,2,3,4
+      LTEMP=LECT(/1)
+*     LTEM: pour les boucles de remplissage
+      LTEM=LECT(/1)
+      JG=LTEM
+* MLREEL: IDEPELX = listreel depl.elastiques
+*      WRITE(*,*)'EVOL24: segini IDEPELX'
+      SEGINI MLREEL
+      IDEPELX = MLREEL
+* MLREE1: IDEPTRX = listreel translations rigides
+      IF (LTRIG) THEN
+*        WRITE(*,*)'EVOL24: LTRIG = ',LTRIG
+*        WRITE(*,*)'EVOL24: segini MLREE1 (IDEPTRX)'
+        SEGINI MLREE1
+        IDEPTRX = MLREE1
+      ENDIF
+C ---------------------------------------------------------------------
+C     RECOMBINAISON DEPL ELASTIQUES
+C     Rappel MLENT1, MLENT2, MLENT3 remplis avec les modes 
+C                                    purement elastiques.
+C     (rotas et eventuellement transla rigides sautees lors du remplissage 
+C                                        dans chcha2.eso) 
+C ---------------------------------------------------------------------
+C     MLENT1 = LISTE DES DEFORMEES MODALES
+C     MLENT3 = LISTE DES LISTREEL alpha_i(t)
+      MLENT1=ILEN1
+      MLENT3=ILEN3
+      SEGACT MLENT1,MLENT3
+C ---------------------------------------------------------------------
+C     FABRICATION DU TABLEAU ITRAV1.TRAV(LDEPL,N)
+C     DES MODES REDUITS AUX POINTS DE SORTIE
+C ---------------------------------------------------------------------
+      
+      LDEPL=MLENT1.LECT(/1) 
+*      WRITE(*,*)'evol24: LDEPL = ',LDEPL
+      SEGINI ITRAV1
+
+C --- BOUCLE SUR LES MODES ----------------------------------
+      LDEP=MLENT1.LECT(/1)
+*      WRITE(*,*)'evol24: LDEP = ',LDEP
+*     En ayant saute les rotas rigides et les translations rigides dans chcha2,
+*     il est posssible que LDEP = 0, dans ce cas on passe toute la reco:
+      IF (LDEP.EQ.0) GOTO 100
+*      WRITE(*,*)'EVOL24: RECO ELASTIQUE'
+      DO 40 I=1,LDEP
+*        WRITE(*,*)'evol24: boucle 40'
+        ICHP=MLENT1.LECT(I)
+*       WRITE(*,*)'evol24: pointeur ',I,'^eme defo modale: ICHP = ',ICHP
+C   --- BOUCLE SUR LES DDL ----------------------------------
+
+c         recup du noeud et du nom de composante
+          MPOINT = NUMO(IP)
+*          WRITE(*,*)'evol24: EXTRA9 MPOINT = ',MPOINT
+*          WRITE(*,*)'               composante = ',NUJ 
+          call EXTRA9(ICHP,MPOINT,NUJ,0,.FALSE.,XFLOT,IRET)
+c         TRAV(I^eme mode,IP^eme ddl)=[ \phi_I(x_IP) ]_{I=1...LDEP}
+          TRAV(I,IP)=XFLOT
+*          WRITE(*,*)
+*     &    'evol24: TRAV(',I,'^eme mode,',IP,'^eme ddl) = ',XFLOT
+ 40   CONTINUE
+ 
+C ---------------------------------------------------------------------
+C     CREATION DE N LISREELS (OU N=NOMBRE DE DDLS A SORTIR)
+C     DE TAILLE LTEM = NOMBRE DE PAS DE TEMPS A SORTIR
+C ---------------------------------------------------------------------
+C
+* Maintenant placé au début:
+*      MLENTI=ILEX
+*      SEGACT MLENTI
+*      LTEM=LECT(/1)
+*      JG=LTEM
+
+      
+
+C ---------------------------------------------------------------------
+C     FABRICATION DU TABLEAU ITRAV2.TRAVV(LDEPL)
+C     DES ALPHA_I AUX TEMPS DE SORTIE
+C ---------------------------------------------------------------------
+      LTEMP=LTEM
+      SEGINI ITRAV2
+
+C --- BOUCLE SUR LES MODES ----------------------------------
+      DO 60 I=1,LDEP
+*        WRITE(*,*)'evol24: boucle 40'
+c       alpha_i(t)
+        MLREE3=MLENT3.LECT(I)
+*        WRITE(*,*)'EVOL24: segact mlree3'
+        segact,MLREE3
+        
+c   --- BOUCLE SUR LES PAS DE TEMPS ------------------------ 
+        DO 62 JL=1,LTEM
+*          WRITE(*,*)'evol24: boucle 62'
+          J=LECT(JL)
+          TRAVV(I,JL) = MLREE3.PROG(J)
+*          WRITE(*,*)
+*     & 'evol24: coord. modale TRAVV(',I,'^eme mode, instant ',JL,') = ',
+*     &                                  TRAVV(I,JL)
+ 62     CONTINUE
+ 
+        segdes,MLREE3
+ 
+ 60   CONTINUE
+ 
+C ---------------------------------------------------------------------
+C     CALCUL DE x(t) DEMANDE
+C ---------------------------------------------------------------------
+
+c --- BOUCLE SUR LES DDL ----------------------------------- 
+      
+*        MLREEL=IDEPELX
+*        SEGACT MLREEL
+*        WRITE(*,*)' PROG(/1) = ',PROG(/1)
+C   --- BOUCLE SUR LES PAS DE TEMPS A SORTIR ------------------------
+* On introduit une condition LDEP.NE.0 qui correspond a:
+*  "la base modale ne contient que des rotations ou translations rigides".
+        DO 52 JL=1,LTEM
+*          WRITE(*,*)'evol24: JL = ',JL
+*          WRITE(*,*)'        PROG(',JL,') = ',PROG(JL)
+c         x_ip(t_J) = \sum_I  alpha_I(t_J)  * \phi_I(x_IP)
+*          WRITE(*,*)'evol24: appel PROSC1'
+          CALL PROSC1(TRAVV(1,JL),TRAV(1,IP),X,LDEP)
+          PROG(JL) = X
+*          WRITE(*,*)'evol24: PROG(',JL,') = ',XP
+ 52     CONTINUE
+ 
+C ---------------------------------------------------------------------
+c     SUPPRESSION ET FERMETURE DES SEGMENTS
+C ---------------------------------------------------------------------
+C
+*      WRITE(*,*)'ITRAV1 = ',ITRAV1
+*      WRITE(*,*)'ITRAV2 = ',ITRAV2
+      SEGSUP ITRAV1,ITRAV2 
+*      WRITE(*,*)'MLENT1 = ',MLENT1
+*      WRITE(*,*)'MLENT3 = ',MLENT3
+      SEGDES MLENT1,MLENT3
+       
+*      WRITE(*,*)'avant SEGDES, MLREEL = ',MLREEL
+      SEGDES MLREEL
+*
+ 100  CONTINUE
+      IF (LDEP.EQ.0) THEN
+*        WRITE(*,*)'evol24: IF apres 100'
+*        WRITE(*,*)'evol24: mlreel = ',mlreel
+*        WRITE(*,*)'evol24: idepelx = ',idepelx
+        DO JL=1,LTEM
+*          WRITE(*,*)'evol24: boucle IDEPELX = 0'
+          PROG(JL) = 0.D0
+        ENDDO
+        SEGDES MLREEL
+      ENDIF
+C ---------------------------------------------------------------------
+C     RECOMBINAISON TRANSLATIONS RIGIDES
+C     MLENT1 --> ITRIG(1-3,2)  defos modales
+C     MLENT2 --> ITRIG(1-3,1)  ptreps
+C ---------------------------------------------------------------------
+      IF (LTRIG) THEN
+*       Acquisition de Phi_i(IP)_nuj pour tous les modes de translations rigides:
+        SEGINI ITRAV3
+        DO 70 I=1,3
+          TRAV1(I) = 0.D0
+*          WRITE(*,*)'evol24: boucle 70, I = ',I
+*          WRITE(*,*)'evol24: ITRIG(I,1) = ',ITRIG(I,1)
+          IF (ITRIG(I,1).EQ.0) GOTO 70
+          ICHP = ITRIG(I,2)
+*          WRITE(*,*)'def modale transl. rigigde: ICHP = ',ICHP
+          MPOINT=NUMO(IP)
+*          WRITE(*,*)'pt a recombiner: ',MPOINT
+*          WRITE(*,*)'comp. a recombiner: ',NUJ
+          IRET2 = 0
+          CALL EXTRA9(ICHP,MPOINT,NUJ,0,.FALSE.,XFLOT1,IRET2)
+*          WRITE(*,*)' IRET = ',IRET2
+          TRAV1(I) = XFLOT1
+*          WRITE(*,*)'transl. rig. comp ',NUJ,' def mode ',I,' = ',
+*     &                                               XFLOT1
+ 70     CONTINUE
+
+*       Acquisition des alpha_i(t)pour tous les modes de translations rigides:
+        SEGINI ITRAV4
+        DO 80 I=1,3
+          DO JL=1,LTEMP
+            TRAVV1(I,JL) = 0.D0
+          ENDDO
+          IF (ITRIG(I,1).EQ.0) GOTO 80
+          IPREP = ITRIG(I,1)
+*          WRITE(*,*)'EVOL24: extraction ptrp_trans: ',IPREP
+c         listreel alpha_i(t)
+*          WRITE(*,*)'evol24: ACCTAB listreel depl trans. rigides'
+          CALL ACCTAB (IDYN1,'POINT',I0,X0,' ',L0,IPREP,
+     &                       'LISTREEL',I1,X1,' ',L1,IRET1)
+*          WRITE(*,*)'evol24: copie de la listreel',IRET1
+*          WRITE(*,*)'              dans: TRAVV1 mode ',I
+          MLREE2 = IRET1
+*          WRITE(*,*)'evol24: avant segact mlree2'
+          SEGACT MLREE2
+c   --- BOUCLE SUR LES PAS DE TEMPS ------------------------ 
+          DO 81 JL=1,LTEM
+*            WRITE(*,*)'evol24: boucle 81'
+            J=LECT(JL)
+            TRAVV1(I,JL)= MLREE2.PROG(J)
+ 81       CONTINUE
+          segdes,MLREE2
+ 80     CONTINUE
+        DO JL=1,LTEM
+          MLREE1.PROG(JL) = 0.D0
+          LDEP=3
+          CALL PROSC1(TRAVV1(1,JL),TRAV1(1),X,LDEP)
+          MLREE1.PROG(JL) = X
+*          DO I=1,3
+*            WRITE(*,*)'EVOL24: reco comp ',NUJ
+*            WRITE(*,*)'       TRAV1(',I,') = ',TRAV1(I)
+*            WRITE(*,*)'       TRAVV1(',I,JL,') = ',TRAVV1(I,JL)
+*            MLREE1.PROG(JL) = MLREE1.PROG(JL) + (TRAV1(I)*TRAVV1(I,JL))
+*          ENDDO
+        ENDDO
+        SEGDES,MLREE1
+        SEGSUP ITRAV3,ITRAV4
+      ENDIF
+
+* Fin des RECOs, desactivation listentier du temps:
+      
+      SEGDES MLENTI
+      
+****
+      END
+
+
+
+
+
+ 
+ 
+ 

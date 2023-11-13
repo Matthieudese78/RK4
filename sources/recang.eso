@@ -1,0 +1,104 @@
+C RECANG    SOURCE    CB215821  20/11/25    13:38:42     10792          
+        SUBROUTINE RECANG(ITRES,IPOS,IPTR,QUAT,QUAT0)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Recherche le quaternion                                        *
+*                                                                    *
+*     Param}tres:                                                    *
+*                                                                    *
+* e   ITRES   table résultat issue de l'opérateur Dyne               *
+* e   IPOS    position de XTEMP dans le listreel des temps           *
+* e   IPTR    ptreps des modes de rotation                           *
+* s   QUAT   quaternion                                              *
+*     Auteur, date de création:                                      *
+*                                                                    *
+*     Matthieu Serre 2021                                            *
+*                                                                    *
+*--------------------------------------------------------------------*
+
+-INC PPARAM
+-INC CCOPTIO
+-INC SMCHPOI
+-INC SMELEME
+-INC SMTABLE
+-INC SMLREEL
+      LOGICAL L0,L1,sortchpo
+      REAL*8 QUAT(4),QUAT0(4)
+      INTEGER IPTR(4)
+      CHARACTER*(8) TYPRET
+*     Sortie CHPO pas encore prete.
+      sortchpo = .false.
+*     Detection rotas rigides:
+      IRIG = 0
+*** sortie type listreel:
+      TYPRET=' '
+      CALL ACCTAB (ITRES,'MOT',I0,X0,'DEPLACEMENT',L0,IRET0,
+     &                    TYPRET,I1,X1,' ',L1,IDYN1) 
+      IF(TYPRET.EQ.'TABLE'.AND.IDYN1.NE.0) THEN
+        MTABLE=IDYN1
+        SEGACT,MTABLE
+        DO 1 I=1,MLOTAB
+          IF(MTABTI(I).NE.'POINT   ') GOTO 1
+          IF(MTABTV(I).NE.'LISTREEL') GOTO 1 
+          DO J =1,4
+            IF (MTABII(I).EQ.IPTR(J)) THEN
+              IRIG = IRIG + 1
+              MLREEL=MTABIV(I)
+              SEGACT,MLREEL
+              QUAT(J) = PROG(IPOS)
+*             On prend aussi le le quaternion a t = 0
+              QUAT0(J) = PROG(1)
+            ENDIF 
+          ENDDO
+          IF (IRIG.NE.0) SEGDES MLREEL
+          IRIG = 0
+ 1      CONTINUE
+      ENDIF
+*** sotie type CHPOINT:
+      IF (sortchpo) THEN
+      CALL ACCTAB(ITRES,'ENTIER',IPOS,X0,' ',L0,IP0,
+     &                      'TABLE',I1,X1,' ',L1,ITDEP)
+      IF (IERR.NE.0) RETURN
+      CALL ACCTAB(ITDEP,'MOT',I0,X0,'DEPLACEMENT',L0,IP0,
+     &                    'CHPOINT',I1,X1,' ',L1,ICHPT)
+      MCHPOI = ICHPT
+      IF (MCHPOI.EQ.0) THEN
+*        le CHPOINT des déplacements modaux est nul
+         MOTERR(1:8) = 'RCDEPL'
+         CALL ERREUR(170)
+         RETURN
+      ENDIF
+* Puis on epluche les elements du du CHPOINT deplacement du mode 
+* de pt ref IPTR, puis on lui attribue XANGLE.
+      SEGACT MCHPOI
+      NSOU = IPCHP(/1)
+      DO 10 ISOU = 1,NSOU
+          MSOUPO = IPCHP(ISOU)
+          SEGACT MSOUPO
+*         on cherche la valeur du champ correspondant au point de
+*         rotation
+          MELEME = IGEOC
+          SEGACT MELEME
+          MPOVAL = IPOVAL
+          SEGACT MPOVAL
+          N2 = NUM(/2)
+          DO 12 I = 1,N2
+            DO J=1,4
+             IF (NUM(1,I).EQ.IPTR(J)) THEN
+                QUAT(J) = VPOCHA(I,1)
+             ENDIF
+            ENDDO
+ 12       CONTINUE
+          SEGDES MPOVAL,MELEME,MSOUPO
+ 10   CONTINUE
+      SEGDES MCHPOI
+      ENDIF
+* fin type sortie chpoint.
+*
+      END
+
+
+
+ 

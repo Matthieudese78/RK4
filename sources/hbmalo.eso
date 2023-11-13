@@ -1,0 +1,950 @@
+C HBMALO    SOURCE    CB215821  20/11/25    13:29:51     10792          
+c
+C DEVALO    SOURCE    BP208322  18/01/30    21:15:12     9719           
+      SUBROUTINE HBMALO(ITBAS,ITKM,ITA,ITLIA,ITCHAR,ITINIT,NINS,ITREDU,
+     &                  IPARNUM,KPREF,KTQ,KTKAM,KTPHI,KTLIAA,KTEMP,
+     &                  KTLIAB,KTFEX,KTPAS,KTRES,KTNUM,IPMAIL,REPRIS,
+     &                  KPARNUM,KSORT,ICHAIN,KOCLFA,KOCLB1,NHBM,NFFT)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z) 
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNC : continuation par longueur d'arc               *
+*     ________________________________________________               *
+*                                                                    *
+*     Dimensionnement des tableaux de travail ( allocation de la     *
+*     memoire ).                                                     *
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   ITBAS   Table representant une base modale                     *
+* e   ITKM    Table contenant les matrices XK et XM                  *
+* e   ITA     Table contenant la matrice XASM                        *
+* e   ITLIA   Table rassemblant la description des liaisons          *
+* e   ITCHAR  Table contenant les chargements                        *
+* e   ITINIT  Table donnant les conditions initiales                 *
+* e   NINS    On veut une sortie tous les NINS pas de calcul         *
+* e   ITREDU  Table contenant les noms d'inconnues de la base B      *
+*             auxquelles on se restreint                             *  
+* e   IPARNUM Table des les parametres numeriques (continuation)     *  
+* e   KPREF   Segment des points de reference                        *
+* e   NHBM    Nombre d'harmoniques de l'approximation                *
+* s   MTQ     Segment contenant les coefficients de Fourier          *
+* s   MTKAM   Segment contenant les vecteurs XK, XASM et XM          *
+* s   MTPHI   Segment contenant les deformees modales                *
+* s   MTLIAA  Segment descriptif des liaisons en base A              *
+* s   MTLIAB  Segment descriptif des liaisons en base B              *
+* s   MTFEX   Segment contenant les chargements libres               *
+* s   MTPAS   Segment des variables au cours d'un pas de temps       *
+* s   PARNUM  Segment des parametres numeriques (continuation)       *
+* s   MTRES   Segment de sauvegarde des resultats                    *
+* s   MTNUM   Segment contenant les parametres temporels             *
+* s   REPRIS  Vrai si reprise de calcul, faux sinon                  *
+* s   ICHAIN  Segment MLENTI (ACTIF) contenant les adresses des      *
+*             chaines dans la pile des mots de CCNOYAU               *
+* s   KOCLFA  Segment contenant les tableaux locaux de la subroutine *
+*             DEVLFA                                                 *
+* s   KOCLB1  Segment contenant les tableaux locaux de la subroutine *
+*             DEVLB1                                                 *
+*                                                                    *
+*     Auteur, date de creation:                                      *
+*                                                                    *
+*     Roberto ALCORTA, le 18 juin 2019.                              *
+*--------------------------------------------------------------------*
+-INC PPARAM
+-INC CCOPTIO
+-INC SMCOORD
+-INC SMMODEL
+-INC SMELEME
+-INC SMCHAML
+-INC SMLENTI
+-INC CCREEL
+-INC SMCHPOI
+*-INC TMDYNC.INC
+************************** debut TMDYNC.INC ****************************
+
+*    TMDYNC : FUTUR INCLUDE POUR LES SEGMENTS DE L'OPERATEUR DYNC
+*    TODO   : a extraire dans un include des que stabilise
+*
+*     Segment des variables generalisees:
+*     -----------------------------------
+      SEGMENT MTQ
+         REAL*8 Q1(NT1)
+         REAL*8 OMEG,XPARA
+         REAL*8 JAC(NT1,NT1),ZZ(NT1,NT1),RX(NT1,NT1)
+         REAL*8 dX(NT1), dw, dv
+      ENDSEGMENT
+*     Q1   : vecteur des inconnues frequentielles de dimension (2h+1)*n
+*            Q1 = {q_0 q_c1 q_s1 ... q_sh}
+*            avec q_i vecteur de dimension n ou n=nombre de modes
+*     OMEG : frequence fondamentale de l'approximation
+*     XPARA: parametre de continuation (par defaut la frequence) 
+*            \in [PARINI,PARFIN]
+*     RX   : matrice jacobienne = ZZ + dFnl/dX
+*     JAC  : jacobienne des efforts non-lineaires  = dFnl/dX
+*     ZZ   : matrice dynamique associee aux matrices modales K, M et C 
+*            lineaires et constantes
+*     {dX,dw,(dv)} : vecteur tangent utilise pour la prediction
+*
+*
+*     Segment contenant les matrices XK, XASM et XM:
+*     ---------------------------------------------
+      SEGMENT MTKAM
+         REAL*8 XK(NA1,NB1K),XASM(NA1,NB1C),XM(NA1,NB1M)
+         REAL*8 GAM(NPC1,nl1),IGAM(nl1,NPC1),DL(nl1)
+*         REAL*8 GAMFIN(NPC2,nl1)
+      ENDSEGMENT
+*     XK,XASM et XM : matrices de raideur, amortissement et masse
+*     GAM et IGAM : matrices pour la FFT et son inverse
+*     GAMFIN      : 
+*
+*     Segment des deformees modales:
+*     ------------------------------
+*     (idem DYNE)
+      SEGMENT MTPHI
+         INTEGER IBASB(NPLB),IPLSB(NPLB),INMSB(NSB),IORSB(NSB)
+         INTEGER IAROTA(NSB)
+         REAL*8  XPHILB(NSB,NPLSB,NA2,IDIMB)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base A:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAA
+         INTEGER IPALA(NLIAA,NIPALA),IPLIA(NLIAA,NPLAA),JPLIA(NPLA)
+         REAL*8  XPALA(NLIAA,NXPALA)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base B:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAB
+         INTEGER IPALB(NLIAB,NIPALB),IPLIB(NLIAB,NPLBB),JPLIB(NPLB)
+         REAL*8  XPALB(NLIAB,NXPALB)
+         REAL*8  XABSCI(NLIAB,NIP),XORDON(NLIAB,NIP)
+      ENDSEGMENT
+*
+*     Segment representant les chargements exterieurs:
+*     -----------------------------------------------
+      SEGMENT MTFEX
+         REAL*8  FEXA(NT1)
+         REAL*8  FEXPSM(NPLB,NPC1,2,IDIMB)
+         INTEGER BAL
+      ENDSEGMENT
+*     FEXA : Vecteur des efforts ext. sous la forme de coefficients de
+*            Fourier et exprimes en base A
+*     FEXPSM: chargement/deplacement statique lie aux modes negliges
+*             (neglige aussi les Fnl). Dans DYNC toujours =0, cree pour
+*             compatibilite avec calcul des Fnl.
+*     BAL  : indique s'il s'agit d'un chargement de type balourd
+*            (cad proportionnel a OMEG**2)
+*
+*     Segment "local" pour DEVLFA:
+*     ----------------------------
+      SEGMENT LOCLFA
+         REAL*8 FTEST(NA1,4)
+      ENDSEGMENT
+*      
+*     Segment "local" pour DEVLB1:
+*     ----------------------------
+      SEGMENT LOCLB1
+         REAL*8 FTEST2(NPLB,6)
+      ENDSEGMENT
+*      
+*     Segment contenant les variables au cours d un pas de temps:
+*     ----------------------------------------------------------
+      SEGMENT MTPAS
+         REAL*8 FTOTA(NA1,4),FTOTB(NPLB,IDIMB),FTOTBA(NA1)
+         REAL*8 XPTB(NPLB,2,IDIMB),FINERT(NA1,4)
+         REAL*8 XVALA(NLIAA,4,NTVAR),XVALB(NLIAB,4,NTVAR)
+         REAL*8 FEXB(NPLB,2,IDIM),XCHPFB(2,NLIAB,4,NPLB)
+         REAL*8 KTOTXA(NA1,NA1),KTOTVA(NA1,NA1)
+         REAL*8 KTOTXB(NPLB,IDIMB,IDIMB), KTOTVB(NPLB,IDIMB,IDIMB) 
+      ENDSEGMENT
+*     FTOTA/B/BA : forces sur base A, B et B projetees sur A
+*     XPTB       : deplacement du point d'une liaison en base B
+*     XVALA/B    : grandeurs de la liaison en base A/B a stocker
+*     FEXB       : forces exterieures en base B (a priori uniquement 
+*                  pour les moments appliques aux rotations rigides ?)
+*     XCHPFB     : forces de contact en base B (lorsqu'on  considere un
+*                  maillage de contact dans certaines liaisons)
+*     KTOTXA/XB/VA/VB : Jacobienne par rapport au deplacement/vitesse en
+*                       base A/B (= contributions a dFnl/dX)
+*
+*
+*     Segment des points de reference des modes (base A):
+*     --------------------------------------------------
+      SEGMENT MPREF
+         INTEGER IPOREF(NPREF),IPORIG(NPRIG)
+      ENDSEGMENT
+*
+*     Segment des points en base B:
+*     -----------------------------
+      SEGMENT NCPR(XCOOR(/1)/(IDIM+1))
+*     NCRP(#global) = #local dans XPTB (1er indice)      
+*
+*     Segment des parametres numeriques pour la continuation: 
+*     ------------------------------------------------------
+      SEGMENT PARNUM
+         CHARACTER*4 TYPS
+         REAL*8   DS,DSMAX,DSMIN,ANGMIN,ANGMAX,ITERMOY,ISENS,TOLMIN
+         REAL*8   PARINI,PARFIN
+         INTEGER  ITERMAX,NBPAS
+         LOGICAL  JANAL
+      ENDSEGMENT
+*
+*     Segment des resultats:
+*     ---------------------
+      SEGMENT  PSORT
+        REAL*8 QSAVE(NT1,NPAS),WSAVE(NPAS),LSAVE(2,2*NA1,NPAS)
+        REAL*8 VSAVE(NPAS)
+        LOGICAL ZSAVE(NPAS)
+        CHARACTER*2 TYPBIF(NBIFU)
+        REAL*8 QBIFU(NT1,NBIFU),WBIFU(NBIFU),WBIF2(NBIFU)
+        REAL*8 QPSIR(NT1,NBIFU),QPSII(NT1,NBIFU)
+        INTEGER CBIF
+      ENDSEGMENT
+*     QSAVE(i,j) = Q harmonique i au pas j
+*     VSAVE(j)   = parametre de continuation (si non w) au j-eme pas
+*     ZSAVE(j)   = stabilite au j-eme pas
+*     LSAVE(1,j) : partie reelle de l'exposant de Floquet
+*     LSAVE(2,j) : partie imaginaire de l'exposant de Floquet
+*     TYPBIF = {LimitPoint, BranchPoint, NeimarkSacker, PeriodDoubling}
+*     QBIFU,WBIFU : vecteur Q et w au point de bifurcation
+*           WBIF2 : partie imaginaire de l'exposant de Floquet
+*     QPSIR,QPSII : vecteur propre au point de bifurcation
+      
+*     Segment des tableaux de travail:
+*     -------------------------------
+      SEGMENT  MTEMP
+         REAL*8 RW(NT1),A,T0(NT1+1),TP(NT1+1),AMPX,AUX
+         REAL*8 T02(NT1+2), TP2(NT1+2)
+         INTEGER IPIV(NT1),IPIV2(NT1+1),IPIV3(NT1+2)
+         REAL*8 res
+         REAL*8 RHS(NT1+1),Ja(NT1+1,NT1+1)
+         REAL*8 QOLD(NT1),OMEGOLD
+         REAL*8 MATJA(NT1+1,NT1+1),Rw2(NT1)
+         REAL*8 Jaa(NT1+2,NT1+2),RHS2(NT1+2),Ra(NT1),VV,VVOLD
+      ENDSEGMENT
+*     Jacobiennes augmentees 
+*     Ja : [ RX  Rw ; dX dw]
+*     Jaa: [ RX  Rw Ra; gx 0 0; dX dw da]
+
+*      SEGMENT  NNNN
+*         REAL*8 IGAM2(nl1,NPC2),DL2(nl1)
+*      ENDSEGMENT
+
+*************************** fin TMDYNC.INC *****************************
+
+*
+*     Segment de travail pour reprise force POLYNOMIALE base A
+*     a metrre dans TMDYNC ?
+      SEGMENT,MTRA
+        INTEGER IPLA(NTRA)
+      ENDSEGMENT
+*      
+      LOGICAL L0,L1,REPRIS
+      CHARACTER*6  MO2
+      CHARACTER*8  TYPRET,CHARRE,CHARR0
+      CHARACTER*10 MO1
+      CHARACTER*40 MONMOT
+      
+      ITREP  = 0
+      MTQ    = 0
+      MTKAM  = 0
+      MTPHI  = 0
+      MTLIAA = 0
+      MTEMP  = 0
+      MTLIAB = 0
+      MTFEX  = 0
+      MTPAS  = 0
+      MTNUM  = 0
+      MTRA   = 0
+      PARNUM = 0
+      PSORT  = 0
+      XTINI  = 0.D0
+      ITLA = 0
+      ITLB = 0
+c       NNNN = 0
+      REPRIS = .FALSE.
+      
+      
+************************************************************************
+*     Recherche du nombre de modes: autant que de points de reference
+************************************************************************
+      IF (IIMPI.EQ.333) write(IOIMP,*) 'HBMALO: recup des modes' 
+*
+      MPREF = KPREF
+      NPREF = IPOREF(/1)
+      NA1   = NPREF
+      
+      
+c     on intialise NB1 a 1; le segment sera eventuellement ajuste
+c     lors du remplissage par D2VTRA
+      NB1  = 1
+      NB1K = 1
+      NB1C = 1
+      NB1M = 1
+      nl1 = 2*NHBM+1
+      NT1 = nl1*na1
+** FORMULE INTELLIGENTE A TROUVER
+      NPC1 = NFFT
+      NPC2 = 40*NFFT
+      
+**===============================
+      SEGINI,MTQ,MTKAM
+      SEGINI,LOCLFA
+      SEGINI,MTEMP
+c       SEGINI,NNNN
+      KTEMP = MTEMP
+      KOCLFA = LOCLFA
+      KTQ   = MTQ
+      KTKAM = MTKAM  
+      
+*     Transformees de Fourier Inverse/Directe
+*     Pour la continuation: GAM,IGAM 
+      CALL AFTM(NPC1,NHBM,GAM,IGAM,DL)
+**     Pour la stabilite: GAMFIN si besoin de + de points
+*      CALL AFTM(NPC2,NHBM,GAMFIN,IGAM2,DL2)
+c       SEGDES,NNNN
+
+
+**********************************************************************
+*     Segment des parametres numeriques:
+*     on renseigne ici seulement TYPS 
+*     d'apres 'TYPE' = FORCe ou AUTOnome ou NonNormalMode?
+**********************************************************************
+      SEGINI, PARNUM
+      KPARNUM = PARNUM
+      IF (IPARNUM.gt.0) THEN   
+        CALL ACCTAB(IPARNUM,'MOT',I0,X0,'TYPE',L0,IP0,
+     &                      'MOT',I1,X1,CHARRE,L1,IP1)    
+        IF(IERR.NE.0) RETURN
+        TYPS(1:4) = CHARRE(1:4) 
+      ELSE 
+c       valeur par defaut (pas super)
+        TYPS(1:4) = 'FORC'
+      ENDIF
+c     verif
+      IF(TYPS.NE.'FORC' .AND. TYPS.NE.'AUTO' .AND.TYPS.NE.'NNM') THEN 
+c         On a lu %m1:8, alors qu'on attend un des mots cles suivant :
+c         %m9:16 %m17:24 %m25:32 %m33:40. Consulter la notice.
+          MOTERR(1:4)=TYPS(1:4)
+          MOTERR(5:8)='    '
+          MOTERR(9:40)='FORC    AUTO    NNM     '
+          CALL ERREUR(930)
+          RETURN      
+      ENDIF
+      
+      
+************************************************************************
+*     Table INITIAL --> Initialisation du vecteur des inconnues 
+************************************************************************
+
+      IF (ITINIT.GT.0) THEN   
+      
+******* Cas d'une reponse FORCee ou d'un systeme AUTOnome *******
+        IF (TYPS.EQ.'FORC' .OR. TYPS.EQ.'AUTO') THEN   
+
+c         TINIT . jharm . imode  = valeur (flottant)  -> idem sortie 
+c         TINIT . jharm  = chpoint                    -> idem chargement
+c         boucle sur les harmoniques
+          DO KHBM=-1*NHBM,NHBM
+            TYPRET = ' '
+            CALL ACCTAB(ITINIT,'ENTIER',KHBM,X0,CHARR0,L0,IP0,
+     &                  TYPRET,I1,X1,CHARRE,L1,IP1)
+            IF(IERR.NE.0) RETURN
+*          -cas d'une table de CHPOINT     
+            IF(TYPRET.EQ.'CHPOINT ') THEN            
+              MCHPOI=IP1
+              SEGACT,MCHPOI 
+              NSOUPO=IPCHP(/1)
+c             boucle sur les zones (definies a partir des noms de composantes)
+              DO I=1,NSOUPO
+                 MSOUPO = IPCHP(I)
+                 SEGACT,MSOUPO
+c                on recupere le maillage
+                 MELEME = IGEOC
+                 SEGACT,MELEME
+c                NC = nombre de composantes
+                 NC = NOCOMP(/2)
+                 IF(NC.NE.1) THEN
+c                  Il faut specifier un champ par point avec une seule composante
+                   CALL ERREUR(180)
+                   RETURN
+                 ENDIF
+                 MPOVAL = IPOVAL
+                 SEGACT,MPOVAL
+c                VPOCHA(i,j) = valeur au noeud i de la composante j
+                 N = VPOCHA(/1)
+                 DO J=1,N
+c                   on cherche le #noeud dans IPOREF
+                    KNOE = NUM(1,J)
+                    CALL PLACE2(IPOREF,NPREF,IPOS,KNOE)
+c                   IPOS est le numero (local) de mode
+                    IF (IPOS.NE.0) THEN
+c                       DO K=1,NC
+                        K=1
+                          IF (KHBM.LE.0) THEN
+                            IND1=2*ABS(KHBM)
+                          ELSE
+                            IND1=2*ABS(KHBM)-1
+                          ENDIF
+                          IND=NA1*IND1+IPOS
+c                         normalement, on ne peut/doit definir qu'1 fois Q1 initial
+                          Q1(IND) = VPOCHA(J,K)
+c                       ENDDO
+                    ENDIF
+                 ENDDO
+                 SEGDES,MPOVAL,MELEME,MSOUPO
+              ENDDO
+              SEGDES,MCHPOI              
+c *          -cas d'une table de TABLE     
+c             ELSEIF(TYPRET.EQ.'TABLE   ') THEN
+c             TODO
+            ELSEIF(TYPRET.NE.' ') THEN
+c              On ne veut pas d'objet de type %m1:8
+               MOTERR(1:8)=TYPRET
+               CALL ERREUR(39)
+               RETURN               
+            ENDIF
+          ENDDO 
+        
+*         frequence initiale        
+          CALL ACCTAB(ITINIT,'MOT',I0,X0,'FREQUENCE',L0,IP0,
+     &                                 'FLOTTANT',I1,X1,CHARRE,L1,IP1)         
+          IF(IERR.NE.0) RETURN
+          OMEG   = X1
+        
+******* Cas d'une reponse FORCee ou d'un systeme AUTOnome *******
+        ELSEIF (TYPS.EQ.'NNM') THEN
+        
+*         mode lineaire considere comme point initial
+          CALL ACCTAB(ITINIT,'MOT',I0,X0,'MODE',L0,IP0,
+     &                       'ENTIER',I1,X1,CHARRE,L1,IP1)         
+          IF(IERR.NE.0) RETURN
+          JMODE=I1
+c         OMEG sera rempli lors du parcours de la base ....
+*         energie initiale du mode (doit etre assez faible ~quasi-nulle)
+          CALL ACCTAB(ITINIT,'MOT',I0,X0,'ENERGIE',L0,IP0,
+     &                       'FLOTTANT',I1,X1,CHARRE,L1,IP1)         
+          XPARA  = ABS(X1)
+          IF(XPARA.le.XPETIT) THEN
+c           La valeur de %M1:8 doit etre positive
+            MOTERR(1:8)='ENERGIE '
+            CALL ERREUR(549)
+            RETURN
+          ENDIF
+*         Par defaut, on initialise selon la composante cos Wt (les autres=0)
+*         (on aurait pu initialiser sin Wt)
+          Q1(NA1+JMODE)=SQRT(XPARA)
+          
+        ELSE 
+        
+        ENDIF
+
+      
+      ENDIF
+      
+      
+************************************************************************
+*     Parametres temporels: pas de temps constant
+************************************************************************
+*
+      NPC=1    
+
+      
+************************************************************************
+*     Gestion des segments descriptifs des liaisons
+************************************************************************
+      IF (IIMPI.EQ.333) write(IOIMP,*) 'HBMALO: recup des liaisons' 
+*
+      NLIAA  = 0
+      NIPALA = 0
+      NXPALA = 0
+      NPLAA  = 0
+      NPLA   = 0
+      NLIAB  = 0
+      NIPALB = 0
+      NXPALB = 0
+      NIP    = 0
+      NPLBB  = 0
+      NPLB   = 0
+      NPLSB  = 0
+      IDIMB  = 0
+      NA2    = 0
+      NSB    = 0
+      KCPR   = 0
+      NTVAR  = 6 + 4 * IDIM
+*
+*     MTRA indiquera la presence de liaisons POLYNOMIALEs
+*     (on suppose un maximum de 100 liaisons en base A)
+*+*   passe a 10000 le 28/1/93
+      NTRA   = 10000
+      SEGINI,MTRA
+*
+      IF (ITLIA.NE.0) THEN
+*
+         TYPRET = ' '
+         CALL ACCTAB(ITLIA,'MOT',I0,X0,'LIAISON_A',L0,IP0,
+     &                    TYPRET,I1,X1,CHARRE,L1,ITLA)
+         IF (IERR.NE.0) RETURN
+*
+*        Liaisons sur la base A : determination des parametres
+*
+         IF (ITLA.NE.0) THEN
+            IF (TYPRET.EQ.'TABLE   ') THEN
+               CALL DYNE21(ITLA,PDT,MTRA,KLIAA,KXPALA,KPLAA,KIPALA)
+*               WRITE(*,*) 'KXPALA=',KXPALA
+               IF (IERR.NE.0) RETURN
+               NLIAA  = KLIAA
+               NIPALA = KIPALA
+               NXPALA = KXPALA
+               NPLAA  = KPLAA
+               NPLA   = NA1
+            ELSE
+               CALL ERREUR(492)
+               RETURN
+            ENDIF
+         ENDIF
+*
+*        Liaisons sur la base B : determination des parametres
+*
+         TYPRET = ' '
+         CALL ACCTAB(ITLIA,'MOT',I0,X0,'LIAISON_B',L0,IP0,
+     &                    TYPRET,I1,X1,CHARRE,L1,ITLB)
+         IF (IERR.NE.0) RETURN
+         IF (ITLB.NE.0) THEN
+            IF (TYPRET.EQ.'TABLE   ') THEN
+               CALL DYNE22(ITLB,KLIAB,KXPALB,KPLBB,KPLB,KDIMB,KCPR,
+     &                     KIPALB,KNIP)
+*           WRITE(*,*) 'KXPALB=',KXPALB
+               IF (IERR.NE.0) RETURN
+               NLIAB  = KLIAB
+               NIPALB = KIPALB
+               NXPALB = KXPALB
+               NPLBB  = KPLBB
+               NPLB   = KPLB
+               IDIMB  = KDIMB
+               NIP = KNIP
+            ELSE
+               CALL ERREUR(493)
+               RETURN
+            ENDIF
+         ENDIF
+      ENDIF       
+      SEGINI,LOCLB1
+      KOCLB1 = LOCLB1
+*
+*     Les segments seront remplis dans le s-p DEVLIA:
+*
+      SEGINI,MTLIAA
+      SEGINI,MTLIAB
+      KTLIAA = MTLIAA
+      KTLIAB = MTLIAB
+      IF (NLIAB.NE.0) THEN
+         NCPR = KCPR
+         LCPR = XCOOR(/1) / (IDIM + 1)
+         IN = 0
+         DO I = 1,LCPR
+            IF (NCPR(I).NE.0) THEN
+               IN = IN + 1
+               JPLIB(IN) = I
+            ENDIF
+         ENDDO
+         SEGSUP,NCPR
+      ENDIF
+      
+
+************************************************************************
+*     Segment des deformees modales:
+************************************************************************
+      IF (IIMPI.EQ.333) write(IOIMP,*) 'HBMALO: recup deformees modales' 
+
+***** Cas table BASE_MODALE et RAIDEUR_ET_MASSE *****
+
+      IF (ITKM.GT.0) THEN
+         TYPRET = ' '
+         CALL ACCTAB(ITKM,'MOT',I0,X0,'BASE_MODALE',L0,IP0,
+     &               TYPRET,I1,X1,CHARRE,L1,ITBAS2)
+      ELSE
+         ITBAS2=ITBAS
+      ENDIF
+
+      IF (ITBAS2.NE.0) THEN
+        CALL ACCTAB(ITBAS2,'MOT',I0,X0,'SOUSTYPE',L0,IP0,
+     &                     'MOT',I1,X1,MONMOT,L1,IP1)
+        IF (IERR.NE.0) RETURN
+        IF (IIMPI.EQ.333) write(IOIMP,*) ITBAS2,'de SOUSTYPE',MONMOT
+*
+*      -Cas ou la base est unique
+        IF (MONMOT(1:11).EQ.'BASE_MODALE') THEN
+          NSB = 1
+          NA2 = NA1
+*         changement de dimension en cas de corps rigide
+          CALL ACCTAB(ITBAS2,'MOT',I0,X0,'MODES',L0,IP0,
+     &                    'TABLE',I1,X1,' ',L1,IBAS)
+          IP = 0
+ 22       CONTINUE
+            IP = IP + 1
+            TYPRET = ' '
+            CALL ACCTAB(IBAS,'ENTIER',IP,X0,' ',L0,IP0,
+     &                        TYPRET,I1,X1,CHARRE,L1,ITP1)
+            IF (IERR.NE.0) RETURN
+            IF (TYPRET.NE.'TABLE') GOTO 23
+            IF (ITP1.LE.0)         GOTO 23
+c           s'agit-il d'un corps rigide ?
+            TYPRET = ' '
+            CALL ACCTAB(ITP1,'MOT',I0,X0,'ROTATION_RIGIDE',L0,IP0,
+     &                        TYPRET,I1,X1,MONMOT,L1,IP1)
+            IF (IERR.NE.0) RETURN
+            IF (TYPRET.EQ.'MOT') THEN
+              IF (MONMOT(1:4).EQ.'VRAI') THEN
+                if (IDIM.eq.2 .and. IDIMB.lt.3) IDIMB = 3
+                if (IDIM.eq.3 .and. IDIMB.lt.6) IDIMB = 6
+                GOTO 23
+              ENDIF
+            ENDIF
+c           cas NNM : on veut recuperer la frequence du mode lineaire 
+c                     initial -> OMEG
+            IF(TYPS.EQ.'NNM ' .AND. IP.EQ.JMODE) THEN
+              CALL ACCTAB(ITP1,'MOT',I0,X0,'FREQUENCE',L0,IP0,
+     &                         'FLOTTANT',I1,X1,MONMOT,L1,IP1)
+              IF (IERR.NE.0) RETURN
+              OMEG = 2.D0*XPI * X1
+            ENDIF
+          GOTO 22
+ 23       CONTINUE
+*      -Cas ou la base est un ensemble de bases
+        ELSE
+          IB = 0
+          NA2 = 0
+*         changement de dimension en cas de corps rigide
+          IR = 0
+ 30       CONTINUE
+            IB = IB + 1
+c             write(ioimp,*) IB,'ieme base de l ensemble'
+            TYPRET = ' '
+            CALL ACCTAB(ITBAS2,'ENTIER',IB,X0,' ',L0,IP0,
+     &                         TYPRET,I1,X1,CHARRE,L1,ITBB)
+            IF (IERR.NE.0) RETURN
+c         --cas lecture table de la IB ieme base modale ok
+            IF (ITBB.NE.0) THEN
+            IF (TYPRET.EQ.'TABLE   ') THEN
+               CALL ACCTAB(ITBB,'MOT',I0,X0,'MODES',L0,IP0,
+     &                        'TABLE',I1,X1,' ',L1,IBAS)
+               IF (IERR.NE.0) RETURN
+               NNA2 = 0
+               IP = 0
+ 32            CONTINUE
+                 IP = IP + 1
+c             write(ioimp,*) '  +',IP,'ieme mode de la ',IB,'ieme base'
+                 TYPRET = ' '
+                 CALL ACCTAB(IBAS,'ENTIER',IP,X0,' ',L0,IP0,
+     &                            TYPRET,I1,X1,CHARRE,L1,ITPP)
+                 IF (IERR.NE.0) RETURN
+c              --cas lecture table du IP ieme mode ok
+                 IF (ITPP.NE.0) THEN
+                 IF (TYPRET.EQ.'TABLE   ') THEN
+*                 changement de dimension en cas de corps rigide
+                  IF (IR.GT.1) GOTO 24
+                  TYPRET = ' '
+                  CALL ACCTAB(ITPP,'MOT',I0,X0,'ROTATION_RIGIDE',L0,IP0,
+     &                    TYPRET,I1,X1,MONMOT,L1,IP1)
+                  IF (IERR.NE.0) RETURN
+                  IF (TYPRET.EQ.'MOT') THEN
+                    IF (MONMOT(1:4).EQ.'VRAI') THEN
+                      if (IDIM.eq.2 .and. IDIMB.lt.3) IDIMB = 3
+                      if (IDIM.eq.3 .and. IDIMB.lt.6) IDIMB = 6
+                    ENDIF
+                  ENDIF
+ 24               CONTINUE
+                  NNA2 = NNA2 + 1
+                  GOTO 32
+c              --fin du cas lecture table du IP ieme mode ok
+                 ELSE
+                    CALL ERREUR(491)
+                    RETURN
+                 ENDIF
+                 ENDIF
+c              --fin du cas lecture table du IP ieme mode non ok
+               NA2 = MAX(NNA2,NA2)
+               GOTO 30
+c         --fin du cas lecture table de la IB ieme base modale ok
+            ELSE
+               CALL ERREUR(491)
+               RETURN
+            ENDIF
+            ENDIF
+c         --fin du cas lecture table de la IB ieme base modale non ok
+          NSB = IB - 1
+        ENDIF
+*      -fin distinction base modale simple / ensemble de bases
+        NPLSB = NPLB      
+      ENDIF
+      NPLSB=1
+      SEGINI,MTPHI
+      KTPHI = MTPHI
+*
+************************************************************************
+*     Variables au cours d'un pas de temps:
+************************************************************************
+      IF (IIMPI.EQ.333) write(IOIMP,*) 'HBMALO: SEGINI,MTPAS' 
+*      
+      MTPAS  = 0
+*       write(*,*) NA1,NPLB,IDIMB,NLIAA,NLIAB,NTVAR,IDIM,NPLB
+      SEGINI,MTPAS
+      KTPAS = MTPAS
+
+      
+************************************************************************
+*     Initialisation du segment representant les chargements ( bases A
+*     et B ):
+************************************************************************
+*           
+      IF (ITCHAR.GT.0) THEN     
+c       NT1 deja dimensionne
+        SEGINI,MTFEX
+        KTFEX = MTFEX
+        TYPRET = ' '
+        CALL ACCTAB(ITCHAR,'MOT',I0,X0,'BALOURD',L0,IP0,
+     &                                      TYPRET,ICH,X1,CHARRE,L1,IP1)
+        IF (TYPRET.EQ.'ENTIER') THEN
+              BAL = ICH
+        ELSE
+              BAL = 0   
+        ENDIF      
+c       boucle sur les harmoniques
+        DO KHBM=-1*NHBM,NHBM
+            TYPRET = ' '
+            CALL ACCTAB(ITCHAR,'ENTIER',KHBM,X0,CHARR0,L0,IP0,
+     &                  TYPRET,I1,X1,CHARRE,L1,IP1)
+c            WRITE(IOIMP,*) 'HBMALO, Chargement. KHBM:',KHBM 
+c            WRITE(IOIMP,*) '-------------------------',TYPRET
+            IF (TYPRET.EQ.'CHARGEME') THEN
+c On ne veut pas d'objet de type %m1:8
+                MOTERR(1:8)='CHARGEME'
+                CALL ERREUR(39)
+                RETURN
+            ELSEIF(TYPRET.EQ.'CHPOINT ') THEN
+              MCHPOI=IP1
+              SEGACT,MCHPOI 
+              NSOUPO=IPCHP(/1)
+c             boucle sur les zones (definies a partir des noms de composantes)
+              DO I=1,NSOUPO
+                 MSOUPO = IPCHP(I)
+                 SEGACT,MSOUPO
+c                on recupere le maillage
+                 MELEME = IGEOC
+                 SEGACT,MELEME
+c                NC = nombre de composantes
+                 NC = NOCOMP(/2)
+                 MPOVAL = IPOVAL
+                 SEGACT,MPOVAL
+c                VPOCHA(i,j) = valeur au noeud i de la composante j
+                 N = VPOCHA(/1)
+                 DO J=1,N
+                    DO K=1,NC
+c                      on cherche le #noeud dans IPOREF
+                       KNOE = NUM(1,J)
+c                      WRITE(IOIMP,*) 'KNOE=',KNOE
+                       CALL PLACE2(IPOREF,NPREF,IPOS,KNOE)
+*                     write(IOIMP,*) J,'eme noeud #',KNOE,' = mode',IPOS
+c                    IPOS est le numero de mode
+c                    WRITE(IOIMP,*) 'IPOS=',IPOS
+c                    WRITE(IOIMP,*) 'VPOCHA=',VPOCHA(J,K),'J=',J,',K=',K
+                       IF (IPOS.NE.0) THEN
+                          XFORCA = VPOCHA(J,K)
+                          IF (KHBM.le.0) then
+                            IND1=2*ABS(KHBM)
+                          else
+                            IND1=2*ABS(KHBM)-1
+                          endif
+                          IND=NA1*IND1+IPOS
+c                         WRITE(IOIMP,*) 'FEXA(',IND,')=',XFORCA
+c                         comme c'est constant on somme
+                          FEXA(IND) = FEXA(IND) + XFORCA
+                       ENDIF
+                    ENDDO
+                 ENDDO
+                 SEGDES,MPOVAL,MELEME,MSOUPO
+              ENDDO
+              SEGDES,MCHPOI
+            ENDIF
+c               On ne veut pas d'objet de type %m1:8
+c                MOTERR(1:8)=TYPRET
+c                CALL ERREUR(39)
+c                RETURN              
+c            ENDIF                
+        ENDDO
+*       mise a 0 de FEXPSM
+        do i1=1,NPLB
+        do i2=1,NPC1
+        do i3=1,2
+        do i4=1,IDIMB
+          FEXPSM(i1,i2,i3,i4)=0.D0
+        enddo
+        enddo
+        enddo
+        enddo
+      ELSE
+        SEGINI,MTFEX
+        KTFEX = MTFEX
+        DO I=1,Q1(/1)
+            FEXA(I) = 0.
+        ENDDO
+      ENDIF
+c     fin du cas ITCHAR existe ou pas
+
+
+**********************************************************************
+*     Segment des parametres numeriques:
+**********************************************************************
+c       SEGINI, PARNUM
+c       KPARNUM = PARNUM
+c deplace + haut
+      IF (IPARNUM.GT.0) THEN
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'DS0',L0,IP0,
+     &                                  'FLOTTANT',I1,X1,CHARRE,L1,IP1)
+          DS = X1
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'DSMAX',L0,IP0,
+     &                               'FLOTTANT',I1,X1,CHARRE,L1,IP1)
+          DSMAX=X1
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'DSMIN',L0,IP0,
+     &                              'FLOTTANT',I1,X1,CHARRE,L1,IP1)
+          DSMIN=X1
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'ANGLE_MIN',L0,IP0,
+     &                              'FLOTTANT',I1,X1,CHARRE,L1,IP1)
+          ANGMIN=X1
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'ANGLE_MAX',L0,IP0,
+     &                               'FLOTTANT',I1,X1,CHARRE,L1,IP1)
+          ANGMAX=X1
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'ITERMOY',L0,IP0,
+     &                               'FLOTTANT',I1,X1,CHARRE,L1,IP1)
+          ITERMOY=X1
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'ITERMAX',L0,IP0,
+     &                               'ENTIER',I1,X1,CHARRE,L1,IP1)
+          ITERMAX=I1
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'NBPAS',L0,IP0,
+     &                               'ENTIER',I1,X1,CHARRE,L1,IP1)
+          NBPAS=I1
+          NPAS =I1
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'ISENS',L0,IP0,
+     &                               'FLOTTANT',I1,X1,CHARRE,L1,IP1)
+          ISENS=X1
+          TYPRET = ' '
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'CALCUL_JAC',L0,IP0,
+     &                                 TYPRET,I1,X1,CHARRE,L1,IP1)
+          IF (TYPRET.EQ.'LOGIQUE') THEN 
+             JANAL = L1 
+          ELSE
+             JANAL = .FALSE.
+          ENDIF
+          TYPRET = ' '
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'TOLERANCE',L0,IP0,
+     &                                 TYPRET,I1,X1,CHARRE,L1,IP1)
+          IF (TYPRET.EQ.'FLOTTANT') THEN 
+             TOLMIN = X1 
+          ELSE
+             TOLMIN = 1.E-8
+          ENDIF
+      ENDIF
+c 
+c *     Type = FORCe ou AUTOnome ou NonNormalMode?
+c       CALL ACCTAB(IPARNUM,'MOT',I0,X0,'TYPE',L0,IP0,
+c      &                                        'MOT',I1,X1,CHARRE,L1,IP1)    
+c       TYPS(1:4) = CHARRE(1:4)   
+c ==> deplace + haut
+      
+      IF (TYPS.EQ.'FORC') THEN   
+*     Le parametre de continuation sera la frequence de forcage
+*     (option par defaut pour l'instant).    
+          PARINI = OMEG
+          XPARA  = PARINI
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'VAL_FIN',L0,IP0,
+     &                        'FLOTTANT',I1,X1,CHARRE,L1,IP1)         
+          PARFIN = X1           
+      ELSEIF (TYPS.EQ.'AUTO') THEN
+*         Continuation par rapport à un autre parametre.   
+*         On utilise comme frequence celle des conditions initiales.
+*         On a besoin des bornes initiales et finales
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'VAL_INI',L0,IP0,
+     &                        'FLOTTANT',I1,X1,CHARRE,L1,IP1)         
+          PARINI = X1           
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'VAL_FIN',L0,IP0,
+     &                        'FLOTTANT',I1,X1,CHARRE,L1,IP1)         
+          PARFIN = X1           
+      ELSEIF (TYPS.EQ.'NNM') THEN
+*         Calcul de mode non lineaire.
+*         La branche est suivie jusqu'a un certain niveau d'energie.
+          CALL ACCTAB(IPARNUM,'MOT',I0,X0,'VAL_FIN',L0,IP0,
+     &                        'FLOTTANT',I1,X1,CHARRE,L1,IP1)         
+          PARINI = XPARA
+          PARFIN = X1
+      ENDIF 
+*     test pas cher 
+      IF (abs(PARINI-PARFIN).le.(XZPREC**0.5)) THEN
+c         Les valeurs des parametres doivent etre distinctes
+          CALL ERREUR(402)
+          RETURN
+      ENDIF
+
+c *     valeur initiale (selon sens de parcours)
+c       IF (ISENS.LT.0.) THEN
+c         XPARA = PARFIN
+c       ELSE
+c         XPARA = PARINI
+c       ENDIF
+cbp : ci-dessus desormais inutile car on utilise la table "INITIALE"
+cbp : PAR_INI et PAR_FIN ne sont plus necessairement ordonnes 
+
+      
+**********************************************************************
+*     Tableau des resultats :
+**********************************************************************
+       NBIFU=MIN(NPAS/2+1,100)
+       SEGINI, PSORT
+       KSORT= PSORT
+
+       
+************************************************************************
+*    Impressions :
+************************************************************************
+      IF (IIMPI.GE.333) THEN
+      
+         WRITE(IOIMP,*) 'Frequence initiale: W0 =',OMEG
+         WRITE(IOIMP,*) 'Le systeme est de type: ',TYPS
+*        DO i=1,Q1(/1)
+*          write(*,*) 'Q1 initial=',(Q1(i))
+*        ENDDO
+
+         WRITE(IOIMP,*)'   segment MTLIAB'
+         WRITE(IOIMP,*)'     NLIAB  =',IPALB(/1)
+         WRITE(IOIMP,*)'     NIPALB =',IPALB(/2)
+         WRITE(IOIMP,*)'     NXPALB =',XPALB(/2)
+         WRITE(IOIMP,*)'     NPLBB  =',IPLIB(/2)
+         WRITE(IOIMP,*)'     NPLB   =',JPLIB(/1)
+         WRITE(IOIMP,*)'     NIP    =',XABSCI(/2)
+*
+         WRITE(IOIMP,*)'   segment MTLIAA'
+         WRITE(IOIMP,*)'     NLIAA  =',IPALA(/1)
+         WRITE(IOIMP,*)'     NIPALA =',IPALA(/2)
+         WRITE(IOIMP,*)'     NXPALA =',XPALA(/2)
+         WRITE(IOIMP,*)'     NPLAA  =',IPLIA(/2)
+         WRITE(IOIMP,*)'     NPLA   =',JPLIA(/1)
+*
+         WRITE(IOIMP,*)'   segment MTFEX : chargement frequentiel'
+         IF (BAL.EQ.1)WRITE(IOIMP,*)'de type balourd'
+         DO i=1,FEXA(/1)
+            write(IOIMP,*) 'FEXA(',i,',:)=',(FEXA(i))
+         ENDDO
+      ENDIF
+*
+      END
+
+
+ 
+ 
+ 
+ 
+ 

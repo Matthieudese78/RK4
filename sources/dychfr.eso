@@ -1,0 +1,133 @@
+C DYCHFR    SOURCE    BP208322  20/03/26    21:15:45     10562          
+      SUBROUTINE DYCHFR(IDIM,IGP,XPALB,NLIAB,I,I0,I1,I2,I3,I4,
+     &                  XGLIS,XADHE,XRAIT,XAMOT,XFN,XFT,XPUS)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNE : algorithme de Fu - de Vogelaere               *
+*     ________________________________________________               *
+*                                                                    *
+*     Gestion des phases glissement et adherence du frottement de    *
+*     COULOMB                                                        *
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   IGP     Indice de glissement au pas precedent                  *
+* es  XPALB   Tableau contenant les parametres de la liaison         *
+* e   NLIAB   Nombre de liaisons sur la base B                       *
+* e   I       Numero de la liaison                                   *
+* e   I0      Pointeur de la vitesse tangentielle dans XPALB         *
+* e   I1      Pointeur de la variation de deplacement par rapport a  *
+*             la position origine d'adherence, projetee sur le plan  *
+*             tangent, dans XPALB                                    *
+* e   I2      Pointeur de la force tangentielle dans XPALB           *
+* e   I3      Pointeur de la vitesse tangentielle au pas precedent   *
+*             dans XPALB                                             *
+* e   I4      Pointeur de la force tangentielle @ la fin du glis-    *
+*             -sement dans XPALB                                     *
+* e   XFN     Valeur de la force de choc suivant la normale.         *
+* e   XGLIS   Valeur du coefficient de glissement                    *
+* e   XADHE   Valeur du coefficient d'adherence                      *
+* e   XRAIT   Valeur de la raideur tangentielle                      *
+* e   XAMOT   Valeur de l'amortissement tangentiel                   *
+*  s  XFT     Module de la force de choc projetee sur le plan tangent*
+*  s  XPUS    Valeur de la puissance d'usure instantanee             *
+*                                                                    *
+*                                                                    *
+*     Auteur, date de creation:                                      *
+*                                                                    *
+*     Bertrand BEAUFILS, le 31 mai 1990.                             *
+*     I. POLITOPOULOS (bricolage pour le model d'Oden) ,juin 1993    *
+*--------------------------------------------------------------------*
+      DIMENSION XPALB(NLIAB,*)
+      XFT = 0.D0
+      XPUS = 0.D0
+      
+*---- modele d' Antunes ---------------------------------------------*
+
+cbp,2016      IF (XRAIT.GT.0.D0) THEN
+      IF (XRAIT.GE.0.D0) THEN
+      
+       IF (IGP.EQ.1) THEN
+*  Il y avait glissement au pas precedent ; calcul du produit scalaire
+*  de la vitesse et de la vitesse au pas precedent ; calcul du module
+*  de la vitesse
+*
+         PS = 0.D0
+         DO 10 ID = 1,IDIM
+            PS = PS + XPALB(I,I0+ID) * XPALB(I,I3+ID)
+ 10         CONTINUE
+*        end do
+         IF (PS.GT.0.D0) THEN
+*  Il y a glissement
+            CALL DYCHGL(IDIM,IGP,XPALB,NLIAB,I,I0,I2,XGLIS,XFN,XFT,XPUS)
+*            WRITE(*,*)'DYCHFR: glissement'
+*            WRITE(*,*)'        apres DYCHGL:'
+*            WRITE(*,*)'        XFN = ',XFN
+*            WRITE(*,*)'        XFT = ',XFT
+         ELSE
+*  Il y a possibilite d'adherence
+            CALL DYCHAD(IDIM,IGP,XPALB,NLIAB,I,I0,I1,I2,I4,XADHE,XRAIT,
+     &                  XAMOT,XFN,XFT,XPUS)
+*            WRITE(*,*)'        apres DYCHAD:'
+*            WRITE(*,*)'        XFN = ',XFN
+*            WRITE(*,*)'        XFT = ',XFT
+            IF (IGP.EQ.1) THEN
+*  En fait, il y a glissement.
+               WRITE(*,*)'DYCHFR: glissement'
+               CALL DYCHGL(IDIM,IGP,XPALB,NLIAB,I,I0,I2,XGLIS,XFN,XFT,
+     &                     XPUS)
+*               WRITE(*,*)'        apres DYCHGL:'
+*               WRITE(*,*)'        XFN = ',XFN
+*               WRITE(*,*)'        XFT = ',XFT
+            ELSE
+*  Ca adhere   WRITE(*,*)'DYCHFR: adherence'
+               CONTINUE
+            ENDIF
+         ENDIF
+      ELSE
+*
+*  Il y avait adherence au pas precedent ; \a peut continuer
+*
+         CALL DYCHAD(IDIM,IGP,XPALB,NLIAB,I,I0,I1,I2,I4,XADHE,XRAIT,
+     &               XAMOT,XFN,XFT,XPUS)
+         IF (IGP.EQ.1) THEN
+*  En fait, il y a glissement.
+            CALL DYCHGL(IDIM,IGP,XPALB,NLIAB,I,I0,I2,XGLIS,XFN,XFT,XPUS)
+         ELSE
+*  Ca adhere
+            CONTINUE
+         ENDIF
+       ENDIF
+       
+       
+*---- modele d'Oden -------------------------------------------------*
+
+      ELSE
+*
+         IGP = 1
+         EPSI = XAMOT
+*  calcul du module  de la vitesse
+*
+         PSV = 0.D0
+         DO 20 ID = 1,IDIM
+            PSV = PSV + XPALB(I,I0+ID) * XPALB(I,I0+ID)
+ 20         CONTINUE
+
+*        end do
+         VITT = SQRT(PSV)
+         IF (VITT.GT.EPSI) THEN
+*  Il y a glissement classique
+           CALL DYCHGL(IDIM,IGP,XPALB,NLIAB,I,I0,I2,XGLIS,XFN,XFT,XPUS)
+         ELSE
+*  on est dans le domaine regularise
+          CALL DYCGLR(IDIM,EPSI,XPALB,NLIAB,I,I0,I2,XGLIS,XFN,XFT,XPUS)
+         ENDIF
+      ENDIF
+
+      RETURN
+      END
+
+ 
+ 

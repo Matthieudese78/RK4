@@ -1,0 +1,58 @@
+C DYNE42    SOURCE    CHAT      05/01/12    23:17:52     5004
+        SUBROUTINE DYNE44(IPOINT,ICDR,XXGP)
+        IMPLICIT INTEGER(I-N)
+        IMPLICIT REAL*8(A-H,O-Z)
+*---------------------------------------------------------------*
+*                                                               *
+*     Opérateur DYNE : algorithme de Fu - de Vogelaere          *
+*     ________________________________________________          *
+*                                                               *
+*     Pour les corps rigides, calcul des fausses déformées      *
+*     modales de rotation                   .                   *
+*                                                               *
+*     Paramètres                                                *
+*                                                               *
+*  e   IPOINT  Numéro du point ou le calcul s'effectue          *
+*  e   ICDR    Numéro du point centre de gravité du corps       *
+*  s   XXGP    Vecteur centre de rotation - pt de travail       *
+*                                                               *
+*                                                               *
+*     Auteur, date de création:                                 *
+*                                                               *
+*     Matthieu Serre      : le 21 Septembre 2021 : Création     *
+*                                                               *
+*                                                               *
+*                                                               *
+*                                                               *
+*---------------------------------------------------------------*
+*
+*
+-INC PPARAM
+-INC CCOPTIO
+-INC SMCOORD
+-INC CCREEL
+*
+      REAL*8  XCDR(3),XPOINT(3)
+      REAL*8  XXGP(3)
+*
+*      WRITE(*,*)'DYNE44: ICDR = ',ICDR
+*      WRITE(*,*)'DYNE44: IPOINT = ',IPOINT
+      DO 9 ID=1,IDIM
+*      Coordonnées du centre de rotation ICDR:
+        XCDR(ID)=XCOOR((ICDR-1)*(IDIM+1) +ID)
+*      Coordonnées du point du maillage P
+        XPOINT(ID) = XCOOR((IPOINT-1)*(IDIM+1) +ID)
+        XXGP(ID) = XPOINT(ID) - XCDR(ID)
+ 9    CONTINUE
+      IF (IDIM.EQ.2) THEN 
+        XXGP(3) = 0.D0
+      ENDIF
+*      WRITE(*,*)'DYNE44: XXGP(1) = ',XXGP(1)
+*      WRITE(*,*)'DYNE44: XXGP(2) = ',XXGP(2)
+*      WRITE(*,*)'DYNE44: XXGP(3) = ',XXGP(3)
+      
+*
+        END
+
+
+

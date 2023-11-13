@@ -1,0 +1,66 @@
+      SUBROUTINE ONLYNOR(IP,XP,YP,XCEC,YCEC,XNUT,XTHMAX,XFNX,XFNY,XFNZ,
+     &                   VXCO,VYCO,VZCO,FTOTB,NPLB,IDIM)
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+
+*     Fait pour Test uniquement : FORECES NORAMLES ONLY !!
+*        (y compris pour le calcul des moments)
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettant de calculer                                 * 
+*     l'angle d'un vect. / axe (0x) via l'operateur ATAN                *
+*     Matthieu SERRE     : le 23/05/2023 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*      
+*     INTEGER NECH
+      REAL*8 VXCO(3),VYCO(3),VZCO(3),FTOTB(NPLB,*)
+*
+      
+************************************************************************ 
+*        CALCUL DU COUPLE RESULTANT 
+************************************************************************  
+*        Fort de la resultante au point d'incidence F = (FX,FY,FZ)^T 
+*        exprimee dans le repere du cone, 
+*        on peut calucler le moment résultant dans le reprere du cone.
+
+* Pour normale only : on a le point d'incidence XP YP / centre de l'ellipse :
+*     1. : on calcule ses coordonnées / centre du cercle dans (Ex,Ey,Ez) :
+*           / centre du cercle dans le plan (EX,EY) le vecteur CP vaut :
+      XP2 = XP - XCEC
+      YP2 = YP - YCEC
+*           Dans (Ex,Ey,Ez) / centre du cercle :
+      XP3 = COS(XNUT)*XP2
+      YP3 = YP2
+      ZP3 = -SIN(XNUT)*XP2
+*     2. : On en déduit le couple calculer au point de liason 
+*              .ie. le centre du cerlce :
+
+      XGX = YP3*XFNZ - ZP3*XFNY
+      XGY = ZP3*XFNX - XP3*XFNZ
+      XGZ = XP3*XFNY - YP3*XFNX
+      WRITE(*,*)'ONLYNOR : MX, MY, MZ dans (Ex,Ey,Ez) / pt liai :'
+      WRITE(*,*)'          MX = ',XGX
+      WRITE(*,*)'          MY = ',XGY
+      WRITE(*,*)'          MZ = ',XGZ
+
+*******  On repasse dans le repere Cast3m : 
+      DO ID=1,IDIM
+         I2 = ID+3
+*          Moments : 
+         FTOTB(IP,I2) = XGX*VXCO(ID) + XGY*VYCO(ID) + XGZ*VZCO(ID)
+*          Resultante : 
+         FTOTB(IP,ID) = XFNX*VXCO(ID)+XFNY*VYCO(ID)+XFNZ*VZCO(ID)
+      ENDDO
+*
+
+      WRITE(*,*)'DEVFB10 : Sans effort tangentiels :'
+      WRITE(*,*)'          FX = ',FTOTB(IP,1)
+      WRITE(*,*)'          FY = ',FTOTB(IP,2)
+      WRITE(*,*)'          FZ = ',FTOTB(IP,3)
+      WRITE(*,*)'DEVFB10 : Sans efforts tangentiels :'
+      WRITE(*,*)'          MX = ',FTOTB(IP,4)
+      WRITE(*,*)'          MY = ',FTOTB(IP,5)
+      WRITE(*,*)'          MZ = ',FTOTB(IP,6)
+*
+      END

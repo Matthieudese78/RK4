@@ -1,0 +1,45 @@
+      SUBROUTINE PQUAT(QUAT1,QUAT2,QUAT3)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettant de faire le produite de 2                   *
+*                      quaternions (4,1)                                *                                                       *    Rappel quaternion:                                                 *
+* X0 = cos(theta/2)                                                     *    
+* X1 = sin(theta/2)*V1                                                  * 
+* X2 = sin(theta/2)*V2                                                  *
+* X3 = sin(theta/2)*V3                                                  *
+* ou V = (V1,V2,V3) est le vecteur unitaire de rotation                 *
+* et theta = angle de la rotation                                       *
+*     Matthieu SERRE     : le 04/05/2021 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*
+      REAL*8 QUAT1(4),QUAT2(4),QUAT3(4)
+      REAL*8 V1(3),V2(3),S1,S2
+      
+      S1 = quat1(1)
+      DO I=1,3
+        I2 = I+1 
+        V1(I) = QUAT1(I2)
+      ENDDO
+      S2 = quat2(1)      
+      DO I=1,3
+        I2 = I+1 
+        V2(I) = QUAT2(I2)
+      ENDDO
+      
+      QUAT3(1) = S1*S2     
+      DO I=1,3
+        QUAT3(1) = QUAT3(1) - V1(I)*V2(I)
+      ENDDO
+      
+      DO I=1,3
+        I2 = I+1
+        QUAT3(I2) = S1*V2(I) + S2*V1(I)
+      ENDDO
+      
+      QUAT3(2) = QUAT3(2) + V1(2)*V2(3) - V1(3)*V2(2)
+      QUAT3(3) = QUAT3(3) + V1(3)*V2(1) - V1(1)*V2(3)      
+      QUAT3(4) = QUAT3(4) + V1(1)*V2(2) - V1(2)*V2(1)
+      
+      END

@@ -1,0 +1,177 @@
+C D2VLF2    SOURCE    BP208322  20/09/18    21:15:16     10718          
+C DEVLF2    SOURCE    LAVARENN  96/10/30    21:18:02     2349
+
+      SUBROUTINE D2VLF2(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,NLIAB,
+     &                  XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,PDT,T,
+     &                  NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,IND,
+     &                  FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
+     &                  IAROTA,KTROT,FEXB,XCHPFB,
+     &                  KTOTXB,KTOTVB)
+     
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Op�rateur DYNE : algorithme differences centrees               *
+*                      Initialisation des forces de choc base B      *
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Param�tres:                                                    *
+*                                                                    *
+* e   Q1(.,.) Vecteur des d�placements g�n�ralis�s.
+* e   Q2      vecteur des vitesses generalises                       *
+* es  FTOTA   Forces ext�rieures totalis�es sur la base A.           *
+* e   NA1     Nombre total d'inconnues en base A.                    *
+* e   IPALB   Renseigne sur le type de la liaison.                   *
+* e   IPLIB   Tableau contenant les num�ros "DYNE" de la liaison.    *
+* e   IAROTA  Indique la position des modes de rotation              *
+* e   XPALB   Tableau contenant les param�tres de la liaison.        *
+* es  XVALB   Tableau contenant les variables internes des liaisons  *
+* e   NLIAB   Nombre de liaisons sur la base B.                      *
+* e   XPHILB  Tableau des vecteurs propres aux points de liaisons.   *
+* e   JPLIB   Tableau contenant les num�ros "GIBI" des liaisons.     *
+* e   NPLB    Nombre total de points intervenant dans les liaisons.  *
+* e   IDIMB   Nombre de directions.                                  *
+* e   IND     Indice du pas.                                         *
+* e   XABSCI  Tableau contenant les abscisses de la loi plastique    *
+*             pour la liaison point-point- ... -plastique            *
+* e   XORDON  Tableau contenant les ordonnees de la loi plastique    *
+*             pour la liaison point-point- ... -plastique            *
+* e   RIGIDE  Vrai si l'on a un corps rigide                         *
+*                                                                    *
+* -   FTEST2  Tableau local FTEST de la subroutine D2VLB1            *
+*                                                                    *
+*--------------------------------------------------------------------*
+*
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+      
+      INTEGER IPALB(NLIAB,*),IPLIB(NLIAB,*),JPLIB(*)
+      INTEGER IBASB(*),IPLSB(*),INMSB(*),IORSB(*),IAROTA(*)
+      REAL*8  XPALB(NLIAB,*),Q1(NA1,*),Q2(NA1,*),FTOTA(NA1,*)
+      REAL*8  XVALB(NLIAB,4,*),XPHILB(NSB,NPLSB,NA2,*),XPTB(NPLB,2,*)
+      REAL*8  FTOTB(NPLB,*),FTOTBA(*),FEXPSM(NPLB,NPC1,2,*)
+      REAL*8  XABSCI(NLIAB,*),XORDON(NLIAB,*),FEXB(NPLB,2,*)
+      REAL*8  XCHPFB(2,NLIAB,4,NPLB)
+      REAL*8  FTEST2(NPLB,6)
+      LOGICAL RIGIDE
+      REAL*8  KTOTXB(NPLB,IDIMB,IDIMB),KTOTVB(NPLB,IDIMB,IDIMB)
+*
+      RIGIDE = KTROT.NE.0
+*--------------------------------------------------------------------*
+*     Initialisations a 0
+*--------------------------------------------------------------------*
+*
+      DO ID = 1,IDIMB
+      DO IP = 1,NPLB
+           FTOTB(IP,ID) = 0.D0
+      ENDDO
+      ENDDO
+
+cbp : on n'utilise pas KTOTXB ni KTOTVB ici 
+c       IF (HBM) THEN
+c         DO ij=1,IDIMB
+c         DO ii=1,IDIMB
+c         DO ip=1,NPLB
+c           KTOTXB(ip,ii,ij)=0.D0
+c           KTOTVB(ip,ii,ij)=0.D0
+c         ENDDO
+c         ENDDO
+c         ENDDO
+c       ENDIF
+
+*--------------------------------------------------------------------*
+*     Recombinaison des deplacements aux points de choc
+*--------------------------------------------------------------------*
+
+      IF (IDIMB.EQ.6) THEN
+         IDIM=3
+      ELSE
+         IDIM=2
+      ENDIF
+
+*old       CALL D2VCOI(Q1,Q2,PDT,NA1,XPTB,NPLB,XPHILB,NSB,NPLSB,NA2,IDIMB,
+c      &            IBASB,IPLSB,INMSB,IORSB,IND,IAROTA)
+      IF (IIMPI.EQ.333) THEN
+         WRITE(IOIMP,*)'D2VLF2: appel DEVRCO'
+         WRITE(IOIMP,*)'        IDIM = ',IDIM
+         WRITE(IOIMP,*)'        IDIMB = ',IDIMB
+         WRITE(IOIMP,*)'        KTROT = ',KTROT
+         WRITE(IOIMP,*)'        NA2 = ',NA2
+      ENDIF
+      CALL DEVRCO(Q1,Q2,NA1,XPTB,NPLB,XPHILB,NSB,NPLSB,NA2,IDIMB,
+     &            IBASB,IPLSB,INMSB,IORSB,IND,IAROTA,KTROT,PDT)
+*          --> XPTB(:,1)=x_n   XPTB(:,2,:)=\dot{q}_n
+*
+*
+*--------------------------------------------------------------------*
+*     Initialisation des tableaux contenants les param�tres de liaison
+*--------------------------------------------------------------------*
+*
+      WRITE(*,*)'D2VLF2: appel DEVLB2'
+      CALL DEVLB2(IPLIB,IPALB,XPALB,XPTB,NLIAB,IND,IDIMB,NPLB,
+     &            XABSCI,XORDON,NIP,IBASB,KTROT)
+*
+*--------------------------------------------------------------------*
+*     Calcul des forces de choc sur base B
+*--------------------------------------------------------------------*
+*
+      WRITE(*,*)'D2VLF2: appel D2VLB1, IPLIB(1,1) = ',IPLIB(1,1) 
+      CALL D2VLB1(FTOTB,XPTB,IPALB,IPLIB,JPLIB,XPALB,XVALB,NLIAB,
+     &            NPLB,IDIMB,PDT,NPAS,IND,FEXPSM,NPC1,IERRD,
+     &            FTEST2,XABSCI,XORDON,NIP,XCHPFB,
+     &            KTOTXB,KTOTVB,.false.,IBASB,KTROT)
+     
+      IF (IERRD.NE.0) RETURN
+
+*--------------------------------------------------------------------*
+*     Calcul des moments dans le cas des modes de rotation rigide
+*--------------------------------------------------------------------*
+      IF (RIGIDE) THEN
+      IF (IIMPI.EQ.333) THEN
+        WRITE(IOIMP,*)'D2VLF2: appel DEVMOM'
+        WRITE(IOIMP,*)'        IDIM = ',IDIM
+        WRITE(IOIMP,*)'        NPLB = ',NPLB
+        WRITE(IOIMP,*)'        NA1 = ',NA1
+        WRITE(IOIMP,*)'        NA2 = ',NA2
+      ENDIF            
+           CALL DEVMOM(FTOTB,Q1,FEXB,XPHILB,IAROTA,IBASB,IPLSB,INMSB,
+     &                 NA2,NA1,NSB,NPLSB,NPLB,1,IDIM,KTROT)
+      ENDIF
+
+*--------------------------------------------------------------------*
+*     Projection des forces base B sur base A
+*--------------------------------------------------------------------*
+      IF (IIMPI.EQ.333) THEN
+        WRITE(IOIMP,*)'D2VLF2: appel DEVPRO'
+        WRITE(IOIMP,*)'        IDIMB = ',IDIMB
+        WRITE(IOIMP,*)'        NPLSB = ',NPLSB
+        WRITE(IOIMP,*)'        NA1 = ',NA1
+        WRITE(IOIMP,*)'        NA2 = ',NA2
+      ENDIF
+      CALL DEVPRO(XPHILB,FTOTB,FTOTBA,IBASB,INMSB,IPLSB,IORSB,NSB,
+     &            NPLSB,NA2,IDIMB,NPLB,NA1,IAROTA,KTROT)
+
+*--------------------------------------------------------------------*
+*     Ajout des forces projetees aux forces exterieures sur base A
+*--------------------------------------------------------------------*
+
+      DO I = 1,NA1
+*        IF (IIMPI.EQ.333) THEN 
+*          WRITE(*,*)'D2VLF2: avant somme: FTOTA(',I,IND,') = ',
+*     &                                        FTOTA(I,IND)
+*          WRITE(*,*)'                     FTOTBA(',I,') = ',
+*     &                                        FTOTBA(I)
+*        ENDIF
+         FTOTA(I,IND) = FTOTA(I,IND) + FTOTBA(I)
+      ENDDO
+
+      END
+
+
+
+
+
+
+ 
+ 
+ 
+ 

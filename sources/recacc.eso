@@ -1,0 +1,96 @@
+C RECVIT    SOURCE    CB215821  20/11/25    13:38:48     10792          
+        SUBROUTINE RECACC(ITRES,IPOS,IPTR,AANG)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Recherche le vecteur acceleration de rotation                  *
+*     (ne fonctionne que pour une sortie LISTREEL!)                  *                                                                *
+*     Paramètres:                                                    *
+*                                                                    *
+* e   ITRES   table résultat issue de l'opérateur Dyne               *
+* e   IPOS    position de XTEMP dans le listreel des temps           *
+* e   IPTR    point de repère du mode de rotation,dans la base modale*
+* s   AANG    vecteur accel. angulaire de roation                    *
+*     Auteur, date de création:                                      *
+*                                                                    *
+*     Samuel DURAND le 15 Octobre 1996.                              *
+*                                                                    *
+*--------------------------------------------------------------------*
+
+-INC PPARAM
+-INC CCOPTIO
+-INC SMCHPOI
+-INC SMELEME
+-INC SMTABLE
+-INC SMLREEL
+      LOGICAL L0,L1,sortchpo
+      REAL*8 AANG(3)
+      INTEGER IPTR(4)
+      CHARACTER*(8) TYPRET
+      sortchpo = .false.
+*
+*** sortie type listreel:
+      TYPRET=' '
+      CALL ACCTAB (ITRES ,'MOT',I0,X0,'ACCELERATION',L0,IRET0,
+     &                    TYPRET,I1,X1,' ',L1,IDYN1) 
+      IF(TYPRET.EQ.'TABLE'.AND.IDYN1.NE.0) THEN
+        MTABLE=IDYN1
+        SEGACT,MTABLE
+        DO 1 I=1,MLOTAB
+          IF(MTABTI(I).NE.'POINT   ') GOTO 1
+          IF(MTABTV(I).NE.'LISTREEL') GOTO 1 
+          DO J =1,3
+            IF (MTABII(I).EQ.IPTR(J)) THEN
+              MLREEL=MTABIV(I)
+              SEGACT,MLREEL
+              AANG(J) = PROG(IPOS)
+            ENDIF
+          ENDDO
+ 1      CONTINUE
+      ENDIF
+*** sotie type CHPOINT: PAS ENCORE FONCTIONNEL!!
+      IF (sortchpo) THEN
+* Recherche du champoint des déplacements généralisés
+      CALL ACCTAB(ITRES,'ENTIER',IPOS,X0,' ',L0,IP0,
+     &                      'TABLE',I1,X1,' ',L1,ITDEP)
+      IF (IERR.NE.0) RETURN
+      CALL ACCTAB(ITDEP,'MOT',I0,X0,'ACCELERATION',L0,IP0,
+     &                    'CHPOINT',I1,X1,' ',L1,ICHPT)
+      MCHPOI = ICHPT
+      IF (MCHPOI.EQ.0) THEN
+*        le CHPOINT des vitesses modales est nul
+         MOTERR(1:8) = 'RCDEPL'
+         CALL ERREUR(170)
+         RETURN
+      ENDIF
+      SEGACT MCHPOI
+      NSOU = IPCHP(/1)
+      DO 10 ISOU = 1,NSOU
+         MSOUPO = IPCHP(ISOU)
+         SEGACT MSOUPO
+*        on cherche la valeur du champ correspondant au point de
+*        rotation
+         MELEME = IGEOC
+         SEGACT MELEME
+         MPOVAL = IPOVAL
+         SEGACT MPOVAL
+         N2 = NUM(/2)
+         DO 12 I = 1,N2
+           DO J=1,3
+             IF (NUM(1,I).EQ.IPTR(J)) THEN
+                AANG(J) = VPOCHA(I,1)
+             ENDIF
+           ENDDO
+ 12      CONTINUE
+         SEGDES MPOVAL,MELEME,MSOUPO
+ 10    CONTINUE
+       SEGDES MCHPOI
+       ENDIF
+*
+       END
+
+
+
+
+ 

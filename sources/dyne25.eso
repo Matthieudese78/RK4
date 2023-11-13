@@ -1,0 +1,138 @@
+C DYNE25    SOURCE    PV        20/03/30    21:18:16     10567          
+      SUBROUTINE DYNE25(ITBAS,KCPR,KCPRIG,IK1,IK2,IB)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNE : algorithme de Fu - de Vogelaere               *
+*     ________________________________________________               *
+*                                                                    *
+*     Recherche des points de reference definis par les points       *
+*     reperes de la base modale.                                     *
+* Matt: ICPR(#global) = #local (1,2,3,4,5,6..)                       *
+*         #global: vrai indice du noeud repère                       *
+*          #local: indice du noeud renumerote                        *
+*      BUT: faciliter le bouclage sur les points reperes             * 
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   IBAS    Table representant une base modale                     *
+*  s  KCPR    Segment des points                                     *
+*  s  KCPRIG  Segments rotas rigides d'origine (3/ss base)           *
+*             (necessaire pour lecture des CIs)                      *
+* es  IK1     Compteur des modes flexibles                           *
+* es  IK2     Compteur des modes rigides                             *
+*                                                                    *
+*--------------------------------------------------------------------*
+
+-INC PPARAM
+-INC CCOPTIO
+-INC SMCOORD
+*
+      SEGMENT,ICPR(nbpts)
+      SEGMENT,ICPRIG(nbpts)
+*
+      LOGICAL L0,L1,RIGIDE
+      CHARACTER*4  MO2
+      CHARACTER*8  TYPRET,CHARRE
+      CHARACTER*40 MONMOT
+      INTEGER IPTRIG(4),ICHD(4)
+* ICHD: stocke les pointeurs de deformees modales
+* Etant dans dans une sous base, on ne compte
+* que les 3 premiers modes rigides: faire attention dans le dgibi.
+* la deformee modale de la 4eme comp. du quaternion sera 0.
+* ICDR et ICHD = 0 si la rota rigide n'existe pas
+      ICPR = KCPR
+*
+*     Acquisition de la table IBAS = Tmode . Modes :
+*
+      CALL ACCTAB(ITBAS,'MOT',IMODE,X0,'MODES',L0,IP0,
+     &                  'TABLE',I1,X1,' ',L1,IBAS)
+      IF (IERR.NE.0) RETURN
+*
+      DO I=1,4
+        ICHD(I) = 0
+*        ICDR(I) = 0
+      ENDDO
+*     ----------> boucle sur les modes
+* Si ensemble de base boucle sur les modes de la sous base
+      IMODE = 0
+      IRIG = 0
+
+ 10   CONTINUE
+      ITBMOD = 0
+      IMODE = IMODE + 1
+      TYPRET = ' '
+      CALL ACCTAB(IBAS,'ENTIER',IMODE,X0,' ',L0,IP0,
+     &                  TYPRET,I1,X1,CHARRE,L1,ITBMOD)
+      IF (IERR.NE.0) RETURN 
+c     IBAS . IMODE existe
+      IF (ITBMOD.NE.0) THEN      
+         CALL ACCTAB(ITBMOD,'MOT',I0,X0,'SOUSTYPE',L0,IP0,
+     &               'MOT',I1,X1,MO2,L1,IP1)
+         IF (IERR.NE.0) RETURN
+         IF (MO2.EQ.'MODE') THEN
+*           recup du point repere
+            CALL ACCTAB(ITBMOD,'MOT',I0,X0,'POINT_REPERE',L0,IP0,
+     &                         'POINT',I1,X1,' ',L1,KNOE)
+            IF (IERR.NE.0) RETURN
+c           IF (KNOE.EQ.0) erreur a faire
+c           si jamais vu, on l'enregistre dans ICPR
+            IF (ICPR(KNOE).EQ.0) THEN
+              TYPRET = ' '
+              CALL ACCTAB(ITBMOD,'MOT',I0,X0,'ROTATION_RIGIDE',L0,IP0,
+     &                          TYPRET,I1,X1,MONMOT,L1,IP1)
+              IF (IERR.NE.0) RETURN
+              IF((TYPRET.EQ.'MOT').and.(MONMOT(1:4).EQ.'VRAI')) THEN
+*               On verifie qu on est dans differences centrees (kcprig nn nul)
+                IF (KCPRIG.EQ.0) THEN
+                  SEGINI,ICPRIG
+                  KCPRIG=ICPRIG 
+                ELSE
+                  ICPRIG=KCPRIG 
+                ENDIF
+                  IRIG = IRIG +1
+                  CALL ACCTAB(ITBMOD,'MOT',I0,X0,'DEFORMEE_MODALE',
+     &                        L0,IP0,'CHPOINT',I1,X1,' ',L1,ICHDI)
+                  CALL ACCTAB(ITBMOD,'MOT',I0,X0,'CENTRE_DE_ROTATION',
+     &                        L0,IP0,'POINT',I1,X1,' ',L1,ICDR)
+                  ICHD(IRIG) = ICHDI
+*                   ICDR(IRIG) = ICDRI
+*                 On ne prend que les 3 premiers modes 
+*                 + les modes doivent être dans l'ordre des CIs.
+                  IF (IRIG.LE.3) THEN
+                   ICPRIG(KNOE) = 3*(IB-1)+IRIG
+                  ENDIF
+                GOTO 10
+              ENDIF
+*             fin traitement rota rigide, on passe aux modes elastiques:
+              IK1 = IK1 + 1
+              ICPR(KNOE) = IK1
+            ENDIF
+* fin IF ICPR(KNOE)=0
+         ELSE
+c           ERREUR : mauvais sous-type 
+            CALL ERREUR(314)
+            RETURN
+         ENDIF
+* fin IF MO2 = MODE
+         GOTO 10
+         ENDIF
+* fin IF ITBMOD.NE.0
+
+    
+*        <----------- fin de boucle sur les modes
+        IF (IRIG.NE.0) THEN
+            CALL RECTMOD(ITBAS,IBAS,IB,ICHD,ICDR,IPTRIG)
+            DO I=1,4
+             IK2 = IK2 + 1
+             nbpts = nbpts + 1
+             SEGADJ ICPR
+             ICPR(IPTRIG(I)) = -1*IK2
+            ENDDO
+        ENDIF
+*** fin rigide
+      END
+
+
+ 

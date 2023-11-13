@@ -1,0 +1,188 @@
+C DEVFB1    SOURCE    BP208322  20/09/18    21:15:26     10718          
+      SUBROUTINE calcflat(xnut,xalpha,xdn,xthmax,xkvert,nech,xrayp,
+     &                    xincid,xgc,ygc,xd,
+     &                    exco,ezco,exce,eyce,ezce,npe,tpe,
+     &                    npoi,ipsom,isb,isbc,nplb,ind,xptb,xptp2,
+     &                    ktrot,xamor,xglis,
+     &                    fnbresf,ftbresf,gresf)
+*--------------------------------------------------------------------*
+*                                                                    *
+*--------------------------------------------------------------------*
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+
+-INC CCREEL   
+
+      real*8 exco(3),ezco(3),exce(3),eyce(3),ezce(3) 
+      real*8 npe(3),tpe(3)  
+      real*8 xprof(nech),yprof(nech),zprof(nech)
+*     vecteur normal repere du cone (uniquement car calcnor le sort)
+*                 (on besoin que de xncbf)
+      real*8 xnc(nech),ync(nech),znc(nech)
+*     vecteur normal en base B
+      real*8 xncbf(3,nech)
+*     sortie : resultante si le cone est considere comme 
+*               "quasi" a plat.
+      real*8 fnbf(nech),ftbf(3,nech)
+      real*8 vnbf(nech),vtbf(3,nech),xprbf(3,nech)
+      real*8 vnbcof(nech),vtbcof(3,nech),xprbcof(3,nech)
+*     resultantes
+      real*8 fnbresf(3),ftbresf(3),gresf(3)
+
+*      write(*,*)'calcflat : donnees d entree'
+*      write(*,*)'        xnut = ',xnut
+*      write(*,*)'        xalpha = ',xalpha
+*      write(*,*)'        xdn = ',xdn
+*      write(*,*)'        xthmax = ',xthmax
+*      write(*,*)'        xkvert = ',xkvert
+*      write(*,*)'        nech = ',nech
+*      write(*,*)'        xrayp = ',xrayp
+*      write(*,*)'        xincid = ',xincid
+*      write(*,*)'        xgc = ',xgc
+*      write(*,*)'        ygc = ',ygc
+*      write(*,*)'        xd = ',xd
+*      write(*,*)'        exco = '
+*      write(*,'(1X,F8.5)') , (exco(id),id=1,3)
+*      write(*,*)'        ezco = '
+*      write(*,'(1X,F8.5)') , (ezco(id),id=1,3)
+*      write(*,*)'        exce = '
+*      write(*,'(1X,F8.5)') , (exce(id),id=1,3)
+*      write(*,*)'        eyce = '
+*      write(*,'(1X,F8.5)') , (eyce(id),id=1,3)
+*      write(*,*)'        ezce = '
+*      write(*,'(1X,F8.5)') , (ezce(id),id=1,3)
+*      write(*,*)'        npe = '
+*      write(*,'(1X,F8.5)') , (npe(id),id=1,3)
+*      write(*,*)'        tpe = '
+*      write(*,'(1X,F8.5)') , (tpe(id),id=1,3)
+*     xincid,xgc,ygc,xd,
+*     exco,ezco,exce,eyce,ezce,
+*     vpos,vproj,vproj2,npe,tpe,
+*--------------------------------------------------------------------*
+*     intialisation fnbf
+*--------------------------------------------------------------------*
+      fnbf(1) = 0.d0
+      fnbf(2) = 0.d0
+      fnbf(3) = 0.d0
+*--------------------------------------------------------------------*
+*     tout le cercle est en contact
+*--------------------------------------------------------------------*
+      xthmax = 2.d0*xpi
+      xdth = xthmax/(real(nech))
+      xdl = xrayp * xdth
+*--------------------------------------------------------------------*
+*     calcul de la penetration vertical equivalente xdv
+*       (composante verticale de la penetration normale)
+*--------------------------------------------------------------------*
+      xdv = xdn*sin(xalpha)
+*      write(*,*)'calcflat : xdv = ',xdv
+*--------------------------------------------------------------------*
+*     calcul de npe et tpe
+*--------------------------------------------------------------------*
+*     vproj(1)=vpos(1)*exco(1) + vpos(2)*exco(2) + vpos(3)*exco(3)
+*     vproj(2)=vpos(1)*eyce(1) + vpos(2)*eyce(2) + vpos(3)*eyce(3)
+*     vproj(3)=vpos(1)*ezco(1) + vpos(2)*ezco(2) + vpos(3)*ezco(3)
+*     --> calcul de xgc et ygc :
+*     XGC  = vproj(1)/dcos(XNUT)
+*     YGC  = vproj(2)
+*     XD = dabs(vproj(3) + (vproj(1)*(dtan(XNUT))))  
+*     --> calcul de npe et tpe
+*     ici l'ellipse est quasi circulaire on projette simplement ds le repere de l'ellipse
+*     vproj2(1) = vpos(1)*exce(1) + vpos(2)*exce(2) + vpos(3)*exce(3)
+*     vproj2(2) = vproj(2)
+*     vproj2(3) = vpos(1)*ezce(1) + vpos(2)*ezce(2) + vpos(3)*ezce(3)
+*     puis directement : 
+*     xincid = datan2(vproj2(2),vproj2(1))
+*     do id=1,3
+*       npe(id) = cos(xincid)*xce(id) + sin(xincid)*yce(id)
+*       tpe(id) = -sin(xincid)*xce(id) + cos(xincid)*yce(id)
+*     enddo
+*--------------------------------------------------------------------*
+*     calcul du champ de vecteur normal     
+*--------------------------------------------------------------------*
+      call calcnor(xthmax,npe,tpe,exce,eyce,xnut,xalpha,xrayp,
+     &                     xgc,ygc,xd,
+     &                     xprof,yprof,zprof,
+     &                     xnc,ync,znc,xdth,nech)
+*
+*     calcul de xncbf (champ vect. nor. repere du cone) fait par calcvtb: 
+*      do id=1,3
+*        do iprof=1,nech
+*      xncbf(id,iprof) = xnc(iprof)*exco(id)+ync(iprof)*eyce(id) +
+*     &                 znc(iprof)*ezco(id)
+*           write(*,*)'xncbf(id,iprof) = ',xncbf(id,iprof)
+*        enddo
+*      enddo
+*
+      do iprof=1,nech
+         fnbf(iprof) = xdv*xkvert/(sin(xalpha)*real(nech - 1))
+      enddo
+*
+      write(*,*)'call calcvtb cercle interpolation'
+      call calcvtb(npoi,xthmax,npe,tpe,exce,eyce,exco,ezco,
+     &             xrayp,xnut,xalpha,
+     &             xnc,ync,znc,xdth,nech,ktrot,isb,ind,
+     &             vnbf,vtbf,xprbf,xncbf,xptb,nplb,xptp2,-1)
+
+      if (isbc.gt.0) then
+        write(*,*)'call calcvtb cone interpolation'
+        call calcvtb(ipsom,xthmax,npe,tpe,exce,eyce,exco,ezco,
+     &               xrayp,xnut,xalpha,
+     &               xnc,ync,znc,xdth,nech,ktrot,isbc,ind,
+     &               vnbcof,vtbcof,xprbcof,xncbf,xptb,nplb,xptp2,isbc)
+*
+        do id=1,3
+          do iprof=1,nech
+            vnbf(iprof) = vnbf(iprof) - vnbcof(iprof)
+            vtbf(id,iprof) = vtbf(id,iprof) - vtbcof(id,iprof)
+          enddo
+        enddo
+* 
+      endif
+************************************************************************  
+*         MAJ FORCE NORMALE --> PRISE EN COMPTE DE L'AMORTISSEMENT
+************************************************************************  
+*        XAMOR est une densite lineique d'amortissement :
+      if (xamor.gt.0.d0) then
+         do id=1,3
+           do iprof=1,nech
+              fnbf(iprof) = fnbf(iprof) - (xamor* xdl * vnbf(iprof))
+           enddo
+         enddo
+      endif
+************************************************************************  
+*         CALCUL DE LA FORCE TANGENTIELLE SUR LE PROFILE 
+*                DE LA PUISSANCE D'USURE SUR LE PROFILE
+*                           EN BASE B
+*                   --> FTB(3,NECH) XPUS(NECH)
+************************************************************************  
+      write(*,*)'call calcftb interpolation'
+      call calcftb(fnbf,vtbf,nech,xglis,vlim,ftbf,xpusf,xpustotf,idim,
+     &                xgladf)
+
+*      write(*,*)'call calcrgb interpolation'
+*      write(*,'(1X,F8.5)'),(fnbf(iprof),iprof=1,nech)
+*      do id = 1,3
+*        write(*,'(1X,F8.5)'),(ftbf(id,iprof),iprof=1,nech)
+*      enddo
+*      do id = 1,3
+*        write(*,'(1X,F8.5)'),(xprbf(id,iprof),iprof=1,nech)
+*      enddo
+*      do id = 1,3
+*        write(*,'(1X,F8.5)'),(xncbf(id,iprof),iprof=1,nech)
+*      enddo
+      call calcrgb(fnbf,ftbf,xprbf,nech,xncbf,npoi,
+     &                fnbresf,ftbresf,gresf)
+
+*
+*      do iprof=1,nech
+*        fnbf(1) = fnbf(1) + ((xdv*xkvert/(sin(xalpha)*real(nech-1)))
+*     &                      *(xncbf(1,iprof)))
+*        fnbf(2) = fnbf(2) + ((xdv*xkvert/(sin(xalpha)*real(nech-1)))
+*     &                      *(xncbf(2,iprof)))
+*        fnbf(3) = fnbf(3) + ((xdv*xkvert/(sin(xalpha)*real(nech-1)))
+*     &                      *(xncbf(3,iprof)))
+*      enddo
+*      write(*,'(1X,F8.5)') , (fnbf(id),id=1,3)
+
+      END

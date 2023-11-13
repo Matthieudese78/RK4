@@ -1,0 +1,73 @@
+      SUBROUTINE RECTMOD(ITBAS,IBAS,IB,ICHD,ICDR,IPTRIG)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+* Subroutine dediee a la creation de points de reference pour        *
+* le stockage des 4 composantes du quaternion                        *
+*         (necessaire a e recombinaion des deplacements              *
+*             en la presence de rotations rigides)                   *
+* = CREATION d'une table paralelle a celle des modes                 *
+*    Tmode . i = Tmodei = IBAS (ss base modale)                      *
+*    Tmodei . ROTAS . J . POINT_REPERE = IPTRIG(J)                   *
+*    Tmodei . ROTAS . J . SOUS_BASE = IB                             *
+*    es IBAS: pointeur base / ss base modale                         *
+*    e  IB:   indice sous base                                       * 
+*    e  ICHD: table indice def modales                               *
+*    e  ICDR: centre de rotation ss base IB                          *
+*    s  IPTRIG: pointeurs ptreps des rotas rigide                    *
+********************************************************************** 
+-INC PPARAM
+-INC CCOPTIO
+-INC SMELEME
+*
+      INTEGER IBAS,IB,ICHD(4),IPTRIG(4)
+*
+* Creation d'une table vide:
+      CALL CRTABL(IPTAB2)
+      CALL ECCTAB(IPTAB2,'MOT',0,0.D0,'SOUSTYPE',.TRUE.,0,
+     &                      'MOT',0,0.D0,'BASE_DE_ROTAS',.TRUE.,0)
+      ZERO = 0.D0
+      DO I=1,4
+         CALL CREPO1(ZERO,ZERO,ZERO,IPOIN)
+         NBSOUS = 0
+         NBREF = 0
+         NBNN = 1
+         NBELEM = 1
+         SEGINI MELEME
+         NUM(1,1) = IPOIN
+         ITYPEL = 1
+         SEGDES MELEME 
+*        Stockage du ID du ptrep pour sortie:
+         IPTRIG(I) = IPOIN
+*
+         CALL CRTABL(IPTAB3)
+         CALL ECCTAB(IPTAB3,'MOT',0,0.D0,'SOUSTYPE',.TRUE.,0,
+     &                      'MOT',0,0.D0,'ROTA',.TRUE.,0)
+         CALL ECCTAB(IPTAB3,'MOT',0,0.D0,'NUMERO_ROTA',.TRUE.,0,
+     &                      'ENTIER',I,0.D0,' ',.TRUE.,0)
+* Remplissage avec un point repère:
+         CALL ECCTAB(IPTAB3,'MOT',0,0.D0,'POINT_REPERE',.TRUE.,0,
+     &               'POINT',0,0.D0,' ',.TRUE.,IPOIN)
+* Remplissage avec l'indice de la sous base:
+         CALL ECCTAB(IPTAB3,'MOT',0,0.D0,'INDICE_SOUS_BASE',.TRUE.,0,
+     &               'ENTIER',IB,0.D0,' ',.TRUE.,0)
+         CALL ECCTAB(IPTAB3,'MOT',0,0.D0,'DEFORMEE_MODALE',.TRUE.,0,
+     &                          'CHPOINT',0,0.D0,' ',.TRUE.,ICHD(I))
+         CALL ECCTAB(IPTAB3,'MOT',0,0.D0,'CENTRE_DE_ROTATION',.TRUE.,0,
+     &                          'POINT',0,0.D0,' ',.TRUE.,ICDR)
+* Ajout a la la base de rotas IPTAB2:
+         CALL ECCTAB(IPTAB2,'ENTIER',I,0.D0,' ',.TRUE.,0,
+     &                      'TABLE',0,0.D0,' ',.TRUE.,IPTAB3)
+*
+      ENDDO
+*     Ecriture de la base de ROTAS dans: Tmode . IB . ROTAS 
+*     (ou Tmode . ROTAS si base unique):
+         CALL ECCTAB(ITBAS,'MOT',0,0.D0,'ROTAS',.TRUE.,0,
+     &                      'TABLE',0,0.D0,' ',.TRUE.,IPTAB2)
+      IF (IIMPI.EQ.333) THEN
+       DO I=1,4
+        WRITE(IOIMP,*)' RECTMOD: IPTRIG(',I,') = ',IPTRIG(I)
+       ENDDO
+      ENDIF
+*
+      END

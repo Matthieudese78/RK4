@@ -1,0 +1,190 @@
+C D2VLFB    SOURCE    BP208322  20/09/18    21:15:18     10718          
+C DEVLFB    SOURCE    LAVARENN  96/10/30    21:18:15     2349
+
+      SUBROUTINE D2VLFB(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,NLIAB,
+     &                  XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,PDT,T,
+     &                  NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,IND,
+     &                  FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
+     &                  FEXB,KTROT,IAROTA,XCHPFB,
+     &                  KTOTXA,KTOTVA,KTOTXB,KTOTVB,GETJAC)
+
+*--------------------------------------------------------------------*
+*     Operateur DYN* : Calcul des forces de choc base B              *
+*                      et projection vers la base A                  *
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   Q1(.,.) Vecteur des deplacements generalises.                  *
+* e   Q2(.,.) Vecteur des vitesses generalisees.                     *
+* es  FTOTA   Forces exterieures totalisees sur la base A.           *
+* es  KTOTXA  Matrice tangente,X des efforts non-lineaires (base A)  *
+* es  KTOTVA  Matrice tangente,V des efforts non-lineaires (base A)  *
+* es  KTOTXB  Matrice tangente,X des efforts non-lineaires (base B)  *
+* es  KTOTVB  Matrice tangente,V des efforts non-lineaires (base B)  *
+* e   NA1     Nombre total d'inconnues en base A.                    *
+* e   IPALB   Renseigne sur le type de la liaison.                   *
+* e   IPLIB   Tableau contenant les numeros "DYNE" de la liaison.    *
+* e   XPALB   Tableau contenant les parametres de la liaison.        *
+* es  XVALB   Tableau contenant les variables internes des liaisons  *
+* e   NLIAB   Nombre de liaisons sur la base B.                      *
+* e   XPHILB  Tableau des vecteurs propres aux points de liaisons.   *
+* e   JPLIB   Tableau contenant les numeros "GIBI" des liaisons.     *
+* e   NPLB    Nombre total de points intervenant dans les liaisons.  *
+* e   IDIMB   Nombre de directions.                                  *
+* e   IND     Indice du pas.                                         *
+* e   XABSCI  Tableau contenant les abscisses de la loi plastique    *
+*             pour la liaison point-point- ... -plastique            *
+* e   XORDON  Tableau contenant les ordonnees de la loi plastique    *
+*             pour la liaison point-point- ... -plastique            *
+* e   NIP     Nb de pts dans l'evolution de la loi de comportement   *
+* e   RIGIDE  Vrai si corps rigide, faux sinon                       *
+* e   USEQ2   .TRUE. si on doit utiliser Q2                          *
+* e   GETJAC  .TRUE. si on doit calculer la jacobienne KTOTXA,KTOTVA *
+*                                                                    *
+*--------------------------------------------------------------------*
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+      
+      INTEGER IPALB(NLIAB,*),IPLIB(NLIAB,*),JPLIB(*)
+      INTEGER IBASB(*),IPLSB(*),INMSB(*),IORSB(*),IAROTA(*)
+      REAL*8  XPALB(NLIAB,*),Q1(NA1,*),Q2(NA1,*),FTOTA(NA1,*)
+      REAL*8  XVALB(NLIAB,4,*),XPHILB(NSB,NPLSB,NA2,*),XPTB(NPLB,2,*)
+      REAL*8  FTOTB(NPLB,*),FTOTBA(*),FEXPSM(NPLB,NPC1,2,*)
+      REAL*8  XABSCI(NLIAB,*),XORDON(NLIAB,*),FEXB(NPLB,2,*)
+      REAL*8  XCHPFB(2,NLIAB,4,NPLB)
+      REAL*8  FTEST2(NPLB,6)
+      LOGICAL RIGIDE
+      REAL*8  KTOTXA(NA1,NA1), KTOTVA(NA1,NA1) 
+      REAL*8  KTOTXB(NPLB,IDIMB,IDIMB),KTOTVB(NPLB,IDIMB,IDIMB) 
+c       REAL*8  KTOTXBA(NA1,NA1), KTOTVBA(NA1,NA1)
+      LOGICAL GETJAC
+*
+      RIGIDE = KTROT.NE.0
+*--------------------------------------------------------------------*
+*     Initialisations a 0
+*--------------------------------------------------------------------*
+*
+      DO ID = 1,IDIMB
+      DO IP = 1,NPLB
+           FTOTB(IP,ID) = 0.D0
+      ENDDO
+      ENDDO
+      
+      IF (GETJAC) THEN
+        DO ij=1,IDIMB
+        DO ii=1,IDIMB
+        DO ip=1,NPLB
+          KTOTXB(ip,ii,ij)=0.D0
+          KTOTVB(ip,ii,ij)=0.D0
+        ENDDO
+        ENDDO
+        ENDDO
+      ENDIF
+
+*--------------------------------------------------------------------*
+*     Recombinaison des deplacements aux points de choc
+*--------------------------------------------------------------------*
+*
+      IF (IDIMB.EQ.6) THEN
+         IDIM=3
+      ELSE
+         IDIM=2
+      ENDIF
+* Matt: DEVRCO modifé pour rotas rigides      
+      IF (IIMPI.EQ.333) THEN
+cmsw         WRITE(IOIMP,*)'D2VLFB: appel DEVRCO'
+cmsw         WRITE(IOIMP,*)'        IDIM = ',IDIM
+cmsw         WRITE(IOIMP,*)'        IDIMB = ',IDIMB
+cmsw         WRITE(IOIMP,*)'        KTROT = ',KTROT
+cmsw         WRITE(IOIMP,*)'        NA2 = ',NA2
+      ENDIF
+      CALL DEVRCO(Q1,Q2,NA1,XPTB,NPLB,XPHILB,NSB,NPLSB,NA2,IDIMB,IBASB,
+     &            IPLSB,INMSB,IORSB,IND,IAROTA,KTROT,PDT)
+*          --> XPTB(:,1)=x_n   XPTB(:,2,:)=\dot{q}_n
+
+*--------------------------------------------------------------------*
+*     Calcul des forces de choc sur base B
+*--------------------------------------------------------------------*
+cmsw      WRITE(*,*)'D2VLFB : appel D2VLB1'
+cmsw      WRITE(*,*)'IPLIB(1,1) = ',IPLIB(1,1)
+      CALL D2VLB1(FTOTB,XPTB,IPALB,IPLIB,JPLIB,XPALB,XVALB,NLIAB,
+     &            NPLB,IDIMB,PDT,NPAS,IND,FEXPSM,NPC1,IERRD,
+     &            FTEST2,XABSCI,XORDON,NIP,XCHPFB,
+     &            KTOTXB,KTOTVB,GETJAC,IBASB,KTROT)
+
+      IF (IERRD.NE.0) RETURN
+
+*--------------------------------------------------------------------*
+*     Calcul des moments dans le cas des modes de rotation rigide
+*--------------------------------------------------------------------*
+*
+      IF (RIGIDE) THEN
+cmsw           WRITE(*,*)'D2VLFB: appel au sous programme DEVMOM'
+           CALL DEVMOM(FTOTB,Q1,FEXB,XPHILB,IAROTA,IBASB,IPLSB,INMSB,
+     &                 NA2,NA1,NSB,NPLSB,NPLB,IND,IDIM,KTROT)
+      ENDIF
+
+*--------------------------------------------------------------------*
+*     Projection des forces base B sur base A
+*     + eventuellement des jacobiennes
+*--------------------------------------------------------------------*
+
+      IF (GETJAC) THEN
+c          CALL DEVPR2(XPHILB,FTOTB,FTOTBA,KTOTXB,KTOTVB,KTOTXBA,KTOTVBA,
+c      &           IBASB,INMSB,IPLSB,IORSB,NSB,NPLSB,NA2,IDIMB,NPLB,NA1)
+c c *        Ajout des matrices projetees sur base A
+c          DO J=1,NA1
+c          DO I=1,NA1
+c              KTOTXA(I,J) = KTOTXA(I,J) + KTOTXBA(I,J)
+c              KTOTVA(I,J) = KTOTVA(I,J) + KTOTVBA(I,J)
+c          ENDDO
+c          ENDDO
+cbp : commente car fait directement dans DEVPRO2 -> permet de supprimer KTOTXBA et KTOTVBA
+cbp : rem : on pourrait aussi le faire pour FTOTA et FTOTBA
+         CALL DEVPR2(XPHILB,FTOTB,FTOTBA,KTOTXB,KTOTVB,KTOTXA,KTOTVA,
+     &           IBASB,INMSB,IPLSB,IORSB,NSB,NPLSB,NA2,IDIMB,NPLB,NA1)
+      ELSE
+*         WRITE(*,*)'D2VLFB: appel au sous programme DEVPRO'
+         CALL DEVPRO(XPHILB,FTOTB,FTOTBA,IBASB,INMSB,IPLSB,IORSB,NSB,
+     &               NPLSB,NA2,IDIMB,NPLB,NA1,IAROTA,KTROT)
+      ENDIF
+
+*--------------------------------------------------------------------*
+*     Ajout des forces projetees aux forces exterieures sur base A
+*--------------------------------------------------------------------*
+
+      DO I = 1,NA1
+         FTOTA(I,IND) = FTOTA(I,IND) + FTOTBA(I)
+      ENDDO
+*
+      IF (IIMPI.EQ.333) THEN
+cmsw        WRITE(IOIMP,*)'D2VLFB: '
+cmsw        DO IP=1,NPLB
+cmsw          DO ID=1,IDIMB
+cmsw          WRITE(IOIMP,*)'      FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
+cmsw          ENDDO
+cmsw        ENDDO
+      ENDIF
+*      WRITE(*,*)'D2VLFB: '
+*      DO I=1,NA1
+*          WRITE(*,*)'      FTOTA(',I,IND,') = ',FTOTA(I,IND)
+*      ENDDO      
+*      DO IP=1,NPLB
+*        DO ID=1,IDIMB
+*          WRITE(*,*)'      FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
+*        ENDDO
+*      ENDDO
+*
+      END
+
+
+
+
+
+
+ 
+ 
+ 
+ 

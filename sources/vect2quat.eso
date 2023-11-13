@@ -1,0 +1,57 @@
+      SUBROUTINE VECT2QUAT(U,QUAT1)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettantde passer d'un vect de rotation (3,1) à      *
+*                un quaternion (4,1)                                    *                                                         *    Rappel quaternion:                                                 *
+* X0 = cos(theta/2)                                                     *    
+* X1 = sin(theta/2)*V1                                                  * 
+* X2 = sin(theta/2)*V2                                                  *
+* X3 = sin(theta/2)*V3                                                  *
+* ou V = (V1,V2,V3) est le vecteur unitaire de rotation                 *
+* et theta = angle de la rotation                                       *
+*     Matthieu SERRE     : le 04/05/2021 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*
+-INC CCREEL
+*
+      REAL*8 U(3),QUAT1(4)
+      REAL*8 NU,NQ,X,XANGLE
+      
+      NU = SQRT(U(1)**2  + U(2)**2 + U(3)**2)
+* Fortran: angles en radians. 
+*      IF (NU.LT.XPI) QUAT1(1) = COS(NU/2.D0)
+*      IF (NU.GT.XPI) QUAT1(1) = -1.D0*COS(NU/2.D0)
+*      IF (NU.EQ.XPI) QUAT1(1) = -1.D0
+*
+      QUAT1(1) = COS(NU/2.D0)
+*
+      IF (NU.LT.XSZPRE) THEN
+*        WRITE(*,*)'VECT2QUAT: DL'
+        X = NU/2.D0
+        DO I=1,3
+          I2 = I+1
+* Dev limite de (sin(x)/x), le tout * U/2:
+          QUAT1(I2) = (1.D0 - X**2/2.D0 + X**4/120.D0 - X**6/5040.D0 + 
+     &                X**8/362880.D0 - X**10/39916800.D0)*U(I)/2.D0
+        ENDDO
+      ELSE
+*        WRITE(*,*)'VECT2QUAT: PAS DL'
+        DO I=1,3
+          QUAT1(I+1) = SIN(NU/2.D0)*U(I)/NU
+        ENDDO
+      ENDIF
+*
+* Normalisation du quaternion:
+      NQ = SQRT(QUAT1(1)**2  + QUAT1(2)**2 + QUAT1(3)**2 + QUAT1(4)**2)
+*      WRITE(*,*)'VECT2QUAT: NQ = ',NQ
+*
+      DO I =1,4
+        QUAT1(I) = QUAT1(I)/NQ
+      ENDDO     
+*      NQ = SQRT(QUAT1(1)**2  + QUAT1(2)**2 + QUAT1(3)**2 + QUAT1(4)**2)
+*      WRITE(*,*)'VECT2QUAT: NQ = ',NQ
+*
+
+      END

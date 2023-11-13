@@ -1,0 +1,21 @@
+
+Matthieu:
+batch_PCERC_vs_PPLAN_Wy_last.sh : 
+Permet de lancer des cas-tests en changeant des parametres dans le .dgibi :
+- copie un cas-test dans le repertoire de travail
+- change les parametres du cas-test selon la liste de parametres fournis (par exemple une condition initiale ou un angle)
+- lance le cas-test 
+- change le parametre
+- passe au suivant
+
+
+Explication benoit:
+do_build.sh
+- reconstruit le repertoire build/
+- y compile les sources + construit l'executable
+
+do_results.sh : 
+- reconstruit le repertoire results/ 
+- y fait tourner les dgibi/*.dgibi en appelant run_cas_tests
+
+

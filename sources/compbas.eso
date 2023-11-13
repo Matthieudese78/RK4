@@ -1,0 +1,52 @@
+
+      SUBROUTINE COMPBAS(VECT,VX,VY)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+
+-INC CCREEL
+*-----------------------------------------------------------------------*
+*                                                                       *
+* Sous programme permettant completer un vecteur en BON.                                 * 
+*     e VECT
+*     s VX, VY
+*     Matthieu SERRE     : le 13/07/2023 : Création                     *
+*                                                                       *
+*-----------------------------------------------------------------------*      
+      REAL*8 VX(3),VY(3),VECT(3) 
+*        On trouve la composante max de VECT :
+         XCOMP = VECT(1)
+         IPOS = 1
+         DO ID=2,3 
+            IF (ABS(VECT(ID)).GT.ABS(XCOMP)) THEN 
+               XCOMP = VECT(ID)
+               IPOS = ID
+            ENDIF
+         ENDDO
+*        On prend un VX non colineaire a VECT :
+         DO ID=1,3
+          IF (ID.EQ.IPOS) THEN
+            VX(ID) = 0.D0
+          ELSE
+            VX(ID) = 1.D0
+          ENDIF
+         ENDDO
+         XPS=0.D0
+         DO ID=1,3
+           XPS = VX(ID)*VECT(ID)
+         ENDDO
+*        On le rend orthogonal a VECT :
+         XN = 0.D0
+         DO ID=1,3
+          VX(ID) = VX(ID) - XPS*VECT(ID)
+          XN = XN + VX(ID)**2
+         ENDDO
+         XN = SQRT(XN)
+         VX(1) = VX(1)/XN
+         VX(2) = VX(2)/XN
+         VX(3) = VX(3)/XN
+*        VY = VECT \wedge VX (en normant VX au passage) :
+         VY(1) = VECT(2)*VX(3) - VECT(3)*VX(2)
+         VY(2) = VECT(3)*VX(1) - VECT(1)*VX(3)
+         VY(3) = VECT(1)*VX(2) - VECT(2)*VX(1)
+*
+      END

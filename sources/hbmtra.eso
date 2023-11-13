@@ -1,0 +1,449 @@
+C HBMTRA    SOURCE    BP208322  20/09/18    21:16:55     10718          
+
+C DEVTRA    SOURCE    BP208322  15/10/16    21:15:01     8685
+      SUBROUTINE HBMTRA(ITBAS,ITKM,ITA,KTKAM,IPMAIL,NHBM,KTRES,KTNUM,
+     &                  KPREF,KTPHI,KTLIAB,RIGIDE)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNC                                                 *
+*     ________________________________________________               *
+*                                                                    *
+*     Transpose l'information des objets de Castem2000 dans des      *
+*     tableaux de travail.                                           *
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   ITBAS   Table representant une base modale                     *
+* e   ITKM    Table contenant les matrices XK et XM                  *
+* e   ITA     Table contenant la matrice XASM                        *
+* es  KTKAM   Segment contenant les matrices XK, XASM et XM          *
+* e   IPMAIL  Maillage de reference pour les CHPOINTs resultats      *
+* es  KTRES   Segment de sauvegarde des resultats                    *
+* e   KPREF   Segment des points de reference                        *
+* es  KTPHI   Segment des deformees modales                          *
+* e   KTLIAB  Segment des liaisons sur base B                        *
+* e   RIGIDE  Vrai si corps rigide, faux sinon                       *
+*                                                                    *
+*--------------------------------------------------------------------*
+-INC SMRIGID
+-INC SMELEME
+-INC PPARAM
+-INC CCOPTIO
+-INC CCREEL
+*
+*-INC TMDYNC.INC
+************************** debut TMDYNC.INC ****************************
+
+*    TMDYNC : FUTUR INCLUDE POUR LES SEGMENTS DE L'OPERATEUR DYNC
+*    TODO   : a extraire dans un include des que stabilise
+*
+*     Segment des variables generalisees:
+*     -----------------------------------
+      SEGMENT MTQ
+         REAL*8 Q1(NT1)
+         REAL*8 OMEG,XPARA
+         REAL*8 JAC(NT1,NT1),ZZ(NT1,NT1),RX(NT1,NT1)
+         REAL*8 dX(NT1), dw, dv
+      ENDSEGMENT
+*     Q1   : vecteur des inconnues frequentielles de dimension (2h+1)*n
+*            Q1 = {q_0 q_c1 q_s1 ... q_sh}
+*            avec q_i vecteur de dimension n ou n=nombre de modes
+*     OMEG : frequence fondamentale de l'approximation
+*     XPARA: parametre de continuation (par defaut la frequence) 
+*            \in [PARINI,PARFIN]
+*     RX   : matrice jacobienne = ZZ + dFnl/dX
+*     JAC  : jacobienne des efforts non-lineaires  = dFnl/dX
+*     ZZ   : matrice dynamique associee aux matrices modales K, M et C 
+*            lineaires et constantes
+*     {dX,dw,(dv)} : vecteur tangent utilise pour la prediction
+*
+*
+*     Segment contenant les matrices XK, XASM et XM:
+*     ---------------------------------------------
+      SEGMENT MTKAM
+         REAL*8 XK(NA1,NB1K),XASM(NA1,NB1C),XM(NA1,NB1M)
+         REAL*8 GAM(NPC1,nl1),IGAM(nl1,NPC1),DL(nl1)
+*         REAL*8 GAMFIN(NPC2,nl1)
+      ENDSEGMENT
+*     XK,XASM et XM : matrices de raideur, amortissement et masse
+*     GAM et IGAM : matrices pour la FFT et son inverse
+*     GAMFIN      : 
+*
+*     Segment des deformees modales:
+*     ------------------------------
+*     (idem DYNE)
+      SEGMENT MTPHI
+         INTEGER IBASB(NPLB),IPLSB(NPLB),INMSB(NSB),IORSB(NSB)
+         INTEGER IAROTA(NSB)
+         REAL*8  XPHILB(NSB,NPLSB,NA2,IDIMB)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base A:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAA
+         INTEGER IPALA(NLIAA,NIPALA),IPLIA(NLIAA,NPLAA),JPLIA(NPLA)
+         REAL*8  XPALA(NLIAA,NXPALA)
+      ENDSEGMENT
+*
+*     Segment descriptif des liaisons en base B:
+*     ------------------------------------------
+*     (idem DYNE)
+      SEGMENT MTLIAB
+         INTEGER IPALB(NLIAB,NIPALB),IPLIB(NLIAB,NPLBB),JPLIB(NPLB)
+         REAL*8  XPALB(NLIAB,NXPALB)
+         REAL*8  XABSCI(NLIAB,NIP),XORDON(NLIAB,NIP)
+      ENDSEGMENT
+*
+*     Segment representant les chargements exterieurs:
+*     -----------------------------------------------
+      SEGMENT MTFEX
+         REAL*8  FEXA(NT1)
+         REAL*8  FEXPSM(NPLB,NPC1,2,IDIMB)
+         INTEGER BAL
+      ENDSEGMENT
+*     FEXA : Vecteur des efforts ext. sous la forme de coefficients de
+*            Fourier et exprimes en base A
+*     FEXPSM: chargement/deplacement statique lie aux modes negliges
+*             (neglige aussi les Fnl). Dans DYNC toujours =0, cree pour
+*             compatibilite avec calcul des Fnl.
+*     BAL  : indique s'il s'agit d'un chargement de type balourd
+*            (cad proportionnel a OMEG**2)
+*
+*     Segment "local" pour DEVLFA:
+*     ----------------------------
+      SEGMENT LOCLFA
+         REAL*8 FTEST(NA1,4)
+      ENDSEGMENT
+*      
+*     Segment "local" pour DEVLB1:
+*     ----------------------------
+      SEGMENT LOCLB1
+         REAL*8 FTEST2(NPLB,6)
+      ENDSEGMENT
+*      
+*     Segment contenant les variables au cours d un pas de temps:
+*     ----------------------------------------------------------
+      SEGMENT MTPAS
+         REAL*8 FTOTA(NA1,4),FTOTB(NPLB,IDIMB),FTOTBA(NA1)
+         REAL*8 XPTB(NPLB,2,IDIMB),FINERT(NA1,4)
+         REAL*8 XVALA(NLIAA,4,NTVAR),XVALB(NLIAB,4,NTVAR)
+         REAL*8 FEXB(NPLB,2,IDIM),XCHPFB(2,NLIAB,4,NPLB)
+         REAL*8 KTOTXA(NA1,NA1),KTOTVA(NA1,NA1)
+         REAL*8 KTOTXB(NPLB,IDIMB,IDIMB), KTOTVB(NPLB,IDIMB,IDIMB) 
+      ENDSEGMENT
+*     FTOTA/B/BA : forces sur base A, B et B projetees sur A
+*     XPTB       : deplacement du point d'une liaison en base B
+*     XVALA/B    : grandeurs de la liaison en base A/B a stocker
+*     FEXB       : forces exterieures en base B (a priori uniquement 
+*                  pour les moments appliques aux rotations rigides ?)
+*     XCHPFB     : forces de contact en base B (lorsqu'on  considere un
+*                  maillage de contact dans certaines liaisons)
+*     KTOTXA/XB/VA/VB : Jacobienne par rapport au deplacement/vitesse en
+*                       base A/B (= contributions a dFnl/dX)
+*
+*
+*     Segment des points de reference des modes (base A):
+*     --------------------------------------------------
+      SEGMENT MPREF
+         INTEGER IPOREF(NPREF),IPORIG(NPRIG)
+      ENDSEGMENT
+*
+*     Segment des points en base B:
+*     -----------------------------
+      SEGMENT NCPR(XCOOR(/1)/(IDIM+1))
+*     NCRP(#global) = #local dans XPTB (1er indice)      
+*
+*     Segment des parametres numeriques pour la continuation: 
+*     ------------------------------------------------------
+      SEGMENT PARNUM
+         CHARACTER*4 TYPS
+         REAL*8   DS,DSMAX,DSMIN,ANGMIN,ANGMAX,ITERMOY,ISENS,TOLMIN
+         REAL*8   PARINI,PARFIN
+         INTEGER  ITERMAX,NBPAS
+         LOGICAL  JANAL
+      ENDSEGMENT
+*
+*     Segment des resultats:
+*     ---------------------
+      SEGMENT  PSORT
+        REAL*8 QSAVE(NT1,NPAS),WSAVE(NPAS),LSAVE(2,2*NA1,NPAS)
+        REAL*8 VSAVE(NPAS)
+        LOGICAL ZSAVE(NPAS)
+        CHARACTER*2 TYPBIF(NBIFU)
+        REAL*8 QBIFU(NT1,NBIFU),WBIFU(NBIFU),WBIF2(NBIFU)
+        REAL*8 QPSIR(NT1,NBIFU),QPSII(NT1,NBIFU)
+        INTEGER CBIF
+      ENDSEGMENT
+*     QSAVE(i,j) = Q harmonique i au pas j
+*     VSAVE(j)   = parametre de continuation (si non w) au j-eme pas
+*     ZSAVE(j)   = stabilite au j-eme pas
+*     LSAVE(1,j) : partie reelle de l'exposant de Floquet
+*     LSAVE(2,j) : partie imaginaire de l'exposant de Floquet
+*     TYPBIF = {LimitPoint, BranchPoint, NeimarkSacker, PeriodDoubling}
+*     QBIFU,WBIFU : vecteur Q et w au point de bifurcation
+*           WBIF2 : partie imaginaire de l'exposant de Floquet
+*     QPSIR,QPSII : vecteur propre au point de bifurcation
+      
+*     Segment des tableaux de travail:
+*     -------------------------------
+      SEGMENT  MTEMP
+         REAL*8 RW(NT1),A,T0(NT1+1),TP(NT1+1),AMPX,AUX
+         REAL*8 T02(NT1+2), TP2(NT1+2)
+         INTEGER IPIV(NT1),IPIV2(NT1+1),IPIV3(NT1+2)
+         REAL*8 res
+         REAL*8 RHS(NT1+1),Ja(NT1+1,NT1+1)
+         REAL*8 QOLD(NT1),OMEGOLD
+         REAL*8 MATJA(NT1+1,NT1+1),Rw2(NT1)
+         REAL*8 Jaa(NT1+2,NT1+2),RHS2(NT1+2),Ra(NT1),VV,VVOLD
+      ENDSEGMENT
+*     Jacobiennes augmentees 
+*     Ja : [ RX  Rw ; dX dw]
+*     Jaa: [ RX  Rw Ra; gx 0 0; dX dw da]
+
+*      SEGMENT  NNNN
+*         REAL*8 IGAM2(nl1,NPC2),DL2(nl1)
+*      ENDSEGMENT
+
+*************************** fin TMDYNC.INC *****************************
+ 
+
+      LOGICAL L0,L1,RIGIDE
+      CHARACTER*4 CMOT,MOINC
+      CHARACTER*8 TYPRET,CHARRE
+      CHARACTER*40 MONMOT
+*
+      MTKAM  = KTKAM
+      MTPHI  = KTPHI
+      MTLIAB = KTLIAB
+      MPREF  = KPREF
+      MTNUM  = KTNUM
+      
+*     dimensions de MTPHI
+      NPLB  = IBASB(/1)
+      NSB   = INMSB(/1)
+      NA2   = XPHILB(/3)
+      IDIMB = XPHILB(/4)
+      NLIAB = IPALB(/1)
+      
+*     dimensions de MTKAM
+      NA1  = XASM(/1)
+      NB1K = XK(/2)
+      NB1C = XASM(/2)
+      NB1M = XM(/2)
+      
+*     dimensions de MTQ     
+*      NT1 = NA1*(2*NHBM+1)
+      
+      NPREF=IPOREF(/1)
+*
+      IA1 = 0
+      DEUXPI = 2.D0 * XPI
+* Pour appel HBM26:
+      RIGIDE =.FALSE.
+* Matt: pas de rotas rigides dans HBM:
+      KTROT = 0
+      KCPRIG = 0
+*
+*     Traitement des matrices de variables generalisees:
+*
+      IF (ITBAS.NE.0 .AND.ITKM.EQ.0) THEN
+         IF (IIMPI.EQ.333)
+     &   WRITE(IOIMP,*) 'HBMTRA: cas table BASE_DE_MODES, quel type?'
+         CALL ACCTAB(ITBAS,'MOT',IMODE,X0,'SOUSTYPE',L0,IP0,
+     &                     'MOT',I1,X1,MONMOT,L1,IP1)
+         IF (IERR.NE.0) RETURN
+*
+*        Cas ou la base est unique
+*
+         IF (MONMOT(1:11).EQ.'BASE_MODALE') THEN
+            IF (IIMPI.EQ.333)
+     &      WRITE(IOIMP,*) 'HBMTRA: lecture table BASE_MODALE'
+*
+*           On recupere la base de modes
+*
+            CALL ACCTAB(ITBAS,'MOT',IMODE,X0,'MODES',L0,IP0,
+     &                        'TABLE',I1,X1,' ',L1,IBAS)
+            IF (IERR.NE.0) RETURN
+            CALL HBM26(IBAS,KTKAM,KTLIAB,KTPHI,IA1,1,ICOMP,RIGIDE,ITKM)
+*            CALL DYNE26(IBAS,KTKAM,KTLIAB,KTPHI,IA1,1,ICOMP,KTROT,
+*     &                  0,.false.,ITKM,KCPRIG)
+            IF (RIGIDE) THEN
+               RIGIDE =.FALSE.
+               DO 80 ILIA =1,NLIAB
+                   ITYP = IPALB(ILIA,1)
+                   IF (ITYP.EQ.35.OR.ITYP.EQ.36) THEN 
+                   WRITE(*,*)
+     &             'Dans HBM, on ne peut avoir RIGIDE = .true.'
+                   CALL ERREUR(272)
+                   RETURN
+* pas dans HBM      RIGIDE =.TRUE.
+                   ENDIF
+80             CONTINUE
+            ENDIF
+            IF (IERR.NE.0) RETURN
+*
+*        Cas ou on a un ensemble de bases
+*
+         ELSE IF (MONMOT(1:17).EQ.'ENSEMBLE_DE_BASES') THEN
+            IF (IIMPI.EQ.333)
+     &      WRITE(IOIMP,*) 'HBMTRA: lecture table ENSEMBLE_DE_BASES'
+*
+*           On boucle sur le nombre de bases
+*
+            IT = 0
+            NPLSB = 0
+ 10         CONTINUE
+            TYPRET = ' '
+            IT = IT + 1
+            CALL ACCTAB(ITBAS,'ENTIER',IT,X0,' ',L0,IP0,
+     &                          TYPRET,I1,X1,CHARRE,L1,ITTBAS)
+            IF (IERR.NE.0) RETURN
+            IF (ITTBAS.NE.0) THEN
+               IF (TYPRET.EQ.'TABLE   ') THEN
+                  CALL ACCTAB(ITTBAS,'MOT',IMODE,X0,'MODES',L0,IP0,
+     &                             'TABLE',I1,X1,' ',L1,IBAS)
+                  IF (IERR.NE.0) RETURN
+                  CALL HBM26(IBAS,KTKAM,KTLIAB,KTPHI,IA1,IT,ICOMP,
+     &                              RIGIDE,ITKM)           
+*                  CALL DYNE26(IBAS,KTKAM,KTLIAB,KTPHI,IA1,IT,ICOMP,
+*     &                              KTROT,0,.false.,ITKM,KCPRIG)
+                  IF (IERR.NE.0) RETURN
+                  NPLSB = MAX(NPLSB,ICOMP)
+                  GOTO 10
+               ELSE
+                  CALL ERREUR(491)
+                  RETURN
+               ENDIF
+            ENDIF
+         ENDIF
+*
+      ELSE IF (ITKM.NE.0) THEN
+*        cas table RAIDEUR_ET_MASSE non prevu pour l'instant
+         CALL ERREUR(491)
+         RETURN
+      ENDIF
+*
+*     Traitement de la matrice d'amortissement
+*
+      IF (ITA.NE.0) THEN
+         IF (IIMPI.EQ.333)
+     &   WRITE(IOIMP,*) 'HBMTRA: cas table AMORTISSEMENT'
+           TYPRET = ' '
+           CALL ACCTAB(ITA,'MOT',I0,X0,'AMORTISSEMENT',L0,IP0,
+     &                    TYPRET,I1,X1,CHARRE,L1,IAMOR)
+           IF (IERR.NE.0) RETURN
+         IF (IAMOR.NE.0 .AND. TYPRET.EQ.'RIGIDITE') THEN
+            IF (IIMPI.EQ.333)
+     &      WRITE(IOIMP,*) 'HBMTRA: lecture table AMORTISSEMENT ok'
+            MRIGID = IAMOR
+            SEGACT,MRIGID
+            NAMOR = IRIGEL(/2)
+            WRITE(*,*)'HBMTRA: NAMOR = ',NAMOR
+            DO 60 I=1,NAMOR
+               COEF = COERIG(I)
+c          write(ioimp,*) 'HBMTRA: sous rigidite ',I,'/',NAMOR,COEF
+               MELEME = IRIGEL(1,I)
+               DESCR  = IRIGEL(3,I)
+               XMATRI = IRIGEL(4,I)
+               SEGACT,DESCR,MELEME,XMATRI
+               NRIG = RE(/3)
+               WRITE(*,*)'HBMTRA: NRIG = ',NRIG
+               LVAL = RE(/1)
+               WRITE(*,*)'HBMTRA: LVAL = ',LVAL
+               DO 70 IRIG=1,NRIG
+          write(*,*) 'HBMTRA: + element',IRIG,'/',NRIG
+c                 boucle sur les lignes (ddls duals)
+                  DO 75 IN=1,LVAL
+                    INODE=NOELED(IN)
+                    IF(INODE.ne.NOELEP(IN)) THEN
+                       WRITE(IIOMP,*) 'Incoherence entre les inconnues',
+     &                 'primales et duales de la matrice AMORTISSEMENT'
+                       CALL ERREUR(47)
+                       RETURN
+                    ENDIF
+                    NNODE=NUM(INODE,IRIG)
+                    WRITE(*,*)'HBMTRA: NNODE=NUM(',INODE,IRIG,')=',NNODE
+          write(*,*) 'HBMTRA:   + noeud dual',IN,'/',LVAL,' #',NNODE
+c                   position de cette inconnue dans IPOREF de MPREF
+                    DO 76 IA=1,NPREF
+                      WRITE(*,*)'HBMTRA: IPOREF(',IA,') = ',IPOREF(IA)
+                      IF (IPOREF(IA).EQ.NNODE) GOTO 79
+ 76                 CONTINUE
+                    write(ioimp,*) 'HBMTRA: Incoherence entre les ',
+     &              'points de reference et la matrice AMORTISSEMENT'
+                    CALL ERREUR(504)
+ 79                 CONTINUE
+          write(*,*) 'HBMTRA:   + noeud dual trouvé en position',IA
+*                     Partie diagonale seulement ...
+                      XASM(IA,1) = XASM(IA,1) + (RE(IN,IN,IRIG) * COEF)
+ 75               CONTINUE
+ 70            CONTINUE
+               SEGDES,XMATRI,MELEME,DESCR
+ 60         CONTINUE
+            SEGDES,MRIGID
+         ELSE
+            CALL ERREUR(485)
+            RETURN
+         ENDIF
+      ENDIF
+*
+      IF (IIMPI.EQ.333) THEN
+         WRITE(IOIMP,*)'     segment MTPHI'
+         WRITE(IOIMP,*)'HBMTRA : valeur de NPLB  :',IBASB(/1)
+         WRITE(IOIMP,*)'HBMTRA : valeur de NSB   :',XPHILB(/1)
+         WRITE(IOIMP,*)'HBMTRA : valeur de NPLSB :',XPHILB(/2)
+         WRITE(IOIMP,*)'HBMTRA : valeur de NA2   :',XPHILB(/3)
+         WRITE(IOIMP,*)'HBMTRA : valeur de IDIMB :',XPHILB(/4)
+         WRITE(IOIMP,*)'     segment MTKAM'
+         WRITE(IOIMP,*)'NA1,NB1K,NB1C,NB1M=',NA1,NB1K,NB1C,NB1M
+         if(NB1K.gt.1) then
+            do iou=1,NA1
+               WRITE(IOIMP,*) 'XK=',(XK(iou,jou),jou=1,NB1K)
+            enddo
+         else
+            do iou=1,NA1
+               WRITE(IOIMP,*) 'XK(',iou,',1)=',XK(iou,1)
+            enddo
+         endif
+         if(NB1C.gt.1) then
+            do iou=1,NA1
+              WRITE(IOIMP,*) 'XASM=',(XASM(iou,jou),jou=1,NB1C)
+            enddo
+         else
+            do iou=1,NA1
+              WRITE(IOIMP,*) 'XASM(',iou,',1)=',XASM(iou,1)
+            enddo
+         endif
+         if(NB1M.gt.1) then
+            do iou=1,NA1
+               WRITE(IOIMP,*) 'XM=',(XM(iou,jou),jou=1,NB1M)
+            enddo
+         else
+            do iou=1,NA1
+               WRITE(IOIMP,*) 'XM(',iou,',1)=',XM(iou,1)
+            enddo
+         endif
+       ENDIF
+*
+      END
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+ 
