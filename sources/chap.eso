@@ -1,0 +1,19 @@
+      SUBROUTINE chap(vect,mat)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*-----------------------------------------------------------------------*
+*     fonction chapeau : produit vectoriel --> produit matriciel                                                                       *
+*-----------------------------------------------------------------------*
+      REAL*8 vect(3),mat(3,3)
+      
+      mat(1,1) = 0.d0
+      mat(2,2) = 0.d0
+      mat(3,3) = 0.d0
+      mat(1,2) = -vect(3)
+      mat(1,3) =  vect(2)
+      mat(2,1) =  vect(3)
+      mat(2,3) = -vect(1)
+      mat(3,1) = -vect(2)
+      mat(3,2) =  vect(1)
+      
+      END
