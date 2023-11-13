@@ -1,0 +1,752 @@
+C D2VPAS    SOURCE    BP208322  20/09/18    21:15:19     10718          
+c
+      SUBROUTINE rkmk4VPAS(Q1,Q2,Q3,NA1,NPC1,XK,XASM,XM,PDT,T,NPAS,
+     &   FTOTA,FEXA,NPFEXA,NLIAA,NLSA,IPALA,IPLIA,XPALA,XVALA,
+     &   NLIAB,NLSB,NPLB,IDIMB,IPALB,IPLIB,JPLIB,XPALB,XVALB,FTOTB,
+     &   FTOTBA,XPTB,FEXPSM,
+     &   FINERT,IERRD,FTEST,FTEST2,WEXT,WINT,
+     &   XABSCI,XORDON,NIP,FTEXB,FEXB,KTROT,KTPHI,XCHPFB,
+     &   XOPM1,NB1,NB1K,NB1C,NB1M)
+     
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Op�rateur DYNE : algorithme des DIFFERENCES CENTREES           *
+*     ________________________________________________               *
+*                                                                    *
+*     Calcul d'un pas de temps, appel aux s-p sp�cifiques.           *
+*                                                                    *
+*     Param�tres:                                                    *
+*                                                                    *
+* es  Q1(,)   Vecteur des d�placements g�n�ralis�s                   *
+* es  Q2(,)   Vecteur des vitesses g�n�ralis�es                      *
+* es  Q3(,)   Vecteur des acc�l�rations g�n�ralis�es                 *
+* es  NA1     Nombre total d'inconnues en base A                     *
+* es  NPC1    Nombre de pas de calcul - 1                            *
+* es  XK      Vecteur des raideurs g�n�ralis�es                      *
+* es  XASM    Vecteur des amortissements g�n�ralis�s                 *
+* es  XM      Vecteur des masses g�n�ralis�es                        *
+* e   PDT     pas de temps courant                                   *
+* e   T       temps courant                                          *
+* e   NPAS    Num�ro du pas de temps                                 *
+* es  FTOTA   Forces ext�rieures totalis�es, sur la base A           *
+* es  FEXA    Evolution des forces ext�rieures en base A             *
+* e   FTEXB   Evolution des forces ext�rieures en base B             *
+* e   FEXB    Forces ext�rieures sur la base B, servant au calcul    *
+*             des moments pour les corps rigides.                    *
+* e   RIGIDE  Vrai si corps rigide, faux sinon                       *
+* es  IFEXA   Num�ro du mode correspondant au point de chargement    *
+*             (supprime le 2018-12-14 par bp)                        *
+* es  NPFEXA  Nombre de points de chargement                         *
+* e   NLIAA   Nombre de liaisons sur la base A                       *
+* e   NLSA    Nombre de liaisons A en sortie                         *
+* e   IPALA   Tableau renseignant sur le type de liaison (base A)    *
+* e   IPLIA   Tableau contenant les num�ros "DYNE" des points        *
+* e   XPALA   Tableau contenant les param�tres des liaisons          *
+* es  XVALA   Tableau contenant les variables internes de liaison A  *
+*     XPHILB  Vecteur des deformees modales                          *
+* e   NLIAB   Nombre de liaisons sur la base B                       *
+* e   NLSB    Nombre de liaisons base B en sortie                    *
+* e   NPLB    Nombre total de points de liaisons (base B)            *
+* e   IDIMB   Nombre de directions                                   *
+* e   IPALB   Tableau renseignant sur le type de liaison             *
+* e   IPLIB   Tableau contenant les numeros "DYNE" des points        *
+* e   JPLIB   Tableau contenant les numeros "GIBI" des points        *
+* e   XPALB   Tableau contenant les parametres des liaisons (base B) *
+* es  XVALB   Tableau contenant les variables internes de liaison B  *
+*     FTOTB   Forces exterieures totalisees sur la base B            *
+* e   XABSCI  Tableau contenant les abscisses de la loi plastique    *
+* e   XORDON  Tableau contenant les ordonnees de la loi plastique    *
+* e   NIP     Nbr de points dans l'evolution de la loi plastique     *
+*     FTOTBA  Forces totales base B projetees base A                 *
+*     XPTB    Deplacements des points de liaison                     *
+*     IBASB   Appartenance des points de liaison a une sous-base     *
+*     IPLSB   Position du point de liaison dans la sous-base         *
+*     INMSB   Nombre de modes dans la sous-base                      *
+*     IORSB   Position du 1er mode de la sous-base dans ens. modes   *
+*     IAROTA  Indique la position des modes de rotation              *
+*     NSB     Nombre de sous-bases                                   *
+*     NPLSB   Nombre de points de liaison par sous-base              *
+*     NA2     Nombre d'inconnues dans la sous-base                   *
+*     FEXPSM  Pseudo-Modes base B                                    *
+*     FINERT  Forces d'inertie base B                                *
+*     IERRD   Indicateur d'erreur                                    *
+* -   FTEST   Tableau local FTEST de la subroutine D2VLFA            *
+* -   FTEST2  Tableau local FTEST de la subroutine DEVLB1            *
+* e,s WEXT   travail des forces exterieures                          *
+* e,s WINT   travail des forces interieures (rigidite et             *
+*            amortissement et forces de liaison )                    *
+*                                                                    *
+*--------------------------------------------------------------------*
+*
+-INC CCREEL
+*
+      SEGMENT,MTPHI
+         INTEGER IBASB(NPLB),IPLSB(NPLB),INMSB(NSB),IORSB(NSB)
+         INTEGER IAROTA(NSB)
+         REAL*8 XPHILB(NSB,NPLSB,NA2,IDIMB)
+      ENDSEGMENT
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,2,NSB),OMEG2(3,2,NSB),OMEG3(3,2,NSB)
+         REAL*8 ROT(3,3,2,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,2,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+      
+*
+*      INTEGER IFEXA(*),IPALA(NLIAA,*),IPLIA(NLIAA,*)
+      INTEGER IPALA(NLIAA,*),IPLIA(NLIAA,*)
+      INTEGER IPALB(NLIAB,*),IPLIB(NLIAA,*),JPLIB(*)
+      REAL*8 Q1(NA1,*),Q2(NA1,*),Q3(NA1,*)
+* Matt: ligne parmetres corps rigide:
+      REAL*8 DYN2(3),DQUAT(4)
+*
+      REAL*8 XVALA(NLIAA,4,*),XPALA(NLIAA,*),XM(NA1,*),XK(NA1,*)
+      REAL*8 XPALB(NLIAB,*),XVALB(NLIAB,4,*),FEXPSM(NPLB,NPC1,2,*)
+      REAL*8 XASM(NA1,*),FTOTA(NA1,*),FEXA(NPFEXA,NPC1,*)
+      REAL*8 FTOTB(NPLB,*),FTOTBA(*),XPTB(NPLB,2,*),FINERT(NA1,*)
+      REAL*8 WEXT(NA1,2),WINT(NA1,2)
+      REAL*8 XABSCI(NLIAB,*),XORDON(NLIAB,*),FEXB(NPLB,2,*)
+      REAL*8 FTEST(NA1,4), FTEST2(NPLB,6)
+      REAL*8 FTEXB(NPLB,NPC1,2,*),XCHPFB(2,NLIAB,4,NPLB)
+cbp,2020-09      REAL*8 XOPM1(NB1,NB1,*),Q2DEMI(NA1),FAMOR(NA1)
+      REAL*8 XOPM1(NB1,NB1,*),FAMOR(NA1)
+      
+*     TODO : KTOTXA et KTOTVA a allouer dans le segment LOCLFA ?
+      REAL*8 KTOTXA(NA1,NA1), KTOTVA(NA1,NA1) 
+*     TODO : KTOTXB et KTOTVB a allouer dans le segment LOCLFB ?
+      REAL*8 KTOTXB(NPLB,IDIMB,IDIMB),KTOTVB(NPLB,IDIMB,IDIMB) 
+*
+c     LOGICAL LWRITE
+      LOGICAL RIGIDE
+      LOGICAL QUATERNION,MATRICE
+* CMS : 
+      REAL*8 FAMO1(NA1),FAMO2(NA1)
+cms : pour le couple resistant "hard code" : 
+      real*8 tspin(3)
+      logical lrspin
+
+cms : pour le couple resistant "hard code" : 
+      real*8 th2(3), th3(3), th4(3), jw2(3), t2(3)
+      real*8 u2(3), u3(3), u4(3), dexpinv(3,3)
+*
+*      QUATERNION = .FALSE.
+       QUATERNION = .TRUE.
+*      MATRICE    = .TRUE.
+       MATRICE    = .FALSE.
+*     resistance au spin ?
+      lrspin = .false.
+*     le cas echeant, base modale de l'adaptateur : 
+      ibad = 1
+
+      RIGIDE = (KTROT.NE.0)
+      IF (RIGIDE) THEN
+        MTROT = KTROT
+      ENDIF
+      MTPHI  = KTPHI
+      NSB = XPHILB(/1)
+      NPLSB = XPHILB(/2)
+      NA2 =  XPHILB(/3)
+*      IF (IIMPI.EQ.555) THEN 
+cmsw        WRITE(*,*)'D2VPAS: KTROT = ',KTROT
+cmsw        WRITE(*,*)'        RIGIDE = ',RIGIDE
+cmsw        WRITE(*,*)'        NSB =',NSB
+cmsw        WRITE(*,*)'        IDIMB = ',IDIMB
+cmsw        WRITE(*,*)'        NLIAA = ',NLIAA
+cmsw        WRITE(*,*)'        NLIAB = ',NLIAB
+*      ENDIF
+* Calcul de IDIM pour le calcul de l energie cinetique :
+      IF (IDIMB.EQ.6) THEN
+        IDIM=3
+      ELSEIF (IDIMB.EQ.3) THEN
+        IDIM=2
+      ENDIF
+C     Parametres d'affichage (pour debuggage) 
+c     LWRITE=.false.
+c     LWRITE=(NPAS.LE.20).OR.(MOD(NPAS,1000).EQ.0)
+c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
+
+************************************************************************
+*     Parametres temporels locaux
+************************************************************************
+      tdeb = T
+      tfin = T + PDT
+      dt   = PDT
+      dt2=dt/2.D0
+      dt22=dt*dt2
+
+************************************************************************
+*     Corps rigides: prediction, MAJ matrice de rotation
+************************************************************************
+* TODO dans D2VINI / DYNE18: initialisation de toutes les ss bases
+* pour l'instant, seulement 1 seule ss base inititalisee
+     
+*      
+      IF (RIGIDE) THEN
+        NSB = ROT(/4)
+        DO 7 IIB=1,NSB
+CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
+cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
+          IF (IAROTA(IIB).EQ.0) GOTO 7
+*         th1 correspond au plan tangent en t_n --> on y est deja!
+          do id=1,3
+            th1(id) = 0.d0
+          enddo
+************************************************************************
+*         k1 = (w1,a1)^T avec :
+*           - w1 = omeg2(id,5,iib)
+*           - a1 = omeg3(id,5,iib)
+************************************************************************
+*          u2 = (th2,w2) = dt2*k1 : 
+************************************************************************
+          do id=1,3
+            th2(id) = omeg2(id,5,iib) * dt2
+            omeg2(id,4,iib)  = omeg2(id,5,iib) + omeg3(id,5,iib) * dt2
+          enddo
+************************************************************************
+*          calcul de EXPTH pour eq. dynamique:
+          CALL VECT2QUAT(TH2(1),DQUAT)
+*          MAJ quaternion OMEG1:
+          CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,4,IIB))
+*          quaternion a l'instant tn+1:
+          CALL QUAT2MAT(OMEG1(1,4,IIB),ROT(1,1,4,IIB)) 
+*          calcul du couple exerce par les forces exterieures dans le body frame :
+*              comme c'est que le poids il ne change ni en norme ni en directioin 
+*              donc on a pas reinterpole sur 1/4 du pas de temps mais a faire si chargement variable!
+          do ip=1,nplb
+            fmomtot(1,4,iib) = fmomtot(1,4,iib) + 
+     &      xcoolb(2,iib,ip)*fexb(ip,2,3) -
+     &      xcoolb(3,iib,ip)*fexb(ip,2,2)
+            fmomtot(2,4,iib) = fmomtot(2,4,iib) + 
+     &      xcoolb(3,iib,ip)*fexb(ip,2,1) -
+     &      xcoolb(1,iib,ip)*fexb(ip,2,3)
+            fmomtot(3,4,iib) = fmomtot(3,4,iib) + 
+     &      xcoolb(1,iib,ip)*fexb(ip,2,2) -
+     &      xcoolb(2,iib,ip)*fexb(ip,2,1)
+          enddo
+*         calcul du terme convectif du 2nd membre : W X J W
+*             JW : 
+          do id=1,3
+            2jw(id) = 0.d0
+            do j=1,3
+          2jw(id) = 2jw(id) + inertie(id,j,iib)*omeg2(j,4,iib)
+            enddo
+          enddo
+*             W X JW
+          t2(1) = omeg2(2,4,iib)*2jw(3) - omeg2(3,4,iib)*2jw(2) 
+          t2(2) = omeg2(3,4,iib)*2jw(1) - omeg2(1,4,iib)*2jw(3) 
+          t2(3) = omeg2(1,4,iib)*2jw(2) - omeg2(2,4,iib)*2jw(1) 
+*         calcul de l'acceleration : A = J^-1 * t2
+          do id = 1,3
+            omeg3(id,4,iib) = 0.d0
+            do j = 1,3
+              omeg3(id,4,iib) = omeg3(id,4,iib) + 
+     &        invinert(id,j,iib) * (t2(j) + fmomtot(j,4,iib))
+            enddo
+          enddo
+*         "rappatriment sur l'espace tangent en t_n :
+          call xpinv(th2(1),dexpinv(1,1),xang)
+
+************************************************************************
+*         "rappatriement" sur le plan tangent en t_n de :
+*           - du vecteur de rotation thi, i = 1,
+*           - du vecteur de rotation
+************************************************************************
+*         k2 = (w2,a2)^T avec :
+*           - w2 = omeg2(id,4,iib)
+*           - a2 = omeg3(id,4,iib)
+************************************************************************
+*          u3 = (th3,w3) = dt2*k2 : 
+************************************************************************
+          do id=1,3
+            th3(id) = omeg2(id,4,iib) * dt2
+            omeg2(id,3,iib)  = omeg2(id,5,iib) + omeg3(id,4,iib) * dt2
+          enddo
+************************************************************************
+*          calcul de EXPTH pour eq. dynamique:
+          CALL VECT2QUAT(TH3(1),DQUAT)
+*          MAJ quaternion OMEG1:
+          CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,3,IIB))
+*          quaternion a l'instant tn+1:
+          CALL QUAT2MAT(OMEG1(1,3,IIB),ROT(1,1,3,IIB)) 
+*          calcul du couple exerce par les forces exterieures dans le body frame :
+*              comme c'est que le poids il ne change ni en norme ni en directioin 
+*              donc on a pas reinterpole sur 1/4 du pas de temps mais a faire si chargement variable!
+          do ip=1,nplb
+            fmomtot(1,3,iib) = fmomtot(1,3,iib) + 
+     &      xcoolb(2,iib,ip)*fexb(ip,2,3) -
+     &      xcoolb(3,iib,ip)*fexb(ip,2,2)
+            fmomtot(2,3,iib) = fmomtot(2,3,iib) + 
+     &      xcoolb(3,iib,ip)*fexb(ip,2,1) -
+     &      xcoolb(1,iib,ip)*fexb(ip,2,3)
+            fmomtot(3,3,iib) = fmomtot(3,3,iib) + 
+     &      xcoolb(1,iib,ip)*fexb(ip,2,2) -
+     &      xcoolb(2,iib,ip)*fexb(ip,2,1)
+          enddo
+*         calcul du terme convectif du 2nd membre : W X J W
+*             JW : 
+          do id=1,3
+            2jw(id) = 0.d0
+            do j=1,3
+          2jw(id) = 2jw(id) + inertie(id,j,iib)*omeg2(j,3,iib)
+            enddo
+          enddo
+*             W X JW
+          t2(1) = omeg2(2,3,iib)*2jw(3) - omeg2(3,3,iib)*2jw(2) 
+          t2(2) = omeg2(3,3,iib)*2jw(1) - omeg2(1,3,iib)*2jw(3) 
+          t2(3) = omeg2(1,3,iib)*2jw(2) - omeg2(2,3,iib)*2jw(1) 
+*         calcul de l'acceleration : A = J^-1 * t2
+          do id = 1,3
+            omeg3(id,3,iib) = 0.d0
+            do j = 1,3
+              omeg3(id,3,iib) = omeg3(id,3,iib) + 
+     &        invinert(id,j,iib) * (t2(j) + fmomtot(j,3,iib))
+            enddo
+          enddo
+************************************************************************
+*         k3 = (w3,a3)^T avec :
+*           - w3 = omeg2(id,3,iib)
+*           - a3 = omeg3(id,3,iib)
+************************************************************************
+*          u4 = (th4,w4) = dt*k2 : 
+************************************************************************
+          do id=1,3
+            th4(id) = omeg2(id,3,iib) * dt
+            omeg2(id,2,iib)  = omeg2(id,5,iib) + omeg3(id,3,iib) * dt
+          enddo
+************************************************************************
+*          calcul de EXPTH pour eq. dynamique:
+          CALL VECT2QUAT(TH4(1),DQUAT)
+*          MAJ quaternion OMEG1:
+          CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,2,IIB))
+*          quaternion a l'instant tn+1:
+          CALL QUAT2MAT(OMEG1(1,2,IIB),ROT(1,1,2,IIB)) 
+*          calcul du couple exerce par les forces exterieures dans le body frame :
+*              comme c'est que le poids il ne change ni en norme ni en directioin 
+*              donc on a pas reinterpole sur 1/4 du pas de temps mais a faire si chargement variable!
+          do ip=1,nplb
+            fmomtot(1,2,iib) = fmomtot(1,2,iib) + 
+     &      xcoolb(2,iib,ip)*fexb(ip,2,3) -
+     &      xcoolb(3,iib,ip)*fexb(ip,2,2)
+            fmomtot(2,2,iib) = fmomtot(2,2,iib) + 
+     &      xcoolb(3,iib,ip)*fexb(ip,2,1) -
+     &      xcoolb(1,iib,ip)*fexb(ip,2,3)
+            fmomtot(3,2,iib) = fmomtot(3,2,iib) + 
+     &      xcoolb(1,iib,ip)*fexb(ip,2,2) -
+     &      xcoolb(2,iib,ip)*fexb(ip,2,1)
+          enddo
+*         calcul du terme convectif du 2nd membre : W X J W
+*             JW : 
+          do id=1,3
+            2jw(id) = 0.d0
+            do j=1,3
+          2jw(id) = 2jw(id) + inertie(id,j,iib)*omeg2(j,2,iib)
+            enddo
+          enddo
+*             W X JW
+          t2(1) = omeg2(2,2,iib)*2jw(3) - omeg2(3,2,iib)*2jw(2) 
+          t2(2) = omeg2(3,2,iib)*2jw(1) - omeg2(1,2,iib)*2jw(3) 
+          t2(3) = omeg2(1,2,iib)*2jw(2) - omeg2(2,2,iib)*2jw(1) 
+*         calcul de l'acceleration : A = J^-1 * t2
+          do id = 1,3
+            omeg3(id,2,iib) = 0.d0
+            do j = 1,3
+              omeg3(id,2,iib) = omeg3(id,2,iib) + 
+     &        invinert(id,j,iib) * (t2(j) + fmomtot(j,2,iib))
+            enddo
+          enddo
+************************************************************************
+*         k4 = (w4,a4)^T avec :
+*           - w4 = omeg2(id,2,iib)
+*           - a4 = omeg3(id,2,iib)
+************************************************************************
+*         maj de la matrice de rotation : (avec th1 = (0 0 0)^T) :
+          do id=1,3
+            dtheta(id,iib) = (dt/6.d0)*( th1(id)
+     &                                + 2.d0*th2(id)
+     &                                + 2.d0*th3(id)
+     &                                + th4(id) )
+          enddo
+*
+          CALL VECT2QUAT(DTHETA(1,IIB),DQUAT)
+*          MAJ quaternion OMEG1:
+          CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,1,IIB))
+*           WRITE(*,*)'D2VPAS: '
+*            DO I=1,4
+*              WRITE(*,*)'     OMEG1(',I,1,IIB,') = ',OMEG1(I,1,IIB)
+*            ENDDO
+*          quaternion a l'instant tn+1:
+          CALL QUAT2MAT(OMEG1(1,1,IIB),ROT(1,1,1,IIB)) 
+
+*         maj des vitesses angulaires :
+          do id=1,3
+            omeg2(id,1,iib) = (dt/6.d0)*( omeg2(id,5,iib) 
+     &                                  + 2.d0*omeg2(id,4) 
+     &                                  + 2.d0*omeg2(id,3) 
+     &                                  + omeg2(id,2)) 
+          enddo
+*         maj des accelerations angulaires :
+          do id=1,3
+            omeg3(id,1,iib) = (dt/6.d0)*( omeg3(id,5,iib) 
+     &                                  + 2.d0*omeg3(id,4) 
+     &                                  + 2.d0*omeg3(id,3) 
+     &                                  + omeg3(id,2)) 
+          enddo
+************************************************************************
+
+cmsw          WRITE(*,*)'     Prediction DTHETA ss base ',IIB
+          DO I=1,3
+            DTHETA(I,IIB) = OMEG2(I,2,IIB)*DT + OMEG3(I,2,IIB)*DT22
+*           IF (IIMPI.EQ.555) THEN
+cmsw             WRITE(*,*)'OMEG2(',I,2,IIB,')',OMEG2(I,2,IIB)
+cmsw             WRITE(*,*)'OMEG3(',I,2,IIB,')',OMEG3(I,2,IIB)
+cmsw             WRITE(*,*)'DTHETA(',I,IIB,')',DTHETA(I,IIB)
+*           ENDIF
+          ENDDO
+          
+
+*         increment de rotation --> quaternion
+          IF (QUATERNION) THEN
+            CALL VECT2QUAT(DTHETA(1,IIB),DQUAT)
+*           MAJ quaternion OMEG1:
+            CALL PQUAT(OMEG1(1,2,IIB),DQUAT,OMEG1(1,1,IIB))
+*            WRITE(*,*)'D2VPAS: '
+*             DO I=1,4
+*               WRITE(*,*)'     OMEG1(',I,1,IIB,') = ',OMEG1(I,1,IIB)
+*             ENDDO
+*           quaternion a l'instant tn+1:
+            CALL QUAT2MAT(OMEG1(1,1,IIB),ROT(1,1,1,IIB)) 
+            if (lrspin) then
+*            achtung!! hard code : pour l'adaptateur : 
+*                      on impose une raideur en rotation
+*             xkspin = 3207.27  
+              xkspin = 5538.73
+              call spinextr(ibad,nsb,rot,omeg1,xkspin,tspin)
+*              write(*,*)'d2vpas : Tspin(1) = ',tspin(1)
+*              write(*,*)'d2vpas : Tspin(2) = ',tspin(2)
+*              write(*,*)'d2vpas : Tspin(3) = ',tspin(3)
+            endif
+*           IF (IIMPI.EQ.555) THEN
+cmsw            WRITE(*,*)'D2VPAS : Matrice de rotation'
+cmsw            WRITE(*,'(20F20.18)')((ROT(k,j,1,IIB),j= 1,3),k= 1,3)     
+*           ENDIF
+****  Alternative mat2quat:
+          ELSEIF (MATRICE) THEN
+            DO I=1,3
+              DO J=1,3
+                ROT(I,J,1,IIB) = 0.D0
+                DO K=1,3
+                  ROT(I,J,1,IIB) = ROT(I,J,1,IIB) + 
+     &                             ROT(I,K,2,IIB)*EXPTH(K,J,1,IIB)
+                ENDDO
+              ENDDO
+            ENDDO
+            CALL MAT2QUAT(ROT(1,1,1,IIB),OMEG1(1,1,IIB))
+          ENDIF
+*          write(*,*)'d2vpas : prediction matrice de rotation :'
+*          write(*,*)'         ss base ',iib,' :'
+*         do id=1,3
+*            write(*,'(3(1X,F8.5))') , (rot(id,j,ind,iib),j=1,3)
+*         enddo
+* fin boucle sur les sous bases
+cms 07/23 :  Prediction en vitesse pour les forces de liaisons :
+*             rq : on prend au 1/2 pas de temps. (Simo & Wong)
+*         WRITE(*,*)'D2VPAS: post-prediction :'
+*         DO ID=1,3
+*           OMEG2(ID,1,IIB) = OMEG2(ID,2,IIB) + OMEG3(ID,2,IIB)*DT/2.D0
+*           WRITE(*,*)'     OMEG2(',ID,1,IIB,') = ',OMEG2(ID,1,IIB)
+*         ENDDO
+ 7      CONTINUE
+      ENDIF
+*     fin condition RIGIDE
+************************************************************************
+*     D�placements g�n�ralis�s
+************************************************************************
+
+      DO 1 I = 1,NA1
+       Q1(I,1) = Q1(I,2) + Q2(I,2)*DT + Q3(I,2)*DT22
+1     CONTINUE
+
+      IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VPAS: debut calcul des forces.'
+************************************************************************
+*     Calcul des forces
+************************************************************************
+
+*     Totalisation des forces ext�rieures pour la base A a la fin du pas
+      IF (IIMPI.EQ.333) THEN
+cmsw         WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VFXA'
+      ENDIF
+        CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
+     &              NPLB,IDIMB,RIGIDE)
+*     estimation de la vitesse (ici plutot que dans DEVLF*, bp,2020-09):
+*     \dot{q}_n ~ \dot{q}_{n+1/2} = ({q}_n - {q}_{n-1}) / dt
+*     on utilise Q2(I,1) temporairement (il sera "bien" rempli � la fin du pas)
+      DO I=1,NA1
+        Q2(I,1)=(Q1(I,1)-Q1(I,2))/dt
+*        WRITE(*,*)'Q2(',I,1,') = ',Q2(I,1)
+      ENDDO
+
+*     Ajout des forces de liaison
+      IF (NLIAA.NE.0) THEN
+         IF (IIMPI.EQ.333) THEN
+cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFA'
+         ENDIF
+         CALL D2VLFA(Q1,Q2,FTOTA,NA1,IPALA,IPLIA,XPALA,XVALA,
+     &               NLIAA,dt,tfin,NPAS,1,FINERT,0,FTEST,
+     &               KTOTXA,KTOTVA,.FALSE.)
+      ENDIF
+      IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VPAS: NLIAB = ',NLIAB
+      IF (NLIAB.NE.0) THEN
+         IF (IIMPI.EQ.333) THEN
+cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
+         ENDIF      
+cmsw         WRITE(*,*)'D2VPAS : appel au sous-programme D2VLFB'
+         CALL D2VLFB(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,NLIAB,
+     &               XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,dt,tfin,
+     &               NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,1,
+     &               FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
+     &               FEXB,KTROT,IAROTA,XCHPFB,
+     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.)
+*
+         IF (IERRD.NE.0) RETURN
+      ENDIF
+* MATT: rota rigide: couple exterieur pris en compte 
+*       que si il existe une liaison B !!!
+
+*     Ajout des forces de raideur
+*     F = F - K Q_1
+      IF (IIMPI.EQ.333) THEN
+cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme DEVLK0'
+      ENDIF
+      CALL DEVLK0(Q1,XK,FTOTA,NA1,NB1K,1)
+
+*     forces d'amortissement
+      IF (NB1C.GT.1) THEN
+cbp,2020-09        DO 3 I=1,NA1
+cbp,2020-09           Q2DEMI(i)=(q1(i,1) - q1(i,2))/dt
+cbp,2020-09 3      CONTINUE
+        DO 4 I=1,NA1
+           FAMOR(I) = 0.D0
+        DO 42 J=1,NB1
+cbp,2020-09           FAMOR(I) = FAMOR(I) + XASM(I,J) * Q2DEMI(J)
+           FAMOR(I) = FAMOR(I) + XASM(I,J) * Q2(J,1)
+ 42     CONTINUE
+ 4      CONTINUE
+      ELSE
+        DO 41 I=1,NA1
+cbp,2020-09           FAMOR(I) = XASM(I,1) * (q1(I,1) - q1(I,2))/dt
+           FAMOR(I) = XASM(I,1) * Q2(I,1)
+ 41     CONTINUE
+      ENDIF
+      
+************************************************************************
+*     Rotas rigides: eq. dyn, calcul vite et accel angulaires
+************************************************************************        
+* Eq. dynamique = equation d'Euler
+* W_{n+1}=J^{-1}exp(-theta) * (JW_{n} + h * ROT_{n}^T * m_{n+1/2}) 
+
+      IF (RIGIDE) THEN
+
+cms    si on veut une resistance au spin, on rajoute 
+*      le couple resistant tspin a ftotb : 
+       if (lrspin) then 
+         fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + tspin(1)
+         fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + tspin(2)
+         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + tspin(3)
+       endif
+       DO 8 IIB=1,NSB
+CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
+          IF (IAROTA(IIB).EQ.0) GOTO 8
+*         Calcul second membre avant prod � gauche par (J^-1)*exp(-dtheta)* :
+          DO I=1,3
+            DYN2(I) = 0.D0
+            DO J1=1,3
+              DYN2(I) = DYN2(I) + INERTIE(I,J1,IIB)*OMEG2(J1,2,IIB)
+            ENDDO
+            DO J2=1,3
+              DYN2(I) = DYN2(I) + DT*ROT(J2,I,2,IIB)*FMOMTOT(J2,1,IIB)
+            ENDDO
+          ENDDO
+*          write(*,*)'ss base ',iib,' :'
+*          write(*,*)'       DYN2 :'
+*          write(*,'(1X,F8.5)') , (dyn2(id),id=1,3)
+*          WRITE(*,*)'D2VPAS: avt * a gauche DYN2(I) = ',DYN2(I)
+cmsw          WRITE(*,*)'D2VPAS: apres equilibre dynamique :'
+*         Produit � gauche par (J^-1)*exp(-dtheta)* :
+          DO ID=1,3
+            OMEG2(ID,1,IIB) = 0.D0
+            DO J=1,3
+              DO K=1,3
+               OMEG2(ID,1,IIB) = OMEG2(ID,1,IIB) + 
+     &           INVINERT(ID,K,IIB)*EXPTH(J,K,1,IIB)*DYN2(J)
+              ENDDO
+            ENDDO
+            OMEG3(ID,1,IIB)=(OMEG2(ID,1,IIB)-OMEG2(ID,2,IIB))/DT
+cmsw            WRITE(*,*)'D2VPAS : apres equilibre dynamique :'
+cmsw            WRITE(*,*)'         base IIB = ',IIB
+cmsw            WRITE(*,*)'         OMEG2(',ID,1,IIB,')=',OMEG2(ID,1,IIB)
+cmsw            WRITE(*,*)'         OMEG3(',ID,1,IIB,')=',OMEG3(ID,1,IIB)
+          ENDDO
+*          write(*,*)'        OMEG2 :'
+*          write(*,'(1X,F8.5)') , (omeg2(id,1,iib),id=1,3)
+*          write(*,*)'        OMEG3 :'
+*          write(*,'(1X,F8.5)') , (omeg3(id,1,iib),id=1,3)
+
+***       Calcul du moment cinetique : 
+          DO I=1,3
+            PICIN(IIB,I) = 0.D0
+            DO J=1,3
+              DYN2(J) = 0.D0
+              DO K=1,3
+                DYN2(J) = DYN2(J) +
+     &                    ROT(I,K,1,IIB)*INERTIE(K,J,IIB)
+              ENDDO
+              PICIN(NSB,I) = PICIN(IIB,I)+DYN2(J)*OMEG2(J,1,IIB)
+            ENDDO
+cmsw            WRITE(*,*)'D2VPAS : rota PICIN = ',PICIN(IIB,I)
+          ENDDO
+***       Calcul de l energie cinetique en rotation : 
+          TCIN(IIB) = 0.D0
+          DO I=1,3
+            DYN2(I) = 0.D0
+            DO J=1,3
+              DYN2(I) = DYN2(I) + INERTIE(I,J,IIB)*OMEG2(J,1,IIB)
+            ENDDO
+            TCIN(IIB) = TCIN(IIB) + OMEG2(I,1,IIB)*DYN2(I)
+          ENDDO
+cmsw          WRITE(*,*)'D2VPAS : rota TCIN = ',TCIN(IIB)
+*
+ 8     CONTINUE
+* fin boucle ss bases
+      ENDIF
+*
+************************************************************************
+*   Cas elastique:  Accelerations et Vitesses g�n�ralis�es
+************************************************************************
+
+c    -Cas C ou M pleine 
+      IF (NB1.NE.1) THEN
+        DO 5 I=1,NA1
+          Q3(I,1) = 0.D0
+          DO 6 J=1,NB1
+            Q3(I,1) = Q3(I,1) + XOPM1(I,J,1)*(FTOTA(J,1)-FAMOR(J))
+ 6        CONTINUE
+*         Vitesses g�n�ralis�es
+          Q2(I,1) = Q2(I,2) + (Q3(I,2) + Q3(I,1))*DT2
+ 5      CONTINUE
+
+c    -Cas C et M diagonales
+      ELSE
+        DO 51 I=1,NA1
+c           UNSM = 1.D0 / ( XM(I,1) - FINERT(I,1) )
+cbp : pour les "vraies" differences centrees, il faut inclure l'amortissement
+          UNSM = 1.D0 / ( XM(I,1) + dt2*XASM(I,1) - FINERT(I,1) )
+          Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) * UNSM
+c           Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) / (XM(I,1) - FINERT(I,1))
+*         Vitesses g�n�ralis�es
+          Q2(I,1) = Q2(I,2) + (Q3(I,2) + Q3(I,1))*DT2
+ 51     CONTINUE
+      ENDIF
+* On rajoute l energie cinetique de translation à l energie cinetique de rotation :
+      IF (RIGIDE) THEN
+CMS : one ne profite pour recompter les modes elastiques non translation rigide :
+        DO 9 IIB=1,NSB
+cmsw          WRITE(*,*)'D2VPAS : Calcul TCIN ssbase : ',IIB
+CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
+          IF (IAROTA(IIB).EQ.0) GOTO 9
+***       Calcul de l'energie cinetique en translation :
+          NA3  = INMSB(IIB)
+*              = nbr de modes elasiques ds la ss base (incluant les transl. rigides)
+          INA2 = IORSB(IIB) - 1
+          XTC = 0.D0
+          DO IN = 1,NA3
+            IN2 = INA2 + IN
+*            WRITE(*,*)'ITRIG(',IIB,IN,') = ',ITRIG(IIB,IN)
+            IF ((ITRIG(IIB,IN))) THEN
+              DO ID=1,IDIM
+                XTC = XTC + 
+     &       0.5*MTSB(IIB)*((XPHILB(IIB,1,IN,ID)*Q2(IN2,1))**2.d0) 
+cmsw               WRITE(*,*)' MTSB(',IIB,') = ',MTSB(IIB)
+cmsw                WRITE(*,*)' XPHILB(',IIB,1,IN,ID,') = ',
+cmsw     &                     XPHILB(IIB,1,IN,ID)
+cmsw               WRITE(*,*)' Q2(',IN2,2,') = ',Q2(IN2,2)
+cmsw               WRITE(*,*)' XTC = ',XTC 
+              ENDDO
+            ELSE
+*              On ajoute l'energie cinetique associee aux modes flexibles : 
+               XTC = XTC + (0.5 * (Q2(IN2,2)**2) * XM(IN,1))
+            ENDIF 
+          ENDDO
+          TCIN(IIB) = TCIN(IIB) + XTC
+cmsw          WRITE(*,*)'D2VPAS : transl. + rota + flex. TCIN = ',TCIN(IIB)
+ 9      CONTINUE
+      ENDIF
+************************************************************************
+*     calcul des travaux + decalage pour pas suivant
+************************************************************************
+      IF (IIMPI.EQ.333) THEN
+cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VENE'
+      ENDIF
+cmsw      WRITE(*,*)'D2VPAS: avant D2VENE'
+cmsw      WRITE(*,*)'        NA1 = ',NA1
+cmsw      WRITE(*,*)'        NPAS = ',NPAS
+cmsw      WRITE(*,*)'        NPC1 = ',NPC1
+cmsw      WRITE(*,*)'        NB1C = ',NB1C
+********************************************************************
+* test : on sort d2vene de la subroutine :
+        
+        IF(NB1C.NE.1)THEN
+          do 21 I=1,NA1
+            FAMO2(I) = 0.D0
+            FAMO1(I) = 0.D0
+          do 21 J=1,NB1C
+            FAMO2(I) = FAMO2(I) + XASM(I,J)*Q2(J,1)
+            FAMO1(I) = FAMO1(I) + XASM(I,J)*Q2(J,2)
+ 21       continue
+        ELSE
+          do I=1,NA1
+            FAMO2(I) = XASM(I,1)*Q2(I,1)
+            FAMO1(I) = XASM(I,1)*Q2(I,2)
+          enddo
+        ENDIF
+
+        DO I=1, NA1
+          DQ1 = Q1(I,1) - Q1(I,2)
+
+          F1 = FEXA(I,NPAS,2)
+          F2 = FEXA(I,NPAS,1)
+          DWEX = (F1 + F2)/2D0 * DQ1
+
+          F1 = FTOTA(I,2) - F1
+          F2 = FTOTA(I,1) - F2
+
+*  on ajoute les forces d'amortissement
+c           F1 = F1 - XASM(I)*Q2(I,2)
+c           F2 = F2 - XASM(I)*Q2(I,1)
+          F1 = F1 - FAMO2(I)
+          F2 = F2 - FAMO1(I)
+          DWIN = -(F1 + F2)/2D0 * DQ1
+
+          WEXT(I,1) = WEXT(I,2) + DWEX
+          WINT(I,1) = WINT(I,2) + DWIN
+cmsw      WRITE(*,*)'wext(i,1) = ',wext(i,1) 
+cmsw      WRITE(*,*)'wint(i,1) = ',wint(i,1) 
+
+        enddo
+
+********************************************************************
+*      CALL D2VENE(NA1,1,NPAS,FEXA,Q1,Q2,FTOTA,WEXT,WINT,
+*     &             XASM,NPC1,NB1C)
+*
+      END
+
+ 
+ 
+ 
+ 
