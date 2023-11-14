@@ -186,7 +186,7 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
 ************************************************************************
 *     remplissage de fexb(ip,1,id) et ftota(i,1)
 ************************************************************************
-      CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
+      CALL RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &              NPLB,IDIMB,RIGIDE)
 ************************************************************************
 *     Corps rigides: prediction, MAJ matrice de rotation
