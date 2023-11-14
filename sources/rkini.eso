@@ -1,0 +1,698 @@
+C D2VINI    SOURCE    BP208322  20/09/18    21:15:13     10718          
+       SUBROUTINE RKINI(ITINIT,KTKAM,KTQ,KTFEX,KTPAS,KTNUM,KTLIAA,
+     &                  KTLIAB,KTPHI,KCPR,KOCLFA,KOCLB1,REPRIS,
+     &                  lmodyn,KTROT,KCPRIG)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNE : algorithme differences centrees               *
+*     ________________________________________________               *
+*                                                                    *
+*     Initialisation de l'algorithme ou reprise de calcul.           *
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   ITINIT  Table contenant les conditions initiales ou les        *
+*             champs necessaires a la reprise du calcul              *
+* es  KTKAM   Segment contenant les vecteurs XK, XASM et XM          *
+* es  KTQ     Segment des variables de mouvement generalisees        *
+*             (et des travaux)
+* es  KTFEX   Segment contenant les chargements libres               *
+* es  KTPAS   Segment des variables au cours d'un pas de temps       *
+* es  KTNUM   Segment contenant les parametres numeriques            *
+* e   KTLIAA  Segment descriptif des liaisons en base A              *
+* e   KTLIAB  Segment descriptif des liaisons en base B              *
+* e   KTPHI   Segment contenant les deformees modales                *
+* e   KCPR    Segment des points                                     *
+* -   KOCLFA  Segment contenant les tableaux locaux de la subroutine *
+*             D2VLFA                                                 *
+* -   KOCLB1  Segment contenant les tableaux locaux de la subroutine *
+*             D2VLB1                                                 *
+* e   REPRIS  Vrai si reprise de calcul                              *
+* e   RIGIDE  Vrai si corps rigide
+*                                                                    *
+*     Auteur, date de creation:                                      *
+*                                                                    *
+*     Denis ROBERT-MOUGIN, le 25 mai 1989.                           *
+*                                                                    *
+*--------------------------------------------------------------------*
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+      
+-INC PPARAM
+-INC CCOPTIO
+-INC CCNOYAU
+-INC SMCOORD
+-INC SMTABLE
+-INC CCASSIS
+*
+      SEGMENT,MTQ
+         REAL*8 Q1(NA1,5),Q2(NA1,5),Q3(NA1,5)
+         REAL*8 WEXT(NA1,2),WINT(NA1,2)
+      ENDSEGMENT
+      SEGMENT,MTFEX
+         REAL*8  FEXA(NPFEXA,NPC1,2)
+         REAL*8  FEXPSM(NPLB,NPC1,2,IDIMB)
+         REAL*8  FTEXB(NPLB,NPC1,2,IDIM)
+*         INTEGER IFEXA(NPFEXA),IFEXB(NPFEXB)
+      ENDSEGMENT
+      SEGMENT,MTPAS
+         REAL*8 FTOTA(NA1,4),FTOTB(NPLB,IDIMB),FTOTBA(NA1)
+         REAL*8 XPTB(NPLB,2,IDIMB),FINERT(NA1,4)
+         REAL*8 XVALA(NLIAA,4,NTVAR),XVALB(NLIAB,4,NTVAR)
+         REAL*8 FEXB(NPLB,2,IDIM),XCHPFB(2,NLIAB,4,NPLB)
+      ENDSEGMENT
+      SEGMENT,MTNUM
+         REAL*8 XDT(NPC1),XTEMPS(NPC1)
+      ENDSEGMENT
+      SEGMENT,MTKAM
+         REAL*8 XK(NA1,NB1K),XASM(NA1,NB1C),XM(NA1,NB1M)
+         REAL*8 XOPER(NB1,NB1,NOPER)
+      ENDSEGMENT
+      SEGMENT,MTLIAA
+         INTEGER IPALA(NLIAA,NIPALA),IPLIA(NLIAA,NPLAA),JPLIA(NPLA)
+         REAL*8  XPALA(NLIAA,NXPALA)
+      ENDSEGMENT
+      SEGMENT,MTLIAB
+         INTEGER IPALB(NLIAB,NIPALB),IPLIB(NLIAB,NPLBB),JPLIB(NPLB)
+         REAL*8  XPALB(NLIAB,NXPALB)
+         REAL*8  XABSCI(NLIAB,NIP),XORDON(NLIAB,NIP)
+      ENDSEGMENT
+      SEGMENT,MTPHI
+         INTEGER IBASB(NPLB),IPLSB(NPLB),INMSB(NSB),IORSB(NSB)
+         INTEGER IAROTA(NSB)
+         REAL*8  XPHILB(NSB,NPLSB,NA2,IDIMB)
+      ENDSEGMENT
+      SEGMENT,ICPR(nbpts)
+      SEGMENT,ICPRIG(nbpts)
+
+*     Segment des modes de rotations rigides
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,5,NSB),OMEG2(3,5,NSB),OMEG3(3,5,NSB)
+         REAL*8 ROT(3,3,5,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+      
+* Segment "local" pour D2VLFA ...
+      SEGMENT,LOCLFA
+         REAL*8 FTEST(NA1,4)
+      ENDSEGMENT
+* Segment "local" pour D2VLB1 ...
+      SEGMENT,LOCLB1
+         REAL*8 FTEST2(NPLB,6)
+      ENDSEGMENT
+      segment mwinit
+        integer jpdep,jpvit,jrepr
+      endsegment
+c       SEGMENT FAMOR(NA1,4)
+      SEGMENT FAMOR(NA1)
+*
+c *     TODO : KTOTXA et KTOTVA a allouer dans le segment LOCLFA ?
+c       REAL*8 KTOTXA(NA1,NA1), KTOTVA(NA1,NA1) 
+c       cf. devpas d2vpas d3vpas
+c       en attendant, petite bidouille locale
+      segment LOCLF2
+         REAL*8 KTOTXA(NA1,NA1), KTOTVA(NA1,NA1) 
+      endsegment
+      segment LOCLF3
+      REAL*8 KTOTXB(NPLB,IDIMB,IDIMB),KTOTVB(NPLB,IDIMB,IDIMB) 
+      endsegment
+      
+      REAL*8 RTGEX(3),JW1(3),WJW(3),DYN2(3)
+      LOGICAL L0,L1,REPRIS,RIGIDE,lmodyn
+      CHARACTER*8 TYPRET,TYPIND,CHARRE
+      CHARACTER*(19) CHAI1
+      CHARACTER*40 MONMOT
+      ILC1 = 19
+      DATA CHAI1 /'VARIABLES_LIAISON_A'/
+      
+*
+      RIGIDE = KTROT.NE.0
+      IF (RIGIDE) THEN
+        MTROT = KTROT
+      ENDIF
+      MTFEX  = KTFEX
+      MTPAS  = KTPAS
+      MTNUM  = KTNUM
+      MTKAM  = KTKAM
+      MTQ    = KTQ
+      MTLIAA = KTLIAA
+      MTLIAB = KTLIAB
+      MTPHI  = KTPHI
+      LOCLFA = KOCLFA
+      LOCLB1 = KOCLB1
+      IDEPL  = 0
+      IVITE  = 0
+      ITABL  = 0
+      ICH1   = 0
+      ICH2   = 0
+      ICH3   = 0
+      ICH4   = 0
+      ICH5   = 0
+      ICH6   = 0
+      NA1    = Q1(/1)
+      NB1K   = XK(/2)
+      NB1C   = XASM(/2)
+      NB1M   = XM(/2)
+      NB1    = XOPER(/1)
+      NLIAA  = IPALA(/1)
+      NLIAB  = IPALB(/1)
+      NPLB   = JPLIB(/1)
+      NSB    = XPHILB(/1)
+      NPLSB  = XPHILB(/2)
+      NA2    = XPHILB(/3)
+      IDIMB  = XPHILB(/4)
+      NPFEXA = FEXA(/1)
+      NPC1   = FEXPSM(/2)
+      NIP    = XABSCI(/2)
+      IERRD = 0
+      segini,LOCLF2,LOCLF3
+
+      WRITE(*,*)'D2VINI : START, NPFEXA = ',NPFEXA
+*     WRITE(*,*)'D2VINI : START, IPLIB(1,1) = ',IPLIB(1,1)
+* Matt: initialisation ROT,EXPTH,OMEG1 si corps rigide: 
+*       EXPTH = ID 
+*       OMEG1 = ID
+*       ROT = ID
+      IF (RIGIDE) THEN
+* Rappel: OMEG1 est un quaternion, elemt neutre = (1,0,0,0)
+*           
+        DO I=1,NSB
+         OMEG1(1,2,I)=1.D0
+         OMEG1(2,2,I)=0.D0
+         OMEG1(3,2,I)=0.D0
+         OMEG1(4,2,I)=0.D0
+         OMEG1(1,1,I)=1.D0
+         OMEG1(2,1,I)=0.D0
+         OMEG1(3,1,I)=0.D0
+         OMEG1(4,1,I)=0.D0
+         OMEG2(1,2,I)=0.D0
+         OMEG2(2,2,I)=0.D0
+         OMEG2(3,2,I)=0.D0
+         OMEG2(1,1,I)=0.D0
+         OMEG2(2,1,I)=0.D0
+         OMEG2(3,1,I)=0.D0
+         OMEG3(1,2,I)=0.D0
+         OMEG3(2,2,I)=0.D0
+         OMEG3(3,2,I)=0.D0
+         OMEG3(1,1,I)=0.D0
+         OMEG3(2,1,I)=0.D0
+         OMEG3(3,1,I)=0.D0
+* Moment cinetique de chaque ss base 
+         PICIN(I,1)=0.D0
+         PICIN(I,2)=0.D0
+         PICIN(I,3)=0.D0
+* energie cinetique de chaque ss base : 
+         TCIN(I)=0.D0
+        ENDDO
+* 
+        DO I=1,NSB
+         DO J=1,3               
+          DO K=1,3
+           ROT(J,K,2,I)=0.D0
+           ROT(J,K,1,I)=0.D0
+           EXPTH(J,K,2,I)=0.D0
+           EXPTH(J,K,1,I)=0.D0
+          ENDDO
+          ROT(J,J,2,I)=1.D0
+          ROT(J,J,1,I)=1.D0
+          EXPTH(J,J,2,I)=1.D0
+          EXPTH(J,J,1,I)=1.D0                
+         ENDDO
+        ENDDO
+*       FMOMTOT sera modifie par D2FVLB si liaison B existe
+        DO I=1,NSB
+          FMOMTOT(1,1,I) = 0.D0
+          FMOMTOT(2,1,I) = 0.D0
+          FMOMTOT(3,1,I) = 0.D0
+          FMOMTOT(1,2,I) = 0.D0
+          FMOMTOT(2,2,I) = 0.D0
+          FMOMTOT(3,2,I) = 0.D0
+        ENDDO
+*       Inititalisation de UFLEX: 
+        DO IB=1,NSB
+          DO IP=1,NPLB
+            DO ID = 1,3
+              UFLEX(IP,IB,ID,2) = 0.D0
+              UFLEX(IP,IB,ID,1) = 0.D0
+              VFLEX(IP,IB,ID,2) = 0.D0
+              VFLEX(IP,IB,ID,1) = 0.D0
+            ENDDO
+          ENDDO
+        ENDDO        
+      ENDIF
+cms : test sur FEXA / FTOTA : 
+      DO I=1,NA1
+         WRITE(*,*)'D2VINI : START'
+         WRITE(*,*)'D2VINI : Fexa (',I,',1,1) =',Fexa(I,1,1)
+         WRITE(*,*)'D2VINI : Fexa (',I,',1,2) =',Fexa(I,1,2)
+      ENDDO
+*** Fin initialisation RIGIDE.
+*
+*     S'agit-il d'une initialisation ou d'une reprise de calcul ? ------
+*
+      IF ( REPRIS ) THEN
+         IF (IIMPI.EQ.333) THEN
+            WRITE(IOIMP,*)'D2VINI : ---> reprise de calcul'
+         ENDIF
+         if (lmodyn) then
+           mwinit = itinit
+           segact mwinit
+           ITABL = jrepr
+         else
+         CALL ACCTAB(ITINIT,'MOT',I0,X0,'REPRISE',L0,IP0,
+     &                    'TABLE',I1,X1,' ',L1,ITABL)
+         endif
+*
+*        Reprise du calcul, on remplit: info initiales
+*
+         CALL ACCTAB(ITABL,'MOT',I0,X0,'DEPLACEMENT',L0,IP0,
+     &                 'CHPOINT',I1,X1,' ',L1,ICH1)
+         IF (IERR.NE.0) RETURN
+*
+         CALL ACCTAB(ITABL,'MOT',I0,X0,'VITESSE',L0,IP0,
+     &                 'CHPOINT',I1,X1,' ',L1,ICH2)
+         IF (IERR.NE.0) RETURN
+*
+         CALL ACCTAB(ITABL,'MOT',I0,X0,'FORCES_BASE_A',L0,IP0,
+     &                 'CHPOINT',I1,X1,' ',L1,ICH5)
+         IF (IERR.NE.0) RETURN
+
+         CALL ACCTAB(ITABL,'MOT',I0,X0,'ACCELERATION',L0,IP0,
+     &                 'CHPOINT',I1,X1,' ',L1,ICH7)
+         IF (IERR.NE.0) RETURN
+
+*
+         CALL ACCTAB(ITABL,'MOT',I0,X0,'TRAVAIL_EXTERIEUR',L0,IP0,
+     &                 'CHPOINT',I1,X1,' ',L1,ICH9)
+         IF (IERR.NE.0) RETURN
+*
+         CALL ACCTAB(ITABL,'MOT',I0,X0,'TRAVAIL_INTERIEUR',L0,IP0,
+     &                 'CHPOINT',I1,X1,' ',L1,ICH10)
+         IF (IERR.NE.0) RETURN
+*
+c        Q1(2)=q_0
+         IF (IIMPI.EQ.333) THEN
+           WRITE(IOIMP,*)'D2VINI: 1er appel a DYNE18'
+         ENDIF
+         IF (ICH1.NE.0) THEN
+            CALL DYNE18(ICH1,KTQ,1,2,KCPR,KCPRIG,KTROT,NSB)
+         ELSE
+            CALL ERREUR(487)
+            RETURN
+         ENDIF
+*
+c        Q2(2)=\dot{q}_0
+         IF (IIMPI.EQ.333) THEN
+           WRITE(IOIMP,*)'D2VINI: 2eme appel a DYNE18'
+         ENDIF
+         IF (ICH2.NE.0) THEN
+            CALL DYNE18(ICH2,KTQ,2,2,KCPR,KCPRIG,KTROT,NSB)
+         ELSE
+            CALL ERREUR(487)
+            RETURN
+         ENDIF
+
+*        FTOTA(2)=F_0
+         IF (ICH5.NE.0) THEN
+            CALL DYNE23(ICH5,KTPAS,2)
+         ELSE
+            CALL ERREUR(487)
+            RETURN
+         ENDIF
+
+         IF (ICH7.NE.0) THEN
+            CALL DYNE18(ICH7,KTQ,3,2,KCPR,KCPRIG,KTROT,NSB)
+         ELSE
+            CALL ERREUR(487)
+            RETURN
+         ENDIF
+
+         IF (ICH9.NE.0) THEN
+            CALL DYNE18(ICH9,KTQ,4,2,KCPR,KCPRIG,KTROT,NSB)
+         ENDIF
+         IF (ICH10.NE.0) THEN
+            CALL DYNE18(ICH10,KTQ,5,2,KCPR,KCPRIG,KTROT,NSB)
+         ENDIF
+*
+*
+         IF (NLIAA.NE.0) THEN
+*
+*           l'indice VARIABLES_LIAISON_A n'existe que pour
+*           les liaisons POLYNOMIALES
+*
+            IPOLY = 0
+            MTABLE = ITABL
+            SEGACT,MTABLE
+            NIND1 = MLOTAB
+            if(nbesc.ne.0)segact ipiloc
+            DO 100 I=1,NIND1
+               TYPIND = MTABTI(I)
+               IF (TYPIND.EQ.'MOT     ') THEN
+                  IP = MTABII(I)
+                  ID = IPCHAR(IP)
+                  IFI = IPCHAR(IP+1)
+                  IL1 = IFI - ID
+                  IF (IL1.EQ.ILC1) THEN
+                     IF (CHAI1.EQ.ICHARA(ID:IFI-1)) THEN
+                        IPOLY = 1
+                     ENDIF
+                  ENDIF
+               ENDIF
+ 100        CONTINUE
+            if(nbesc.ne.0)SEGDES,IPILOC
+            SEGDES,MTABLE
+            IF (IIMPI.EQ.333) THEN
+               WRITE(IOIMP,*) 'D2VINI : IPOLY = ',IPOLY
+            ENDIF
+            IF (IPOLY.NE.0) THEN
+               CALL ACCTAB(ITABL,'MOT',I0,X0,'VARIABLES_LIAISON_A',
+     &                     L0,IP0,'TABLE',I1,X1,' ',L1,ITREFR)
+               CALL DYNA14(ITREFR,KTLIAA)
+               IF (IERR.NE.0) RETURN
+            ENDIF
+         ENDIF
+         IF (NLIAB.NE.0) THEN
+*old            CALL DEVRCO(Q1,NA1,XPTB,NPLB,XPHILB,NSB,NPLSB,NA2,IDIMB,
+            IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VINI: appel DEVRCO'
+            WRITE(*,*)'D2VINI: appel DEVRCO'
+CMS : Si rotaions rigides, on a besoin de PDT dans devrco :
+            PDT=XDT(1)
+            CALL DEVRCO(Q1,Q2,NA1,XPTB,NPLB,XPHILB,NSB,NPLSB,NA2,IDIMB,
+*           --> XPTB(:,2,:)=x_0   XPTB(:,3,:)=\dot{q}_0
+*               ok car XPTB(:,3,:) utilisé uniquement pour calcul FnlB
+     &                  IBASB,IPLSB,INMSB,IORSB,2,IAROTA,KTROT,PDT)
+            CALL ACCTAB(ITABL,'MOT',I0,X0,'VARIABLES_LIAISON_B',
+     &                  L0,IP0,'TABLE',I1,X1,' ',L1,ITREFR)
+            IF (IERR.NE.0) RETURN
+            CALL DYNE14(ITREFR,KTLIAB)
+            IF (IERR.NE.0) RETURN
+         ENDIF
+*
+      ELSE
+*
+*        Chpoints initiaux de deplacement et de vitesse:
+*
+         IF (ITINIT.NE.0) THEN
+          if (lmodyn) then
+           mwinit = itinit
+           segact mwinit
+           idepl = jpdep
+           ivite = jpvit
+          else
+            TYPRET=' '
+            CALL ACCTAB(ITINIT,'MOT',I0,X0,'DEPLACEMENT',L0,IP0,
+     &                        TYPRET,I1,X1,CHARRE,L1,IDEPL)
+*
+            TYPRET=' '
+            CALL ACCTAB(ITINIT,'MOT',I0,X0,'VITESSE',L0,IP0,
+     &                        TYPRET,I1,X1,CHARRE,L1,IVITE)
+          endif
+         ENDIF
+*
+*        Mise des valeurs initiales au pas m (indice 3)
+c        Q1(2)=q_0   
+c        Q2(2)=\dot{q}_0
+         IF (IDEPL.NE.0) THEN
+            CALL DYNE18(IDEPL,KTQ,1,2,KCPR,KCPRIG,KTROT,NSB)
+            MTQ = KTQ
+         ENDIF
+         IVINIT = 0
+         IF (IVITE.NE.0) THEN
+            CALL DYNE18(IVITE,KTQ,2,2,KCPR,KCPRIG,KTROT,NSB)
+            IVINIT = 1
+         ENDIF
+*
+*        Ajout des forces de liaison
+*
+         PDT=XDT(1)
+         T=XTEMPS(1)
+         IF (NLIAA.NE.0) THEN
+*           IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VINI: appel D2VLFA'
+            WRITE(*,*)'D2VINI: appel D2VLFA'
+            CALL D2VLFA(Q1,Q2,FTOTA,NA1,IPALA,IPLIA,XPALA,XVALA,
+     &                  NLIAA,PDT,T,1,2,FINERT,IVINIT,FTEST,
+     &                  KTOTXA,KTOTVA,.FALSE.)     
+         ENDIF
+         IF (NLIAB.NE.0) THEN
+             IF (RIGIDE) THEN
+                DO 13 IP=1,NPLB
+                  DO 15 ID=1,IDIM
+                       FEXB(IP,2,ID) = FTEXB(IP,1,2,ID)
+                       WRITE(*,*)'D2VINI: FEXB(',IP,2,ID,') = ',
+     &                                    FEXB(IP,2,ID)
+ 15               CONTINUE
+ 13             CONTINUE
+            ENDIF
+*           IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VINI: appel D2VLF2'
+            WRITE(*,*)'D2VINI: appel D2VLF2'
+            CALL D2VLF2(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,
+     &           NLIAB,XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,
+     &           PDT,T,1,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,2,
+     &           FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,
+     &           NIP,IAROTA,KTROT,FEXB,XCHPFB,
+     &           KTOTXB,KTOTVB)
+     
+            IF (IERRD.NE.0) THEN
+               IF (IERRD.EQ.1) CALL ERREUR(528)
+               RETURN
+            ENDIF
+cms : test : a-t-on toujours fexa ? 
+            DO I=1,NA1
+               WRITE(*,*)'D2VINI : post-d2vlf2 : '
+               WRITE(*,*)'D2VINI : Fexa (',I,',1,1) =',Fexa(I,1,1)
+               WRITE(*,*)'D2VINI : Fexa (',I,',1,2) =',Fexa(I,1,2)
+            ENDDO
+         ENDIF
+*
+*        Calcul des deplacements et des vitesses au pas debut du initial
+*
+      IF (IIMPI.EQ.333) THEN
+         WRITE(IOIMP,*)'D2VINI :'
+         DO I=1,NA1
+            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',3)   =',FTOTA(I,3)
+            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',4)   =',FTOTA(I,4)
+            WRITE(IOIMP,*)'D2VINI : FEXA (',I,',1,1) =',FEXA(I,1,1)
+            WRITE(IOIMP,*)'D2VINI : FEXA (',I,',1,2) =',FEXA(I,1,2)
+         ENDDO
+*        end do
+      ENDIF
+
+c        Cas selon nature (pleine ou diag) des matrices K,C et M :
+c------- Cas K,C ou M pleine -----------------------------------
+         IF(NB1K.GT.1.OR.NB1C.GT.1.OR.NB1M.GT.1) THEN
+
+c          F_0 =  F^liaison_0 + F^ext_0 - K * Q_0
+           DO 61 I = 1,NA1
+              FTOTA(I,2) = FTOTA(I,2) + FEXA(I,1,2)
+ 61        CONTINUE
+           CALL DEVLK0(Q1,XK,FTOTA,NA1,NB1K,2)
+           SEGINI,FAMOR
+c            CALL DEVLC0(Q2,XASM,FAMOR,NA1,NB1C,2)
+           IF (NB1C.EQ.1) THEN
+             DO 611 I=1,NA1
+               FAMOR(I) = XASM(I,1)*Q2(I,2)
+ 611         CONTINUE
+           ELSE
+             DO 612 I=1,NA1
+               FAMOR(I) = 0.D0
+             DO 613 IB=1,NB1
+               FAMOR(I) = FAMOR(I) + XASM(I,IB)*Q2(IB,2)
+ 613         CONTINUE
+ 612         CONTINUE
+           ENDIF
+c          \ddot Q_0 = [M+dt/2C]-1 * (F_0 - F^AMOR_0)
+c         -cas matrice M ou C pleine
+           IF(NB1.NE.1) THEN
+             DO 63 I=1,NA1
+               Q3(I,2) = 0.D0
+             DO 64 J=1,NB1
+               Q3(I,2) = Q3(I,2) + XOPER(I,J,1)*(FTOTA(J,2)-FAMOR(J))
+ 64          CONTINUE
+ 63          CONTINUE
+           ELSE
+             DO 62 I=1,NA1
+               Q3(I,2) = (FTOTA(I,2)-FAMOR(I))/(XM(I,1)-FINERT(I,2))
+ 62          CONTINUE
+           ENDIF
+           SEGSUP,FAMOR
+
+c       -cas matrices M et C diagonales
+
+c------- Cas K,C et M diagonal -----------------------------------
+         ELSE
+           DO 10 I = 1,NA1
+             WRITE(*,*)'MODE : ',I
+*            WRITE(*,*)'FEXA(',I,'1,2) = ',FEXA(I,1,2)
+             WRITE(*,*)'XK(',I,'1) = ',XK(I,1)
+             WRITE(*,*)'Q1(',I,'2) = ',Q1(I,2) 
+             WRITE(*,*)'Q2(',I,'2) = ',Q2(I,2) 
+             WRITE(*,*)'XASM(',I,'1) = ',XASM(I,1)
+             UNSM = 1.D0 / ( XM(I,1) - FINERT(I,2) )
+             WRITE(*,*)'UNSM = ',UNSM
+             WRITE(*,*)'XM(I,1) = ',XM(I,1)
+             WRITE(*,*)'FINERT(I,2) = ',FINERT(I,2)
+             WRITE(*,*)'FTOTA(I,2) = ',FTOTA(I,2)
+             WRITE(*,*)'FEXA(I,1,2) = ',FEXA(I,1,2)
+             
+             FTOTA(I,2) = FTOTA(I,2) + FEXA(I,1,2) - XK(I,1)*Q1(I,2)
+     &                  - XASM(I,1)*Q2(I,2)
+             Q3(I,2) = FTOTA(I,2)*UNSM
+ 10        CONTINUE
+         ENDIF
+*
+      ENDIF
+      IF (IIMPI.EQ.333) THEN
+         DO 30 I=1,NA1
+            WRITE(IOIMP,*)'D2VINI :'
+            WRITE(IOIMP,*)'D2VINI :  Q1(',I,',1) =',Q1(I,1)
+            WRITE(IOIMP,*)'D2VINI :  Q2(',I,',1) =',Q2(I,1)
+            WRITE(IOIMP,*)'D2VINI :  Q3(',I,',1) =',Q3(I,1)
+            WRITE(IOIMP,*)'D2VINI :'
+            WRITE(IOIMP,*)'D2VINI :'
+            WRITE(IOIMP,*)'D2VINI :  Q1(',I,',2) =',Q1(I,2)
+            WRITE(IOIMP,*)'D2VINI :  Q2(',I,',2) =',Q2(I,2)
+            WRITE(IOIMP,*)'D2VINI :  Q3(',I,',2) =',Q3(I,2)
+            WRITE(IOIMP,*)'D2VINI :'
+            WRITE(IOIMP,*)'D2VINI :'
+            WRITE(IOIMP,*)'D2VINI :  Q1(',I,',3) =',Q1(I,3)
+            WRITE(IOIMP,*)'D2VINI :  Q2(',I,',3) =',Q2(I,3)
+            WRITE(IOIMP,*)'D2VINI :  Q3(',I,',3) =',Q3(I,3)
+            WRITE(IOIMP,*)'D2VINI :'
+            WRITE(IOIMP,*)'D2VINI :  Q1(',I,',4) =',Q1(I,4)
+            WRITE(IOIMP,*)'D2VINI :  Q2(',I,',4) =',Q2(I,4)
+            WRITE(IOIMP,*)'D2VINI :  Q3(',I,',4) =',Q3(I,4)
+ 30         CONTINUE
+*        end do
+         DO 31 I=1,NA1
+            WRITE(IOIMP,*)'D2VINI :',FTOTA(/1),FTOTA(/2)
+            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',1) =',FTOTA(I,1)
+            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',2) =',FTOTA(I,2)
+            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',3) =',FTOTA(I,3)
+            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',4) =',FTOTA(I,4)
+ 31         CONTINUE
+*        end do
+      ENDIF
+******************************************************************
+* ROTATIONS RIGIDES: initialisation du vect accel. angulaire 
+*                    via l equation d Euler
+******************************************************************
+*     Eq. Euler: A = J^(-1)*( R^T*gamma_ext - W wege J*W )
+      IF (RIGIDE) THEN
+*       On boucle sur les sous-bases :
+        DO IB=1,NSB
+*         Calcul de l'énergie cinétique en translation :
+          NA3  = INMSB(IB)
+          INA2 = IORSB(IB) - 1
+          XTC = 0.D0
+          DO IN = 1,NA3
+            IN2 = INA2 + IN
+*           Calc. energie cinetique en translation :
+            IF (ITRIG(IB,IN)) THEN
+      WRITE(*,*)'D2VINI : prise en compte de la translation rigide !!!'
+              DO ID=1,IDIM
+                XTC = XTC + 
+     &       0.5*MTSB(IB)*((XPHILB(IB,1,IN,ID)*Q2(IN2,2))**2.d0) 
+               WRITE(*,*)' MTSB(',IB,') = ',MTSB(IB)
+               WRITE(*,*)' XPHILB(',IB,1,IN,ID,') = ',XPHILB(IB,1,IN,ID)
+               WRITE(*,*)' Q2(',IN2,2,') = ',Q2(IN2,2)
+               WRITE(*,*)' XTC = ',XTC
+              ENDDO
+            ENDIF 
+*           fin boucle sur les modes
+          ENDDO
+          TCIN(IB) = XTC
+*
+*         Calc. energie cinetique en rotation :
+          DO I=1,3
+            DYN2(I) = 0.D0
+            DO J=1,3
+              DYN2(I) = DYN2(I) + INERTIE(I,J,IB)*OMEG2(J,2,IB)
+            ENDDO
+            TCIN(IB) = TCIN(IB) + OMEG2(I,2,IB)*DYN2(I)
+          ENDDO
+*         Calc. moment cinétique spatial :
+          DO I=1,3
+            PICIN(IB,I) = 0.D0
+            DO J=1,3
+              DYN2(J) = 0.D0
+              DO K=1,3
+                DYN2(J) = DYN2(J) +
+     &          ROT(I,K,2,IB)*INERTIE(K,J,IB)
+              ENDDO
+*              write(*,*)'DYN2(',J,') = ',DYN2(J)
+              PICIN(IB,I) = PICIN(IB,I)+DYN2(J)*OMEG2(J,2,IB)
+*              WRITE(*,*)'D2VINI : PICIN(',IB,I,') = ',PICIN(IB,I)
+            ENDDO
+          ENDDO                
+*         
+*         ROT ^T * FMOMTOT:
+          DO I=1,3
+            RTGEX(I)=0.D0
+            JW1(I)=0.D0
+            DO J=1,3
+                RTGEX(I) = RTGEX(I) + ROT(J,I,2,IB)*FMOMTOT(J,2,IB)
+                JW1(I) = JW1(I) + INERTIE(I,J,IB)*OMEG2(J,2,IB)
+            ENDDO
+          ENDDO
+          WJW(1) =   OMEG2(2,2,IB)*JW1(3) - OMEG2(3,2,IB)*JW1(2)
+          WJW(2) =   OMEG2(3,2,IB)*JW1(1) - OMEG2(1,2,IB)*JW1(3)
+          WJW(3) =   OMEG2(1,2,IB)*JW1(2) - OMEG2(2,2,IB)*JW1(1)
+        
+          DO ID=1,3
+            OMEG3(ID,2,IB) = 0.D0
+            DO J=1,3
+              OMEG3(ID,2,IB) = OMEG3(ID,2,IB) + 
+     &        INVINERT(ID,J,IB)*(RTGEX(J) + WJW(J))
+            ENDDO
+*            WRITE(*,*)'D2VINI: OMEG3(',ID,',2,IB) = ',OMEG3(ID,2,IB)
+          ENDDO
+      
+*       fin boucle sur les ss bases
+*        WRITE(*,*)'D2VINI : tenseur J'
+*        write(*,'(20F15.5)')((INERTIE(k,j,IB),j= 1,3),k= 1,3)
+*        WRITE(*,*)'D2VINI : matrice de rotation R'
+*        write(*,'(20F15.5)')((ROT(k,j,2,IB),j= 1,3),k= 1,3)
+*        WRITE(*,*)' ROT(3,1,2,IB) = ',ROT(3,1,2,IB)
+*        WRITE(*,*)' ROT(3,2,2,IB) = ',ROT(3,2,2,IB)
+*        WRITE(*,*)' ROT(3,3,2,IB) = ',ROT(3,3,2,IB)
+*        WRITE(*,*)'D2VINI : vitesse de rotation'
+*        write(*,'(20F15.5)')(OMEG2(j,2,IB),j= 1,3)
+*        WRITE(*,*)'D2VINI: PICIN(',IB,1,') = ',PICIN(IB,1)
+*        WRITE(*,*)'D2VINI: PICIN(',IB,2,') = ',PICIN(IB,2)
+*        WRITE(*,*)'D2VINI: PICIN(',IB,3,') = ',PICIN(IB,3)
+        WRITE(*,*)'D2VINI: TCIN(',IB,') = ',TCIN(IB)
+*       fin boucle ss bases
+        ENDDO
+
+* fin cas rigide
+      ENDIF
+******************************************************************
+*
+      ICPR = KCPR
+      SEGSUP,ICPR
+*
+      IF (KCPRIG.NE.0) THEN
+        ICPRIG = KCPRIG
+        SEGSUP,ICPRIG
+      ENDIF
+*
+      END
+
+
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 

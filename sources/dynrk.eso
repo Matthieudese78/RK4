@@ -203,7 +203,7 @@ cms : on liste
          CALL ERREUR(-259)
         WRITE(IOIMP,*)'DYNDIF : avant lappel au sous-programme D2VINI'
       ENDIF
-      CALL D2VINI(ITINIT,KTKAM,KTQ,KTFEX,KTPAS,KTNUM,KTLIAA,KTLIAB,
+      CALL RKINI(ITINIT,KTKAM,KTQ,KTFEX,KTPAS,KTNUM,KTLIAA,KTLIAB,
      &            KTPHI,KCPR,KOCLFA,KOCLB1,REPRIS,lmodyn,KTROT,
      &            KCPRIG)
       IF (IERR.NE.0) RETURN
