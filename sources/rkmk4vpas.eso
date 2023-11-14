@@ -255,7 +255,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             omeg3(id,4,iib) = 0.d0
             do j = 1,3
               omeg3(id,4,iib) = omeg3(id,4,iib) + 
-     &        invinert(id,j,iib) * (t2(j) + fmomtot(j,4,iib))
+     &        invinert(id,j,iib) * (-t2(j) + fmomtot(j,4,iib))
             enddo
           enddo
 *         "rappatriment sur l'espace tangent en t_n :
@@ -336,7 +336,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             omeg3(id,3,iib) = 0.d0
             do j = 1,3
               omeg3(id,3,iib) = omeg3(id,3,iib) + 
-     &        invinert(id,j,iib) * (t2(j) + fmomtot(j,3,iib))
+     &        invinert(id,j,iib) * (-t2(j) + fmomtot(j,3,iib))
+            enddo
+          enddo
 
 *         "rappatriment sur l'espace tangent en t_n :
           call xpinv(th3(1),dexpinv(1,1),xang2)
@@ -409,7 +411,10 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             omeg3(id,2,iib) = 0.d0
             do j = 1,3
               omeg3(id,2,iib) = omeg3(id,2,iib) + 
-     &        invinert(id,j,iib) * (t2(j) + fmomtot(j,2,iib))
+     &        invinert(id,j,iib) * (-t2(j) + fmomtot(j,2,iib))
+     
+            enddo
+          enddo
 *         "rappatriment sur l'espace tangent en t_n :
           call xpinv(th4(1),dexpinv(1,1),xang2)
 *         application : 
@@ -475,6 +480,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
  7      continue
       ENDIF
 *     fin condition RIGIDE
+
 ************************************************************************
 *     RK4 : deplacements elastiques 
 ************************************************************************
