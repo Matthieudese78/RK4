@@ -297,10 +297,10 @@ cms : test sur FEXA / FTOTA :
 *
 c        Q1(2)=q_0
          IF (IIMPI.EQ.333) THEN
-           WRITE(IOIMP,*)'D2VINI: 1er appel a DYNE18'
+           WRITE(IOIMP,*)'D2VINI: 1er appel a RK18'
          ENDIF
          IF (ICH1.NE.0) THEN
-            CALL DYNE18(ICH1,KTQ,1,2,KCPR,KCPRIG,KTROT,NSB)
+            CALL RK18(ICH1,KTQ,1,2,KCPR,KCPRIG,KTROT,NSB)
          ELSE
             CALL ERREUR(487)
             RETURN
@@ -308,10 +308,10 @@ c        Q1(2)=q_0
 *
 c        Q2(2)=\dot{q}_0
          IF (IIMPI.EQ.333) THEN
-           WRITE(IOIMP,*)'D2VINI: 2eme appel a DYNE18'
+           WRITE(IOIMP,*)'D2VINI: 2eme appel a RK18'
          ENDIF
          IF (ICH2.NE.0) THEN
-            CALL DYNE18(ICH2,KTQ,2,2,KCPR,KCPRIG,KTROT,NSB)
+            CALL RK18(ICH2,KTQ,2,2,KCPR,KCPRIG,KTROT,NSB)
          ELSE
             CALL ERREUR(487)
             RETURN
@@ -326,17 +326,17 @@ c        Q2(2)=\dot{q}_0
          ENDIF
 
          IF (ICH7.NE.0) THEN
-            CALL DYNE18(ICH7,KTQ,3,2,KCPR,KCPRIG,KTROT,NSB)
+            CALL RK18(ICH7,KTQ,3,2,KCPR,KCPRIG,KTROT,NSB)
          ELSE
             CALL ERREUR(487)
             RETURN
          ENDIF
 
          IF (ICH9.NE.0) THEN
-            CALL DYNE18(ICH9,KTQ,4,2,KCPR,KCPRIG,KTROT,NSB)
+            CALL RK18(ICH9,KTQ,4,2,KCPR,KCPRIG,KTROT,NSB)
          ENDIF
          IF (ICH10.NE.0) THEN
-            CALL DYNE18(ICH10,KTQ,5,2,KCPR,KCPRIG,KTROT,NSB)
+            CALL RK18(ICH10,KTQ,5,2,KCPR,KCPRIG,KTROT,NSB)
          ENDIF
 *
 *
@@ -418,12 +418,12 @@ CMS : Si rotaions rigides, on a besoin de PDT dans devrco :
 c        Q1(2)=q_0   
 c        Q2(2)=\dot{q}_0
          IF (IDEPL.NE.0) THEN
-            CALL DYNE18(IDEPL,KTQ,1,2,KCPR,KCPRIG,KTROT,NSB)
+            CALL RK18(IDEPL,KTQ,1,2,KCPR,KCPRIG,KTROT,NSB)
             MTQ = KTQ
          ENDIF
          IVINIT = 0
          IF (IVITE.NE.0) THEN
-            CALL DYNE18(IVITE,KTQ,2,2,KCPR,KCPRIG,KTROT,NSB)
+            CALL RK18(IVITE,KTQ,2,2,KCPR,KCPRIG,KTROT,NSB)
             IVINIT = 1
          ENDIF
 *
