@@ -355,14 +355,14 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *              donc on a pas reinterpole sur 1/4 du pas de temps mais a faire si chargement variable!
           do ip=1,nplb
             fmomtot(1,2,iib) = fmomtot(1,2,iib) + 
-     &      xcoolb(2,iib,ip)*fexb(ip,2,3) -
-     &      xcoolb(3,iib,ip)*fexb(ip,2,2)
+     &      xcoolb(2,iib,ip)*fexb(ip,1,3) -
+     &      xcoolb(3,iib,ip)*fexb(ip,1,2)
             fmomtot(2,2,iib) = fmomtot(2,2,iib) + 
-     &      xcoolb(3,iib,ip)*fexb(ip,2,1) -
-     &      xcoolb(1,iib,ip)*fexb(ip,2,3)
+     &      xcoolb(3,iib,ip)*fexb(ip,1,1) -
+     &      xcoolb(1,iib,ip)*fexb(ip,1,3)
             fmomtot(3,2,iib) = fmomtot(3,2,iib) + 
-     &      xcoolb(1,iib,ip)*fexb(ip,2,2) -
-     &      xcoolb(2,iib,ip)*fexb(ip,2,1)
+     &      xcoolb(1,iib,ip)*fexb(ip,1,2) -
+     &      xcoolb(2,iib,ip)*fexb(ip,1,1)
           enddo
 *         calcul du terme convectif du 2nd membre : W X J W
 *             JW : 
