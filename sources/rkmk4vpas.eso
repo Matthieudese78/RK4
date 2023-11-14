@@ -124,7 +124,7 @@ cbp,2020-09      REAL*8 XOPM1(NB1,NB1,*),Q2DEMI(NA1),FAMOR(NA1)
       REAL*8 KTOTXB(NPLB,IDIMB,IDIMB),KTOTVB(NPLB,IDIMB,IDIMB) 
 *
 c     LOGICAL LWRITE
-      LOGICAL RIGIDE
+      LOGICAL RIGIDE,lxpinv
       LOGICAL QUATERNION,MATRICE
 * CMS : 
       REAL*8 FAMO1(NA1),FAMO2(NA1)
@@ -142,6 +142,8 @@ cms : pour le couple resistant "hard code" :
        MATRICE    = .FALSE.
 *     resistance au spin ?
       lrspin = .false.
+*     correction dexpinv ?
+      lxpinv = .true.
 *     le cas echeant, base modale de l'adaptateur : 
       ibad = 1
 
@@ -257,6 +259,14 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           enddo
 *         "rappatriment sur l'espace tangent en t_n :
           call xpinv(th2(1),dexpinv(1,1),xang)
+*  on implemente la correction ?
+          if (lxpinv) then
+            do id=1,3  
+              th2(id) = th2bis(id)
+              omeg2(id,4,j,iib) = w2bis(id)
+              omeg3(id,4,j,iib) = a2bis(id)
+            enddo
+          endif
 
 ************************************************************************
 *         "rappatriement" sur le plan tangent en t_n de :
@@ -314,6 +324,14 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
      &        invinert(id,j,iib) * (t2(j) + fmomtot(j,3,iib))
             enddo
           enddo
+*  on implemente la correction ?
+          if (lxpinv) then
+            do id=1,3  
+              th3(id) = th3bis(id)
+              omeg2(id,3,j,iib) = w3bis(id)
+              omeg3(id,3,j,iib) = a3bis(id)
+            enddo
+          endif
 ************************************************************************
 *         k3 = (w3,a3)^T avec :
 *           - w3 = omeg2(id,3,iib)
@@ -366,6 +384,14 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
      &        invinert(id,j,iib) * (t2(j) + fmomtot(j,2,iib))
             enddo
           enddo
+*  on implemente la correction ?
+          if (lxpinv) then
+            do id=1,3  
+              th4(id) = th4bis(id)
+              omeg2(id,2,j,iib) = w2bis(id)
+              omeg3(id,2,j,iib) = a2bis(id)
+            enddo
+          endif
 ************************************************************************
 *         k4 = (w4,a4)^T avec :
 *           - w4 = omeg2(id,2,iib)
