@@ -142,8 +142,8 @@ c     segment local : calcule l operateur et son inverse
             CALL ACCTAB(ITBAS,'MOT',IMODE,X0,'MODES',L0,IP0,
      &                        'TABLE',I1,X1,' ',L1,IBAS)
             IF (IERR.NE.0) RETURN
-            WRITE(*,*)'D2VTRA: appel DYNE26'
-            CALL DYNE26(IBAS,KTKAM,KTLIAB,KTPHI,IA1,1,ICOMP,
+            WRITE(*,*)'D2VTRA: appel RK26'
+            CALL RK26(IBAS,KTKAM,KTLIAB,KTPHI,IA1,1,ICOMP,
      &                  KTROT,ITCARA,LMODYN,ITKM,KCPRIG)
 c            IF (RIGIDE) THEN
 c                RIGIDE =.FALSE.
@@ -178,8 +178,8 @@ c            ENDIF
                   CALL ACCTAB(ITTBAS,'MOT',IMODE,X0,'MODES',L0,IP0,
      &                             'TABLE',I1,X1,' ',L1,IBAS)
                   IF (IERR.NE.0) RETURN
-                  WRITE(*,*)'D2VTRA: appel DYNE26 IB = ',IT
-                  CALL DYNE26(IBAS,KTKAM,KTLIAB,KTPHI,IA1,IT,ICOMP,
+                  WRITE(*,*)'D2VTRA: appel RK26 IB = ',IT
+                  CALL RK26(IBAS,KTKAM,KTLIAB,KTPHI,IA1,IT,ICOMP,
      &                        KTROT,ITCARA,LMODYN,ITKM,KCPRIG)
                   IF (IERR.NE.0) RETURN
                   NPLSB = MAX(NPLSB,ICOMP)
@@ -191,7 +191,7 @@ c            ENDIF
             ENDIF
 
 *         le segadj n'est plus necessaire
-*         on le fait dans dyne26
+*         on le fait dans RK26
 *                  MP
 *           SEGADJ,MTPHI
          ENDIF
@@ -209,7 +209,7 @@ c       write(ioimp,*) 'fin du traitement de la base',ITBAS
          mtbas = itbas
          NPLSB = 0
          do isstru = 1,nsstru
-            CALL DYNE26(itbas,KTKAM,KTLIAB,KTPHI,IA1,isstru,ICOMP,
+            CALL RK26(itbas,KTKAM,KTLIAB,KTPHI,IA1,isstru,ICOMP,
      &                        KTROT,ITCARA,LMODYN,ITKM,KCPRIG)
                   IF (IERR.NE.0) RETURN
                   NPLSB = MAX(NPLSB,ICOMP)
@@ -408,7 +408,7 @@ c                       attention a ne pas remplir 2 fois la diagonale...
             CALL ACCTAB(ITBAS2,'MOT',IMODE,X0,'MODES',L0,IP0,
      &                        'TABLE',I1,X1,' ',L1,IBAS2)
             IF (IERR.NE.0) RETURN
-            CALL DYNE26(IBAS2,KTKAM,KTLIAB,KTPHI,IA1,1,ICOMP,
+            CALL RK26(IBAS2,KTKAM,KTLIAB,KTPHI,IA1,1,ICOMP,
      &                  KTROT,ITCARA,LMODYN,ITKM,KCPRIG)
 *        Cas ou la base est un ensemble de bases
          ELSEIF(MONMOT(1:17).EQ.'ENSEMBLE_DE_BASES') THEN
@@ -425,7 +425,7 @@ c                       attention a ne pas remplir 2 fois la diagonale...
                   CALL ACCTAB(ITTBAS,'MOT',IMODE,X0,'MODES',L0,IP0,
      &                             'TABLE',I1,X1,' ',L1,IBAS2)
                   IF (IERR.NE.0) RETURN
-                  CALL DYNE26(IBAS2,KTKAM,KTLIAB,KTPHI,IA1,IT,ICOMP,
+                  CALL RK26(IBAS2,KTKAM,KTLIAB,KTPHI,IA1,IT,ICOMP,
      &                        KTROT,ITCARA,LMODYN,ITKM,KCPRIG)
                   IF (IERR.NE.0) RETURN
                   NPLSB = MAX(NPLSB,ICOMP)
