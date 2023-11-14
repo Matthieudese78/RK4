@@ -131,7 +131,6 @@ c     LOGICAL LWRITE
 cms : pour le couple resistant "hard code" : 
       real*8 tspin(3)
       logical lrspin
-
 cms : pour le couple resistant "hard code" : 
       real*8 th1(3), th2(3), th3(3), th4(3), jw2(3), t2(3)
 *      real*8 th2bis(3), th3bis(3), th4bis(3)
@@ -328,46 +327,42 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 ************************************************************************
       do i = 1,na1
         q1(i,4) = q1(i,5) + q2(i,5) * dt2
-        q2(i,4)  = q2(i,5) + q3(i,5) * dt2
+        q2(i,4) = q2(i,5) + q3(i,5) * dt2
       enddo
-*     ajout des forces de raideurs :
-      CALL DEVLK0(Q1,XK,FTOTA,NA1,NB1K,4)
-*     ajout des forces d'amortissement :
-      IF (NB1C.GT.1) THEN
-        DO 4 I=1,NA1
-           FAMOR(I) = 0.D0
-        DO 42 J=1,NB1
-           FAMOR(I) = FAMOR(I) + XASM(I,J) * Q2(J,4)
- 42     CONTINUE
- 4      CONTINUE
-      ELSE
-        DO 41 I=1,NA1
-           FAMOR(I) = XASM(I,1) * Q2(I,4)
- 41     CONTINUE
-      ENDIF
-c    -Cas C ou M pleine 
-      IF (NB1.NE.1) THEN
-        DO 5 I=1,NA1
-          Q3(I,4) = 0.D0
-          DO 6 J=1,NB1
-            Q3(I,4) = Q3(I,4) + XOPM1(I,J,1)*(FTOTA(J,4)-FAMOR(J))
- 6        CONTINUE
-*         Vitesses g�n�ralis�es
-          Q2(I,1) = Q2(I,2) + (Q3(I,2) + Q3(I,1))*DT2
- 5      CONTINUE
+      call rkpasel(q1,q2,q3,xk,ftota,na1,nb1k,nb1c,nb1,famor,
+     &             xasm,xopm1,4)
+************************************************************************
+*     k2 = (q2(i,4), q3(i,4))^T
+*     u3 = y + k2*dt2
+************************************************************************
+      do i = 1,na1
+        q1(i,3) = q1(i,5) + q2(i,4) * dt2
+        q2(i,3) = q2(i,5) + q3(i,4) * dt2
+      enddo
+      call rkpasel(q1,q2,q3,xk,ftota,na1,nb1k,nb1c,nb1,famor,
+     &             xasm,xopm1,3)
 
-c    -Cas C et M diagonales
-      ELSE
-        DO 51 I=1,NA1
-c           UNSM = 1.D0 / ( XM(I,1) - FINERT(I,1) )
-cbp : pour les "vraies" differences centrees, il faut inclure l'amortissement
-          UNSM = 1.D0 / ( XM(I,1) + dt2*XASM(I,1) - FINERT(I,1) )
-          Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) * UNSM
-c           Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) / (XM(I,1) - FINERT(I,1))
-*         Vitesses g�n�ralis�es
-          Q2(I,1) = Q2(I,2) + (Q3(I,2) + Q3(I,1))*DT2
- 51     CONTINUE
-      ENDIF
+************************************************************************
+*     k3 = (q2(i,3), q3(i,3))^T
+*     u4 = y + k3*dt
+************************************************************************
+      do i = 1,na1
+        q1(i,2) = q1(i,5) + q2(i,3) * dt2
+        q2(i,2) = q2(i,5) + q3(i,3) * dt2
+      enddo
+      call rkpasel(q1,q2,q3,xk,ftota,na1,nb1k,nb1c,nb1,famor,
+     &             xasm,xopm1,2)
+************************************************************************
+*     k4 = (q2(i,2), q3(i,2))^T
+************************************************************************
+      do i=1,na1
+*       position :
+        q1(i,1) = (dt/6.d0)*(q2(i,5) + 2.d0*q2(i,4) + 2.d0*q2(i,3) +
+     &                       q2(i,2))
+*       vitesse :
+        q2(i,1) = (dt/6.d0)*(q3(i,5) + 2.d0*q3(i,4) + 2.d0*q3(i,3) +
+     &                       q3(i,2))
+      enddo
 ************************************************************************
 *         k1 = (w1,a1)^T avec :
 *           - w1 = omeg2(id,5,iib)
