@@ -7,7 +7,7 @@
 *-----------------------------------------------------------------------*
       REAL*8 Q1(NA1,*),Q2(NA1,*),Q3(NA1,*),XK(NA1,*),XASM(NA1,*) 
       real*8 FTOTA(NA1,*),XOPM1(NB1,NB1,*),FAMOR(NA1),FINERT(NA1,*)
-      
+
 *     ajout des forces de raideurs :
       CALL DEVLK0(Q1,XK,FTOTA,NA1,NB1K,ind)
 *     ajout des forces d'amortissement :
