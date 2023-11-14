@@ -319,7 +319,7 @@ c        Q2(2)=\dot{q}_0
 
 *        FTOTA(2)=F_0
          IF (ICH5.NE.0) THEN
-            CALL DYNE23(ICH5,KTPAS,2)
+            CALL DYNE23(ICH5,KTPAS,3)
          ELSE
             CALL ERREUR(487)
             RETURN
