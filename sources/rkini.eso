@@ -183,26 +183,20 @@ c       en attendant, petite bidouille locale
 * Rappel: OMEG1 est un quaternion, elemt neutre = (1,0,0,0)
 *           
         DO I=1,NSB
-         OMEG1(1,2,I)=1.D0
-         OMEG1(2,2,I)=0.D0
-         OMEG1(3,2,I)=0.D0
-         OMEG1(4,2,I)=0.D0
-         OMEG1(1,1,I)=1.D0
-         OMEG1(2,1,I)=0.D0
-         OMEG1(3,1,I)=0.D0
-         OMEG1(4,1,I)=0.D0
-         OMEG2(1,2,I)=0.D0
-         OMEG2(2,2,I)=0.D0
-         OMEG2(3,2,I)=0.D0
-         OMEG2(1,1,I)=0.D0
-         OMEG2(2,1,I)=0.D0
-         OMEG2(3,1,I)=0.D0
-         OMEG3(1,2,I)=0.D0
-         OMEG3(2,2,I)=0.D0
-         OMEG3(3,2,I)=0.D0
-         OMEG3(1,1,I)=0.D0
-         OMEG3(2,1,I)=0.D0
-         OMEG3(3,1,I)=0.D0
+         do ik=1,5
+         OMEG1(1,ik,I)=1.D0
+         OMEG1(2,ik,I)=0.D0
+         OMEG1(3,ik,I)=0.D0
+         OMEG1(4,ik,I)=0.D0
+
+         OMEG2(1,ik,I)=0.D0
+         OMEG2(2,ik,I)=0.D0
+         OMEG2(3,ik,I)=0.D0
+
+         OMEG3(1,ik,I)=0.D0
+         OMEG3(2,ik,I)=0.D0
+         OMEG3(3,ik,I)=0.D0
+         enddo
 * Moment cinetique de chaque ss base 
          PICIN(I,1)=0.D0
          PICIN(I,2)=0.D0
@@ -214,25 +208,30 @@ c       en attendant, petite bidouille locale
         DO I=1,NSB
          DO J=1,3               
           DO K=1,3
-           ROT(J,K,2,I)=0.D0
            ROT(J,K,1,I)=0.D0
+           ROT(J,K,2,I)=0.D0
+           ROT(J,K,3,I)=0.D0
+           ROT(J,K,4,I)=0.D0
+           ROT(J,K,5,I)=0.D0
            EXPTH(J,K,2,I)=0.D0
            EXPTH(J,K,1,I)=0.D0
           ENDDO
-          ROT(J,J,2,I)=1.D0
           ROT(J,J,1,I)=1.D0
+          ROT(J,J,2,I)=1.D0
+          ROT(J,J,3,I)=1.D0
+          ROT(J,J,4,I)=1.D0
+          ROT(J,J,5,I)=1.D0
           EXPTH(J,J,2,I)=1.D0
           EXPTH(J,J,1,I)=1.D0                
          ENDDO
         ENDDO
 *       FMOMTOT sera modifie par D2FVLB si liaison B existe
         DO I=1,NSB
-          FMOMTOT(1,1,I) = 0.D0
-          FMOMTOT(2,1,I) = 0.D0
-          FMOMTOT(3,1,I) = 0.D0
-          FMOMTOT(1,2,I) = 0.D0
-          FMOMTOT(2,2,I) = 0.D0
-          FMOMTOT(3,2,I) = 0.D0
+          do ik = 1,5
+          FMOMTOT(1,ik,I) = 0.D0
+          FMOMTOT(2,ik,I) = 0.D0
+          FMOMTOT(3,ik,I) = 0.D0
+          enddo
         ENDDO
 *       Inititalisation de UFLEX: 
         DO IB=1,NSB
