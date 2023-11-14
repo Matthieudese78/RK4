@@ -22,7 +22,7 @@ C DYNDEV    SOURCE    LAVARENN  96/10/30    21:23:28     2349
 *
       LOGICAL REPRIS,RIGIDE,LMODYN
 *
-      write(*,*)'DYNRKMK4 : start'
+      write(*,*)'DYNRK : start'
 *     on laisse ichain qui est utilise dans l'appel a dyne15 :
       ICHAIN = 0
 *
@@ -64,7 +64,7 @@ C DYNDEV    SOURCE    LAVARENN  96/10/30    21:23:28     2349
          CALL ERREUR(-259)
         WRITE(IOIMP,*)'DINDIF : avant lappel au sous-programme DEVALO'
       ENDIF
-      CALL RKMK4ALO(ITBAS,ITKM,ITA,ITLIA,ITCHAR,ITINIT,NP,PDT,NINS,
+      CALL RKMKALO(ITBAS,ITKM,ITA,ITLIA,ITCHAR,ITINIT,NP,PDT,NINS,
      &            ITSORT,ITREDU,KPREF,KTQ,KTKAM,KTPHI,KTLIAA,KTLIAB,
      &            KTFEX,KTPAS,KTRES,KTNUM,IPMAIL,REPRIS,ICHAIN,
      &            KOCLFA,KOCLB1,ITCARA,LMODYN,KTROT)
