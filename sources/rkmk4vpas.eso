@@ -133,9 +133,9 @@ cms : pour le couple resistant "hard code" :
       logical lrspin
 
 cms : pour le couple resistant "hard code" : 
-      real*8 th2(3), th3(3), th4(3), jw2(3), t2(3)
-      real*8 th2bis(3), th3bis(3), th4bis(3)
-      real*8 u2(3), u3(3), u4(3), dexpinv(3,3)
+      real*8 th1(3), th2(3), th3(3), th4(3), jw2(3), t2(3)
+*      real*8 th2bis(3), th3bis(3), th4bis(3)
+      real*8 dexpinv(3,3)
 *
 *      QUATERNION = .FALSE.
        QUATERNION = .TRUE.
@@ -232,64 +232,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,4,IIB))
 *          quaternion a l'instant tn+1:
           CALL QUAT2MAT(OMEG1(1,4,IIB),ROT(1,1,4,IIB)) 
-*          calcul du couple exerce par les forces exterieures dans le body frame :
-*              comme c'est que le poids il ne change ni en norme ni en directioin 
-*              donc on a pas reinterpole sur 1/4 du pas de temps mais a faire si chargement variable!
-          do ip=1,nplb
-            fmomtot(1,4,iib) = fmomtot(1,4,iib) + 
-     &      xcoolb(2,iib,ip)*fexb(ip,2,3) -
-     &      xcoolb(3,iib,ip)*fexb(ip,2,2)
-            fmomtot(2,4,iib) = fmomtot(2,4,iib) + 
-     &      xcoolb(3,iib,ip)*fexb(ip,2,1) -
-     &      xcoolb(1,iib,ip)*fexb(ip,2,3)
-            fmomtot(3,4,iib) = fmomtot(3,4,iib) + 
-     &      xcoolb(1,iib,ip)*fexb(ip,2,2) -
-     &      xcoolb(2,iib,ip)*fexb(ip,2,1)
-          enddo
-*         calcul du terme convectif du 2nd membre : W X J W
-*             JW : 
-          do id=1,3
-            2jw(id) = 0.d0
-            do j=1,3
-          2jw(id) = 2jw(id) + inertie(id,j,iib)*omeg2(j,4,iib)
-            enddo
-          enddo
-*             W X JW
-          t2(1) = omeg2(2,4,iib)*2jw(3) - omeg2(3,4,iib)*2jw(2) 
-          t2(2) = omeg2(3,4,iib)*2jw(1) - omeg2(1,4,iib)*2jw(3) 
-          t2(3) = omeg2(1,4,iib)*2jw(2) - omeg2(2,4,iib)*2jw(1) 
-*         calcul de l'acceleration : A = J^-1 * t2
-          do id = 1,3
-            omeg3(id,4,iib) = 0.d0
-            do j = 1,3
-              omeg3(id,4,iib) = omeg3(id,4,iib) + 
-     &        invinert(id,j,iib) * (-t2(j) + fmomtot(j,4,iib))
-            enddo
-          enddo
-*         "rappatriment sur l'espace tangent en t_n :
-          call xpinv(th2(1),dexpinv(1,1),xang2)
-*         application : 
-* - au vecteur de rotation
-* - a la vitesse angulaire de rotation
-* - a l' acceleration angulaire de rotation
-          do id=1,3
-            th2bis(id) = 0.d0
-            w2bis(id) = 0.d0
-            a2bis(id) = 0.d0
-            do j=1,3
-              th2bis(id) = th2bis(id) + dexpinv(id,j) * th2(j)
-              w2bis(id) = w2bis(id) + dexpinv(id,j) * omeg2(id,4,j,iib)
-              a2bis(id) = a2bis(id) + dexpinv(id,j) * omeg3(id,4,j,iib)
-            enddo
-          enddo
-*  on implemente la correction ?
-          if (lxpinv) then
-            do id=1,3  
-              th2(id) = th2bis(id)
-              omeg2(id,4,j,iib) = w2bis(id)
-              omeg3(id,4,j,iib) = a2bis(id)
-            enddo
-          endif
+*          equilibre dynamique :
+          call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
+     &                  th2,fmomtot,xcoolb,fexb,nplb,4,2,lxpinv)
 
 ************************************************************************
 *         "rappatriement" sur le plan tangent en t_n de :
@@ -313,63 +258,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,3,IIB))
 *          quaternion a l'instant tn+1:
           CALL QUAT2MAT(OMEG1(1,3,IIB),ROT(1,1,3,IIB)) 
-*          calcul du couple exerce par les forces exterieures dans le body frame :
-*              comme c'est que le poids il ne change ni en norme ni en directioin 
-*              donc on a pas reinterpole sur 1/4 du pas de temps mais a faire si chargement variable!
-          do ip=1,nplb
-            fmomtot(1,3,iib) = fmomtot(1,3,iib) + 
-     &      xcoolb(2,iib,ip)*fexb(ip,2,3) -
-     &      xcoolb(3,iib,ip)*fexb(ip,2,2)
-            fmomtot(2,3,iib) = fmomtot(2,3,iib) + 
-     &      xcoolb(3,iib,ip)*fexb(ip,2,1) -
-     &      xcoolb(1,iib,ip)*fexb(ip,2,3)
-            fmomtot(3,3,iib) = fmomtot(3,3,iib) + 
-     &      xcoolb(1,iib,ip)*fexb(ip,2,2) -
-     &      xcoolb(2,iib,ip)*fexb(ip,2,1)
-          enddo
-*         calcul du terme convectif du 2nd membre : W X J W
-*             JW : 
-          do id=1,3
-            2jw(id) = 0.d0
-            do j=1,3
-          2jw(id) = 2jw(id) + inertie(id,j,iib)*omeg2(j,3,iib)
-            enddo
-          enddo
-*             W X JW
-          t2(1) = omeg2(2,3,iib)*2jw(3) - omeg2(3,3,iib)*2jw(2) 
-          t2(2) = omeg2(3,3,iib)*2jw(1) - omeg2(1,3,iib)*2jw(3) 
-          t2(3) = omeg2(1,3,iib)*2jw(2) - omeg2(2,3,iib)*2jw(1) 
-*         calcul de l'acceleration : A = J^-1 * t2
-          do id = 1,3
-            omeg3(id,3,iib) = 0.d0
-            do j = 1,3
-              omeg3(id,3,iib) = omeg3(id,3,iib) + 
-     &        invinert(id,j,iib) * (-t2(j) + fmomtot(j,3,iib))
-            enddo
-          enddo
-
-*         "rappatriment sur l'espace tangent en t_n :
-          call xpinv(th3(1),dexpinv(1,1),xang2)
-*         application : 
-* - au vecteur de rotation
-          do id=1,3
-            th3bis(id) = 0.d0
-            w3bis(id) = 0.d0
-            a3bis(id) = 0.d0
-            do j=1,3
-              th3bis(id) = th3bis(id) + dexpinv(id,j) * th3(j)
-              w3bis(id) = w3bis(id) + dexpinv(id,j) * omeg2(id,3,j,iib)
-              a3bis(id) = a3bis(id) + dexpinv(id,j) * omeg3(id,3,j,iib)
-            enddo
-          enddo
-*  on implemente la correction ?
-          if (lxpinv) then
-            do id=1,3  
-              th3(id) = th3bis(id)
-              omeg2(id,3,j,iib) = w3bis(id)
-              omeg3(id,3,j,iib) = a3bis(id)
-            enddo
-          endif
+*          equilibre dynamique :
+          call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
+     &                  th3,fmomtot,xcoolb,fexb,nplb,3,2,lxpinv)
 ************************************************************************
 *         k3 = (w3,a3)^T avec :
 *           - w3 = omeg2(id,3,iib)
@@ -388,63 +279,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,2,IIB))
 *          quaternion a l'instant tn+1:
           CALL QUAT2MAT(OMEG1(1,2,IIB),ROT(1,1,2,IIB)) 
-*          calcul du couple exerce par les forces exterieures dans le body frame :
-*              comme c'est que le poids il ne change ni en norme ni en directioin 
-*              donc on a pas reinterpole sur 1/4 du pas de temps mais a faire si chargement variable!
-          do ip=1,nplb
-            fmomtot(1,2,iib) = fmomtot(1,2,iib) + 
-     &      xcoolb(2,iib,ip)*fexb(ip,1,3) -
-     &      xcoolb(3,iib,ip)*fexb(ip,1,2)
-            fmomtot(2,2,iib) = fmomtot(2,2,iib) + 
-     &      xcoolb(3,iib,ip)*fexb(ip,1,1) -
-     &      xcoolb(1,iib,ip)*fexb(ip,1,3)
-            fmomtot(3,2,iib) = fmomtot(3,2,iib) + 
-     &      xcoolb(1,iib,ip)*fexb(ip,1,2) -
-     &      xcoolb(2,iib,ip)*fexb(ip,1,1)
-          enddo
-*         calcul du terme convectif du 2nd membre : W X J W
-*             JW : 
-          do id=1,3
-            2jw(id) = 0.d0
-            do j=1,3
-          2jw(id) = 2jw(id) + inertie(id,j,iib)*omeg2(j,2,iib)
-            enddo
-          enddo
-*             W X JW
-          t2(1) = omeg2(2,2,iib)*2jw(3) - omeg2(3,2,iib)*2jw(2) 
-          t2(2) = omeg2(3,2,iib)*2jw(1) - omeg2(1,2,iib)*2jw(3) 
-          t2(3) = omeg2(1,2,iib)*2jw(2) - omeg2(2,2,iib)*2jw(1) 
-*         calcul de l'acceleration : A = J^-1 * t2
-          do id = 1,3
-            omeg3(id,2,iib) = 0.d0
-            do j = 1,3
-              omeg3(id,2,iib) = omeg3(id,2,iib) + 
-     &        invinert(id,j,iib) * (-t2(j) + fmomtot(j,2,iib))
-     
-            enddo
-          enddo
-*         "rappatriment sur l'espace tangent en t_n :
-          call xpinv(th4(1),dexpinv(1,1),xang2)
-*         application : 
-* - au vecteur de rotation
-          do id=1,3
-            th4bis(id) = 0.d0
-            w2bis(id) = 0.d0
-            a2bis(id) = 0.d0
-            do j=1,3
-              th4bis(id) = th4bis(id) + dexpinv(id,j) * th4(j)
-              w2bis(id) = w2bis(id) + dexpinv(id,j) * omeg2(id,2,j,iib)
-              a2bis(id) = a2bis(id) + dexpinv(id,j) * omeg3(id,2,j,iib)
-            enddo
-          enddo
-*  on implemente la correction ?
-          if (lxpinv) then
-            do id=1,3  
-              th4(id) = th4bis(id)
-              omeg2(id,2,j,iib) = w2bis(id)
-              omeg3(id,2,j,iib) = a2bis(id)
-            enddo
-          endif
+*          equilibre dynamique :
+          call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
+     &                  th4,fmomtot,xcoolb,fexb,nplb,2,1,lxpinv)
 ************************************************************************
 *         k4 = (w4,a4)^T avec :
 *           - w4 = omeg2(id,2,iib)
