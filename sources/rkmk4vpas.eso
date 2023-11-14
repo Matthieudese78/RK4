@@ -287,37 +287,31 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *           - w4 = omeg2(id,2,iib)
 *           - a4 = omeg3(id,2,iib)
 ************************************************************************
-*         maj de la matrice de rotation : (avec th1 = (0 0 0)^T) :
           do id=1,3
-            dtheta(id,iib) = (dt/6.d0)*( th1(id)
-     &                                + 2.d0*th2(id)
-     &                                + 2.d0*th3(id)
-     &                                + th4(id) )
+            dtheta(id,iib) = (dt/6.d0)*( omeg2(id,5,iib)
+     &                                 + 2.d0*omeg2(id,4,iib)
+     &                                 + 2.d0*omeg2(id,3,iib)
+     &                                 + omeg2(id,2,iib) )
           enddo
 *
           CALL VECT2QUAT(DTHETA(1,IIB),DQUAT)
 *          MAJ quaternion OMEG1:
           CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,1,IIB))
-*           WRITE(*,*)'D2VPAS: '
-*            DO I=1,4
-*              WRITE(*,*)'     OMEG1(',I,1,IIB,') = ',OMEG1(I,1,IIB)
-*            ENDDO
 *          quaternion a l'instant tn+1:
           CALL QUAT2MAT(OMEG1(1,1,IIB),ROT(1,1,1,IIB)) 
-
 *         maj des vitesses angulaires :
           do id=1,3
-            omeg2(id,1,iib) = (dt/6.d0)*( omeg2(id,5,iib) 
-     &                                  + 2.d0*omeg2(id,4) 
-     &                                  + 2.d0*omeg2(id,3) 
-     &                                  + omeg2(id,2)) 
-          enddo
-*         maj des accelerations angulaires :
-          do id=1,3
-            omeg3(id,1,iib) = (dt/6.d0)*( omeg3(id,5,iib) 
+            omeg2(id,1,iib) = (dt/6.d0)*( omeg3(id,5,iib) 
      &                                  + 2.d0*omeg3(id,4) 
      &                                  + 2.d0*omeg3(id,3) 
      &                                  + omeg3(id,2)) 
+          enddo
+*          equilibre dynamique :
+          call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
+     &             dtheta(1,iib),fmomtot,xcoolb,fexb,nplb,1,1,.false.)
+*          MAJ vitesse angulaire :
+          do id = 1,3
+            omeg2(id,1,iib)=(dt/2.d0)*(omeg3(id,1,iib)-omeg3(id,5,iib))
           enddo
 ******** fin boucle sur les ss bases
         enddo
