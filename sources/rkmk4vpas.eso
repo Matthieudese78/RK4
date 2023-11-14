@@ -134,6 +134,7 @@ cms : pour le couple resistant "hard code" :
 
 cms : pour le couple resistant "hard code" : 
       real*8 th2(3), th3(3), th4(3), jw2(3), t2(3)
+      real*8 th2bis(3), th3bis(3), th4bis(3)
       real*8 u2(3), u3(3), u4(3), dexpinv(3,3)
 *
 *      QUATERNION = .FALSE.
@@ -258,7 +259,21 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             enddo
           enddo
 *         "rappatriment sur l'espace tangent en t_n :
-          call xpinv(th2(1),dexpinv(1,1),xang)
+          call xpinv(th2(1),dexpinv(1,1),xang2)
+*         application : 
+* - au vecteur de rotation
+* - a la vitesse angulaire de rotation
+* - a l' acceleration angulaire de rotation
+          do id=1,3
+            th2bis(id) = 0.d0
+            w2bis(id) = 0.d0
+            a2bis(id) = 0.d0
+            do j=1,3
+              th2bis(id) = th2bis(id) + dexpinv(id,j) * th2(j)
+              w2bis(id) = w2bis(id) + dexpinv(id,j) * omeg2(id,4,j,iib)
+              a2bis(id) = a2bis(id) + dexpinv(id,j) * omeg3(id,4,j,iib)
+            enddo
+          enddo
 *  on implemente la correction ?
           if (lxpinv) then
             do id=1,3  
@@ -322,6 +337,19 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             do j = 1,3
               omeg3(id,3,iib) = omeg3(id,3,iib) + 
      &        invinert(id,j,iib) * (t2(j) + fmomtot(j,3,iib))
+
+*         "rappatriment sur l'espace tangent en t_n :
+          call xpinv(th3(1),dexpinv(1,1),xang2)
+*         application : 
+* - au vecteur de rotation
+          do id=1,3
+            th3bis(id) = 0.d0
+            w3bis(id) = 0.d0
+            a3bis(id) = 0.d0
+            do j=1,3
+              th3bis(id) = th3bis(id) + dexpinv(id,j) * th3(j)
+              w3bis(id) = w3bis(id) + dexpinv(id,j) * omeg2(id,3,j,iib)
+              a3bis(id) = a3bis(id) + dexpinv(id,j) * omeg3(id,3,j,iib)
             enddo
           enddo
 *  on implemente la correction ?
@@ -382,6 +410,18 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             do j = 1,3
               omeg3(id,2,iib) = omeg3(id,2,iib) + 
      &        invinert(id,j,iib) * (t2(j) + fmomtot(j,2,iib))
+*         "rappatriment sur l'espace tangent en t_n :
+          call xpinv(th4(1),dexpinv(1,1),xang2)
+*         application : 
+* - au vecteur de rotation
+          do id=1,3
+            th4bis(id) = 0.d0
+            w2bis(id) = 0.d0
+            a2bis(id) = 0.d0
+            do j=1,3
+              th4bis(id) = th4bis(id) + dexpinv(id,j) * th4(j)
+              w2bis(id) = w2bis(id) + dexpinv(id,j) * omeg2(id,2,j,iib)
+              a2bis(id) = a2bis(id) + dexpinv(id,j) * omeg3(id,2,j,iib)
             enddo
           enddo
 *  on implemente la correction ?
