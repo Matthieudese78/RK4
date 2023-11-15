@@ -1,4 +1,4 @@
-C D2VINI    SOURCE    BP208322  20/09/18    21:15:13     10718          
+C RKINI    SOURCE    BP208322  20/09/18    21:15:13     10718          
        SUBROUTINE RKINI(ITINIT,KTKAM,KTQ,KTFEX,KTPAS,KTNUM,KTLIAA,
      &                  KTLIAB,KTPHI,KCPR,KOCLFA,KOCLB1,REPRIS,
      &                  lmodyn,KTROT,KCPRIG)
@@ -173,8 +173,8 @@ c       en attendant, petite bidouille locale
       IERRD = 0
       segini,LOCLF2,LOCLF3
 
-      WRITE(*,*)'D2VINI : START, NPFEXA = ',NPFEXA
-*     WRITE(*,*)'D2VINI : START, IPLIB(1,1) = ',IPLIB(1,1)
+      WRITE(*,*)'RKINI : START, NPFEXA = ',NPFEXA
+*     WRITE(*,*)'RKINI : START, IPLIB(1,1) = ',IPLIB(1,1)
 * Matt: initialisation ROT,EXPTH,OMEG1 si corps rigide: 
 *       EXPTH = ID 
 *       OMEG1 = ID
@@ -247,9 +247,9 @@ c       en attendant, petite bidouille locale
       ENDIF
 cms : test sur FEXA / FTOTA : 
       DO I=1,NA1
-         WRITE(*,*)'D2VINI : START'
-         WRITE(*,*)'D2VINI : Fexa (',I,',1,1) =',Fexa(I,1,1)
-         WRITE(*,*)'D2VINI : Fexa (',I,',1,2) =',Fexa(I,1,2)
+         WRITE(*,*)'RKINI : START'
+         WRITE(*,*)'RKINI : Fexa (',I,',1,1) =',Fexa(I,1,1)
+         WRITE(*,*)'RKINI : Fexa (',I,',1,2) =',Fexa(I,1,2)
       ENDDO
 *** Fin initialisation RIGIDE.
 *
@@ -257,7 +257,7 @@ cms : test sur FEXA / FTOTA :
 *
       IF ( REPRIS ) THEN
          IF (IIMPI.EQ.333) THEN
-            WRITE(IOIMP,*)'D2VINI : ---> reprise de calcul'
+            WRITE(IOIMP,*)'RKINI : ---> reprise de calcul'
          ENDIF
          if (lmodyn) then
            mwinit = itinit
@@ -297,7 +297,7 @@ cms : test sur FEXA / FTOTA :
 *
 c        Q1(2)=q_0
          IF (IIMPI.EQ.333) THEN
-           WRITE(IOIMP,*)'D2VINI: 1er appel a RK18'
+           WRITE(IOIMP,*)'RKINI: 1er appel a RK18'
          ENDIF
          IF (ICH1.NE.0) THEN
             CALL RK18(ICH1,KTQ,1,2,KCPR,KCPRIG,KTROT,NSB)
@@ -308,7 +308,7 @@ c        Q1(2)=q_0
 *
 c        Q2(2)=\dot{q}_0
          IF (IIMPI.EQ.333) THEN
-           WRITE(IOIMP,*)'D2VINI: 2eme appel a RK18'
+           WRITE(IOIMP,*)'RKINI: 2eme appel a RK18'
          ENDIF
          IF (ICH2.NE.0) THEN
             CALL RK18(ICH2,KTQ,2,2,KCPR,KCPRIG,KTROT,NSB)
@@ -367,7 +367,7 @@ c        Q2(2)=\dot{q}_0
             if(nbesc.ne.0)SEGDES,IPILOC
             SEGDES,MTABLE
             IF (IIMPI.EQ.333) THEN
-               WRITE(IOIMP,*) 'D2VINI : IPOLY = ',IPOLY
+               WRITE(IOIMP,*) 'RKINI : IPOLY = ',IPOLY
             ENDIF
             IF (IPOLY.NE.0) THEN
                CALL ACCTAB(ITABL,'MOT',I0,X0,'VARIABLES_LIAISON_A',
@@ -377,12 +377,11 @@ c        Q2(2)=\dot{q}_0
             ENDIF
          ENDIF
          IF (NLIAB.NE.0) THEN
-*old            CALL DEVRCO(Q1,NA1,XPTB,NPLB,XPHILB,NSB,NPLSB,NA2,IDIMB,
-            IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VINI: appel DEVRCO'
-            WRITE(*,*)'D2VINI: appel DEVRCO'
-CMS : Si rotaions rigides, on a besoin de PDT dans devrco :
+            IF (IIMPI.EQ.333) WRITE(IOIMP,*)'RKINI: appel RKRCO'
+            WRITE(*,*)'RKINI: appel RKRCO'
+CMS : Si rotaions rigides, on a besoin de PDT dans RKRCO :
             PDT=XDT(1)
-            CALL DEVRCO(Q1,Q2,NA1,XPTB,NPLB,XPHILB,NSB,NPLSB,NA2,IDIMB,
+            CALL RKRCO(Q1,Q2,NA1,XPTB,NPLB,XPHILB,NSB,NPLSB,NA2,IDIMB,
 *           --> XPTB(:,2,:)=x_0   XPTB(:,3,:)=\dot{q}_0
 *               ok car XPTB(:,3,:) utilisé uniquement pour calcul FnlB
      &                  IBASB,IPLSB,INMSB,IORSB,2,IAROTA,KTROT,PDT)
@@ -432,8 +431,8 @@ c        Q2(2)=\dot{q}_0
          PDT=XDT(1)
          T=XTEMPS(1)
          IF (NLIAA.NE.0) THEN
-*           IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VINI: appel D2VLFA'
-            WRITE(*,*)'D2VINI: appel D2VLFA'
+*           IF (IIMPI.EQ.333) WRITE(IOIMP,*)'RKINI: appel D2VLFA'
+            WRITE(*,*)'RKINI: appel D2VLFA'
             CALL D2VLFA(Q1,Q2,FTOTA,NA1,IPALA,IPLIA,XPALA,XVALA,
      &                  NLIAA,PDT,T,1,2,FINERT,IVINIT,FTEST,
      &                  KTOTXA,KTOTVA,.FALSE.)     
@@ -443,13 +442,13 @@ c        Q2(2)=\dot{q}_0
                 DO 13 IP=1,NPLB
                   DO 15 ID=1,IDIM
                        FEXB(IP,2,ID) = FTEXB(IP,1,2,ID)
-                       WRITE(*,*)'D2VINI: FEXB(',IP,2,ID,') = ',
+                       WRITE(*,*)'RKINI: FEXB(',IP,2,ID,') = ',
      &                                    FEXB(IP,2,ID)
  15               CONTINUE
  13             CONTINUE
             ENDIF
-*           IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VINI: appel D2VLF2'
-            WRITE(*,*)'D2VINI: appel D2VLF2'
+*           IF (IIMPI.EQ.333) WRITE(IOIMP,*)'RKINI: appel D2VLF2'
+            WRITE(*,*)'RKINI: appel D2VLF2'
             CALL D2VLF2(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,
      &           NLIAB,XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,
      &           PDT,T,1,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,2,
@@ -463,21 +462,21 @@ c        Q2(2)=\dot{q}_0
             ENDIF
 cms : test : a-t-on toujours fexa ? 
             DO I=1,NA1
-               WRITE(*,*)'D2VINI : post-d2vlf2 : '
-               WRITE(*,*)'D2VINI : Fexa (',I,',1,1) =',Fexa(I,1,1)
-               WRITE(*,*)'D2VINI : Fexa (',I,',1,2) =',Fexa(I,1,2)
+               WRITE(*,*)'RKINI : post-d2vlf2 : '
+               WRITE(*,*)'RKINI : Fexa (',I,',1,1) =',Fexa(I,1,1)
+               WRITE(*,*)'RKINI : Fexa (',I,',1,2) =',Fexa(I,1,2)
             ENDDO
          ENDIF
 *
 *        Calcul des deplacements et des vitesses au pas debut du initial
 *
       IF (IIMPI.EQ.333) THEN
-         WRITE(IOIMP,*)'D2VINI :'
+         WRITE(IOIMP,*)'RKINI :'
          DO I=1,NA1
-            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',3)   =',FTOTA(I,3)
-            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',4)   =',FTOTA(I,4)
-            WRITE(IOIMP,*)'D2VINI : FEXA (',I,',1,1) =',FEXA(I,1,1)
-            WRITE(IOIMP,*)'D2VINI : FEXA (',I,',1,2) =',FEXA(I,1,2)
+            WRITE(IOIMP,*)'RKINI : FTOTA(',I,',3)   =',FTOTA(I,3)
+            WRITE(IOIMP,*)'RKINI : FTOTA(',I,',4)   =',FTOTA(I,4)
+            WRITE(IOIMP,*)'RKINI : FEXA (',I,',1,1) =',FEXA(I,1,1)
+            WRITE(IOIMP,*)'RKINI : FEXA (',I,',1,2) =',FEXA(I,1,2)
          ENDDO
 *        end do
       ENDIF
@@ -509,14 +508,14 @@ c          \ddot Q_0 = [M+dt/2C]-1 * (F_0 - F^AMOR_0)
 c         -cas matrice M ou C pleine
            IF(NB1.NE.1) THEN
              DO 63 I=1,NA1
-               Q3(I,2) = 0.D0
+               Q3(I,5) = 0.D0
              DO 64 J=1,NB1
-               Q3(I,2) = Q3(I,2) + XOPER(I,J,1)*(FTOTA(J,2)-FAMOR(J))
+               Q3(I,5) = Q3(I,2) + XOPER(I,J,1)*(FTOTA(J,2)-FAMOR(J))
  64          CONTINUE
  63          CONTINUE
            ELSE
              DO 62 I=1,NA1
-               Q3(I,2) = (FTOTA(I,2)-FAMOR(I))/(XM(I,1)-FINERT(I,2))
+               Q3(I,5) = (FTOTA(I,2)-FAMOR(I))/(XM(I,1)-FINERT(I,2))
  62          CONTINUE
            ENDIF
            SEGSUP,FAMOR
@@ -541,39 +540,39 @@ c------- Cas K,C et M diagonal -----------------------------------
              
              FTOTA(I,2) = FTOTA(I,2) + FEXA(I,1,2) - XK(I,1)*Q1(I,2)
      &                  - XASM(I,1)*Q2(I,2)
-             Q3(I,2) = FTOTA(I,2)*UNSM
+             Q3(I,5) = FTOTA(I,2)*UNSM
  10        CONTINUE
          ENDIF
 *
       ENDIF
       IF (IIMPI.EQ.333) THEN
          DO 30 I=1,NA1
-            WRITE(IOIMP,*)'D2VINI :'
-            WRITE(IOIMP,*)'D2VINI :  Q1(',I,',1) =',Q1(I,1)
-            WRITE(IOIMP,*)'D2VINI :  Q2(',I,',1) =',Q2(I,1)
-            WRITE(IOIMP,*)'D2VINI :  Q3(',I,',1) =',Q3(I,1)
-            WRITE(IOIMP,*)'D2VINI :'
-            WRITE(IOIMP,*)'D2VINI :'
-            WRITE(IOIMP,*)'D2VINI :  Q1(',I,',2) =',Q1(I,2)
-            WRITE(IOIMP,*)'D2VINI :  Q2(',I,',2) =',Q2(I,2)
-            WRITE(IOIMP,*)'D2VINI :  Q3(',I,',2) =',Q3(I,2)
-            WRITE(IOIMP,*)'D2VINI :'
-            WRITE(IOIMP,*)'D2VINI :'
-            WRITE(IOIMP,*)'D2VINI :  Q1(',I,',3) =',Q1(I,3)
-            WRITE(IOIMP,*)'D2VINI :  Q2(',I,',3) =',Q2(I,3)
-            WRITE(IOIMP,*)'D2VINI :  Q3(',I,',3) =',Q3(I,3)
-            WRITE(IOIMP,*)'D2VINI :'
-            WRITE(IOIMP,*)'D2VINI :  Q1(',I,',4) =',Q1(I,4)
-            WRITE(IOIMP,*)'D2VINI :  Q2(',I,',4) =',Q2(I,4)
-            WRITE(IOIMP,*)'D2VINI :  Q3(',I,',4) =',Q3(I,4)
+            WRITE(IOIMP,*)'RKINI :'
+            WRITE(IOIMP,*)'RKINI :  Q1(',I,',1) =',Q1(I,1)
+            WRITE(IOIMP,*)'RKINI :  Q2(',I,',1) =',Q2(I,1)
+            WRITE(IOIMP,*)'RKINI :  Q3(',I,',1) =',Q3(I,1)
+            WRITE(IOIMP,*)'RKINI :'
+            WRITE(IOIMP,*)'RKINI :'
+            WRITE(IOIMP,*)'RKINI :  Q1(',I,',2) =',Q1(I,2)
+            WRITE(IOIMP,*)'RKINI :  Q2(',I,',2) =',Q2(I,2)
+            WRITE(IOIMP,*)'RKINI :  Q3(',I,',2) =',Q3(I,2)
+            WRITE(IOIMP,*)'RKINI :'
+            WRITE(IOIMP,*)'RKINI :'
+            WRITE(IOIMP,*)'RKINI :  Q1(',I,',3) =',Q1(I,3)
+            WRITE(IOIMP,*)'RKINI :  Q2(',I,',3) =',Q2(I,3)
+            WRITE(IOIMP,*)'RKINI :  Q3(',I,',3) =',Q3(I,3)
+            WRITE(IOIMP,*)'RKINI :'
+            WRITE(IOIMP,*)'RKINI :  Q1(',I,',4) =',Q1(I,4)
+            WRITE(IOIMP,*)'RKINI :  Q2(',I,',4) =',Q2(I,4)
+            WRITE(IOIMP,*)'RKINI :  Q3(',I,',4) =',Q3(I,4)
  30         CONTINUE
 *        end do
          DO 31 I=1,NA1
-            WRITE(IOIMP,*)'D2VINI :',FTOTA(/1),FTOTA(/2)
-            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',1) =',FTOTA(I,1)
-            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',2) =',FTOTA(I,2)
-            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',3) =',FTOTA(I,3)
-            WRITE(IOIMP,*)'D2VINI : FTOTA(',I,',4) =',FTOTA(I,4)
+            WRITE(IOIMP,*)'RKINI :',FTOTA(/1),FTOTA(/2)
+            WRITE(IOIMP,*)'RKINI : FTOTA(',I,',1) =',FTOTA(I,1)
+            WRITE(IOIMP,*)'RKINI : FTOTA(',I,',2) =',FTOTA(I,2)
+            WRITE(IOIMP,*)'RKINI : FTOTA(',I,',3) =',FTOTA(I,3)
+            WRITE(IOIMP,*)'RKINI : FTOTA(',I,',4) =',FTOTA(I,4)
  31         CONTINUE
 *        end do
       ENDIF
@@ -593,7 +592,7 @@ c------- Cas K,C et M diagonal -----------------------------------
             IN2 = INA2 + IN
 *           Calc. energie cinetique en translation :
             IF (ITRIG(IB,IN)) THEN
-      WRITE(*,*)'D2VINI : prise en compte de la translation rigide !!!'
+      WRITE(*,*)'RKINI : prise en compte de la translation rigide !!!'
               DO ID=1,IDIM
                 XTC = XTC + 
      &       0.5*MTSB(IB)*((XPHILB(IB,1,IN,ID)*Q2(IN2,2))**2.d0) 
@@ -613,7 +612,7 @@ c------- Cas K,C et M diagonal -----------------------------------
             DO J=1,3
               DYN2(I) = DYN2(I) + INERTIE(I,J,IB)*OMEG2(J,2,IB)
             ENDDO
-            TCIN(IB) = TCIN(IB) + OMEG2(I,2,IB)*DYN2(I)
+            TCIN(IB) = TCIN(IB) + (OMEG2(I,2,IB)*DYN2(I)/2.d0)
           ENDDO
 *         Calc. moment cinétique spatial :
           DO I=1,3
@@ -626,7 +625,7 @@ c------- Cas K,C et M diagonal -----------------------------------
               ENDDO
 *              write(*,*)'DYN2(',J,') = ',DYN2(J)
               PICIN(IB,I) = PICIN(IB,I)+DYN2(J)*OMEG2(J,2,IB)
-*              WRITE(*,*)'D2VINI : PICIN(',IB,I,') = ',PICIN(IB,I)
+*              WRITE(*,*)'RKINI : PICIN(',IB,I,') = ',PICIN(IB,I)
             ENDDO
           ENDDO                
 *         
@@ -646,26 +645,26 @@ c------- Cas K,C et M diagonal -----------------------------------
           DO ID=1,3
             OMEG3(ID,2,IB) = 0.D0
             DO J=1,3
-              OMEG3(ID,2,IB) = OMEG3(ID,2,IB) + 
-     &        INVINERT(ID,J,IB)*(RTGEX(J) + WJW(J))
+              OMEG3(ID,5,IB) = OMEG3(ID,2,IB) + 
+     &        INVINERT(ID,J,IB)*(RTGEX(J) - WJW(J))
             ENDDO
-*            WRITE(*,*)'D2VINI: OMEG3(',ID,',2,IB) = ',OMEG3(ID,2,IB)
+*            WRITE(*,*)'RKINI: OMEG3(',ID,',2,IB) = ',OMEG3(ID,2,IB)
           ENDDO
       
 *       fin boucle sur les ss bases
-*        WRITE(*,*)'D2VINI : tenseur J'
+*        WRITE(*,*)'RKINI : tenseur J'
 *        write(*,'(20F15.5)')((INERTIE(k,j,IB),j= 1,3),k= 1,3)
-*        WRITE(*,*)'D2VINI : matrice de rotation R'
+*        WRITE(*,*)'RKINI : matrice de rotation R'
 *        write(*,'(20F15.5)')((ROT(k,j,2,IB),j= 1,3),k= 1,3)
 *        WRITE(*,*)' ROT(3,1,2,IB) = ',ROT(3,1,2,IB)
 *        WRITE(*,*)' ROT(3,2,2,IB) = ',ROT(3,2,2,IB)
 *        WRITE(*,*)' ROT(3,3,2,IB) = ',ROT(3,3,2,IB)
-*        WRITE(*,*)'D2VINI : vitesse de rotation'
+*        WRITE(*,*)'RKINI : vitesse de rotation'
 *        write(*,'(20F15.5)')(OMEG2(j,2,IB),j= 1,3)
-*        WRITE(*,*)'D2VINI: PICIN(',IB,1,') = ',PICIN(IB,1)
-*        WRITE(*,*)'D2VINI: PICIN(',IB,2,') = ',PICIN(IB,2)
-*        WRITE(*,*)'D2VINI: PICIN(',IB,3,') = ',PICIN(IB,3)
-        WRITE(*,*)'D2VINI: TCIN(',IB,') = ',TCIN(IB)
+*        WRITE(*,*)'RKINI: PICIN(',IB,1,') = ',PICIN(IB,1)
+*        WRITE(*,*)'RKINI: PICIN(',IB,2,') = ',PICIN(IB,2)
+*        WRITE(*,*)'RKINI: PICIN(',IB,3,') = ',PICIN(IB,3)
+        WRITE(*,*)'RKINI: TCIN(',IB,') = ',TCIN(IB)
 *       fin boucle ss bases
         ENDDO
 
