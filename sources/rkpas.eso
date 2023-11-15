@@ -310,7 +310,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
      &             dtheta(1,iib),fmomtot,xcoolb,fexb,nplb,1,1,.false.)
 *          MAJ vitesse angulaire :
           do id = 1,3
-            omeg2(id,1,iib)=(dt/2.d0)*(omeg3(id,1,iib)-omeg3(id,5,iib))
+            omeg2(id,1,iib)=(dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
           enddo
 ******** fin boucle sur les ss bases
         enddo
