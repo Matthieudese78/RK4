@@ -69,7 +69,7 @@ c          CALL DYNPLX
       ELSE IF (MOALG(1:5).EQ.MORKMK4) THEN
 *        on met ialgo = 2 pour avoir a priori comme les diff centrees
 *        qui correspond de l'algo d'ou on part.
-         CALL DYNRK(2)
+         CALL DYNDIF(5)
          RETURN
 *     Erreur dans le choix de l'algorithme
       ELSE
