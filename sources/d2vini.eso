@@ -646,7 +646,7 @@ c------- Cas K,C et M diagonal -----------------------------------
             OMEG3(ID,2,IB) = 0.D0
             DO J=1,3
               OMEG3(ID,2,IB) = OMEG3(ID,2,IB) + 
-     &        INVINERT(ID,J,IB)*(RTGEX(J) + WJW(J))
+     &        INVINERT(ID,J,IB)*(RTGEX(J) - WJW(J))
             ENDDO
 *            WRITE(*,*)'D2VINI: OMEG3(',ID,',2,IB) = ',OMEG3(ID,2,IB)
           ENDDO
