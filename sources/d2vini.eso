@@ -174,7 +174,8 @@ c       en attendant, petite bidouille locale
       WRITE(*,*)'D2VINI : START, NPFEXA = ',NPFEXA
 *     NB : dyne18 fonctionne pour diffrences_centrees ET RKMK4
 *           en implementant a chaque fois les indices 2 ET 5 de certaines tables
-
+*     indice pour le ringe kutta : 
+      i3 = 5
 *     WRITE(*,*)'D2VINI : START, IPLIB(1,1) = ',IPLIB(1,1)
 * Matt: initialisation ROT,EXPTH,OMEG1 si corps rigide: 
 *       EXPTH = ID 
@@ -516,10 +517,14 @@ c         -cas matrice M ou C pleine
              DO 64 J=1,NB1
                Q3(I,2) = Q3(I,2) + XOPER(I,J,1)*(FTOTA(J,2)-FAMOR(J))
  64          CONTINUE
+*            pour le runge kutta :
+             q3(i,i3) = q3(i,2)
  63          CONTINUE
            ELSE
              DO 62 I=1,NA1
                Q3(I,2) = (FTOTA(I,2)-FAMOR(I))/(XM(I,1)-FINERT(I,2))
+*              pour le runge kutta :
+               q3(i,i3) = q3(i,2)
  62          CONTINUE
            ENDIF
            SEGSUP,FAMOR
@@ -545,6 +550,8 @@ c------- Cas K,C et M diagonal -----------------------------------
              FTOTA(I,2) = FTOTA(I,2) + FEXA(I,1,2) - XK(I,1)*Q1(I,2)
      &                  - XASM(I,1)*Q2(I,2)
              Q3(I,2) = FTOTA(I,2)*UNSM
+*            pour le runge kutta :
+             q3(i,i3) = q3(i,2)
  10        CONTINUE
          ENDIF
 *
