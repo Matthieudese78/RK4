@@ -1,0 +1,395 @@
+C DEVRCO    SOURCE    BP208322  20/09/18    21:15:42     10718          
+      SUBROUTINE RKRCO(Q1,Q2,NA1,XPTB,NPLB,XPHILB,NSB,NPLSB,NA2,IDIMB,
+     &                  IBASB,IPLSB,INMSB,IORSB,IND,IAROTA,KTROT,PDT)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNE : algorithme de Fu - de Vogelaere               *
+*     ________________________________________________               *
+*                                                                    *
+*     Recombinaison des deplacements aux points de choc.             *
+*                                                                    *
+*     Param}tres:                                                    *
+*                                                                    *
+* e   Q1      Tableau des deplacements generalises.                  *
+* e   NA1     Nombre total d'inconnues en base A.                    *
+* es  XPTB    Tableau des deplacements des points sur base B.        *
+*new:                 et de la vitesse                               *
+* e   NPLB    Nombre total de points intervenant dans les liaisons.  *
+* e   XPHILB  Tableau des vecteurs propres aux points de liaisons.   *
+* e   NSB     Nombre de sous base.                                   *
+* e   NPLSB   Nombre total de points intervenant dans les liaisons   *
+*             dans une sous base.                                    *
+* e   NA2     Nombre total d'inconnues dans une sous base.           *
+* e   IDIMB   Nombre total de ddl retenus.                           *
+* e   IBASB   Indique dans quelle sous base appartient le point de   *
+*             liaison.                                               *
+* e   INMSB   Indique le nombre d'inconnues de la sous base.         *
+* e   IORSB   Donne l'indice du premier mode dans l'ensemble des     *
+*             modes.                                                 *
+* e   IPLSB   Dans une sous base, indique la position du point de    *
+*             liaison.                                               *
+* e   IND     Indice du pas. (ex: dans appel d2vini IND = 2)         *
+*                                                                    *
+* e   ITRIG(IN) vrai si IN = translation rigide, faux sinon.         *
+*                                                                    *
+* Prise en compte des rotations rigides:                             *
+*   1) RIGIDE ici sert aussi de condition: est-on dans diff centrees?*
+*      --> condition: IAROTA.NE.0 .AND. RIGIDE                       *
+*     (les 2 car sinon de vogelaere tente une reco rigide avec MTROT *
+*      non repmpli!!)                                                *
+*   2)XXCP: vect. centre de rota --> pt a reco                       *
+*   3) DEPLACEMENT:                                                  *
+*      X = XCOOLB - XCENT = coord. initiale point repere du solide   *
+*      Dans le repere du solide:                                     *
+*      POSITION = X + u_elastique                                    *
+*      Dans le repere spatial:                                       *
+*      POSITION = ROT * POSITION                                     *
+*      DEPLACEMENT = POSITION - ( XCOOLB - XCENT )                   *
+*   4) VITESSE:                                                      *
+*      Dans le repere du solide:                                     *
+*      VLOCAL = OMEG2 vectoriel (X + u_elastique) + d/dt(u_elastique)*
+*      Dans le repere spatial:                                       *
+*      VITESSE = ROT*VLOCAL                                          *
+*                                                                    *
+* En presence de translations rigides:                               *
+*   1) les depl elastiques (repere mobile et translations rigides    *
+*      sont recombines separement                                    *
+*   2) La formule implémentée est:                                   *
+*      U_tot(repere global) = U_translation_rigide +                 *
+*                       ( ROT*(CP + U_elastique(repere solide)) ) -  *
+*                       ( XCOOLB - XCENT )                           *
+*   3) la posi. du pt de liaison IP ds le repere du solide:          *
+*      (U_elastique(repere solide)                              *
+*      est stockee sous UFLEX pr eviter le recombinaison ds devmom   *
+*--------------------------------------------------------------------*
+*
+
+*     Segment des modes de rotations rigides
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,5,NSB),OMEG2(3,5,NSB),OMEG3(3,5,NSB)
+         REAL*8 ROT(3,3,5,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+      
+      LOGICAL RIGIDE
+      INTEGER IBASB(*),INMSB(*),IORSB(*),IPLSB(*),IAROTA(*)
+      REAL*8  XPHILB(NSB,NPLSB,NA2,*),Q1(NA1,*),Q2(NA1,*),XPTB(NPLB,2,*)
+      REAL*8  VLOCAL(3),XXCP(3),VITTR(3)
+      REAL*8  XTORS(3),XVTORS(3)
+*
+******* cms : creation d'un nouvel indice pour les besoins du RK4 :
+*     appel par rkini : ind = 2, 
+*     on utilise les valeurs qu'on vient d'implementer dans les tables a l'indice 5
+      if (ind.eq.2) ind2 = 5
+*     autres appel ind = 1
+*     on utilise les valeurs issues du rk4 stockees a l'indice 1
+      if (ind.eq.1) ind2 = 1
+*******
+
+      IF (IIMPI.EQ.333) WRITE(IOIMP,*)'DEVRCO: START'
+
+      RIGIDE = (KTROT.NE.0)
+*
+      IF (RIGIDE) THEN
+        MTROT = KTROT
+        NSB = OMEG1(/3)
+        IF (IDIMB.EQ.6) THEN
+cmsw      WRITE(*,*)'DEVRCO : IDIMB = 6'
+          IDIM = 3
+        ELSEIF (IDIMB.EQ.3) THEN
+          IDIM = 2
+        ENDIF
+*        WRITE(*,*)'DEVRCO: IDIM = ',IDIM
+      ENDIF
+*
+c     boucle sur les points de la liaison      
+cmsw   WRITE(*,*)'DEVRCO: NPLB = ',NPLB
+*      WRITE(*,*)'DEVRCO: IPLIB(1,1) = ',IPLIB(1,1)
+      DO 10 IP = 1,NPLB
+         ISB  = IBASB(IP)
+cmsw     WRITE(*,*)'DEVRCO: IBASB(',IP,') = ',IBASB(IP)
+         NA3  = INMSB(ISB)
+*        NA3 = nbr modes elastiques dans la sous base
+         INA1 = IORSB(ISB) - 1
+*         WRITE(*,*)'        INA1 = ',INA1
+*        IORSB(ISB) = pos. 1er mode de la sous base dans l'ensemble des modes.
+         IPLB = IPLSB(IP)
+*         WRITE(*,*)'DYNE26: IP = ',IP
+*         WRITE(*,*)'        IPLSB(',IP,') = ',IPLSB(IP)
+         IROT = IAROTA(ISB)
+c        boucle sur les ddls
+*         WRITE(*,*)'DEVRCO: ISB = ',ISB
+*         WRITE(*,*)'        NA3 = ',NA3
+*         WRITE(*,*)'        NA1 = ',NA1
+*         WRITE(*,*)'        XPHILB(/3) = ',NA2
+         DO 20 ID = 1,IDIMB
+cmsw        WRITE(*,*)'DEVRCO boucle 20 ID = ',ID
+            XRET = 0.D0
+            XRETV= 0.D0
+            XRETR = 0.D0
+            XRETRV = 0.D0
+c           boucle sur les modes
+*            WRITE(*,*)'DEVRCO boucle 20 NA3 = ',NA3
+            DO 30 IN = 1,NA3
+*               WRITE(*,*)'DEVRCO boucle 30 mode num = ',IN,'/',NA3
+*               WRITE(*,*)'    ITRIG(',ISB,IN,') = ',ITRIG(ISB,IN)
+               INN = INA1 + IN
+*               WRITE(*,*)'       XPHILB(',ISB,IPLB,IN,ID,') = ',
+*     &                           XPHILB(ISB,IPLB,IN,ID)
+*               WRITE(*,*)'       Q1(',INN,IND,') = ',Q1(INN,IND)
+*               WRITE(*,*)'       Q2(',INN,IND,') = ',Q2(INN,IND)
+*              On separe la reco des translation rigide de celle des depl. elastiques 
+*              dans le repere du solide: (que si la sous base comporte > 0 rota rigide)
+               IF ((IROT.NE.0).AND.(RIGIDE)) THEN
+*                Si rota rigide dans la ss base, on fait un tri:
+                 IF (ITRIG(ISB,IN)) THEN
+*                  On incrémente les translations rigides:
+                   XRETR = XRETR + XPHILB(ISB,IPLB,IN,ID)*Q1(INN,IND2)
+                   XRETRV = XRETRV + XPHILB(ISB,IPLB,IN,ID)*Q2(INN,IND2)
+*                   WRITE(*,*)'DEVRCO: XRETR = ',XRETR
+*                   WRITE(*,*)'DEVRCO: XRETRV = ',XRETRV
+                   GOTO 30
+                 ELSE
+*                  On incrémente les depl elastiques (repere du solide):                 
+                   XRET = XRET + XPHILB(ISB,IPLB,IN,ID) * Q1(INN,IND2)
+                   XRETV= XRETV+ XPHILB(ISB,IPLB,IN,ID) * Q2(INN,IND2)
+                   GOTO 30
+                 ENDIF                 
+               ENDIF
+               XRET = XRET + XPHILB(ISB,IPLB,IN,ID) * Q1(INN,IND2)
+               XRETV= XRETV + XPHILB(ISB,IPLB,IN,ID) * Q2(INN,IND2)
+*              Si il n'y a pas de rota rigide dans la sous-base, XRETR et XRETRV sont les 
+*              dépls/vite élastiques:INA1
+               XRETR = XRET
+               XRETRV = XRETV
+ 30         CONTINUE
+* si rota rigide dans ss base: On stocke d'abord les depl. et vite. des translations rigides dans XPTB (deja exprimes dans le repere global).
+            XPTB(IP,1,ID) = XRETR
+            XPTB(IP,2,ID) = XRETRV
+********		Rotation et vitesses de rotations elastiques :
+*							Si IROT.NE.0 & ID>IDIM (ddls de rotation) 
+*								elles ne sont pas stockees dans UFLEX et VFLEX.
+        		IF ((IROT.NE.0).AND.(RIGIDE)) THEN
+        		  IF (ID.GT.IDIM) THEN
+cmsw            WRITE(*,*)'DEVRCO : sauv XRET & XRETV pour DDLs 4-6'	
+        	      XPTB(IP,1,ID) = XRET
+        	      XPTB(IP,2,ID) = XRETV
+*	          WRITE(*,*)'DEVRCO: XPTB(',IP,1,ID,') = ',XPTB(IP,1,ID)
+*	          WRITE(*,*)'DEVRCO: XPTB(',IP,2,ID,') = ',XPTB(IP,2,ID)
+cmsw            WRITE(*,*)'DEVRCO: Fin DDLs 4-6'
+        		  ENDIF
+        		ENDIF
+********
+*            IF (IIMPI.EQ.555) THEN
+*            WRITE(*,*)'DEVRCO: XPTB(',IP,1,ID,') = ',XPTB(IP,1,ID)
+*            WRITE(*,*)'DEVRCO: XPTB(',IP,2,ID,') = ',XPTB(IP,2,ID)
+*            ENDIF
+************************************************************************
+*         Prise en compte des effets de rotation pour les corps rigides:
+* IAROTA .AND. RIGIDE (les 2 car sinon de vogelaere tente une reco rigide avec MTROT qui n'existe pas!!):
+            IF ((IROT.NE.0).AND.(RIGIDE)) THEN
+* Vecteur OP ds le repere du solide (en prenant en compte les depl. elastiques):
+             IF (ID.LE.IDIM) THEN
+*              on stocke les depls elastiques pour la reco rigide qui suit.
+               XXCP(ID) = (XCOOLB(ID,ISB,IP) - XCENT(ID,ISB)) + XRET
+*               WRITE(*,*)' XRET elast. = ',XRET
+*               WRITE(*,*)' XXCP(',ID,') = ',XXCP(ID)
+*              On enregistre les vite. elastiques dans le repère du solide
+*              calculees plus haut: 
+               VFLEX(IP,ISB,ID,IND) = XRETV
+* UFLEX(IP,ISB,ID) = XXCP = depl. elastique du point de laison IP dans le repère du solide (ss base)
+*                  on l exporte pour le calcul du moment dans DEVMOM pour 
+*                  ne pas à avoir à refaire la recombinaison des depl. élastiques (cf notice):
+               UFLEX(IP,ISB,ID,IND) = XRET
+             ENDIF
+            ENDIF
+*
+ 20      CONTINUE
+*
+         IF ((IROT.NE.0).AND.(RIGIDE)) THEN
+* Important: RECO en dehors de la boucle 20 sur IDIM.
+* Maintenant que XXCP et VLOCAL ont bien pris en compte les defo elastiques 
+* dans toutes les directions, on peut reco les depl. / vite.:
+*   Rajout de la 3eme coord (nulle) si IDIM < 3:
+           IF (IDIM.LT.2) THEN
+             XXCP(2) = 0.D0
+             XXCP(3) = 0.D0
+             VLOCAL(2) = 0.D0
+             VLOCAL(3) = 0.D0             
+           ELSEIF (IDIM.EQ.2) THEN
+             XXCP(3) = 0.D0
+             VLOCAL(3) = 0.D0
+           ENDIF
+*
+*
+* VLOCAL = OMEG2 vectoriel (X + u_elastique):
+           VLOCAL(1) = VFLEX(IP,ISB,1,IND) + 
+     &                 OMEG2(2,IND2,ISB)*XXCP(3) - 
+     &                 OMEG2(3,IND2,ISB)*XXCP(2)
+           VLOCAL(2) = VFLEX(IP,ISB,2,IND) + 
+     &                 OMEG2(3,IND2,ISB)*XXCP(1) - 
+     &                 OMEG2(1,IND2,ISB)*XXCP(3)
+           VLOCAL(3) = VFLEX(IP,ISB,3,IND) + 
+     &                 OMEG2(1,IND2,ISB)*XXCP(2) - 
+     &                 OMEG2(2,IND2,ISB)*XXCP(1)
+** Test chute libre:
+*           VLOCAL(1) = OMEG2(2,IND,ISB)*XXCP(3) - 
+*     &                 OMEG2(3,IND,ISB)*XXCP(2)
+*           VLOCAL(2) = OMEG2(3,IND,ISB)*XXCP(1) - 
+*     &                 OMEG2(1,IND,ISB)*XXCP(3)
+*           VLOCAL(3) = OMEG2(1,IND,ISB)*XXCP(2) - 
+*     &                 OMEG2(2,IND,ISB)*XXCP(1)
+** Fin Test
+           DO ID = 1,IDIM
+              XRET = 0.D0
+              XRETV= 0.D0              
+              DO J=1,3
+                XRET  = XRET  + ROT(ID,J,IND2,ISB)*XXCP(J)
+*
+                XRETV = XRETV + ROT(ID,J,IND2,ISB)*VLOCAL(J)
+              ENDDO
+              XRET = XRET - (XCOOLB(ID,ISB,IP) - XCENT(ID,ISB))
+              
+* U_tot(repere global) = U_translation_rigide + 
+*                       ( ROT*(CP + U_elastique(repere mobile)) ) - 
+*                       ( XCOOLB - XCENT )
+              XPTB(IP,1,ID) = XPTB(IP,1,ID) + XRET
+              XPTB(IP,2,ID) = XPTB(IP,2,ID) + XRETV
+* old              XPTB(IP,1,ID) = XRET
+* old             XPTB(IP,2,ID) = XRETV
+*              IF (IIMPI.EQ.333) THEN
+cmsw            WRITE(*,*)'DEVRCO: XPTB(',IP,1,ID,') = ',XPTB(IP,1,ID)
+cmsw            WRITE(*,*)'DEVRCO: XPTB(',IP,2,ID,') = ',XPTB(IP,2,ID)
+*              ENDIF
+           ENDDO
+* --> fait dans DEVRCO: Pour le calcul des forces de liaison:on rajoute à XPTB(4-6) les rotas rigides (depl. ET vite.) :
+* Rq: la rotation torsion et la rotation rigide sont des petites rotations (infinitésimales)
+*              --> elles commutent --> on peut additionner les vecteurs de rotation incrementaux.
+* fin si rotas rigides dans la ss base:
+         ENDIF
+
+*--------------------------------------------------------------------*
+*         Rotas rigides: MAJ des DDLs de rotations (XPTB(..,4-6))
+*                  --> seulement si la sous base en question
+*                      comporte des grandes rotations !!
+*									 --> ie. (IROT.NE.0)
+*--------------------------------------------------------------------*
+         IF ((KTROT.NE.0).AND.(IROT.NE.0)) THEN
+cmsw        WRITE(*,*)'DEVRCO: Correction de XPTB(IP,1-2,4-6)'
+cmsw        WRITE(*,*)'				 si la ss base comporte >1 gde rotation'
+cmsw        WRITE(*,*)'			PDT = ',PDT
+
+*						WRITE(*,*)'			XPTB(',IP,1,4,') = ',XPTB(IP,1,4)
+*						WRITE(*,*)'			XPTB(',IP,2,4,') = ',XPTB(IP,2,4)
+
+*						WRITE(*,*)'			XPTB(',IP,1,5,') = ',XPTB(IP,1,5)
+*						WRITE(*,*)'			XPTB(',IP,2,5,') = ',XPTB(IP,2,5)
+
+*						WRITE(*,*)'			XPTB(',IP,1,6,') = ',XPTB(IP,1,6)
+*						WRITE(*,*)'			XPTB(',IP,2,6,') = ',XPTB(IP,2,6)
+            DT22 = (PDT**2)/2.D0
+*	OLD(on est deja dans une boucel sur les pts liason) : DO I=1,NLIAB
+CMS : deja fait plus haut ISB = IBASB(IP)
+*
+*        1 Ajout de la rotation rigide autour de l axe propre (grandes rotations) 
+*                   � la torsion (petites rotations) :
+*
+*         Rq 1.: OMEG2, OMEG3 --> repere du solide = repere dans lequel 
+*                                   sont exprimes les petites rotations
+*                              a t=0 : repere du solide = repere global 
+*                                      = repere des DDLs de la poutre
+*         Rq 2.: rotations incr�mentales entre t_n et t_n+1 --> petites rotations
+*                rotations �lastiques poutre --> petites rotations
+*                DONC: on peut aditionner les vecteurs de rotations (erreur d ordre 2)
+*         Rq 3.: Pour les omegas: approx. linear theory of elastodynamics 
+*                --> On ajoute les vitesses elastiques et des les vite. des gdes rotations
+*                <--> ajouter les omegas (linearite du produit vectoriel)
+*
+          
+              IF (IDIM.EQ.3) THEN
+* Depl:         Au PDT n+1 mais j'ai l'impression que XPTB(..,1,4-6) ne sont pas utilisés.
+                XPTB(IP,1,4) = XPTB(IP,1,4) + 
+     &                    OMEG2(1,IND2,ISB)*PDT + OMEG3(1,IND2,ISB)*DT22
+          
+                XPTB(IP,1,5) = XPTB(IP,1,5) + 
+     &                    OMEG2(2,IND2,ISB)*PDT + OMEG3(2,IND2,ISB)*DT22
+     
+                XPTB(IP,1,6) = XPTB(IP,1,6) + 
+     &                    OMEG2(3,IND2,ISB)*PDT + OMEG3(3,IND2,ISB)*DT22   
+    
+* Vite:       Au PDT n+1/2 : cf prédiction en OMEGA1 rajoutée dans d2vpas avant appel d2vlfb.
+                XPTB(IP,2,4) = XPTB(IP,2,4) + OMEG2(1,IND2,ISB)
+                XPTB(IP,2,5) = XPTB(IP,2,5) + OMEG2(2,IND2,ISB)
+                XPTB(IP,2,6) = XPTB(IP,2,6) + OMEG2(3,IND2,ISB)
+
+              ELSEIF (IDIM.EQ.2) THEN
+* Depl:
+                XPTB(IP,1,3) = XPTB(IP,1,3) + 
+     &                       OMEG2(3,2,ISB)*PDT + OMEG3(3,2,ISB)*DT22
+* Vite:
+                XPTB(IP,2,3) = XPTB(IP,2,3) + OMEG2(3,2,ISB)
+              ENDIF
+*
+* 2 passage du vecteur de rotation ( flexion + torsion + rotas rigides) 
+*         (XPTB(IP,1 ,4-6)) dans le rep�re global (base B):
+*         --> (multiplication  a gauche par ROT)
+*
+              IF (IDIM.EQ.3) THEN
+                DO ID=1,3
+*                  I1 = ID+3
+*                  WRITE(*,*)'DEVRCO: ID = ',ID
+*                  WRITE(*,*)'DEVRCO: I1 = ',ID+3
+                  XTORS(ID) = 0.D0
+                  XVTORS(ID) = 0.D0
+                  DO J=1,3
+*                    J1=J+3
+*                    WRITE(*,*)'DEVRCO: J = ',J
+*                    WRITE(*,*)'DEVRCO: J1 = ',J+3
+                    XTORS(ID) = XTORS(ID) + 
+     &                          ROT(ID,J,IND2,ISB)*(XPTB(IP,1,(J+3)))
+                    XVTORS(ID) = XVTORS(ID) + 
+     &                          ROT(ID,J,IND2,ISB)*(XPTB(IP,2,(J+3)))
+                  ENDDO
+                ENDDO
+                DO ID=1,3
+                  XPTB(IP,1,(ID+3)) = XTORS(ID)
+                  XPTB(IP,2,(ID+3)) = XVTORS(ID)
+cmsw              WRITE(*,*)'DEVRCO: XPTB(',IP,1,(ID+3),') = ',
+cmsw    &                               XPTB(IP,1,(ID+3))
+cmsw              WRITE(*,*)'DEVRCO: XPTB(',IP,2,(ID+3),') = ',
+cmsw    &                               XPTB(IP,2,(ID+3))
+                ENDDO
+              ELSEIF (IDIM.EQ.2) THEN
+*               2D: pas de changement de base necessaire
+                CONTINUE
+              ENDIF
+
+* OLD(on est deja ds une loop sur les pts liaisons) :
+*						  ENDDO
+* fin correction cas rotas rigides + point appartenant a une sous base 
+*									contenant une grande rotation  
+      ENDIF
+
+*--------------------------------------------------------------------*
+*			FIN LOOP 10 SUR LES PTS DE LIAISON NPLB
+*--------------------------------------------------------------------*
+ 10   CONTINUE
+*
+      IF (IIMPI.EQ.333) THEN
+            WRITE(IOIMP,*)'DEVRCO: END'
+      ENDIF
+*
+      END
+
+
+ 
+ 
+ 
