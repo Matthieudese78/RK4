@@ -31,7 +31,7 @@ C COML11    SOURCE    CB215821  20/11/25    13:21:56     10792
       endsegment
 
       SEGMENT,MTQ
-         REAL*8 Q1(NA1,4),Q2(NA1,4),Q3(NA1,4)
+         REAL*8 Q1(NA1,5),Q2(NA1,5),Q3(NA1,5)
          REAL*8 WEXT(NA1,2),WINT(NA1,2)
       ENDSEGMENT
 
