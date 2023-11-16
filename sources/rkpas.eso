@@ -131,9 +131,8 @@ c     LOGICAL LWRITE
 cms : pour le couple resistant "hard code" : 
       real*8 tspin(3)
       logical lrspin
-cms : pour le couple resistant "hard code" : 
+*     vecteurs de rotations incrementaux :
       real*8 th1(3), th2(3), th3(3), th4(3), jw2(3), t2(3)
-*      real*8 th2bis(3), th3bis(3), th4bis(3)
       real*8 dexpinv(3,3)
 *
 *      QUATERNION = .FALSE.
@@ -184,10 +183,22 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
       dt22=dt*dt2
 
 ************************************************************************
-*     remplissage de fexb(ip,1,id) et ftota(i,1)
+*     remplissage de fexb(ip,1,id) et ftota(i,1) : "les deux extremites du pas de temps"
 ************************************************************************
-      CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
+      CALL RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &              NPLB,IDIMB,RIGIDE)
+* ddls elastiques :  
+*      do in=1,npfexa 
+**        fel(in,3) = ftota(in,2)
+**       force au demi-pas de temps :
+*        fel(in,2) = fota(in,2) + ((ftota(in,1) - ftota(in,2))/2.d0)
+*        fel(in,2) = 
+*      enddo
+      
+************************************************************************
+*     todo : ici : l'interpolation des forces exterieures
+************************************************************************
+
 ************************************************************************
 *     Corps rigides: prediction, MAJ matrice de rotation
 ************************************************************************

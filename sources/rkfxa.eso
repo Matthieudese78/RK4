@@ -1,4 +1,4 @@
-      SUBROUTINE D4VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,
+      SUBROUTINE RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,
      &                  FTEXB,FEXB,NPLB,IDIMB,RIGIDE)
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -34,11 +34,18 @@
 c       INTEGER IFEXA(*)
 *
       LOGICAL RIGIDE
+*     remarque : l'indice 3 :
+*       - de ftota n'est pas utilise dans cet algorithme
+*       - de fexb a ete rajoute pour l'occasion
 *
 *     Boucle sur les points de chargement:
 *
       DO 100 I=1,NPFEXA
+*        au pas de temps n+1 :
          FTOTA(I,1) = FEXA(I,NPAS,1)
+*        au demi pas de temps :
+         FTOTA(I,3) = FEXA(I,NPAS,2) + 
+     &               (FEXA(I,NPAS,1) - FEXA(I,NPAS,2))/2.d0
  100     CONTINUE
 *     END DO
 *
@@ -51,7 +58,11 @@ c       INTEGER IFEXA(*)
          ENDIF
          DO 200 IP=1,NPLB
              DO 210 ID=1,IDIM
+*        au pas de temps n+1 :
                 FEXB(IP,1,ID) = FTEXB(IP,NPAS,1,ID)
+*        au demi pas de temps :
+                FEXB(IP,3,ID) = FTEXB(IP,NPAS,2,ID) + 
+     &               (fexb(I,NPAS,1,id) - fexb(I,NPAS,2,id))/2.d0
  210         CONTINUE
  200     CONTINUE
       ENDIF
