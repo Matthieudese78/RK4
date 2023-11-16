@@ -166,6 +166,7 @@ cmsw         WRITE(*,*)'RCDEPEL: base ITBAS = ',ITBAS
           CALL RCDEPEL2(ITBAS,KTRAV,KCPR,KCHAR,XTEMP,IRET,ITRES,IPOS,
      &                  ITLIA,ITYP,ICHD1,LTRIG,XTRIG)
 
+          ICHDEPL = IRET
 **********************************************************************
 
 *      CALL ACCTAB(ITBAS,'MOT',I0,X0,'MODES',L0,IP0,
