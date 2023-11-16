@@ -12,7 +12,7 @@
 *-----------------------------------------------------------------------*
       real*8 omeg1(3,5,nsb), omeg2(3,5,nsb), omeg3(3,5,nsb)
       real*8 rot(3,3,5,nsb), inertie(3,3,nsb), invinert(3,3,nsb)
-      real*8 Fexb(nplb,2,3)
+      real*8 Fexb(nplb,3,3)
       real*8 th(3),t2(3),2jw(3),dexpinv(3,3)
       real*8 thbis(3),wbis(3),abis(3)
       logical lxpinv

@@ -92,7 +92,7 @@ C DEVMOM    SOURCE    CHAT      05/01/12    22:46:46     5004
 *
         INTEGER IBASB(*),IAROTA(*),IPLSB(*),INMSB(*)
         REAL*8  XPHILB(NSB,NPLSB,NA2,*),Q1(NA1,*)
-        REAL*8  FEXB(NPLB,2,*),FTOTB(NPLB,*)
+        REAL*8  FEXB(NPLB,3,*),FTOTB(NPLB,*)
         REAL*8  XCDG(3),FORCE(3)
 * variables Matthieu:
         REAL*8 DTHETA12(3),DROT12(3,3),ROT12(3,3),FMOM(3),XCOO12(3)
