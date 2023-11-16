@@ -242,9 +242,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,4,IIB))
 *          quaternion a l'instant tn+1:
           CALL QUAT2MAT(OMEG1(1,4,IIB),ROT(1,1,4,IIB)) 
-*          equilibre dynamique :
+*          equilibre dynamique : 1/2 pdt --> ifex = 3
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
-     &                  th2,fmomtot,xcoolb,fexb,nplb,4,2,lxpinv)
+     &                  th2,fmomtot,xcoolb,fexb,nplb,4,3,lxpinv)
 
 ************************************************************************
 *         "rappatriement" sur le plan tangent en t_n de :
@@ -268,9 +268,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,3,IIB))
 *          quaternion a l'instant tn+1:
           CALL QUAT2MAT(OMEG1(1,3,IIB),ROT(1,1,3,IIB)) 
-*          equilibre dynamique :
+*          equilibre dynamique : 1/2 pdt --> ifex = 3
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
-     &                  th3,fmomtot,xcoolb,fexb,nplb,3,2,lxpinv)
+     &                  th3,fmomtot,xcoolb,fexb,nplb,3,3,lxpinv)
 ************************************************************************
 *         k3 = (w3,a3)^T avec :
 *           - w3 = omeg2(id,3,iib)
@@ -289,7 +289,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,2,IIB))
 *          quaternion a l'instant tn+1:
           CALL QUAT2MAT(OMEG1(1,2,IIB),ROT(1,1,2,IIB)) 
-*          equilibre dynamique :
+*          equilibre dynamique : t_n+1 --> ifex = 1
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
      &                  th4,fmomtot,xcoolb,fexb,nplb,2,1,lxpinv)
 ************************************************************************
@@ -340,8 +340,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
         q1(i,4) = q1(i,5) + q2(i,5) * dt2
         q2(i,4) = q2(i,5) + q3(i,5) * dt2
       enddo
+*     1/2 pdt --> ifex = 3
       call rkpasel(q1,q2,q3,xk,ftota,na1,nb1k,nb1c,nb1,famor,
-     &             xasm,xopm1,finert,4)
+     &             xasm,xopm1,finert,4,3)
 ************************************************************************
 *     k2 = (q2(i,4), q3(i,4))^T
 *     u3 = y + k2*dt2
@@ -350,8 +351,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
         q1(i,3) = q1(i,5) + q2(i,4) * dt2
         q2(i,3) = q2(i,5) + q3(i,4) * dt2
       enddo
+*     1/2 pdt --> ifex = 3
       call rkpasel(q1,q2,q3,xk,ftota,na1,nb1k,nb1c,nb1,famor,
-     &             xasm,xopm1,finert,3)
+     &             xasm,xopm1,finert,3,3)
 
 ************************************************************************
 *     k3 = (q2(i,3), q3(i,3))^T
@@ -361,8 +363,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
         q1(i,2) = q1(i,5) + q2(i,3) * dt2
         q2(i,2) = q2(i,5) + q3(i,3) * dt2
       enddo
+*     t_n+1 --> ifex = 1
       call rkpasel(q1,q2,q3,xk,ftota,na1,nb1k,nb1c,nb1,famor,
-     &             xasm,xopm1,finert,2)
+     &             xasm,xopm1,finert,2,1)
 ************************************************************************
 *     k4 = (q2(i,2), q3(i,2))^T
 ************************************************************************
