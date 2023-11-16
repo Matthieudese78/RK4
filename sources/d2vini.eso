@@ -174,9 +174,10 @@ c       en attendant, petite bidouille locale
 
       WRITE(*,*)'D2VINI : START, NPFEXA = ',NPFEXA
 cms   prendre en compte le moment au demi pas de temps dans d2vlf2 --> devmom ? depend du shema numerique
-      lm12 = .true.
-      if (ialgo.eq.5) then 
-         lm12 = .false.
+*     estimation du moment au demi-pas que pour les diffs centrees (rigide = simo & wong)
+      lm12 = .false.
+      if (ialgo.eq.2) then 
+         lm12 = .true.
       endif
 *     NB : dyne18 fonctionne pour diffrences_centrees ET RKMK4
 *           en implementant a chaque fois les indices 2 ET 5 de certaines tables
