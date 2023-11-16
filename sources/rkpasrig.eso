@@ -10,10 +10,10 @@
 *             - 2 : a t_n + dt/2
 *             - 1 : a t_n + dt
 *-----------------------------------------------------------------------*
-      real*8 omeg1(3,5,nsb), omeg2(3,5,nsb), omeg3(3,5,nsb)
-      real*8 rot(3,3,5,nsb), inertie(3,3,nsb), invinert(3,3,nsb)
-      real*8 Fexb(nplb,3,3)
-      real*8 th(3),t2(3),2jw(3),dexpinv(3,3)
+      real*8 omeg1(3,5,nsb),omeg2(3,5,nsb),omeg3(3,5,nsb)
+      real*8 rot(3,3,5,nsb),inertie(3,3,nsb),invinert(3,3,nsb)
+      real*8 Fexb(nplb,3,3),fmomtot(3,5,nsb),xcoolb(3,nsb,nplb) 
+      real*8 th(3),t2(3),jw(3),dexpinv(3,3)
       real*8 thbis(3),wbis(3),abis(3)
       logical lxpinv
       
@@ -31,15 +31,15 @@
 *        calcul du terme convectif du 2nd membre : W X J W
 *            JW : 
         do id=1,3
-          2jw(id) = 0.d0
+          jw(id) = 0.d0
           do j=1,3
-        2jw(id) = 2jw(id) + inertie(id,j,ib)*omeg2(j,ind,ib)
+        jw(id) = jw(id) + inertie(id,j,ib)*omeg2(j,ind,ib)
           enddo
         enddo
 *            W X JW
-        t2(1) = omeg2(2,ind,ib)*2jw(3) - omeg2(3,ind,ib)*2jw(2) 
-        t2(2) = omeg2(3,ind,ib)*2jw(1) - omeg2(1,ind,ib)*2jw(3) 
-        t2(3) = omeg2(1,ind,ib)*2jw(2) - omeg2(2,ind,ib)*2jw(1) 
+        t2(1) = omeg2(2,ind,ib)*jw(3) - omeg2(3,ind,ib)*jw(2) 
+        t2(2) = omeg2(3,ind,ib)*jw(1) - omeg2(1,ind,ib)*jw(3) 
+        t2(3) = omeg2(1,ind,ib)*jw(2) - omeg2(2,ind,ib)*jw(1) 
 *        calcul de l'acceleration : A = J^-1 * (-t2 + Gext)
         do id = 1,3
           omeg3(id,ind,ib) = 0.d0
@@ -62,14 +62,14 @@
             abis(id) = 0.d0
             do j=1,3
               thbis(id) = thbis(id) + dexpinv(id,j) * th(j)
-              wbis(id) = wbis(id) + dexpinv(id,j) * omeg2(id,ind,j,ib)
-              abis(id) = abis(id) + dexpinv(id,j) * omeg3(id,ind,j,ib)
+              wbis(id) = wbis(id) + dexpinv(id,j) * omeg2(j,ind,ib)
+              abis(id) = abis(id) + dexpinv(id,j) * omeg3(j,ind,ib)
             enddo
           enddo
           do id=1,3  
            th(id) = thbis(id)
-           omeg2(id,ind,j,ib) = wbis(id)
-           omeg3(id,ind,j,ib) = abis(id)
+           omeg2(id,ind,ib) = wbis(id)
+           omeg3(id,ind,ib) = abis(id)
           enddo
         endif
 

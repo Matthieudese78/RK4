@@ -63,7 +63,7 @@ cms : pour detecter les Nan
       REAL*8  XVPC0(3),XVPCT(3)
       REAL*8  ZCE(3),YCE(3),XCE(3),XCO(3),ZCO(3),NCONE(3)
       REAL*8  XSCO(3),XPROJ(3),XPROJ2(3),NPE(3),TPE(3)
-      REAL*8  VROT(3),ROT2(3,5,XFOR(3),XVN(3),XSUP(3)
+      REAL*8  VROT(3),ROT2(3,3),XFOR(3),XVN(3),XSUP(3)
 *     TODO : tester en mettant 1 en dimension
       REAL*8  XPROF(NECH),YPROF(NECH),ZPROF(NECH)
       REAL*8  XNCONE(NECH),YNCONE(NECH),ZNCONE(NECH),XNCB(3,NECH)
@@ -1362,8 +1362,7 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
       endif
       XVALB(I,IND,31) = niter  
       XVALB(I,IND,32) = xres  
-      
-      endif
+
       IF (LPENE) THEN
         ICENTR = INT(REAL(NECH - 1) / 2.D0)
         XVALB(I,IND,7) = VTB(1,ICENTR)

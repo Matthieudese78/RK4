@@ -220,7 +220,7 @@ c       write(*,*) 'Q3(:,2) =',(Q3(iou,2),iou=1,NA1)
 *
 *      Decalage ou mise a zero dans les tableaux pour le pas suivant:
 ************************************************************************
-          CALL D2NE16(Q1,Q2,Q3,NA1,FTOTA,XPTB,NPLB,IDIMB,FINERT,
+          CALL RKNE16(Q1,Q2,Q3,NA1,FTOTA,XPTB,NPLB,IDIMB,FINERT,
      &                WEXT,WINT,KTROT)
               
 *

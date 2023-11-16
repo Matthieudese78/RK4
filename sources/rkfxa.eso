@@ -62,7 +62,7 @@ c       INTEGER IFEXA(*)
                 FEXB(IP,1,ID) = FTEXB(IP,NPAS,1,ID)
 *        au demi pas de temps :
                 FEXB(IP,3,ID) = FTEXB(IP,NPAS,2,ID) + 
-     &               (fexb(I,NPAS,1,id) - fexb(I,NPAS,2,id))/2.d0
+     &               (ftexb(I,NPAS,1,id) - ftexb(I,NPAS,2,id))/2.d0
  210         CONTINUE
  200     CONTINUE
       ENDIF

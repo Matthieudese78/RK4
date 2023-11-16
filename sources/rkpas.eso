@@ -324,8 +324,6 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             omeg2(id,1,iib)=(dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
           enddo
 ******** fin boucle sur les ss bases
-        enddo
-************************************************************************
  7      continue
       ENDIF
 *     fin condition RIGIDE
@@ -341,7 +339,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
         q2(i,4) = q2(i,5) + q3(i,5) * dt2
       enddo
 *     1/2 pdt --> ifex = 3
-      call rkpasel(q1,q2,q3,xk,ftota,na1,nb1k,nb1c,nb1,famor,
+      call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
      &             xasm,xopm1,finert,4,3)
 ************************************************************************
 *     k2 = (q2(i,4), q3(i,4))^T
@@ -352,7 +350,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
         q2(i,3) = q2(i,5) + q3(i,4) * dt2
       enddo
 *     1/2 pdt --> ifex = 3
-      call rkpasel(q1,q2,q3,xk,ftota,na1,nb1k,nb1c,nb1,famor,
+      call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
      &             xasm,xopm1,finert,3,3)
 
 ************************************************************************
@@ -364,7 +362,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
         q2(i,2) = q2(i,5) + q3(i,3) * dt2
       enddo
 *     t_n+1 --> ifex = 1
-      call rkpasel(q1,q2,q3,xk,ftota,na1,nb1k,nb1c,nb1,famor,
+      call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
      &             xasm,xopm1,finert,2,1)
 ************************************************************************
 *     k4 = (q2(i,2), q3(i,2))^T

@@ -155,6 +155,7 @@ c       +vitesse
          ENDIF
 *
 c       +deplacement demi-pas 
+cms : faux pour le rkmk4
          IF (ICHRES(3).GE.1) THEN
             KRES = KRES + 1
             DO 14 I=1,NA1
@@ -164,6 +165,7 @@ c       +deplacement demi-pas
 
 
 c       +vitesse demi-pas 
+cms : faux pour le rkmk4
          IF (ICHRES(4).GE.1) THEN
             KRES = KRES + 1
             DO 16 I=1,NA1
@@ -200,6 +202,7 @@ c       +acceleration
          ENDIF
 *
 c       +acceleration demi-pas
+cms : faux pour le rkmk4
          IF (ICHRES(6).GE.1) THEN
             KRES = KRES + 1
             DO 20 I=1,NA1
