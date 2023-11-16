@@ -101,7 +101,9 @@ cms : pour detecter les Nan
 *     veut on interpoler le passage manchette a plat --> quasi a plat 
       linter = .true.
 *     FTOTB : implementer ftotb(4-6) ne sert a rien : le moment est recalcule dans devmom
-      lmom = .false.
+*			- si il le faut : il s'agit des moments par rapport a 
+*				la fibre neutre. devmom ne fait que completer par relation de Chasles.
+      lmom = .true.
 *--------------------------------------------------------------------*
 * --- choc elementaire CERCLE_CONE
 *                      avec ou sans amortissement
@@ -1296,7 +1298,7 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
           endif
 
          IF (ISBC.GT.0) THEN
-*          Implementation de FTOTB au point de liason du cone :
+*          Implementation de FTOTB au point de liaison du cone :
 *          Fres_cone = - Fres_cercle
 *          todo : mettre un autre point de liaison pour le vrai point 
 *          d'application de la force qui ne se fait pas au sommet du cone!!
