@@ -1,7 +1,7 @@
 C D2VINI    SOURCE    BP208322  20/09/18    21:15:13     10718          
        SUBROUTINE D2VINI(ITINIT,KTKAM,KTQ,KTFEX,KTPAS,KTNUM,KTLIAA,
      &                  KTLIAB,KTPHI,KCPR,KOCLFA,KOCLB1,REPRIS,
-     &                  lmodyn,KTROT,KCPRIG)
+     &                  lmodyn,KTROT,KCPRIG,ialgo)
 *--------------------------------------------------------------------*
 *                                                                    *
 *     Operateur DYNE : algorithme differences centrees               *
@@ -34,6 +34,7 @@ C D2VINI    SOURCE    BP208322  20/09/18    21:15:13     10718
 *                                                                    *
 *     Denis ROBERT-MOUGIN, le 25 mai 1989.                           *
 *                                                                    *
+*     lm12 : pour devmom omly : moment estime au demi pdt ou pas
 *--------------------------------------------------------------------*
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -122,7 +123,7 @@ c       en attendant, petite bidouille locale
       endsegment
       
       REAL*8 RTGEX(3),JW1(3),WJW(3),DYN2(3)
-      LOGICAL L0,L1,REPRIS,RIGIDE,lmodyn
+      LOGICAL L0,L1,REPRIS,RIGIDE,lmodyn,lm12
       CHARACTER*8 TYPRET,TYPIND,CHARRE
       CHARACTER*(19) CHAI1
       CHARACTER*40 MONMOT
@@ -172,6 +173,11 @@ c       en attendant, petite bidouille locale
       segini,LOCLF2,LOCLF3
 
       WRITE(*,*)'D2VINI : START, NPFEXA = ',NPFEXA
+cms   prendre en compte le moment au demi pas de temps dans d2vlf2 --> devmom ? depend du shema numerique
+      lm12 = .true.
+      if (ialgo.eq.5) then 
+         lm12 = .false.
+      endif
 *     NB : dyne18 fonctionne pour diffrences_centrees ET RKMK4
 *           en implementant a chaque fois les indices 2 ET 5 de certaines tables
 *     indice pour le ringe kutta : 
@@ -459,7 +465,7 @@ c        Q2(2)=\dot{q}_0
      &           PDT,T,1,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,2,
      &           FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,
      &           NIP,IAROTA,KTROT,FEXB,XCHPFB,
-     &           KTOTXB,KTOTVB)
+     &           KTOTXB,KTOTVB,lm12)
      
             IF (IERRD.NE.0) THEN
                IF (IERRD.EQ.1) CALL ERREUR(528)

@@ -215,7 +215,7 @@ cms : on liste
       ENDIF
       CALL D2VINI(ITINIT,KTKAM,KTQ,KTFEX,KTPAS,KTNUM,KTLIAA,KTLIAB,
      &            KTPHI,KCPR,KOCLFA,KOCLB1,REPRIS,lmodyn,KTROT,
-     &            KCPRIG)
+     &            KCPRIG,IALGO)
       IF (IERR.NE.0) RETURN
       IF (IIMPI.EQ.444) THEN
          CALL GIBTEM(XKT)
