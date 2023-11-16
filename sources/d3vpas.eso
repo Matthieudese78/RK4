@@ -10,39 +10,39 @@ C D3VPAS    SOURCE    BP208322  20/09/18    21:15:21     10718
       IMPLICIT REAL*8(A-H,O-Z)
 *--------------------------------------------------------------------*
 *                                                                    *
-*     Opérateur DYNE : algorithme de Newmark                         *
+*     Opï¿½rateur DYNE : algorithme de Newmark                         *
 *                      (Acceleration moyenne par defaut)             *
 *     ________________________________________________               *
 *                                                                    *
-*     Calcul d'un pas de temps, appel aux s-p spécifiques.           *
+*     Calcul d'un pas de temps, appel aux s-p spï¿½cifiques.           *
 *                                                                    *
-*     Paramètres:                                                    *
+*     Paramï¿½tres:                                                    *
 *                                                                    *
-* es  Q1(,)   Vecteur des déplacements généralisés                   *
-* es  Q2(,)   Vecteur des vitesses généralisées                      *
-* es  Q3(,)   Vecteur des accélérations généralisées                 *
+* es  Q1(,)   Vecteur des dï¿½placements gï¿½nï¿½ralisï¿½s                   *
+* es  Q2(,)   Vecteur des vitesses gï¿½nï¿½ralisï¿½es                      *
+* es  Q3(,)   Vecteur des accï¿½lï¿½rations gï¿½nï¿½ralisï¿½es                 *
 * es  NA1     Nombre total d'inconnues en base A                     *
 * es  NPC1    Nombre de pas de calcul - 1                            *
-* es  XK      Vecteur des raideurs généralisées                      *
-* es  XASM    Vecteur des amortissements généralisés                 *
-* es  XM      Vecteur des masses généralisées                        *
+* es  XK      Vecteur des raideurs gï¿½nï¿½ralisï¿½es                      *
+* es  XASM    Vecteur des amortissements gï¿½nï¿½ralisï¿½s                 *
+* es  XM      Vecteur des masses gï¿½nï¿½ralisï¿½es                        *
 * e   PDT     pas de temps courant                                   *
 * e   T       temps courant                                          *
-* e   NPAS    Numéro du pas de temps                                 *
-* es  FTOTA   Forces extérieures totalisées, sur la base A           *
-* es  FEXA    Evolution des forces extérieures en base A             *
-* e   FTEXB   Evolution des forces extérieures en base B             *
-* e   FEXB    Forces extérieures sur la base B, servant au calcul    *
+* e   NPAS    Numï¿½ro du pas de temps                                 *
+* es  FTOTA   Forces extï¿½rieures totalisï¿½es, sur la base A           *
+* es  FEXA    Evolution des forces extï¿½rieures en base A             *
+* e   FTEXB   Evolution des forces extï¿½rieures en base B             *
+* e   FEXB    Forces extï¿½rieures sur la base B, servant au calcul    *
 *             des moments pour les corps rigides.                    *
 * e   RIGIDE  Vrai si corps rigide, faux sinon                       *
-* es  IFEXA   Numéro du mode correspondant au point de chargement    *
+* es  IFEXA   Numï¿½ro du mode correspondant au point de chargement    *
 *             (supprime le 2018-12-14 par bp)
 * es  NPFEXA  Nombre de points de chargement                         *
 * e   NLIAA   Nombre de liaisons sur la base A                       *
 * e   NLSA    Nombre de liaisons A en sortie                         *
 * e   IPALA   Tableau renseignant sur le type de liaison (base A)    *
-* e   IPLIA   Tableau contenant les numéros "DYNE" des points        *
-* e   XPALA   Tableau contenant les paramètres des liaisons          *
+* e   IPLIA   Tableau contenant les numï¿½ros "DYNE" des points        *
+* e   XPALA   Tableau contenant les paramï¿½tres des liaisons          *
 * es  XVALA   Tableau contenant les variables internes de liaison A  *
 *     XPHILB  Vecteur des deformees modales                          *
 * e   NLIAB   Nombre de liaisons sur la base B                       *
@@ -118,7 +118,7 @@ C D3VPAS    SOURCE    BP208322  20/09/18    21:15:21     10718
       III = 1
 *
 ************************************************************************
-*     Predicteurs des déplacements et vitesses
+*     Predicteurs des dï¿½placements et vitesses
 ************************************************************************
       DO 1 I = 1,NA1
        Q1(I,1) = Q1(I,2) + Q2(I,2)*pdt + Q3(i,2)*B1
@@ -129,7 +129,7 @@ C D3VPAS    SOURCE    BP208322  20/09/18    21:15:21     10718
 *     Calcul des forces
 ************************************************************************
 *
-*     Totalisation des forces extérieures pour la base A
+*     Totalisation des forces extï¿½rieures pour la base A
 *     pour la fin du pas precedent
       CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &            NPLB,IDIMB,RIGIDE)
@@ -155,7 +155,7 @@ C D3VPAS    SOURCE    BP208322  20/09/18    21:15:21     10718
      &               NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,III,
      &               FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
      &               FEXB,KTROT,IAROTA,XCHPFB,
-     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.)
+     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.false.)
          IF (IERRD.NE.0) RETURN
       ENDIF
 

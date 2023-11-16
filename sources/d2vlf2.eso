@@ -39,7 +39,7 @@ C DEVLF2    SOURCE    LAVARENN  96/10/30    21:18:02     2349
 *                                                                    *
 * -   FTEST2  Tableau local FTEST de la subroutine D2VLB1            *
 *                                                                    *
-*     lm12 : pour devmom omly : moment estime au demi pdt ou pas
+*     lm12 : pour devmom only : moment estime au demi pdt ou pas
 *--------------------------------------------------------------------*
 *
       IMPLICIT INTEGER(I-N)

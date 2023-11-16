@@ -289,7 +289,7 @@ c        Fnl(x,-) en base B (ddls physique)
      & XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,PDT,ZERO,I,IBASB,IPLSB,
      &   INMSB,IORSB,NSB,NPLSB,NA2,1,FEXPSM,NPC1,IERRD,FTEST2,XABSCI,
      &   XORDON,NIP,FEXB,KTROT,IAROTA,XCHPFB,
-     &   KTOTXA,KTOTVA,KTOTXB,KTOTVB,.TRUE.)
+     &   KTOTXA,KTOTVA,KTOTXB,KTOTVB,.TRUE.,.false.)
            ENDIF
 
 c          stockage de la force + JAC au pas de temps I     

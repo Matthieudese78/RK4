@@ -303,7 +303,7 @@ cmsw         WRITE(*,*)'D2VPAS : appel au sous-programme D2VLFB'
      &               NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,1,
      &               FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
      &               FEXB,KTROT,IAROTA,XCHPFB,
-     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.)
+     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.true.)
 *
          IF (IERRD.NE.0) RETURN
       ENDIF

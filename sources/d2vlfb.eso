@@ -6,7 +6,7 @@ C DEVLFB    SOURCE    LAVARENN  96/10/30    21:18:15     2349
      &                  NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,IND,
      &                  FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
      &                  FEXB,KTROT,IAROTA,XCHPFB,
-     &                  KTOTXA,KTOTVA,KTOTXB,KTOTVB,GETJAC)
+     &                  KTOTXA,KTOTVA,KTOTXB,KTOTVB,GETJAC,lm12)
 
 *--------------------------------------------------------------------*
 *     Operateur DYN* : Calcul des forces de choc base B              *
@@ -42,6 +42,7 @@ C DEVLFB    SOURCE    LAVARENN  96/10/30    21:18:15     2349
 * e   USEQ2   .TRUE. si on doit utiliser Q2                          *
 * e   GETJAC  .TRUE. si on doit calculer la jacobienne KTOTXA,KTOTVA *
 *                                                                    *
+*     lm12 : pour devmom only : moment estime au demi pdt ou pas
 *--------------------------------------------------------------------*
 
       IMPLICIT INTEGER(I-N)
@@ -59,7 +60,7 @@ C DEVLFB    SOURCE    LAVARENN  96/10/30    21:18:15     2349
       REAL*8  KTOTXA(NA1,NA1), KTOTVA(NA1,NA1) 
       REAL*8  KTOTXB(NPLB,IDIMB,IDIMB),KTOTVB(NPLB,IDIMB,IDIMB) 
 c       REAL*8  KTOTXBA(NA1,NA1), KTOTVBA(NA1,NA1)
-      LOGICAL GETJAC
+      LOGICAL GETJAC,lm12
 *
       RIGIDE = KTROT.NE.0
 *--------------------------------------------------------------------*
@@ -121,9 +122,15 @@ cmsw      WRITE(*,*)'IPLIB(1,1) = ',IPLIB(1,1)
 *--------------------------------------------------------------------*
 *
       IF (RIGIDE) THEN
-cmsw           WRITE(*,*)'D2VLFB: appel au sous programme DEVMOM'
+        if (lm12) then
+*          moment calcule au demi-pas
            CALL DEVMOM(FTOTB,Q1,FEXB,XPHILB,IAROTA,IBASB,IPLSB,INMSB,
      &                 NA2,NA1,NSB,NPLSB,NPLB,IND,IDIM,KTROT)
+        else
+*          moment calcule a t_n+1
+           CALL RKMOM(FTOTB,Q1,FEXB,XPHILB,IAROTA,IBASB,IPLSB,INMSB,
+     &                 NA2,NA1,NSB,NPLSB,NPLB,IND,IDIM,KTROT)
+        endif
       ENDIF
 
 *--------------------------------------------------------------------*
