@@ -207,19 +207,19 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
      
 *      
       IF (RIGIDE) THEN
-*       mise a 0 des couples ext. :
-        do id=1,3
-          fmomtot(id,1,iib) = 0.d0
-          fmomtot(id,2,iib) = 0.d0
-          fmomtot(id,3,iib) = 0.d0
-          fmomtot(id,4,iib) = 0.d0
-          fmomtot(id,5,iib) = 0.d0
-        enddo
         NSB = ROT(/4)
         DO 7 IIB=1,NSB
 CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
 cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           IF (IAROTA(IIB).EQ.0) GOTO 7
+*         mise a 0 des couples ext. :
+          do id=1,3
+            fmomtot(id,1,iib) = 0.d0
+            fmomtot(id,2,iib) = 0.d0
+            fmomtot(id,3,iib) = 0.d0
+            fmomtot(id,4,iib) = 0.d0
+            fmomtot(id,5,iib) = 0.d0
+          enddo
 *         th1 correspond au plan tangent en t_n --> on y est deja!
           do id=1,3
             th1(id) = 0.d0
