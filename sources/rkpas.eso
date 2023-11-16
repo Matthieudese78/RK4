@@ -78,6 +78,7 @@ c
 * e,s WINT   travail des forces interieures (rigidite et             *
 *            amortissement et forces de liaison )                    *
 *                                                                    *
+*     fmomtot : couple exterieur dans le body frame pour la phase rk4!!
 *--------------------------------------------------------------------*
 *
 -INC CCREEL
@@ -185,6 +186,7 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
 ************************************************************************
 *     remplissage de fexb(ip,1,id) et ftota(i,1) : "les deux extremites du pas de temps"
 ************************************************************************
+*     pas de conditoin sur l'appel a d2vfxa.
       CALL RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &              NPLB,IDIMB,RIGIDE)
 * ddls elastiques :  
@@ -375,41 +377,24 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
         q2(i,1) = (dt/6.d0)*(q3(i,5) + 2.d0*q3(i,4) + 2.d0*q3(i,3) +
      &                       q3(i,2))
       enddo
-************************************************************************
-*         k1 = (w1,a1)^T avec :
-*           - w1 = omeg2(id,5,iib)
-*           - a1 = omeg3(id,5,iib)
-************************************************************************
-*          u2 = (th2,w2) = y + dt2*k1 : 
-************************************************************************
-      DO 1 I = 1,NA1
-       Q1(I,1) = Q1(I,2) + Q2(I,2)*DT + Q3(I,2)*DT22
-1     CONTINUE
 
-      IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VPAS: debut calcul des forces.'
+      call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
+     &             xasm,xopm1,finert,1,1)
+
+*     MAJ vitesse generalisee :
+      do in = na1
+        q2(in,1)=(dt/2.d0)*(q3(in,1)+q3(in,1))
+      enddo
+
 ************************************************************************
-*     Calcul des forces
+*     Calcul des forces de liaisons
 ************************************************************************
 
 *     Totalisation des forces ext�rieures pour la base A a la fin du pas
-      IF (IIMPI.EQ.333) THEN
-cmsw         WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VFXA'
-      ENDIF
         CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &              NPLB,IDIMB,RIGIDE)
-*     estimation de la vitesse (ici plutot que dans DEVLF*, bp,2020-09):
-*     \dot{q}_n ~ \dot{q}_{n+1/2} = ({q}_n - {q}_{n-1}) / dt
-*     on utilise Q2(I,1) temporairement (il sera "bien" rempli � la fin du pas)
-      DO I=1,NA1
-        Q2(I,1)=(Q1(I,1)-Q1(I,2))/dt
-*        WRITE(*,*)'Q2(',I,1,') = ',Q2(I,1)
-      ENDDO
-
 *     Ajout des forces de liaison
       IF (NLIAA.NE.0) THEN
-         IF (IIMPI.EQ.333) THEN
-cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFA'
-         ENDIF
          CALL D2VLFA(Q1,Q2,FTOTA,NA1,IPALA,IPLIA,XPALA,XVALA,
      &               NLIAA,dt,tfin,NPAS,1,FINERT,0,FTEST,
      &               KTOTXA,KTOTVA,.FALSE.)
@@ -429,31 +414,25 @@ cmsw         WRITE(*,*)'D2VPAS : appel au sous-programme D2VLFB'
 *
          IF (IERRD.NE.0) RETURN
       ENDIF
-* MATT: rota rigide: couple exterieur pris en compte 
-*       que si il existe une liaison B !!!
 
+************************************************************************
+*     Calcul des forces de liaisons
+************************************************************************
 *     Ajout des forces de raideur
 *     F = F - K Q_1
-      IF (IIMPI.EQ.333) THEN
-cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme DEVLK0'
-      ENDIF
+*     ici c'est bien devlk0 par rklk0 car indice 1 :
       CALL DEVLK0(Q1,XK,FTOTA,NA1,NB1K,1)
 
 *     forces d'amortissement
       IF (NB1C.GT.1) THEN
-cbp,2020-09        DO 3 I=1,NA1
-cbp,2020-09           Q2DEMI(i)=(q1(i,1) - q1(i,2))/dt
-cbp,2020-09 3      CONTINUE
         DO 4 I=1,NA1
            FAMOR(I) = 0.D0
         DO 42 J=1,NB1
-cbp,2020-09           FAMOR(I) = FAMOR(I) + XASM(I,J) * Q2DEMI(J)
            FAMOR(I) = FAMOR(I) + XASM(I,J) * Q2(J,1)
  42     CONTINUE
  4      CONTINUE
       ELSE
         DO 41 I=1,NA1
-cbp,2020-09           FAMOR(I) = XASM(I,1) * (q1(I,1) - q1(I,2))/dt
            FAMOR(I) = XASM(I,1) * Q2(I,1)
  41     CONTINUE
       ENDIF
@@ -486,11 +465,6 @@ CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
               DYN2(I) = DYN2(I) + DT*ROT(J2,I,2,IIB)*FMOMTOT(J2,1,IIB)
             ENDDO
           ENDDO
-*          write(*,*)'ss base ',iib,' :'
-*          write(*,*)'       DYN2 :'
-*          write(*,'(1X,F8.5)') , (dyn2(id),id=1,3)
-*          WRITE(*,*)'D2VPAS: avt * a gauche DYN2(I) = ',DYN2(I)
-cmsw          WRITE(*,*)'D2VPAS: apres equilibre dynamique :'
 *         Produit � gauche par (J^-1)*exp(-dtheta)* :
           DO ID=1,3
             OMEG2(ID,1,IIB) = 0.D0
@@ -501,10 +475,6 @@ cmsw          WRITE(*,*)'D2VPAS: apres equilibre dynamique :'
               ENDDO
             ENDDO
             OMEG3(ID,1,IIB)=(OMEG2(ID,1,IIB)-OMEG2(ID,2,IIB))/DT
-cmsw            WRITE(*,*)'D2VPAS : apres equilibre dynamique :'
-cmsw            WRITE(*,*)'         base IIB = ',IIB
-cmsw            WRITE(*,*)'         OMEG2(',ID,1,IIB,')=',OMEG2(ID,1,IIB)
-cmsw            WRITE(*,*)'         OMEG3(',ID,1,IIB,')=',OMEG3(ID,1,IIB)
           ENDDO
 *          write(*,*)'        OMEG2 :'
 *          write(*,'(1X,F8.5)') , (omeg2(id,1,iib),id=1,3)
@@ -522,7 +492,6 @@ cmsw            WRITE(*,*)'         OMEG3(',ID,1,IIB,')=',OMEG3(ID,1,IIB)
               ENDDO
               PICIN(NSB,I) = PICIN(IIB,I)+DYN2(J)*OMEG2(J,1,IIB)
             ENDDO
-cmsw            WRITE(*,*)'D2VPAS : rota PICIN = ',PICIN(IIB,I)
           ENDDO
 ***       Calcul de l energie cinetique en rotation : 
           TCIN(IIB) = 0.D0
@@ -531,7 +500,7 @@ cmsw            WRITE(*,*)'D2VPAS : rota PICIN = ',PICIN(IIB,I)
             DO J=1,3
               DYN2(I) = DYN2(I) + INERTIE(I,J,IIB)*OMEG2(J,1,IIB)
             ENDDO
-            TCIN(IIB) = TCIN(IIB) + OMEG2(I,1,IIB)*DYN2(I)
+            TCIN(IIB) = TCIN(IIB) + (OMEG2(I,1,IIB)*DYN2(I)/2.d0)
           ENDDO
 cmsw          WRITE(*,*)'D2VPAS : rota TCIN = ',TCIN(IIB)
 *
@@ -557,11 +526,8 @@ c    -Cas C ou M pleine
 c    -Cas C et M diagonales
       ELSE
         DO 51 I=1,NA1
-c           UNSM = 1.D0 / ( XM(I,1) - FINERT(I,1) )
-cbp : pour les "vraies" differences centrees, il faut inclure l'amortissement
           UNSM = 1.D0 / ( XM(I,1) + dt2*XASM(I,1) - FINERT(I,1) )
           Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) * UNSM
-c           Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) / (XM(I,1) - FINERT(I,1))
 *         Vitesses g�n�ralis�es
           Q2(I,1) = Q2(I,2) + (Q3(I,2) + Q3(I,1))*DT2
  51     CONTINUE
@@ -580,16 +546,10 @@ CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
           XTC = 0.D0
           DO IN = 1,NA3
             IN2 = INA2 + IN
-*            WRITE(*,*)'ITRIG(',IIB,IN,') = ',ITRIG(IIB,IN)
             IF ((ITRIG(IIB,IN))) THEN
               DO ID=1,IDIM
                 XTC = XTC + 
      &       0.5*MTSB(IIB)*((XPHILB(IIB,1,IN,ID)*Q2(IN2,1))**2.d0) 
-cmsw               WRITE(*,*)' MTSB(',IIB,') = ',MTSB(IIB)
-cmsw                WRITE(*,*)' XPHILB(',IIB,1,IN,ID,') = ',
-cmsw     &                     XPHILB(IIB,1,IN,ID)
-cmsw               WRITE(*,*)' Q2(',IN2,2,') = ',Q2(IN2,2)
-cmsw               WRITE(*,*)' XTC = ',XTC 
               ENDDO
             ELSE
 *              On ajoute l'energie cinetique associee aux modes flexibles : 
@@ -597,20 +557,11 @@ cmsw               WRITE(*,*)' XTC = ',XTC
             ENDIF 
           ENDDO
           TCIN(IIB) = TCIN(IIB) + XTC
-cmsw          WRITE(*,*)'D2VPAS : transl. + rota + flex. TCIN = ',TCIN(IIB)
  9      CONTINUE
       ENDIF
 ************************************************************************
 *     calcul des travaux + decalage pour pas suivant
 ************************************************************************
-      IF (IIMPI.EQ.333) THEN
-cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VENE'
-      ENDIF
-cmsw      WRITE(*,*)'D2VPAS: avant D2VENE'
-cmsw      WRITE(*,*)'        NA1 = ',NA1
-cmsw      WRITE(*,*)'        NPAS = ',NPAS
-cmsw      WRITE(*,*)'        NPC1 = ',NPC1
-cmsw      WRITE(*,*)'        NB1C = ',NB1C
 ********************************************************************
 * test : on sort d2vene de la subroutine :
         
