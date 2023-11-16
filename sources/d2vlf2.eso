@@ -135,8 +135,9 @@ c      &            IBASB,IPLSB,INMSB,IORSB,IND,IAROTA)
         WRITE(IOIMP,*)'        NA2 = ',NA2
       ENDIF            
         if (lm12) then
+           write(*,*)'d2vlf2 : call devmom'
            CALL DEVMOM(FTOTB,Q1,FEXB,XPHILB,IAROTA,IBASB,IPLSB,INMSB,
-     &                 NA2,NA1,NSB,NPLSB,NPLB,1,IDIM,KTROT)
+     &                 NA2,NA1,NSB,NPLSB,NPLB,ind,IDIM,KTROT)
         else
            CALL RKMOM(FTOTB,Q1,FEXB,XPHILB,IAROTA,IBASB,IPLSB,INMSB,
      &                 NA2,NA1,NSB,NPLSB,NPLB,ind,IDIM,KTROT)

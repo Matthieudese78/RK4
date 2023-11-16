@@ -152,12 +152,12 @@ C D2VRIG    SOURCE    CB215821  20/11/25    13:23:57     10792
                                 IT2 = IT + 1
                                 FTEXB(IPOS,IT,1,ID) =
      &                    FTEXB(IPOS,IT,1,ID) +( XFORCB * FTCHG(IT2) )
-*       WRITE(*,*)'D2VRIG: FTCHG(',IT,') = ',FTCHG(IT)
-*       WRITE(*,*)'D2VRIG: FTCHG(',IT2,') = ',FTCHG(IT2)
-*        WRITE(*,*)'D2VRIG: FTEXB(',IPOS,IT,2,ID,') = ',
-*     &                    FTEXB(IPOS,IT,2,ID)
-*        WRITE(*,*)'D2VRIG: FTEXB(',IPOS,IT,1,ID,') = ',
-*     &                    FTEXB(IPOS,IT,1,ID)     
+       WRITE(*,*)'D2VRIG: FTCHG(',IT,') = ',FTCHG(IT)
+       WRITE(*,*)'D2VRIG: FTCHG(',IT2,') = ',FTCHG(IT2)
+        WRITE(*,*)'D2VRIG: FTEXB(',IPOS,IT,2,ID,') = ',
+     &                    FTEXB(IPOS,IT,2,ID)
+        WRITE(*,*)'D2VRIG: FTEXB(',IPOS,IT,1,ID,') = ',
+     &                    FTEXB(IPOS,IT,1,ID)     
  36                           CONTINUE
                             ENDIF
 *                       end do

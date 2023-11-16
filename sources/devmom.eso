@@ -157,7 +157,7 @@ cmsw            WRITE(*,*)'   ss base ISB  = ',ISB
              FORCE(ID) = FEXB(IP,IND,ID)+FTOTB(IP,ID)
 *             WRITE(*,*)'DEVMOM : bilan des forces en base B :'
 *             WRITE(*,*)'         Forces exterieures :'
-*             WRITE(*,*)'         FEXB(',IP,IND,ID,') = ',FEXB(IP,IND,ID)
+          WRITE(*,*)'devmom :  FEXB = ',FEXB(IP,IND,ID)
 *             WRITE(*,*)'         Forces NL :'
 *             WRITE(*,*)'         FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
 *             WRITE(*,*)'         Moment déjà calule ? :'
@@ -198,7 +198,7 @@ cmsw            WRITE(*,*)'   ss base ISB  = ',ISB
 * il ne nous reste plus qu a sommer FMOMTOT et FTOTB (relation de chasles):
 * TODO: moment au demi pas de temps --> corriger FTOTB(4-6) qui est a t_n+1!!
 *                WRITE(*,*)'DEVMOM: avant somme FMOMTOT'
-*                 WRITE(*,*)'       FMOM(',I,') = ',FMOM(I)
+                 WRITE(*,*)'       FMOM(',I,') = ',FMOM(I)
 *                 WRITE(*,*)'       FTOTB(',IP,I2,') = ',
 *     &                            FTOTB(IP,I2)
                 FMOMTOT(I,IND,ISB) = FMOMTOT(I,IND,ISB) + FMOM(I)+

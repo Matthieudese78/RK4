@@ -240,8 +240,6 @@ cms   prendre en compte le moment au demi pas de temps dans d2vlf2 --> devmom ? 
           FMOMTOT(1,ik,I) = 0.D0
           FMOMTOT(2,ik,I) = 0.D0
           FMOMTOT(3,ik,I) = 0.D0
-          FMOMTOT(4,ik,I) = 0.D0
-          FMOMTOT(5,ik,I) = 0.D0
           enddo
         ENDDO
 *       Inititalisation de UFLEX: 
@@ -666,7 +664,7 @@ c------- Cas K,C et M diagonal -----------------------------------
               OMEG3(ID,2,IB) = OMEG3(ID,2,IB) + 
      &        INVINERT(ID,J,IB)*(RTGEX(J) - WJW(J))
             ENDDO
-*            WRITE(*,*)'D2VINI: OMEG3(',ID,',2,IB) = ',OMEG3(ID,2,IB)
+            WRITE(*,*)'D2VINI: OMEG3(',ID,',2,IB) = ',OMEG3(ID,2,IB)
           ENDDO
       
 *       fin boucle sur les ss bases

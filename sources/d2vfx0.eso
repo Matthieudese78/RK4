@@ -123,10 +123,10 @@ C DEVFX0    SOURCE    KK2000    97/09/08    21:16:59     2809
                            IT2 = IT + 1
                            FEXA(IPOS,IT,1) = FEXA(IPOS,IT,1) +
      &                                       ( XFORCA * FTCHG(IT2) )
-*                  WRITE(*,*)'D2VFX0: FEXA(',IPOS,IT,2,') = ',
-*     &                    FEXA(IPOS,IT,2)
-*                  WRITE(*,*)'D2VFX0: FEXA(',IPOS,IT,1,') = ',
-*     &                    FEXA(IPOS,IT,1)     
+                  WRITE(*,*)'D2VFX0: FEXA(',IPOS,IT,2,') = ',
+     &                    FEXA(IPOS,IT,2)
+                  WRITE(*,*)'D2VFX0: FEXA(',IPOS,IT,1,') = ',
+     &                    FEXA(IPOS,IT,1)     
  36                        CONTINUE
 *                       end do
                      ENDIF
