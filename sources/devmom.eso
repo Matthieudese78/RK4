@@ -101,6 +101,8 @@ C DEVMOM    SOURCE    CHAT      05/01/12    22:46:46     5004
       MTROT = KTROT
       RIGIDE=(KTROT.NE.0)
 *
+
+      write(*,*)'devmom : start, ind = ',ind
 * FMOMTOT: couple exterieur total = somme couple pts de liaison B
 *             au demi-pas ed temps
 * Initialisation FMOMTOT:
@@ -121,6 +123,17 @@ C DEVMOM    SOURCE    CHAT      05/01/12    22:46:46     5004
 cmsw        WRITE(*,*)'DEVMOM : NPLB = ',NPLB
         DO 10 IP=1,NPLB
             ISB=IBASB(IP)
+         write(*,*)'devmom : dtheta'
+         write(*,'(3(1X,F8.5))') , (dtheta(id,isb),id=1,3)
+
+         WRITE(*,*)'devmom : dtheta(1,ISB) = ',
+     &                                     DTHETA(1,ISB)
+
+         WRITE(*,*)'devmom : dtheta(2,ISB) = ',
+     &                                     DTHETA(2,ISB)
+
+         WRITE(*,*)'devmom : dtheta(3,ISB) = ',
+     &                                     DTHETA(3,ISB)
 cmsw            WRITE(*,*)'   Pt liai IP = ',IP
 cmsw            WRITE(*,*)'   ss base ISB  = ',ISB
 *           Produit vectoriel GP^F
@@ -174,7 +187,9 @@ cmsw            WRITE(*,*)'   ss base ISB  = ',ISB
      &           (UFLEX(IP,ISB,J,1) - UFLEX(IP,ISB,J,2))/2.D0)
 *                 si il s agit de l initialisation (d2vini):
                   ELSEIF (IND.EQ.2) THEN
-                  XCOO12(I) = XCOO12(I) + ROT12(I,J)*
+*                 si initialisation on prend rot telle quelle car dtheta
+*                 contient les conditions inis pas le depl. entre 2 pdts.
+                  XCOO12(I) = XCOO12(I) + ROT(I,J,ind,isb)*
      &             ( XCOOLB(J,ISB,IP) - XCENT(J,ISB) +
      &                         UFLEX(IP,ISB,J,2) ) 
                   ENDIF
