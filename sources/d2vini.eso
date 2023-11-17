@@ -435,6 +435,16 @@ c        Q2(2)=\dot{q}_0
             CALL DYNE18(IVITE,KTQ,2,2,KCPR,KCPRIG,KTROT,NSB)
             IVINIT = 1
          ENDIF
+
+         write(*,*)'d2vini : apres dyne18 :'
+         write(*,*)'         omeg1 :'
+         WRITE(*,'(20F20.18)')((omeg1(id,2,isb),id=1,4),isb=1,nsb)
+         write(*,*)'         omeg2 :'
+         WRITE(*,'(20F20.18)')((omeg2(id,2,isb),id=1,3),isb=1,nsb)
+         write(*,*)'         omeg3 :'
+         WRITE(*,'(20F20.18)')((omeg3(id,2,isb),id=1,3),isb=1,nsb)
+
+         write(*,*)'         omeg2 rz :',omeg2(3,2,1) 
 *
 *        Ajout des forces de liaison
 *

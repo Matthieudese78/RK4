@@ -103,6 +103,9 @@
 * FMOMTOT: couple exterieur total = somme couple pts de liaison B
 *             au demi-pas ed temps
 * Initialisation FMOMTOT:
+
+      write(*,*)'rkmom : start , ind = ',ind
+      WRITE(*,'(20F20.18)')((fexb(ip,ind,id),ip=1,nplb),id= 1,3)
       IF (RIGIDE) THEN
         NSB = OMEG1(/3)
         DO J =1,NSB
@@ -131,7 +134,8 @@ cmsw        WRITE(*,*)'DEVMOM : NPLB = ',NPLB
 *               FTOTB: resultante chocs + contacts en base B
                 FORCE(ID) = FEXB(IP,IND,ID)+FTOTB(IP,ID)
  20           CONTINUE
-
+              write(*,*)'rkmom : fexb + ftotb :'
+              WRITE(*,'(20F20.18)')(force(id),id= 1,3)
               DO I=1,3
                 xcoo1(I) = 0.D0
                 DO J=1,3
@@ -140,6 +144,8 @@ cmsw        WRITE(*,*)'DEVMOM : NPLB = ',NPLB
      &                          UFLEX(IP,ISB,J,ind))
                 ENDDO
               ENDDO
+              write(*,*)'rkmom : xcoo1 :'
+              WRITE(*,'(20F20.18)')(xcoo1(id),id= 1,3)
               IF (IDIM.EQ.3) THEN        
                FMOM(1) = xcoo1(2)*FORCE(3) -
      &                   xcoo1(3)*FORCE(2)
@@ -148,6 +154,8 @@ cmsw        WRITE(*,*)'DEVMOM : NPLB = ',NPLB
                FMOM(3) = xcoo1(1)*FORCE(2) -
      &                   xcoo1(2)*FORCE(1)
 * FMOM = couple exterieur dans le repere global.
+              write(*,*)'rkmom : fmom :'
+              WRITE(*,'(20F20.18)')(fmom(id),id= 1,3)
                DO I=1,3
                 I2 = I+3
 * FTOTB = couple exterieur du aux liaisons:
@@ -158,6 +166,8 @@ cmsw        WRITE(*,*)'DEVMOM : NPLB = ',NPLB
                 FMOMTOT(I,IND,ISB) = FMOMTOT(I,IND,ISB) + FMOM(I) +
      &                               FTOTB(IP,I2)
                ENDDO
+                write(*,*)'rkmom : fmomtot :'
+                WRITE(*,'(20F20.18)')(fmomtot(id,ind,isb),id= 1,3)
 * Pour l'instant FMOMTOT qu'en dimension 3!!!
 * FTOTB(IP,3-6) = couple exterieur ds le repere global.
               ELSE

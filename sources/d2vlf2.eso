@@ -89,6 +89,8 @@ c       ENDIF
          IDIM=2
       ENDIF
 
+        WRITE(*,*)'D2VLF2: lm12 = ',lm12
+        WRITE(*,*)'        rigide = ',rigide
 *old       CALL D2VCOI(Q1,Q2,PDT,NA1,XPTB,NPLB,XPHILB,NSB,NPLSB,NA2,IDIMB,
 c      &            IBASB,IPLSB,INMSB,IORSB,IND,IAROTA)
       IF (IIMPI.EQ.333) THEN
@@ -139,6 +141,7 @@ c      &            IBASB,IPLSB,INMSB,IORSB,IND,IAROTA)
            CALL DEVMOM(FTOTB,Q1,FEXB,XPHILB,IAROTA,IBASB,IPLSB,INMSB,
      &                 NA2,NA1,NSB,NPLSB,NPLB,ind,IDIM,KTROT)
         else
+           write(*,*)'d2vlf2 : call rkmom'
            CALL RKMOM(FTOTB,Q1,FEXB,XPHILB,IAROTA,IBASB,IPLSB,INMSB,
      &                 NA2,NA1,NSB,NPLSB,NPLB,ind,IDIM,KTROT)
         endif
