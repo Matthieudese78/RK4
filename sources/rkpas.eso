@@ -183,12 +183,25 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
       dt2=dt/2.D0
       dt22=dt*dt2
 
+      write(*,*)'rkpas : indice 5 :'
+      write(*,*)'        mat. inertie :'
+      do id=1,3
+         write(*,'(3(1X,F8.5))') , (inertie(id,j,1),j=1,3)
+      enddo
+      write(*,*)'         omeg1 :'
+      WRITE(*,'(3(1X,F8.5))')((omeg1(id,5,isb),id=1,4),isb=1,nsb)
+      write(*,*)'         omeg2 :'
+      WRITE(*,'(3(1X,F8.5))')((omeg2(id,5,isb),id=1,3),isb=1,nsb)
+      write(*,*)'         omeg3 :'
+      WRITE(*,'(3(1X,F8.5))')((omeg3(id,5,isb),id=1,3),isb=1,nsb)
 ************************************************************************
 *     remplissage de fexb(ip,1,id) et ftota(i,1) : "les deux extremites du pas de temps"
 ************************************************************************
 *     pas de conditoin sur l'appel a d2vfxa.
       CALL RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &              NPLB,IDIMB,RIGIDE)
+            write(*,*)'rkpas : fexb :'
+            write(*,'(3(1X,F8.5))') , ((fexb(ip,3,j),j=1,3),ip=1,nplb)
 * ddls elastiques :  
 *      do in=1,npfexa 
 **        fel(in,3) = ftota(in,2)
@@ -237,6 +250,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             th2(id) = omeg2(id,5,iib) * dt2
             omeg2(id,4,iib)  = omeg2(id,5,iib) + omeg3(id,5,iib) * dt2
           enddo
+            write(*,*)'rkpas : 1st pred :'
+            write(*,'(3(1X,F8.5))') , (omeg2(j,4,iib),j=1,3)
+
 ************************************************************************
 *          calcul de EXPTH pour eq. dynamique:
           CALL VECT2QUAT(TH2(1),DQUAT)
@@ -244,6 +260,11 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,4,IIB))
 *          quaternion a l'instant tn+1:
           CALL QUAT2MAT(OMEG1(1,4,IIB),ROT(1,1,4,IIB)) 
+
+            write(*,*)'rkpas : rot 1st pred : indice 4'
+         do id=1,3
+            write(*,'(3(1X,F8.5))') , (rot(id,j,4,iib),j=1,3)
+         enddo
 *          equilibre dynamique : 1/2 pdt --> ifex = 3
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
      &                  th2,fmomtot,xcoolb,fexb,nplb,4,3,lxpinv)
@@ -313,17 +334,19 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL QUAT2MAT(OMEG1(1,1,IIB),ROT(1,1,1,IIB)) 
 *         maj des vitesses angulaires :
           do id=1,3
-            omeg2(id,1,iib) = (dt/6.d0)*( omeg3(id,5,iib) 
-     &                                  + 2.d0*omeg3(id,4) 
-     &                                  + 2.d0*omeg3(id,3) 
-     &                                  + omeg3(id,2)) 
+            omeg2(id,1,iib) = omeg2(id,5,iib) +
+     &                   (dt/6.d0)*( omeg3(id,5,iib) 
+     &                             + 2.d0*omeg3(id,4) 
+     &                             + 2.d0*omeg3(id,3) 
+     &                             + omeg3(id,2)) 
           enddo
 *          equilibre dynamique :
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
      &             dtheta(1,iib),fmomtot,xcoolb,fexb,nplb,1,1,.false.)
 *          MAJ vitesse angulaire :
           do id = 1,3
-            omeg2(id,1,iib)=(dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
+            omeg2(id,1,iib) = omeg2(id,5,iib) + 
+     &                     (dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
           enddo
 ******** fin boucle sur les ss bases
  7      continue
@@ -383,7 +406,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 
 *     MAJ vitesse generalisee :
       do in=1,na1
-        q2(in,1)=(dt/2.d0)*(q3(in,1)+q3(in,1))
+        q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,1)+q3(in,1))
       enddo
 
 ************************************************************************
