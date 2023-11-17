@@ -30,6 +30,8 @@ c     GAMMA=0.5 et BETA=...(selon l'algo)
         BETA=0.25D0
       ELSEIF(IALGO.EQ.4) THEN
         BETA=1.D0/12.D0      
+      ELSEIF(IALGO.EQ.5) THEN
+        write(*,*)'dyndif : rkmk4' 
       ELSE 
 c       on ne devrait jamais arriver ici car deja teste en amont
         CALL ERREUR(477)
@@ -58,9 +60,9 @@ c       on ne devrait jamais arriver ici car deja teste en amont
       WRITE(IOIMP,*)'DYNDIF : apres lappel au sous-programme DEVLIR'
       ENDIF
       RIGIDE = (KCPRIG.ne.0)
-      IF ((IALGO.NE.2).AND.(RIGIDE)) THEN
+      IF ((IALGO.NE.2).and.(IALGO.NE.5).AND.(RIGIDE)) THEN
         WRITE(*,*)'DYNDIF: D3VALG incompatible avec rotations rigides'
-        CALL ERREUR(272)
+        CALL exit(1)
         RETURN
       ENDIF
 *     Allocation de l'espace de travail:

@@ -23,7 +23,8 @@ C DYNE      SOURCE    CB215821  18/09/21    21:15:35     9930
 -INC CCOPTIO
 *
       CHARACTER*6 MOPLEX
-      CHARACTER*20 MODEVO,MOALG,MODIFF,MORK4,MORKMK4  
+      character*5 morkmk4
+      CHARACTER*20 MODEVO,MOALG,MODIFF,MORK4  
       CHARACTER*20 MONEWM(2)
       DATA MOPLEX /'PLEXUS'/
       DATA MODEVO /'DE_VOGELAERE'/
@@ -31,7 +32,7 @@ C DYNE      SOURCE    CB215821  18/09/21    21:15:35     9930
       DATA MONEWM /'ACCELERATION_MOYENNE','FOX_GOODWIN'/
 c                   12345678901234567890   12345678901
       DATA MORK4  /'RUNGE_KUTTA_4'/
-* ms : rk4 mmunthe-kaas dedies aux corps flexibles rigides :
+* ms : rk4 mmunthe-kaas dedies SO(3) :
       DATA MORKMK4  /'RKMK4'/
 *
 *     Quel algorithme a-t-on choisi ?
@@ -67,6 +68,7 @@ c          CALL DYNPLX
          
 *     Algorithmes implicites de Newmark
       ELSE IF (MOALG(1:5).EQ.MORKMK4) THEN
+         write(*,*)'dyne : algo reconnu'
          CALL DYNDIF(5)
          RETURN
 *     Erreur dans le choix de l'algorithme
