@@ -412,32 +412,31 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 ************************************************************************
 *     Calcul des forces de liaisons
 ************************************************************************
-
-*     Totalisation des forces ext�rieures pour la base A a la fin du pas
-        CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
-     &              NPLB,IDIMB,RIGIDE)
-*     Ajout des forces de liaison
-      IF (NLIAA.NE.0) THEN
-         CALL D2VLFA(Q1,Q2,FTOTA,NA1,IPALA,IPLIA,XPALA,XVALA,
-     &               NLIAA,dt,tfin,NPAS,1,FINERT,0,FTEST,
-     &               KTOTXA,KTOTVA,.FALSE.)
-      ENDIF
-      IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VPAS: NLIAB = ',NLIAB
-      IF (NLIAB.NE.0) THEN
-         IF (IIMPI.EQ.333) THEN
-cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
-         ENDIF      
-*        dernier arg = .false. --> calcul du moment au pas t_n+1 via rkmom
-         CALL D2VLFB(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,NLIAB,
-     &               XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,dt,tfin,
-     &               NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,1,
-     &               FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
-     &               FEXB,KTROT,IAROTA,XCHPFB,
-     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.false.)
+**     Totalisation des forces ext�rieures pour la base A a la fin du pas
+*        CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
+*     &              NPLB,IDIMB,RIGIDE)
+**     Ajout des forces de liaison
+*      IF (NLIAA.NE.0) THEN
+*         CALL D2VLFA(Q1,Q2,FTOTA,NA1,IPALA,IPLIA,XPALA,XVALA,
+*     &               NLIAA,dt,tfin,NPAS,1,FINERT,0,FTEST,
+*     &               KTOTXA,KTOTVA,.FALSE.)
+*      ENDIF
+*      IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VPAS: NLIAB = ',NLIAB
+*      IF (NLIAB.NE.0) THEN
+*         IF (IIMPI.EQ.333) THEN
+*cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
+*         ENDIF      
+**        dernier arg = .false. --> calcul du moment au pas t_n+1 via rkmom
+*         CALL D2VLFB(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,NLIAB,
+*     &               XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,dt,tfin,
+*     &               NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,1,
+*     &               FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
+*     &               FEXB,KTROT,IAROTA,XCHPFB,
+*     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.false.)
+**
+*         IF (IERRD.NE.0) RETURN
+*      ENDIF
 *
-         IF (IERRD.NE.0) RETURN
-      ENDIF
-
 ************************************************************************
 *
       END
