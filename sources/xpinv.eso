@@ -32,6 +32,8 @@
           mat(id,j) = -(uchap(id,j)/2.d0)
         enddo
       enddo
+      write(*,*)'dxpinv : dcotan(0.1) : ',dcotan(0.1) 
+      write(*,*)'         dcos(0.1)/dsin(0.1) : ',dcos(0.1)/dsin(0.1)
       if (dabs(xang).gt.xzprec) then
         do id=1,3
           do j=1,3

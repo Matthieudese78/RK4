@@ -170,7 +170,7 @@ cmsw            WRITE(*,*)'   ss base ISB  = ',ISB
              FORCE(ID) = FEXB(IP,IND,ID)+FTOTB(IP,ID)
 *             WRITE(*,*)'DEVMOM : bilan des forces en base B :'
 *             WRITE(*,*)'         Forces exterieures :'
-          WRITE(*,*)'devmom :  FEXB = ',FEXB(IP,IND,ID)
+              WRITE(*,*)'devmom :  FEXB = ',FEXB(IP,IND,ID)
 *             WRITE(*,*)'         Forces NL :'
 *             WRITE(*,*)'         FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
 *             WRITE(*,*)'         Moment déjà calule ? :'
