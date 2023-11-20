@@ -91,7 +91,7 @@ C D2VINI    SOURCE    BP208322  20/09/18    21:15:13     10718
          REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
          REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
          REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
-         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB) 
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
          LOGICAL ITRIG(NSB,NA2)
@@ -212,6 +212,8 @@ cms   prendre en compte le moment au demi pas de temps dans d2vlf2 --> devmom ? 
          PICIN(I,3)=0.D0
 * energie cinetique de chaque ss base : 
          TCIN(I)=0.D0
+* energie potentielle de chaque ss base : 
+         epot(I)=0.D0
         ENDDO
 * 
         DO I=1,NSB
@@ -602,6 +604,7 @@ c------- Cas K,C et M diagonal -----------------------------------
  31         CONTINUE
 *        end do
       ENDIF
+
 ******************************************************************
 * ROTATIONS RIGIDES: initialisation du vect accel. angulaire 
 *                    via l equation d Euler
@@ -640,6 +643,12 @@ c------- Cas K,C et M diagonal -----------------------------------
             ENDDO
             TCIN(IB) = TCIN(IB) + (OMEG2(I,2,IB)*DYN2(I)/2.d0) 
           ENDDO
+*         Energie potentielle de pesanteur : 
+*           - la gravite est en -ez
+*           - le cdm du solide est le point de liaison numero 1 
+          if (nliab.ne.0) then
+            epot(ib) = xptb(1,1,3)*mtsb(ib)*9.81 
+          endif
 *         Calc. moment cinétique spatial :
           DO I=1,3
             PICIN(IB,I) = 0.D0

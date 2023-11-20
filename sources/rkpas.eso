@@ -94,7 +94,7 @@ c
          REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
          REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
          REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
-         REAL*8 PICIN(NSB,3),TCIN(NSB) 
+         REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB) 
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
          LOGICAL ITRIG(NSB,NA2)
@@ -439,6 +439,60 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *      ENDIF
 *
 ************************************************************************
+*     Energies
+************************************************************************
+      IF (RIGIDE) THEN
+       DO 8 IIB=1,NSB
+CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
+          IF (IAROTA(IIB).EQ.0) GOTO 8
+***       Calcul du moment cinetique : 
+          DO I=1,3
+            PICIN(IIB,I) = 0.D0
+            DO J=1,3
+              DYN2(J) = 0.D0
+              DO K=1,3
+                DYN2(J) = DYN2(J) +
+     &                    ROT(I,K,1,IIB)*INERTIE(K,J,IIB)
+              ENDDO
+              PICIN(NSB,I) = PICIN(IIB,I)+DYN2(J)*OMEG2(J,1,IIB)
+            ENDDO
+          ENDDO
+***       Calcul de l energie cinetique en rotation : 
+          TCIN(IIB) = 0.D0
+          DO I=1,3
+            DYN2(I) = 0.D0
+            DO J=1,3
+              DYN2(I) = DYN2(I) + INERTIE(I,J,IIB)*OMEG2(J,1,IIB)
+            ENDDO
+            TCIN(IIB) = TCIN(IIB) + (OMEG2(I,1,IIB)*DYN2(I)/2.d0) 
+          ENDDO
+          NA3  = INMSB(IIB)
+*              = nbr de modes elasiques ds la ss base (incluant les transl. rigides)
+          INA2 = IORSB(IIB) - 1
+          XTC = 0.D0
+          DO IN = 1,NA3
+            IN2 = INA2 + IN
+            IF ((ITRIG(IIB,IN))) THEN
+*             Energie cinetique translation : 
+              DO ID=1,IDIM
+                XTC = XTC + 
+     &            0.5*MTSB(IIB)*((XPHILB(IIB,1,IN,ID)*Q2(IN2,1))**2.d0) 
+              ENDDO
+            ELSE
+*             Energie cinetique modes flexibles : 
+              XTC = XTC + (0.5 * (Q2(IN2,2)**2) * XM(IN,1))
+            ENDIF 
+          ENDDO
+          TCIN(IIB) = TCIN(IIB) + XTC
+*         Energie potentielle de pesanteur : 
+*           - la gravite est en -ez
+*           - le cdm du solide est le point de liaison numero 1 
+          if (nliab.ne.0) then
+            epot(iib) = xptb(1,1,3)*mtsb(iib)*9.81 
+          endif
+ 8     CONTINUE
+* fin boucle ss bases
+      ENDIF
 *
       END
 
