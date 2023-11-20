@@ -109,13 +109,13 @@ c             ENDIF
          SEGACT,MPOVAL
          DO 14 KJ = 1,NUM(/2)
                if (nocomp(icc).eq.'UX') then 
-                  MST(1,in,ib) = st(1,in,ib) + VPOCHA(KJ,ICC)
+                  MST(1,in,ib) = mst(1,in,ib) + VPOCHA(KJ,ICC)
                endif
                if (nocomp(icc).eq.'UY') then 
-                  MST(2,in,ib) = st(2,in,ib) + VPOCHA(KJ,ICC)
+                  MST(2,in,ib) = mst(2,in,ib) + VPOCHA(KJ,ICC)
                endif
                if (nocomp(icc).eq.'UZ') then 
-                  MST(3,in,ib) = st(3,in,ib) + VPOCHA(KJ,ICC)
+                  MST(3,in,ib) = mst(3,in,ib) + VPOCHA(KJ,ICC)
                endif
  14      CONTINUE
          SEGDES,MPOVAL
