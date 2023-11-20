@@ -456,9 +456,10 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           E(3,2,iib) = -omeg1(3,iib)
           E(3,3,iib) = omeg1(2,iib)
           E(3,4,iib) = omeg1(1,iib)
+        enddo
 * MRTH :
-          do id = 1,na1
-
+        do id = 1,na1
+          
         enddo
 *
       endif
