@@ -86,6 +86,8 @@ C DYNE26    SOURCE    CB215821  20/11/04    21:16:12     10766
       CHARACTER*8 CMOT,TYPRET,MORIGI,CHARRE,MONMOT,CMOT1
       REAL*8      XAXROT(3),XROTA(2,3),XXGP(3),XGRAV(3),XCG(3)
       REAL*8      JINERT(3,3),INERT2(3,3)
+*     matrices pour inertia forces (a introduire dans mtrot plus tard)
+*      real*8      mst(3,na2,nsb)
 
 
 *
@@ -509,6 +511,38 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
         ENDIF
 *     Fin 
       ENDIF
+
+************************************************************************
+*        rigide : on implente les matrices 
+*                 utiles au calculs des forces d'inertie
+************************************************************************
+      if ((rigide).and.(iarota(ib).ne.0)) then
+        do in=1,inel
+          TYPRET = ' '
+          CALL ACCTAB(IBAS,'ENTIER',IN,X0,' ',L0,IP0,
+     &                  TYPRET,I1,X1,CHARRE,L1,IBAMOD)
+          IF (IERR.NE.0) RETURN
+*         -on a bien un objet de type table
+          IF (IBAMOD.NE.0) THEN
+            IF (TYPRET.EQ.'TABLE   ') THEN
+              CALL ACCTAB(IBAMOD,'MOT',I0,X0,'DEFORMEE_MODALE',L0,IP0,
+     &                         'CHPOINT',I1,X1,' ',L1,ICDM)
+              IF (IERR.NE.0) RETURN
+              CALL ACTOBJ('CHPOINT ',ICDM,1)
+*             remplissage de la matrice st :
+              mst(1,in,ib) = 0.d0
+              mst(2,in,ib) = 0.d0
+              mst(3,in,ib) = 0.d0
+              call calcmst(ICDM,0,.FALSE.,st,in,na2,ib,nsb)
+*           fin if typret = table
+            endif
+*         fin if ibamod diff 0
+          endif
+*       fin boucle sur les modes
+        enddo
+*     fin rigide et iarota diff 0
+      endif
+************************************************************************
 ************************************************************************
 *     table PASAPAS
 ************************************************************************
