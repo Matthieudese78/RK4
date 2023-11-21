@@ -72,22 +72,12 @@ C EXTRA9    SOURCE    CB215821  20/11/25    13:28:43     10792
 *        Cas d'un chpo "Fourier" ou NHARM fourni : 
 *        on teste le nom + l'harmonique         
          IF (IFOPOI.EQ.1.OR.ZTEST) THEN
-            DO 12 IC = 1,NC
-c             IF (NOCOMP(IC).EQ.CMOT.AND.NOHARM(IC).EQ.NTEST) THEN
-c                ICC=IC
-c                GOTO 13
-c             ENDIF
-*              WRITE(*,*)'extra9: boucle 22'
-              IF (NOHARM(IC).NE.NTEST) GOTO 12
-              IF (NOCOMP(IC).NE.CMOT)  GOTO 12
-*              WRITE(*,*)'extra9: composante trouvee, ICC = ',ICC
-              ICC=IC
-              GOTO 13
- 12         CONTINUE  
-*        Autre Cas : on teste le nom de composante
+            write(*,*)'calcmst : couplage inertiel rotas - transl rig'
+            write(*,*)'  Fourrier non pris en charge ici!'
+            call exit(1)
          ELSE
             DO 22 IC = 1,NC
-              WRITE(*,*)'calst : boucle 22'
+              WRITE(*,*)'calcmst : boucle 22'
               IF ((NOCOMP(IC).EQ.'UX').or.
      &            (NOCOMP(IC).EQ.'UY').or. 
      &            (NOCOMP(IC).EQ.'UZ')) THEN
