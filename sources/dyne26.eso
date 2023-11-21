@@ -533,6 +533,12 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
               call calcmst(ICDM,0,.FALSE.,mst,in,na2,ib,nsb)
               write(*,*)'dyne26 : mst mode in : '
               write(*,'(3(1X,F8.5))') , (mst(id,in,ib),id=1,3)
+*             si la matirce de masse n'est pas diagonale :
+              if (itkm.gt.0) then
+                write(*,*)'matrice de couplage inertiel pas encore'
+                write(*,*)'implementees avec matirce de masse pleine!'
+                call exit(1)
+              endif
 *           fin if typret = table
             endif
 *         fin if ibamod diff 0
