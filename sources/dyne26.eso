@@ -492,7 +492,7 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
             XCG(ID,IB) = (XGRAV(ID) - XCENT(ID,IB))
           ENDDO
 *         Calcul de la norme de Xcdr - Xcdg:
-          XCG2 = SQRT(XCG(1)**2 + XCG(2)**2 + XCG(3)**2)
+          XCG2 = SQRT(XCG(1,ib)**2 + XCG(2,ib)**2 + XCG(3,ib)**2)
           IF (XCG2.GT.XPETIT) THEN
             IF (IERR.NE.0) RETURN
             WRITE(*,*)'Appel MAJINERT '
