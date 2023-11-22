@@ -369,7 +369,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
       enddo
 *     1/2 pdt --> ifex = 3
       call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
-     &             xasm,xopm1,finert,4,3)
+     &             xasm,xopm1,finert,4,3,pdt)
 ************************************************************************
 *     k2 = (q2(i,4), q3(i,4))^T
 *     u3 = y + k2*dt2
@@ -380,7 +380,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
       enddo
 *     1/2 pdt --> ifex = 3
       call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
-     &             xasm,xopm1,finert,3,3)
+     &             xasm,xopm1,finert,3,3,pdt)
 
 ************************************************************************
 *     k3 = (q2(i,3), q3(i,3))^T
@@ -392,7 +392,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
       enddo
 *     t_n+1 --> ifex = 1
       call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
-     &             xasm,xopm1,finert,2,1)
+     &             xasm,xopm1,finert,2,1,pdt)
 ************************************************************************
 *     k4 = (q2(i,2), q3(i,2))^T
 ************************************************************************
@@ -406,7 +406,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
       enddo
 
       call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
-     &             xasm,xopm1,finert,1,1)
+     &             xasm,xopm1,finert,1,1,pdt)
 
 *     MAJ vitesse generalisee :
       do in=1,na1
