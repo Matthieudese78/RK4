@@ -1,4 +1,4 @@
-      SUBROUTINE accdef(itbas,npoi)
+      SUBROUTINE accdef(jbas,npoi)
 
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -11,43 +11,61 @@
 *   de toutes les deformees modales d'une base / ss base
 *   (via ctdef) et prend le maximal. 
 ************************************************************************
-      logical l0,l1
-      character*8  typret,charre
-      character*40 monmot
+* pour avoir ierr : include ccoptio
+* -INC CCOPTIO
 
+-INC PPARAM
+-INC CCOPTIO
+-INC SMCOORD
+-INC SMMODEL
+-INC SMELEME
+-INC SMCHAML
+-INC SMLENTI
+      logical l0,l1
+      character*8  typret,charre,monmot,cmot,morigi
+
+      write(*,*)'accdef : START'
+      write(*,*)'     jbas = ',jbas
       npoi = 0
-*     ibas est une base ou une ss base :
-      call acctab(itbas,'MOT',i0,x0,'MODES',l0,ip0,
-     &           'TABLE',i1,x1,' ',l1,imod)
-      if (ierr.ne.0) return
+*     jbas est une base ou une ss base :
+      call acctab(jbas,'MOT',i0,x0,'MODES',l0,ip0,
+     &                 'TABLE',i1,x1,' ',l1,ibmod)
+      write(*,*)'         ierr ',ierr
+*      if (ierr.ne.0) return
+      write(*,*)'accdef : tmode . modes ',ibmod
 *
       in = 0
  1    continue
       in = in + 1
 *     acquisition du mode :
       typret = ' '
-      call acctab(ibas,'ENTIER',in,x0,' ',l0,ip0,
+      call acctab(ibmod,'ENTIER',in,x0,' ',l0,ip0,
      &                      typret,i1,x1,charre,l1,imod)
-      if (ierr.ne.0) return
+      write(*,*)'         ierr ',ierr
+*      if (ierr.ne.0) return
       if ((imod.ne.0).and.(typret.eq.'TABLE   ')) then
+        write(*,*)'accdef : mode ',in
 *       on saute les rotations rigides :
-        typret = ' '
+        morigi = ' '
         call acctab(imod,'MOT',i0,x0,'ROTATION_RIGIDE',l0,ip0,
-     &                    typret,i1,x1,monmot,l1,ip1)
-        if (ierr.ne.0) return
-        if (typret.eq.'MOT') then
-          if (monmot(1:4).eq.'VRAI') goto 1
+     &                    morigi,i1,x1,cmot,l1,ip1)
+        write(*,*)'         ierr ',ierr
+*        if (ierr.ne.0) return
+        if (morigi(1:3).eq.'MOT') then
+          if (cmot(1:4).eq.'VRAI') then 
+            write(*,*)'mode rigide saute'
+            goto 1
+          endif
         endif
 *       on prend la deformee modale :
 
         call acctab(imod,'MOT',i0,x0,'DEFORMEE_MODALE',l0,ip0,
      &                      'CHPOINT',i1,x1,' ',l1,icdm)
-        if (ierr.ne.0) return
-        if (typret.eq.'TABLE   ') then
-          call ctdef(icdm,npoi)
-          if (npoi.eq.0) goto 1
-          write(*,*)'accdef : npoi = ',npoi
-        endif
+        write(*,*)'deformee ',icdm
+*        if (ierr.ne.0) return
+        write(*,*)'accdef : call ctdef'
+        call ctdef(icdm,npoi)
+        if (npoi.eq.0) goto 1
       endif
 
       END

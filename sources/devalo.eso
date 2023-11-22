@@ -623,8 +623,9 @@ c         --fin du cas lecture table de la IB ieme base modale non ok
         if (rigide) then
         npdef = 0
         if (.not.leb) then 
+          write(*,*)'devalo : call accdef, itbas2 = ',itbas2
           call accdef(itbas2,npdef)
-          write(*,*)'nbr de point dans la deformee npdef = ',npdef
+          write(*,*)'devalo : nbr de pts deformee npdef = ',npdef
         else
           do ib=1,nsb
             npdef2 = 0
@@ -632,6 +633,7 @@ c         --fin du cas lecture table de la IB ieme base modale non ok
             call acctab(itbas2,'ENTIER',ib,x0,' ',l0,ip0,
      &                         typret,i1,x1,charre,l1,itbb)
             call accdef(itbb,npdef2)
+          write(*,*)'devalo : nbr de pts deformee npdef2 = ',npdef2
             npdef = max(npdef,npdef2)
           enddo
         endif

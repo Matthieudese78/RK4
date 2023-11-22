@@ -12,10 +12,10 @@
 *       
 ************************************************************************
 *
--INC SMCHPOI
--INC SMELEME
 -INC PPARAM
 -INC CCOPTIO
+-INC SMCHPOI
+-INC SMELEME
 
       CHARACTER*8 MOTLAG
       DATA MOTLAG/'LX'/
