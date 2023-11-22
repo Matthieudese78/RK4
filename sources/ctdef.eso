@@ -1,0 +1,73 @@
+      SUBROUTINE ctdef(ICHP,inoe)
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+************************************************************************
+*
+*                             CTDEF
+*
+* FONCTION:
+* ---------
+* compte les noeuds comportant une composante 'UX' d'un chpoint 
+*       
+************************************************************************
+*
+-INC SMCHPOI
+-INC SMELEME
+-INC PPARAM
+-INC CCOPTIO
+
+      CHARACTER*8 MOTLAG
+      DATA MOTLAG/'LX'/
+
+*     compteur de noeuds :      
+      inoe = 0
+*
+      IRET=0
+      XFLOT=0.D0
+      MCHPOI=ICHP
+      SEGACT MCHPOI
+* --- BOUCLE SUR LES ZONES DU CHPOINT
+      NBSOUS = IPCHP(/1)
+      DO 11 I = 1,NBSOUS
+         MSOUPO = IPCHP(I)
+         SEGACT MSOUPO
+         NC = NOCOMP(/2)
+         if (ifopoi.eq.1) then
+            write(*,*)'calcmst : couplage inertiel rotas - transl rig'
+            write(*,*)'  Fourrier non pris en charge ici!'
+            call exit(1)
+         else
+            do 22 ic = 1,nc
+              if (nocomp(ic).eq.motlag) goto 11
+*             on ne fait la detection que sur 'UX' pour ne pas remplir avec 2 fois le mm point!
+              if (nocomp(ic).eq.'UX') then
+                 icc=ic
+                 goto 13
+              endif
+ 22         continue  
+         endif
+*        absence de la composante ou mult. lagrange    
+         goto 11 
+         
+*        on a trouvé le nom de composante 
+ 13      continue
+*      - RECHERCHE DU NOEUD
+         meleme = igeoc
+         segact,meleme
+         mpoval = ipoval
+         segact,mpoval
+         do 14 kj = 1,num(/2)
+            inoe = inoe + 1
+ 14      continue
+         segdes,mpoval
+         segdes,meleme
+         segdes,msoupo
+ 11   continue
+      segdes,mchpoi
+
+      END
+
+ 
+ 
+ 

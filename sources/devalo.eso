@@ -192,6 +192,8 @@ C DEVALO    SOURCE    CB215821  20/11/04    21:16:09     10766
       CHARACTER*8  TYPRET,CHARRE
       CHARACTER*10 MO1
       CHARACTER*40 MONMOT
+*     ensemble de base ou base unique : leb
+      logical leb
 *
       ITREP  = 0
       MTQ    = 0
@@ -210,6 +212,7 @@ C DEVALO    SOURCE    CB215821  20/11/04    21:16:09     10766
       KTROT = 0
       REPRIS = .FALSE.
       RIGIDE = .FALSE.
+      leb = .false.
 *
 ************************************************************************
 *     On recupere le cas echeant, le temps de reprise:
@@ -554,6 +557,8 @@ c             write(ioimp,*) IB,'ieme base de l ensemble'
 c         --cas lecture table de la IB ieme base modale ok
             IF (ITBB.NE.0) THEN
             IF (TYPRET.EQ.'TABLE   ') THEN
+*              on a bien 1 ensemble de base :
+               leb = .true.
                CALL ACCTAB(ITBB,'MOT',I0,X0,'MODES',L0,IP0,
      &                        'TABLE',I1,X1,' ',L1,IBAS)
             WRITE(*,*)'         ITBB . MODES = IBAS = ',IBAS
@@ -613,6 +618,25 @@ c         --fin du cas lecture table de la IB ieme base modale non ok
 *      -fin distinction base modale simple / ensemble de bases
         NPLSB = NPLB
 
+***** enclave matthieu pour couplage inertiel en deformable multibody *****
+*       countdef :
+        if (rigide) then
+        npdef = 0
+        if (.not.leb) then 
+          call accdef(itbas2,npdef)
+          write(*,*)'nbr de point dans la deformee npdef = ',npdef
+        else
+          do ib=1,nsb
+            npdef2 = 0
+            TYPRET = ' '
+            call acctab(itbas2,'ENTIER',ib,x0,' ',l0,ip0,
+     &                         typret,i1,x1,charre,l1,itbb)
+            call accdef(itbb,npdef2)
+            npdef = max(npdef,npdef2)
+          enddo
+        endif
+        endif
+***** 
 
 ***** Cas table PASAPAS *****
 

@@ -1,0 +1,57 @@
+      SUBROUTINE accdef(itbas,npoi)
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+************************************************************************
+*                             ACCDEF
+************************************************************************
+* FONCTION:
+* ---------
+* Compte les points de composantes 'UX' 'UY' 'UZ'
+*   de toutes les deformees modales d'une base / ss base
+*   (via ctdef) et prend le maximal. 
+************************************************************************
+      logical l0,l1
+      character*8  typret,charre
+      character*40 monmot
+
+      npoi = 0
+*     ibas est une base ou une ss base :
+      call acctab(itbas,'MOT',i0,x0,'MODES',l0,ip0,
+     &           'TABLE',i1,x1,' ',l1,imod)
+      if (ierr.ne.0) return
+*
+      in = 0
+ 1    continue
+      in = in + 1
+*     acquisition du mode :
+      typret = ' '
+      call acctab(ibas,'ENTIER',in,x0,' ',l0,ip0,
+     &                      typret,i1,x1,charre,l1,imod)
+      if (ierr.ne.0) return
+      if ((imod.ne.0).and.(typret.eq.'TABLE   ')) then
+*       on saute les rotations rigides :
+        typret = ' '
+        call acctab(imod,'MOT',i0,x0,'ROTATION_RIGIDE',l0,ip0,
+     &                    typret,i1,x1,monmot,l1,ip1)
+        if (ierr.ne.0) return
+        if (typret.eq.'MOT') then
+          if (monmot(1:4).eq.'VRAI') goto 1
+        endif
+*       on prend la deformee modale :
+
+        call acctab(imod,'MOT',i0,x0,'DEFORMEE_MODALE',l0,ip0,
+     &                      'CHPOINT',i1,x1,' ',l1,icdm)
+        if (ierr.ne.0) return
+        if (typret.eq.'TABLE   ') then
+          call ctdef(icdm,npoi)
+          if (npoi.eq.0) goto 1
+          write(*,*)'accdef : npoi = ',npoi
+        endif
+      endif
+
+      END
+
+ 
+ 
+ 
