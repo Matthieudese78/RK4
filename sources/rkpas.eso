@@ -126,7 +126,7 @@ cbp,2020-09      REAL*8 XOPM1(NB1,NB1,*),Q2DEMI(NA1),FAMOR(NA1)
       REAL*8 KTOTXB(NPLB,IDIMB,IDIMB),KTOTVB(NPLB,IDIMB,IDIMB) 
 *
 c     LOGICAL LWRITE
-      LOGICAL RIGIDE,lxpinv
+      LOGICAL RIGIDE,lxpinv,linert
       LOGICAL QUATERNION,MATRICE
 * CMS : 
       REAL*8 FAMO1(NA1),FAMO2(NA1)
@@ -146,7 +146,9 @@ cms : pour le couple resistant "hard code" :
 *     resistance au spin ?
       lrspin = .false.
 *     correction dexpinv ?
-      lxpinv = .false.
+      lxpinv = .true.
+*     couplage inertiel ?
+      linert = .false.
 *      lxpinv = .true.
 *     le cas echeant, base modale de l'adaptateur : 
       ibad = 1
@@ -204,8 +206,16 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
 *     pas de conditoin sur l'appel a d2vfxa.
       CALL RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &              NPLB,IDIMB,RIGIDE)
-            write(*,*)'rkpas : fexb :'
-            write(*,'(3(1X,F8.5))') , ((fexb(ip,3,j),j=1,3),ip=1,nplb)
+*      write(*,*)'rkpas : fexb :'
+*      write(*,'(3(1X,F8.5))') , ((fexb(ip,3,j),j=1,3),ip=1,nplb)
+*      write(*,*)'rkpas : ftota :'
+*      do i=1,na1
+*      write(*,'(3(1X,F8.5))') , (ftota(i,ind1),ind1=1,3)
+*      enddo
+*      write(*,*)'rkpas : finert :'
+*      do i=1,na1
+*      write(*,'(1X,F8.5)') , finert(i,1)
+*      enddo
 * ddls elastiques :  
 *      do in=1,npfexa 
 **        fel(in,3) = ftota(in,2)
@@ -254,8 +264,8 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             th2(id) = omeg2(id,5,iib) * dt2
             omeg2(id,4,iib)  = omeg2(id,5,iib) + omeg3(id,5,iib) * dt2
           enddo
-            write(*,*)'rkpas : 1st pred :'
-            write(*,'(3(1X,F8.5))') , (omeg2(j,4,iib),j=1,3)
+*           write(*,*)'rkpas : 1st pred :'
+*           write(*,'(3(1X,F8.5))') , (omeg2(j,4,iib),j=1,3)
 
 ************************************************************************
 *          calcul de EXPTH pour eq. dynamique:
@@ -265,10 +275,11 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *          quaternion a l'instant tn+1:
           CALL QUAT2MAT(OMEG1(1,4,IIB),ROT(1,1,4,IIB)) 
 
-            write(*,*)'rkpas : rot 1st pred : indice 4'
-         do id=1,3
-            write(*,'(3(1X,F8.5))') , (rot(id,j,4,iib),j=1,3)
-         enddo
+*          write(*,*)'rkpas : rot 1st pred : indice 4'
+*          do id=1,3
+*              write(*,'(3(1X,F8.5))') , (rot(id,j,4,iib),j=1,3)
+*          enddo
+
 *          equilibre dynamique : 1/2 pdt --> ifex = 3
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
      &                  th2,fmomtot,xcoolb,fexb,nplb,4,3,lxpinv)
@@ -363,20 +374,37 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *     k1 = (q2(i,5), q3(i,5))^T
 *     u2 = y + k1*dt2
 ************************************************************************
+*      write(*,*)'rkpas : indice 5'
+*      do i = 1,na1
+*      write(*,*)'q1 :',q1(i,5)
+*      write(*,*)'q2 :',q2(i,5)
+*      enddo
+
+      write(*,*)'rkpas 1st pred :'
       do i = 1,na1
         q1(i,4) = q1(i,5) + q2(i,5) * dt2
         q2(i,4) = q2(i,5) + q3(i,5) * dt2
+*       write(*,*)'q1 :',q1(i,4)
+*       write(*,*)'q2 :',q2(i,4)
       enddo
 *     1/2 pdt --> ifex = 3
       call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
      &             xasm,xopm1,finert,4,3,pdt)
+*      write(*,*)'rkpas 1st rkpasel :'
+*      do i = 1,na1
+*      write(*,*)'q2 :',q2(i,4)
+*      write(*,*)'q3 :',q3(i,4)
+*      enddo
 ************************************************************************
 *     k2 = (q2(i,4), q3(i,4))^T
 *     u3 = y + k2*dt2
 ************************************************************************
+      write(*,*)'rkpas 2nd pred :'
       do i = 1,na1
         q1(i,3) = q1(i,5) + q2(i,4) * dt2
         q2(i,3) = q2(i,5) + q3(i,4) * dt2
+*        write(*,*)'q1 :',q1(i,3)
+*        write(*,*)'q2 :',q2(i,3)
       enddo
 *     1/2 pdt --> ifex = 3
       call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
@@ -386,9 +414,12 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *     k3 = (q2(i,3), q3(i,3))^T
 *     u4 = y + k3*dt
 ************************************************************************
+      write(*,*)'rkpas 3rd pred :'
       do i = 1,na1
         q1(i,2) = q1(i,5) + q2(i,3) * dt2
         q2(i,2) = q2(i,5) + q3(i,3) * dt2
+*        write(*,*)'q1 :',q1(i,2)
+*        write(*,*)'q2 :',q2(i,2)
       enddo
 *     t_n+1 --> ifex = 1
       call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
@@ -403,11 +434,20 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *       vitesse :
       q2(i,1)=q2(i,2)+(dt/6.d0)*(q3(i,5) + 2.d0*q3(i,4) + 2.d0*q3(i,3) +
      &                       q3(i,2))
+
+*      write(*,*)'rkpas avant liaison :'
+*      write(*,*)'q1 :',q1(i,1)
+*      write(*,*)'q1 :',q1(i,1)
+*      write(*,*)'q2 :',q2(i,1)
+*      write(*,*)'q2 :',q2(i,1)
       enddo
 
       call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
      &             xasm,xopm1,finert,1,1,pdt)
 
+*      write(*,*)'rkpas avant liaison :'
+*      write(*,*)'q1 :',q1(i,ind)
+*      write(*,*)'q1 :',q1(i,ind)
 *     MAJ vitesse generalisee :
       do in=1,na1
         q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,1)+q3(in,1))
@@ -444,65 +484,67 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 * ROTATIONS RIGIDES: calcul des matrices necessaires au calcul des forces d'inertie 
 *     dans le repere spatial --> on prend le quaternion omeg1 (orientation dans le repere spatial).
 ******************************************************************
-      if (rigide) then
-        ind1 = 5
-        do iib=1,nsb
-*         na3 : nombre de modes elastiques + translations rig
-*               dans la ss base iib.
-          na3 = inmsb(iib)
-*****     M_{Rtheta} : couplage translations rigides. shabana p 273
-*         indice = ind1
-*         on initialise :
-          do id=1,3
-            do j=1,3
-              mrth(id,j,ind1,iib) = 0.d0
-            enddo
-          enddo
-          do id=1,3
-            mrth1(id) = 0.d0
-            do 1 in = 1,na3
-              i2 = iorsb(iib) + in - 1
-*             on saute les translation rigides
-              if (itrig(iib,in)) goto 1           
-*              call chap(mst(1,in,iib),chmst(1,1))
-            mrth1(id) = mrth1(id) + xm(i2,1)*mst(id,in,iib)*q1(in,ind1) 
- 1          continue
-          enddo
-*         on rajoute l'eventuel bras de levier
-*         du a l'origine du body frame :
-          mrth1(1) = mtsb(iib)*xcg(1,iib) + mrth1(1)
-          mrth1(2) = mtsb(iib)*xcg(2,iib) + mrth1(2)
-          mrth1(3) = mtsb(iib)*xcg(3,iib) + mrth1(3)
-          call chap(mrth1(1),mrth2(1,1))
-*         on passe dans le repere spatial et on rajoute un moins :
-          do id=1,3
-            do j=1,3
-                mrth(id,j,ind1,iib) = 0.d0
-              do k=1,3
-               mrth(id,j,ind1,iib) = mrth(id,j,ind1,iib) -
-     &                           rot(id,k,ind1,iib)*mrth2(k,j) 
-              enddo
-            enddo
-          enddo
-
-*****   M_{Rf} : couplage translations rigides. depl. elastiques shabana p 274
-*       M_{Rf} = rot * MST :
-          do 2 in=1,na3
-*           on saute les translations rigides
-            if (itrig(iib,in)) goto 2
-            do id=1,3
-              do j=1,3
-                mrf(id,in,ind1,iib) = mrf(id,in,ind1,iib) + 
-     &              rot(id,j,ind1,iib) * 
-     &            (mtsb(iib)*xcg(j,iib) + mst(j,in,iib)*q1(in,ind1))
-              enddo
-            enddo
- 2        continue
-
-*       fin boucle sur les ss bases 
-        enddo
-*     fin if rigide
-      endif
+*      if (linert) then
+*      if (rigide) then
+*        ind1 = 5
+*        do iib=1,nsb
+**         na3 : nombre de modes elastiques + translations rig
+**               dans la ss base iib.
+*          na3 = inmsb(iib)
+******     M_{Rtheta} : couplage translations rigides. shabana p 273
+**         indice = ind1
+**         on initialise :
+*          do id=1,3
+*            do j=1,3
+*              mrth(id,j,ind1,iib) = 0.d0
+*            enddo
+*          enddo
+*          do id=1,3
+*            mrth1(id) = 0.d0
+*            do 1 in = 1,na3
+*              i2 = iorsb(iib) + in - 1
+**             on saute les translation rigides
+*              if (itrig(iib,in)) goto 1           
+**              call chap(mst(1,in,iib),chmst(1,1))
+*            mrth1(id) = mrth1(id) + xm(i2,1)*mst(id,in,iib)*q1(in,ind1) 
+* 1          continue
+*          enddo
+**         on rajoute l'eventuel bras de levier
+**         du a l'origine du body frame :
+*          mrth1(1) = mtsb(iib)*xcg(1,iib) + mrth1(1)
+*          mrth1(2) = mtsb(iib)*xcg(2,iib) + mrth1(2)
+*          mrth1(3) = mtsb(iib)*xcg(3,iib) + mrth1(3)
+*          call chap(mrth1(1),mrth2(1,1))
+**         on passe dans le repere spatial et on rajoute un moins :
+*          do id=1,3
+*            do j=1,3
+*                mrth(id,j,ind1,iib) = 0.d0
+*              do k=1,3
+*               mrth(id,j,ind1,iib) = mrth(id,j,ind1,iib) -
+*     &                           rot(id,k,ind1,iib)*mrth2(k,j) 
+*              enddo
+*            enddo
+*          enddo
+*
+******   M_{Rf} : couplage translations rigides. depl. elastiques shabana p 274
+**       M_{Rf} = rot * MST :
+*          do 2 in=1,na3
+**           on saute les translations rigides
+*            if (itrig(iib,in)) goto 2
+*            do id=1,3
+*              do j=1,3
+*                mrf(id,in,ind1,iib) = mrf(id,in,ind1,iib) + 
+*     &              rot(id,j,ind1,iib) * 
+*     &            (mtsb(iib)*xcg(j,iib) + mst(j,in,iib)*q1(in,ind1))
+*              enddo
+*            enddo
+* 2        continue
+*
+**       fin boucle sur les ss bases 
+*        enddo
+**     fin if rigide
+*      endif
+*      endif
 ************************************************************************
 *     Energies
 ************************************************************************

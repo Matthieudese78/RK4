@@ -109,17 +109,19 @@ cmsw     WRITE(*,*)'DEVRCO: IBASB(',IP,') = ',IBASB(IP)
          NA3  = INMSB(ISB)
 *        NA3 = nbr modes elastiques dans la sous base
          INA1 = IORSB(ISB) - 1
-*         WRITE(*,*)'        INA1 = ',INA1
+         WRITE(*,*)'        INA1 = ',INA1
 *        IORSB(ISB) = pos. 1er mode de la sous base dans l'ensemble des modes.
          IPLB = IPLSB(IP)
-*         WRITE(*,*)'DYNE26: IP = ',IP
-*         WRITE(*,*)'        IPLSB(',IP,') = ',IPLSB(IP)
+         WRITE(*,*)'DYNE26: IP = ',IP
+         WRITE(*,*)'        IPLSB(',IP,') = ',IPLSB(IP)
          IROT = IAROTA(ISB)
 c        boucle sur les ddls
-*         WRITE(*,*)'DEVRCO: ISB = ',ISB
-*         WRITE(*,*)'        NA3 = ',NA3
-*         WRITE(*,*)'        NA1 = ',NA1
-*         WRITE(*,*)'        XPHILB(/3) = ',NA2
+         WRITE(*,*)'DEVRCO: ISB = ',ISB
+         WRITE(*,*)'        NA3 = ',NA3
+         WRITE(*,*)'        NA1 = ',NA1
+         WRITE(*,*)'        XPHILB(/3) = ',NA2
+         WRITE(*,*)'        idimb = ',idimb
+         WRITE(*,*)'        irot = ',irot
          DO 20 ID = 1,IDIMB
 cmsw        WRITE(*,*)'DEVRCO boucle 20 ID = ',ID
             XRET = 0.D0
@@ -129,8 +131,8 @@ cmsw        WRITE(*,*)'DEVRCO boucle 20 ID = ',ID
 c           boucle sur les modes
 *            WRITE(*,*)'DEVRCO boucle 20 NA3 = ',NA3
             DO 30 IN = 1,NA3
-*               WRITE(*,*)'DEVRCO boucle 30 mode num = ',IN,'/',NA3
-*               WRITE(*,*)'    ITRIG(',ISB,IN,') = ',ITRIG(ISB,IN)
+               WRITE(*,*)'DEVRCO boucle 30 mode num = ',IN,'/',NA3
+               WRITE(*,*)'    ITRIG(',ISB,IN,') = ',ITRIG(ISB,IN)
                INN = INA1 + IN
 *               WRITE(*,*)'       XPHILB(',ISB,IPLB,IN,ID,') = ',
 *     &                           XPHILB(ISB,IPLB,IN,ID)
@@ -151,11 +153,20 @@ c           boucle sur les modes
 *                  On incrémente les depl elastiques (repere du solide):                 
                    XRET = XRET + XPHILB(ISB,IPLB,IN,ID) * Q1(INN,IND)
                    XRETV= XRETV+ XPHILB(ISB,IPLB,IN,ID) * Q2(INN,IND)
+*                   write(*,*)'cas rigide + elastique :'
+*                   write(*,*)'q1 :',q1(inn,ind)
+*                   write(*,*)'xphilb :'
+*        write(*,'(3(1X,F8.5))') , (xphilb(isb,iplb,in,icomp),icomp=1,3)
                    GOTO 30
                  ENDIF                 
                ENDIF
                XRET = XRET + XPHILB(ISB,IPLB,IN,ID) * Q1(INN,IND)
                XRETV= XRETV + XPHILB(ISB,IPLB,IN,ID) * Q2(INN,IND)
+*               write(*,*)'devrco loop 30 : ind = ',ind
+*               write(*,*)'q1 :',q1(inn,ind)
+*               write(*,*)'q1 :',q1(inn,ind)
+*               write(*,*)'xphilb :'
+*        write(*,'(3(1X,F8.5))') , (xphilb(isb,iplb,in,icomp),icomp=1,3)
 *              Si il n'y a pas de rota rigide dans la sous-base, XRETR et XRETRV sont les 
 *              dépls/vite élastiques:INA1
                XRETR = XRET
@@ -164,6 +175,8 @@ c           boucle sur les modes
 * si rota rigide dans ss base: On stocke d'abord les depl. et vite. des translations rigides dans XPTB (deja exprimes dans le repere global).
             XPTB(IP,1,ID) = XRETR
             XPTB(IP,2,ID) = XRETRV
+*            write(*,*)'devrco : xretr = ',xretr
+*            write(*,*)'devrco : xretrv = ',xretrv
 ********		Rotation et vitesses de rotations elastiques :
 *							Si IROT.NE.0 & ID>IDIM (ddls de rotation) 
 *								elles ne sont pas stockees dans UFLEX et VFLEX.
@@ -190,6 +203,11 @@ cmsw            WRITE(*,*)'DEVRCO: Fin DDLs 4-6'
              IF (ID.LE.IDIM) THEN
 *              on stocke les depls elastiques pour la reco rigide qui suit.
                XXCP(ID) = (XCOOLB(ID,ISB,IP) - XCENT(ID,ISB)) + XRET
+
+*               WRITE(*,*)' xcoolb :'
+*               WRITE(*,'(20F20.18)')(xcoolb(icomp,isb,ip),icomp= 1,3)     
+*               WRITE(*,*)' xcent :'
+*               WRITE(*,'(20F20.18)')(xcent(icomp,isb),icomp= 1,3)     
 *               WRITE(*,*)' XRET elast. = ',XRET
 *               WRITE(*,*)' XXCP(',ID,') = ',XXCP(ID)
 *              On enregistre les vite. elastiques dans le repère du solide
@@ -382,10 +400,10 @@ cmsw    &                               XPTB(IP,2,(ID+3))
 *--------------------------------------------------------------------*
  10   CONTINUE
 *
-      WRITE(*,*)'devrco end : depl. recombines :'
-      WRITE(*,'(20F20.18)')((xptb(ip,1,id),ip= 1,nplb),id= 1,3)     
-      WRITE(*,*)'devrco end : vite. recombines :'
-      WRITE(*,'(20F20.18)')((xptb(ip,2,id),ip= 1,nplb),id= 1,3)     
+*      WRITE(*,*)'devrco end : depl. recombines :'
+*      WRITE(*,'(20F20.18)')((xptb(ip,1,id),ip= 1,nplb),id= 1,3)     
+*      WRITE(*,*)'devrco end : vite. recombines :'
+*      WRITE(*,'(20F20.18)')((xptb(ip,2,id),ip= 1,nplb),id= 1,3)     
 
       IF (IIMPI.EQ.333) THEN
             WRITE(IOIMP,*)'DEVRCO: END'
