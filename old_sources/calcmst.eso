@@ -1,0 +1,121 @@
+C EXTRA9    SOURCE    CB215821  20/11/25    13:28:43     10792          
+      SUBROUTINE calcmst(ICHP,NHARM,ZTEST,mst,in,na2,ib,nsb)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+************************************************************************
+*
+*                             E X T R A 9
+*
+* FONCTION:
+* ---------
+*
+*     EXTRAIT LA VALEUR "XFLOT" DU CHPOINT "ICHP" AU POINT "MPOINT"
+*     DE COMPOSANTE "CMOTIN".
+*
+*
+* PARAMETRES:   (E)=ENTREE   (S)=SORTIE
+* -----------
+*
+*     ICHP    (E)  POINTEUR SUR LE CHPOINT
+*     MPOINT  (E)  POINT A EXTRAIRE
+*     CMOTIN  (E)  COMPOSANTE DU POINT A EXTRAIRE
+*     NHARM   (E)  HARMONIQUE DE FOURIER
+*     ZTEST   (E) = | TRUE   SI NHARM A ETE FOURNIE : ON LA TESTE
+*                   | FALSE  SINON
+*     XFLOT   (S)  VALEUR EXTRAITE
+*     IRET    (S) = | 1  SI NOEUD+COMPOSANTE EFFECTIVEMENT VU
+*                   | 0  SINON (CF. REMARQUE)
+*
+* REMARQUE 1 :  SI LE CHPOINT N'EST PAS DEFINI AU NOEUD + COMPOSANTE 
+* ----------    DEMANDE, LA VALEUR RETOURNEE PAR XFLOT EST 0.
+*               (CONVENTION DES CHPOINTS)
+* REMARQUE 2 :  SI NHARM N'EST PAS FOURNIE ET QUE LE CHPOINT EST DE TYPE 
+* ----------    FOURIER, ALORS ON EXTRAIT L'HARMONIQUE COURANTE
+*
+* ici : nharm = 0
+*       ztest = .false. 
+*       
+************************************************************************
+*
+-INC SMCHPOI
+-INC SMELEME
+
+-INC PPARAM
+-INC CCOPTIO
+
+      CHARACTER*(LOCOMP) CMOT
+      LOGICAL       ZTEST
+*     matthieu
+      real*8 mst(3,na2,nsb)
+      
+*     a t'on fourni une harmonique de Fourier ? si non, valeur courante
+      IF (ZTEST) THEN
+        NTEST=NHARM
+      ELSE
+        NTEST=NIFOUR
+      ENDIF
+      IRET=0
+      XFLOT=0.D0
+      MCHPOI=ICHP
+      SEGACT MCHPOI
+*      WRITE(*,*)'EXTRA9: MCHPOI = ',ICHP
+* --- BOUCLE SUR LES ZONES DU CHPOINT
+      NBSOUS = IPCHP(/1)
+*      WRITE(*,*)'EXTRA9: NBSOUS = ',NBSOUS
+      DO 11 I = 1,NBSOUS
+         MSOUPO = IPCHP(I)
+         SEGACT MSOUPO
+*         WRITE(*,*)'EXTRA9: MSOUPO = ',MSOUPO
+         NC = NOCOMP(/2)
+*         WRITE(*,*)'        NC = ',NC
+*      - RECHERCHE DE LA COMPOSANTE
+*        Cas d'un chpo "Fourier" ou NHARM fourni : 
+*        on teste le nom + l'harmonique         
+         IF (IFOPOI.EQ.1.OR.ZTEST) THEN
+            write(*,*)'calcmst : couplage inertiel rotas - transl rig'
+            write(*,*)'  Fourrier non pris en charge ici!'
+            call exit(1)
+         ELSE
+            DO 22 IC = 1,NC
+              WRITE(*,*)'calcmst : boucle 22'
+              IF ((NOCOMP(IC).EQ.'UX').or.
+     &            (NOCOMP(IC).EQ.'UY').or. 
+     &            (NOCOMP(IC).EQ.'UZ')) THEN
+                 ICC=IC
+                 GOTO 13
+              ENDIF
+ 22         CONTINUE  
+         ENDIF
+         
+*        absence de la composante    
+         GOTO 11
+         
+*        on a trouvé le nom de composante (+ harmonique ou pas)         
+ 13      CONTINUE
+*      - RECHERCHE DU NOEUD
+         MELEME = IGEOC
+         SEGACT,MELEME
+         MPOVAL = IPOVAL
+         SEGACT,MPOVAL
+         DO 14 KJ = 1,NUM(/2)
+               if (nocomp(icc).eq.'UX') then 
+                  MST(1,in,ib) = mst(1,in,ib) + VPOCHA(KJ,ICC)
+               endif
+               if (nocomp(icc).eq.'UY') then 
+                  MST(2,in,ib) = mst(2,in,ib) + VPOCHA(KJ,ICC)
+               endif
+               if (nocomp(icc).eq.'UZ') then 
+                  MST(3,in,ib) = mst(3,in,ib) + VPOCHA(KJ,ICC)
+               endif
+ 14      CONTINUE
+         SEGDES,MPOVAL
+         SEGDES,MELEME
+         SEGDES,MSOUPO
+ 11   CONTINUE
+      SEGDES,MCHPOI
+
+      END
+
+ 
+ 
+ 

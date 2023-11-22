@@ -1,0 +1,104 @@
+      SUBROUTINE fillphi(ICHP,xcoola,mst,in,na2,ib,nsb,idim)
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+************************************************************************
+*
+*                             FILLPHI
+*
+* FONCTION:
+* ---------
+* Stocke les coord en base A et les valeurs des composantes 
+* de la def modale par neoeud et par mode
+*
+* PARAMETRES:   (E)=ENTREE   (S)=SORTIE
+* -----------
+*
+*     ICHP    (E)  POINTEUR SUR LE CHPOINT
+*     MPOINT  (E)  POINT A EXTRAIRE
+*     CMOTIN  (E)  COMPOSANTE DU POINT A EXTRAIRE
+*     NHARM   (E)  HARMONIQUE DE FOURIER
+*     ZTEST   (E) = | TRUE   SI NHARM A ETE FOURNIE : ON LA TESTE
+*                   | FALSE  SINON
+*     Xcoola  (S)  coord en base A
+*     IRET    (S) = | 1  SI NOEUD+COMPOSANTE EFFECTIVEMENT VU
+*                   | 0  SINON (CF. REMARQUE)
+*
+* REMARQUE 1 :  SI LE CHPOINT N'EST PAS DEFINI AU NOEUD + COMPOSANTE 
+* ----------    DEMANDE, LA VALEUR RETOURNEE PAR XFLOT EST 0.
+*               (CONVENTION DES CHPOINTS)
+* REMARQUE 2 :  SI NHARM N'EST PAS FOURNIE ET QUE LE CHPOINT EST DE TYPE 
+* ----------    FOURIER, alors on exit(1)
+*
+*       ztest = .false. 
+*       
+************************************************************************
+*
+-INC SMCHPOI
+-INC SMELEME
+
+-INC PPARAM
+-INC CCOPTIO
+
+-INC SMCOORD
+*
+      CHARACTER*(LOCOMP) CMOT
+
+      DATA MOTLAG/'LX'/
+*     compteur de noeuds :      
+      inoe = 0
+*     a t'on fourni une harmonique de Fourier ? si non, valeur courante
+      IF (ZTEST) THEN
+        NTEST=NHARM
+      ELSE
+        NTEST=NIFOUR
+      ENDIF
+      IRET=0
+      XFLOT=0.D0
+      MCHPOI=ICHP
+      SEGACT MCHPOI
+* --- BOUCLE SUR LES ZONES DU CHPOINT
+      NBSOUS = IPCHP(/1)
+      DO 11 I = 1,NBSOUS
+         MSOUPO = IPCHP(I)
+         SEGACT MSOUPO
+         NC = NOCOMP(/2)
+         IF (IFOPOI) THEN
+            write(*,*)'calcmst : couplage inertiel rotas - transl rig'
+            write(*,*)'  Fourrier non pris en charge ici!'
+            call exit(1)
+         ELSE
+            DO 22 IC = 1,NC
+              if (nocomp(ic).eq.motlag) goto 11
+*             on ne fait la detection que sur 'UX' pour ne pas remplir avec 2 fois le mm point!
+              IF (NOCOMP(IC).EQ.'UX') THEN
+                 ICC=IC
+                 GOTO 13
+              ENDIF
+ 22         CONTINUE  
+         ENDIF
+*        absence de la composante ou mult. lagrange    
+         goto 11 
+         
+*        on a trouvé le nom de composante (+ harmonique ou pas)         
+ 13      CONTINUE
+*      - RECHERCHE DU NOEUD
+         MELEME = IGEOC
+         SEGACT,MELEME
+         MPOVAL = IPOVAL
+         SEGACT,MPOVAL
+         DO 14 KJ = 1,NUM(/2)
+            inoe = inoe + 1
+            jpdef(inoe) = num(1,kj)
+ 14      CONTINUE
+         SEGDES,MPOVAL
+         SEGDES,MELEME
+         SEGDES,MSOUPO
+ 11   CONTINUE
+      SEGDES,MCHPOI
+
+      END
+
+ 
+ 
+ 
