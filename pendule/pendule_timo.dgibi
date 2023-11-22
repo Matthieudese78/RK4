@@ -1,0 +1,692 @@
+*** Cas-test issu de Simo & Wong:
+* UNCONDITIONALLY STABLE ALGORITHMS FOR RIGID
+* BODY DYNAMICS THAT EXACTLY PRESERVE ENERGY
+* AND MOMENTUM
+rk4 = vrai ;
+sw = faux ;
+xpinv = vrai ;
+*********************************************************************
+*                       Valeurs numeriques 
+*********************************************************************
+opti impi 555 ;
+***** General:
+* On prend une toupie conique en acier:
+* Masse:
+ M = 2.;
+* Gravite:
+ g = 10. ;
+* Module d'Young:
+ eac = 20.e6; 
+* Coefficient de Poisson:
+ nuac = 0.3;
+* Masse volumique:
+ rho_ac = 8000;
+*
+****** Geometrie:
+* longueur de la poutre: 
+ h = 1.5 ;
+* Moment d'inertie / centre de gravite:
+ Jx_G = 5. - (M*((2.*h/3.)**2)) ;
+ Jy_G = 5. - (M*((2.*h/3.)**2)) ;
+ Jz_G = 1.                      ; 
+* Momens d inertie / centre de rotation:
+ Jx_C = 5. ;
+ Jy_C = 5.;
+ Jz_C = 1.; 
+* Rayon:
+ R = (2.*Jz_C/(rho_ac*h))**0.25 ;
+* Section de la poutre :
+ sectpou = (Pi*(R**2)) ;
+* Moments quadratiques de la poutre:
+ IGx = (Pi*((2.*R)**4))/64. ;
+ IGy = (Pi*((2.*R)**4))/64. ;
+ IG = (Pi*((2.*R)**4))/32. ;
+* Volume:
+ V = (Pi*(R**2.)*h) ;
+*Position du centre de gravite:
+ LG = (h/2.);
+
+*
+* Centre de rotation = P1 ci-dessous = origine (0. 0. 0.).
+*
+***** Temporel:
+* T = 5. ;
+* DTE = 1.e-3 ;
+* NSORT =  50 ;
+T = 10. ;
+* T = 4.e-3 ;
+DTE = 1.e-3 ;
+NSORT =  10 ;
+*
+NPASe = (ENTI 'PROCH' (T / DTe)) - 1;
+tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
+***** Base modale:
+* rigide = vrai si presence de rotas rigides dans la base modale:
+rigide = vrai ;
+* Rotas rigides et modes elastiques:
+  typmode = 1;
+* Que rotas rigides:
+* typmode = 2;
+* Que modes elastiques:
+* typmode = 3;
+si (typmode ega 3);
+  rigide = faux ;
+finsi;
+
+*
+***** Conditions initiales:
+* nutation initiale de la toupie (Castem: angles en degres!):
+theta_ini = 0.3 ;
+* Vitesses angulaires de rotation inititales ds le repere du solide:
+WXini = 0. ;
+WYini = 0. ;
+WZini = 0. ;
+*
+*********************************************************************
+*                            OPTIONS 
+*********************************************************************
+***** Figure:
+opti 'TRAC' PSC ; 
+script = 'pendule_timo';
+si (rk4) ;
+script = (chai script'_rk4_') ;
+finsi ;
+si (sw) ;
+script = (chai script'_sw_') ;
+finsi ;
+si xpinv ;
+script = (chai script'xpinv') ;
+finsi ;
+opti 'FTRA ' (chai 'fig/'script'_T_'T'_h_'Dte'_NSORT_'NSORT'.ps' );
+opti 'EPTR' 5;
+***** OPIONS SORTIE EXCEL: 
+OPTI 'SORT' (CHAI 'data_dgibi/'script'_AC2_data_dgibi_T_' T '_h_' DTe'_NSORT_'NSORT) ;
+* opti trac 'X';
+***** dime et typel:
+Opti dime 3; 
+opti elem CUB8; 
+* Pour afficher les "IF (IIMPI.EQ.333) THEN WRITE(IOIMP,*)":
+* opti impi 333;
+oeil1 = (5.*R) (5.*R) (0.5*h) ;
+***** RECO totale voulue ?
+RECOTOT = VRAI ;
+EVOLRECO = VRAI ;
+FLVTK = VRAI ;
+SI (RECOTOT EGA FAUX);
+  FLVTK = FAUX ;
+FINSI ;
+*********************************************************************
+*                            Maillage 
+*********************************************************************
+P1 = 0. 0. 0. ;
+P2 = 0. 0. h ; 
+* Centre de masse theorique:
+G1 = 0. 0. LG ; 
+***** Maillage: nombre d'element de la poutre:
+ npou = 10 ;
+ L1 = d npou P1 P2 ;
+ MESHPOU = L1 ;
+*  OPTI 'TRAC' X ; 
+ TRAC 'QUAL' meshpou ;
+ OPTI 'TRAC' 'PSC' ;
+ G1 = MESHPOU POIN 'PROC' G1 ;
+* Utilisation de BARY: si le maillage est fidèle! (Pas le cas ici): 
+* Cgrav = BARY MESHPOU ;
+* G1 = MESHPOU POIN 'PROC' Cgrav ;
+* Point d'observation le plus eloigne X,Y,Z >0: utile pour comp avec python
+Pobs = G1 ;
+list Pobs ;
+*
+*********************************************************************
+*                            MODELE 
+*********************************************************************
+modpou = mode meshpou 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
+* Remarque: l'axe x est l'axe de la poutre contrairement au maillage.
+matpou = MATE modpou 'YOUN' eac 'NU' nuac 'RHO' rho_ac  'SECT' sectpou 'INRZ' IGy 'INRY' IGx 'TORS' IG ;
+*
+* matrice de raideur:
+K = rigi modpou matpou ;
+* matrice de masse:
+M1 = mass modpou matpou ;
+****************************************************************************
+*                       Conditions limites 
+****************************************************************************
+CL1 = BLOQ 'DEPL' P2;
+K = K et cl1 ; 
+*********************************************************************
+*                            CLs 
+*********************************************************************
+* On prend un point qui n appartient pas au plan (Oyz):
+CLRX = BLOQ 'RY' 'RZ' meshpou;
+CLRY = BLOQ 'RX' 'RZ' meshpou;
+CLRZ = BLOQ 'RX' 'RY' meshpou;
+CLela = BLOQ 'DEPL' 'ROTA' P1;
+KRX = K et CLRX;
+KRY = K et CLRY;
+KRZ = K et CLRZ;
+Kela = K et CLela;
+*********************************************************************
+*                          Calculs des modes: 
+*********************************************************************
+* defini plus haut: Nmode = 5 ;
+Tmode_RX  = vibr 'IRAM' 0.5 1 KRX M1 ; 
+Tmode_RY  = vibr 'IRAM' 0.5 1 KRY M1 ;
+Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
+* On teste egalemetn en presence de modes elastiques:
+Tmode_ela = vibr 'IRAM' 1. 1 Kela M1;
+* postvibr:
+
+postvibr Tmode_RX ;
+postvibr Tmode_RY ;
+postvibr Tmode_RZ ;
+postvibr Tmode_ela ;
+*
+ptrep_RX =    Tmode_RX . 'MODES' . 1 . 'POINT_REPERE';
+ptrep_RY =    Tmode_RY . 'MODES' . 1 . 'POINT_REPERE';
+ptrep_RZ =    Tmode_RZ . 'MODES' . 1 . 'POINT_REPERE';
+ptrep_ela_1 =    Tmode_ela . 'MODES' . 1 . 'POINT_REPERE';
+* ptrep_ela_2 =    Tmode_ela . 'MODES' . 2 . 'POINT_REPERE';
+*
+*********************************************************************
+*                     Traitement rotations rigides: 
+*********************************************************************
+* Si l'on veut avoir les bons moments d'inertie (theoriques), 
+* on les rentre manuellement en tant que masses generalisees:
+     Tmode_RX . modes . 1 . masse_generalisee = Jx_C;
+     Tmode_RY . modes . 1 . masse_generalisee = Jy_C;
+     Tmode_RZ . modes . 1 . masse_generalisee = Jz_C;
+* Pour les rotas rigides:
+Tmode_RX . modes . 1 . frequence = 0. ;
+Tmode_RY . modes . 1 . frequence = 0. ;
+Tmode_RZ . modes . 1 . frequence = 0. ;
+*
+* Rq tenseur d'inertie : 
+* Dans Simo & wong le tenseur d'inertie est déjà défini en la pointe de la toupie P1 !!
+* On triche pour ne pas avoir de modif via MAJINERT: 
+* CENTRE DE ROTATION = G1 ! 
+Tmode_RX . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
+Tmode_RX . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= P1;
+Tmode_RX . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P1;
+Tmode_RX . 'MODES' . 1 . 'MASSE'= M ;
+Tmode_RX . 'MODES' . 1 . 'COMPOSANTE' = 'RX' ;
+Tmode_RY . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
+Tmode_RY . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= P1 ;
+Tmode_RY . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P1 ;
+Tmode_RY . 'MODES' . 1 . 'MASSE'= M ;
+Tmode_RY . 'MODES' . 1 . 'COMPOSANTE' = 'RY' ;
+Tmode_RZ . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
+Tmode_RZ . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= P1 ;
+Tmode_RZ . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P1 ;
+Tmode_RZ . 'MODES' . 1 . 'MASSE'= M ;
+Tmode_RZ . 'MODES' . 1 . 'COMPOSANTE' = 'RZ' ;
+*
+*********************************************************************
+*                     Assemblage des bases modales: 
+*********************************************************************
+*
+* Rotas rigides et modes elastiques:
+SI (typmode EGA 1);
+Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ et Tmode_ela) ;
+FINSI;
+* Que rotas rigides:
+SI (typmode EGA 2);
+Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ ) ;
+FINSI;
+* Que modes elastiques:
+SI (typmode EGA 3);
+Tmode = (Tmode_ela) ;
+FINSI;
+*
+************************************************************************
+*     					Parametrage DYNE
+************************************************************************
+*** TSORT:
+TSORT = TABL 'SORTIE';
+TSORT . 'VARIABLE'  = tabl 'VARIABLE' ;
+TSORT . 'VARIABLE' . 'TYPE_SORTIE'  = mot 'LISTREEL';
+*
+TSORT . 'VARIABLE' . 'ACCELERATION' = VRAI;
+TSORT . 'VARIABLE' . 'VITESSE' = VRAI;
+* MOMENT_CINETIQUE : 
+TSORT . 'VARIABLE' . 'TRAVAIL_INTERIEUR' = VRAI ;
+* ENERGIE_CINETIQUE :
+TSORT . 'VARIABLE' . 'TRAVAIL_EXTERIEUR' = VRAI ;
+*
+*** TINI:
+* Deplacements:
+ U0_RX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' theta_ini ;
+ U0_RY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' 0. ;
+ U0_RZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' 0. ;
+ U0_ela_1 = MANU 'CHPO' ptrep_ela_1 'NATUR' 'DIFFUS' 'ALFA' 0. ;
+* U0_ela_2 = MANU 'CHPO' ptrep_ela_2 'NATUR' 'DIFFUS' 'ALFA' 0.;
+* assemblage en 1 chpoint:
+*  U0_P = (U0_RX et U0_RY et U0_RZ et U0_ela_1 et U0_ela_2);
+ U0_P = (U0_RX et U0_RY et U0_RZ) ;
+* U0_P = (U0_ela_1 et U0_ela_2) ;
+* Vitesses:
+si (typmode ega 3);
+  WXini = 0. ;
+  WYini = 0. ; 
+  WZini = 0. ;
+finsi;
+ V0_PX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' WXini ;
+ V0_PY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' WYini ;
+ V0_PZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' WZini ;
+ V0_P = (V0_PX et V0_PY et V0_PZ);
+* Table:
+  TINI = tabl 'INITIAL';
+  TINI . 'DEPLACEMENT' = U0_P;
+  TINI . 'VITESSE'     = V0_P;
+*
+*** TCHAR:
+TCHAR = TABL 'CHARGEMENT';
+		FPES   = FORC 'FZ' ((-1.)*(m*g)) G1;
+		FPESA = PJBA FPES Tmode;
+
+		Fprog = prog (dime tprog)*1. ; 
+		evolF = evol 'ROSE' 'MANU' 't' tprog 'F' Fprog;
+   DESS evolF 'TITRE' 'chargmt = f(t)' LEGE;
+		CHA_PES = CHAR 'FORC' FPES evolF ;
+		CHA_PESA = CHAR 'FORC' FPESA evolF ;
+
+* Chargement introduit en base A et en base B:
+  TCHAR .'BASE_A' = TABL;
+  TCHAR .'BASE_A' = CHA_PESA;
+  TCHAR .'BASE_B' = TABL;  
+  TCHAR .'BASE_B' = CHA_PES;
+
+* TODO: Determiner si le chargement doit reeelement etre exprime 
+*                  en base A ET en base B.
+*
+***** TLIAI:
+* Liaison fictive en G1 pour RECO: pour avoir appel a D2VLFB / 2.
+* (appelees uniquement si (NLIAB.NE.0).
+
+	 TL1  =  TABLE  'LIAISON_ELEMENTAIRE'    ;
+	 TL1.'TYPE_LIAISON'  =  MOT 'POINT_PLAN' ;
+	 TL1.'SUPPORT'       =  G1              ;
+	 TL1.'RAIDEUR'       =  1.              ;
+	 TL1.'NORMALE' = (poin 1. 0. 0.) ;
+*    On prend volontairement un jeu demesure (liaison fictive):
+	 TL1.'JEU'           =  10.              ;
+*
+
+    TLIAI = TABLE 'LIAISON'   ;
+    TTLB = TABLE 'LIAISON_B' ;
+    TLIAI .'LIAISON_B' = TTLB  ;
+    TTLB . 1 = TL1 ;
+*   TTLA = TABLE 'LIAISON_A' ;
+*   TLIAI . 'LIAISON_A' = TTLA ;
+*   TTLA . 1 = TL1 ;
+************************************************************************
+*     					Resolution DYNE
+************************************************************************
+*
+si (sw) ;
+  TRESU = DYNE 'DIFFERENCES_CENTREES' Tmode TLIAI TCHAR TINI TSORT NPASe DTe NSORT;
+finsi ;
+si (rk4) ;
+  TRESU = DYNE 'RKMK4' Tmode TLIAI TCHAR TINI TSORT NPASe DTe NSORT;
+finsi ;
+* TRESU = DYNE 'DIFFERENCES_CENTREES' Tmode TLIAI TINI TSORT NPASe DTe NSORT;
+*
+tprog = TRESU . TEMPS_DE_SORTIE;
+*
+Nt = dime tprog;
+*
+* opti donn 5 ; 
+************************************************************************
+*     					POST TRAITEMENT
+************************************************************************
+*
+************************************************************************
+*     			Vitesses et accelerations angulaires
+************************************************************************
+SI (rigide EGA VRAI) ;
+***** Recuperation des nouveaus ptreps associes aux rotas rigides:
+ptrep_rig1 = Tmode . rotas . 1 . point_repere;
+ptrep_rig2 = Tmode . rotas . 2 . point_repere;
+ptrep_rig3 = Tmode . rotas . 3 . point_repere;
+ptrep_rig4 = Tmode . rotas . 4 . point_repere;
+***** Recuperation des vitesses angulaires de rotation;
+W1 = tresu . vitesse . ptrep_rig1;
+W2 = tresu . vitesse . ptrep_rig2;
+W3 = tresu . vitesse . ptrep_rig3;
+*
+W1_ev = EVOL 'ROSE' MANU 't' tprog 'W1' W1;
+W2_ev = EVOL 'VIOL' MANU 't' tprog 'W2' W2;
+W3_ev = EVOL 'BLEU' MANU 't' tprog 'W3' W3;
+*
+*
+A1 = tresu . acceleration . ptrep_rig1;
+A2 = tresu . acceleration . ptrep_rig2;
+A3 = tresu . acceleration . ptrep_rig3;
+*
+A1_ev = EVOL 'ROSE' MANU 't' tprog 'A1' A1;
+A2_ev = EVOL 'VIOL' MANU 't' tprog 'A2' A2;
+A3_ev = EVOL 'BLEU' MANU 't' tprog 'A3' A3;
+*
+TAB1 = TABL; TAB1 . 'TITRE' = TABL;
+	TAB1 . 'TITRE' . 2 = 'W2';	
+	TAB1 . 'TITRE' . 3 = 'W3';
+Dess (W1_ev et  W2_ev et W3_ev) 'TITRE' 'Ws = f(t)' TAB1 LEGE;
+*
+	TAB1 . 'TITRE' . 1 = 'W1';
+Dess (W1_ev) 'TITRE' 'W1 = f(t)' TAB1 LEGE;
+TAB1 . 'TITRE' . 1 = 'W2';
+Dess (W2_ev) 'TITRE' 'W2 = f(t)' TAB1 LEGE;
+TAB1 . 'TITRE' . 1 = 'W3';
+Dess (W3_ev) 'TITRE' 'W3 = f(t)' TAB1 LEGE;
+* Fin si RIGIDE = VRAI:
+*** Moment cinétique :
+PI1 = tresu . TRAVAIL_INTERIEUR . ptrep_rig1;
+PI2 = tresu . TRAVAIL_INTERIEUR . ptrep_rig2;
+PI3 = tresu . TRAVAIL_INTERIEUR . ptrep_rig3;
+*
+PI1_ev = EVOL 'ROSE' MANU 't' tprog 'PI1' PI1;
+PI2_ev = EVOL 'VIOL' MANU 't' tprog 'PI2' PI2;
+PI3_ev = EVOL 'BLEU' MANU 't' tprog 'PI3' PI3;
+TAB1 . 'TITRE' . 1 = 'PI1';
+Dess (PI1_ev) 'TITRE' 'PI1 = f(t)' TAB1 LEGE;
+TAB1 . 'TITRE' . 1 = 'PI2';
+Dess (PI2_ev) 'TITRE' 'PI2 = f(t)' TAB1 LEGE;
+TAB1 . 'TITRE' . 1 = 'PI3';
+Dess (PI3_ev) 'TITRE' 'PI3 = f(t)' TAB1 LEGE;
+TAB1 . 'TITRE' . 1 = 'PI1';
+TAB1 . 'TITRE' . 2 = 'PI2';
+TAB1 . 'TITRE' . 3 = 'PI3';
+Dess (PI3_ev et PI2_ev et PI3_ev) 'TITRE' 'PI = f(t)' TAB1 LEGE;
+*
+*** Energie cinetique :
+EC1 = tresu . TRAVAIL_EXTERIEUR . ptrep_rig1 ;
+EC1_ev = EVOL 'ROSE' MANU 't' tprog 'EC1' EC1 ;
+TAB1 . 'TITRE' . 1 = 'EC';
+Dess (EC1_ev) 'TITRE' 'EC = f(t)' TAB1 LEGE;
+*
+*** Energie potentielle de pesanteur :
+EP1 = tresu . TRAVAIL_EXTERIEUR . ptrep_rig2 ;
+EP1_ev = EVOL 'ROSE' MANU 't' tprog 'EC1' EP1 ;
+TAB1 . 'TITRE' . 1 = 'EP';
+Dess (EP1_ev) 'TITRE' 'EP = f(t)' TAB1 LEGE;
+
+*** Energie totale = hamiltonien :
+ET1 = EC1 + EP1 ;
+ET1_ev = EVOL 'ROSE' MANU 't' tprog 'EC1' ET1 ;
+TAB1 . 'TITRE' . 1 = 'Etot';
+Dess (ET1_ev) 'TITRE' 'ET = f(t)' TAB1 LEGE;
+FINSI;
+*
+************************************************************************
+*     					RECO en tous les points
+************************************************************************
+Si (RECOTOT EGA VRAI) ;
+	 UX1 = prog; 
+	 UY1 = prog;
+	 UZ1 = prog;
+	 VX1 = prog; 
+	 VY1 = prog;
+	 VZ1 = prog;
+   AX1 = prog; 
+	 AY1 = prog;
+	 AZ1 = prog;
+REPE BRECO Nt;
+      D1 =  RECO  TRESU  Tmode (extr tprog &BRECO) 'DEPL' ;
+*       V1 =  RECO  TRESU  Tmode (extr tprog &BRECO) 'VITE' ;
+      UX2 = EXTR D1 'UX' Pobs;
+      UY2 = EXTR D1 'UY' Pobs;
+	    UZ2 = EXTR D1 'UZ' Pobs;		
+      UX1 = UX1 et UX2;
+      UY1 = UY1 et UY2;
+      UZ1 = UZ1 et UZ2;		  
+FIN BRECO;
+UX_ev = EVOL 'JAUN' MANU 't' tprog 'UX' UX1;
+UY_ev = EVOL 'ORAN' MANU 't' tprog 'UY' UY1;
+UZ_ev = EVOL 'ROUG' MANU 't' tprog 'UZ' UZ1;
+TAB1 = TABL; TAB1 . 'TITRE' = TABL;
+	TAB1 . 'TITRE' . 1 = 'UX';
+Dess(UX_ev) 'TITRE' 'Depl = f(t)' TAB1 LEGE;
+    TAB1 . 'TITRE' . 1 = 'UY';
+Dess(UY_ev) 'TITRE' 'Depl = f(t)' TAB1 LEGE;
+    TAB1 . 'TITRE' . 1 = 'UZ';
+Dess(UZ_ev) 'TITRE' 'Depl = f(t)' TAB1 LEGE;
+	TAB1 . 'TITRE' . 1 = 'UX';
+	TAB1 . 'TITRE' . 2 = 'UY';	
+	TAB1 . 'TITRE' . 3 = 'UZ';
+Dess(UX_ev et UY_ev et UZ_ev) 'TITRE' 'recotot: Depl = f(t)' TAB1 LEGE;
+* Vitesse:
+REPE BRECOVITE Nt;
+      VITE1 =  RECO  TRESU  Tmode (extr tprog &BRECOVITE) 'VITE' ;
+      VX2 = EXTR VITE1 'UX' Pobs;
+      VY2 = EXTR VITE1 'UY' Pobs;
+	  VZ2 = EXTR VITE1 'UZ' Pobs;	
+      VX1 = VX1 et VX2;
+      VY1 = VY1 et VY2;
+      VZ1 = VZ1 et VZ2;		  
+FIN BRECOVITE;
+*
+ VX_ev = EVOL 'JAUN' MANU 't' tprog 'VX' VX1;
+ VY_ev = EVOL 'ORAN' MANU 't' tprog 'VY' VY1;
+ VZ_ev = EVOL 'ROUG' MANU 't' tprog 'VZ' VZ1;
+ 	TAB1 . 'TITRE' . 1 = 'VX';
+Dess(VX_ev) 'TITRE' 'recotot: VX = f(t)' TAB1 LEGE;
+    TAB1 . 'TITRE' . 1 = 'VY';
+Dess(VY_ev) 'TITRE' 'recotot: VY = f(t)' TAB1 LEGE;
+    TAB1 . 'TITRE' . 1 = 'VZ';
+Dess(VZ_ev) 'TITRE' 'recotot: VZ = f(t)' TAB1 LEGE;
+*
+    TAB1 . 'TITRE' . 1 = 'VX';
+	TAB1 . 'TITRE' . 2 = 'VY';	
+	TAB1 . 'TITRE' . 3 = 'VZ';
+Dess(VX_ev et VY_ev et VZ_ev) 'TITRE' 'Vitesse = f(t)' TAB1 LEGE;
+
+* Acceleration:
+REPE BRECOACC Nt;
+      ACCE1 =  RECO  TRESU  Tmode (extr tprog &BRECOACC) 'ACCE' ;
+      AX2 = EXTR ACCE1 'UX' Pobs;
+      AY2 = EXTR ACCE1 'UY' Pobs;
+	    AZ2 = EXTR ACCE1 'UZ' Pobs;	
+      AX1 = AX1 et AX2;
+      AY1 = AY1 et AY2;
+      AZ1 = AZ1 et AZ2;		  
+FIN BRECOACC;
+*
+ AX_ev = EVOL 'JAUN' MANU 't' tprog 'AX' AX1;
+ AY_ev = EVOL 'ORAN' MANU 't' tprog 'AY' AY1;
+ AZ_ev = EVOL 'ROUG' MANU 't' tprog 'AZ' AZ1;
+ 	TAB1 . 'TITRE' . 1 = 'AX';
+Dess(AX_ev) 'TITRE' 'recotot: AX = f(t)' TAB1 LEGE;
+    TAB1 . 'TITRE' . 1 = 'AY';
+Dess(AY_ev) 'TITRE' 'recotot: AY = f(t)' TAB1 LEGE;
+    TAB1 . 'TITRE' . 1 = 'AZ';
+Dess(AZ_ev) 'TITRE' 'recotot: AZ = f(t)' TAB1 LEGE;
+    TAB1 . 'TITRE' . 1 = 'AX';
+	TAB1 . 'TITRE' . 2 = 'AY';	
+	TAB1 . 'TITRE' . 3 = 'AZ';
+Dess(AX_ev et AY_ev et AZ_ev) 'TITRE' 'recotot: Acceleration = f(t)' TAB1 LEGE;
+* formatT = chai '(D1.' (ABS NdecT) ')';
+* list formatT;
+* List T;
+* Tmot = (chai 'FORMAT' (mot (F1.2)) T );
+* list Tmot;
+* DTe = (chai 'FORMAT' '(F1.2)' DTe);
+******************** VTK *****************************************
+  SI (FLVTK);
+*   REPE BVTK (enti ((Nt)/10tprog (&BVTK)) 'DEPL';
+*    D1 =  RECO  TRESU  Tmode (extr ..));
+   REPE BVTK (Nt - 2);
+*   REPE BVTK (Nt - 2);
+    D1 =  RECO  TRESU  Tmode (extr tprog (&BVTK)) 'DEPL';
+    DEP2 = D1 exco (mots 'UX' 'UY' 'UZ') ;
+*    DEP3 = CHAN 'CHAM' DEP2 mod1 'GRAVITE' ;
+*    DEP4 = CHAN 'CHAM' DEP2 VOL1 ;
+    T_I = (extr tprog &BVTK) ;
+*    mess T_I ;
+*    VOL2 = EXTR DEP2 'MAIL';
+*    VOL3 = CHAN 'POI1' VOL1 ;
+**** DEformees:
+*     def1 = DEFO VOL1 DEP2 1. 'ROUG' ;
+*     def0 = DEFO VOL1 DEP2 0. 'VERT' ;
+*     def2 = def1 et def0 ;
+*     TRAC def2 VOL1 ;
+****
+    OPTI 'SORT'  (chai 'depl_vtk/'script);
+    SORT 'VTK' meshpou 'MAIL' DEP2 'DEPL' 'TEMP' T_I;
+    FIN BVTK;
+* FIN FLVTK:
+  FINSI;
+* FIN RECOTOT:
+FINSI;
+*********************************************************************
+*                     EVOL RECO au centre de gravite
+*********************************************************************
+*
+SI (EVOLRECO EGA VRAI) ;
+UXG_ev = EVOL 'JAUN' 'RECO' TRESU TMODE 'DEPL' G1 'UX' ;
+UYG_ev = EVOL 'ORAN' 'RECO' TRESU TMODE 'DEPL' G1 'UY' ;
+UZG_ev = EVOL 'ROUG' 'RECO' TRESU TMODE 'DEPL' G1 'UZ' ;
+VXG_ev = EVOL 'JAUN' 'RECO' TRESU TMODE 'VITE' G1 'UX' ;
+VYG_ev = EVOL 'ORAN' 'RECO' TRESU TMODE 'VITE' G1 'UY' ;
+VZG_ev = EVOL 'ROUG' 'RECO' TRESU TMODE 'VITE' G1 'UZ' ;
+AXG_ev = EVOL 'JAUN' 'RECO' TRESU TMODE 'ACCE' G1 'UX' ;
+AYG_ev = EVOL 'ORAN' 'RECO' TRESU TMODE 'ACCE' G1 'UY' ;
+AZG_ev = EVOL 'ROUG' 'RECO' TRESU TMODE 'ACCE' G1 'UZ' ;
+*
+UXG2 = EXTR UXG_EV 'ORDO' 1 ;
+UYG2 = EXTR UYG_EV 'ORDO' 1 ;
+UZG2 = EXTR UZG_EV 'ORDO' 1 ;
+VXG2 = EXTR VXG_EV 'ORDO' 1 ;
+VYG2 = EXTR VYG_EV 'ORDO' 1 ;
+VZG2 = EXTR VZG_EV 'ORDO' 1 ;
+AXG2 = EXTR AXG_EV 'ORDO' 1 ;
+AYG2 = EXTR AYG_EV 'ORDO' 1 ;
+AZG2 = EXTR AZG_EV 'ORDO' 1 ;
+*
+    TAB1 = TABL ; TAB1 . 'TITRE' = TABL ;
+	TAB1 . 'TITRE' . 1 = 'UX_G';	
+	TAB1 . 'TITRE' . 2 = 'UY_G';
+	TAB1 . 'TITRE' . 3 = 'UZ_G';
+Dess (UXG_ev et UYG_ev et UZG_ev) 'TITRE' 'EVOL RECO DEPL' TAB1 LEGE ;
+*
+	TAB1 . 'TITRE' . 1 = 'VX_G';	
+	TAB1 . 'TITRE' . 2 = 'VY_G';
+	TAB1 . 'TITRE' . 3 = 'VZ_G';
+Dess (VXG_ev et VYG_ev et VZG_ev) 'TITRE' 'EVOL RECO VITE' TAB1 LEGE ;
+*
+    TAB1 . 'TITRE' . 1 = 'AX_G';
+Dess (AXG_ev) 'TITRE' 'EVOL RECO AX' TAB1 LEGE ;
+*
+    TAB1 . 'TITRE' . 1 = 'AY_G';
+Dess (AYG_ev) 'TITRE' 'EVOL RECO AY' TAB1 LEGE ;    
+*
+    TAB1 . 'TITRE' . 1 = 'AZ_G';
+Dess (AZG_ev) 'TITRE' 'EVOL RECO AZ' TAB1 LEGE ;
+*
+	TAB1 . 'TITRE' . 1 = 'AX_G';	
+	TAB1 . 'TITRE' . 2 = 'AY_G';
+	TAB1 . 'TITRE' . 3 = 'AZ_G';
+Dess (AXG_ev et AYG_ev et AZG_ev) 'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
+* fin si evolreco :
+FINSI ;
+*
+si (typmode ega 1) ;
+q1 = tresu . deplacement . ptrep_ela_1 ;
+q1_ev = EVOL 'ROUG' MANU 't' tprog 'q1' q1 ;
+TAB1 . 'TITRE' . 1 = 'q1';	
+Dess q1_ev  'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
+finsi ;
+***************************************************************************
+*                  SORTIE
+
+*************************************************************************** sorties rotas rigides : 
+TSORT = 'TABL' ;
+TSORT . 't' = 'TABL' ;
+TSORT . 'WX' = 'TABL' ;
+TSORT . 'WY' = 'TABL' ;
+TSORT . 'WZ' = 'TABL' ;
+TSORT . 't' = tprog ;
+TSORT . 'WX' = W1 ;
+TSORT . 'WY' = W2 ;
+TSORT . 'WZ' = W3 ;
+TSORT . 'AX' = 'TABL' ;
+TSORT . 'AY' = 'TABL' ;
+TSORT . 'AZ' = 'TABL' ;
+TSORT . 'AX' = A1 ;
+TSORT . 'AY' = A2 ;
+TSORT . 'AZ' = A3 ;
+TSORT . 'PIX' = 'TABL' ;
+TSORT . 'PIY' = 'TABL' ;
+TSORT . 'PIZ' = 'TABL' ;
+TSORT . 'PIX' = PI1 ;
+TSORT . 'PIY' = PI2 ;
+TSORT . 'PIZ' = PI3 ;
+TSORT . 'EC' = 'TABL' ;
+TSORT . 'EC' = EC1 ;
+TSORT . 'EP' = 'TABL' ;
+TSORT . 'EP' = EP1 ;
+TSORT . 'ET' = 'TABL' ;
+TSORT . 'ET' = ET1 ;
+* RECOTOT : 
+SI (RECOTOT EGA VRAI) ;
+TSORT . 'UX1' = 'TABL' ;
+TSORT . 'UY1' = 'TABL' ;
+TSORT . 'UZ1' = 'TABL' ;
+TSORT . 'UX1' = UX1 ;
+TSORT . 'UY1' = UY1 ;
+TSORT . 'UZ1' = UZ1 ;
+TSORT . 'VX1' = 'TABL' ;
+TSORT . 'VY1' = 'TABL' ;
+TSORT . 'VZ1' = 'TABL' ;
+TSORT . 'VX1' = VX1 ;
+TSORT . 'VY1' = VY1 ;
+TSORT . 'VZ1' = VZ1 ;
+TSORT . 'AX1' = 'TABL' ;
+TSORT . 'AY1' = 'TABL' ;
+TSORT . 'AZ1' = 'TABL' ;
+TSORT . 'AX1' = AX1 ;
+TSORT . 'AY1' = AY1 ;
+TSORT . 'AZ1' = AZ1 ;
+FINSI ; 
+* EVOLRECO :
+SI (EVOLRECO EGA VRAI) ;
+TSORT . 'UX2' = 'TABL' ;
+TSORT . 'UY2' = 'TABL' ;
+TSORT . 'UZ2' = 'TABL' ;
+TSORT . 'UX2' = UXG2 ;
+TSORT . 'UY2' = UYG2 ;
+TSORT . 'UZ2' = UZG2 ;
+TSORT . 'VX2' = 'TABL' ;
+TSORT . 'VY2' = 'TABL' ;
+TSORT . 'VZ2' = 'TABL' ;
+TSORT . 'VX2' = VXG2 ;
+TSORT . 'VY2' = VYG2 ;
+TSORT . 'VZ2' = VZG2 ;
+TSORT . 'AX2' = 'TABL' ;
+TSORT . 'AY2' = 'TABL' ;
+TSORT . 'AZ2' = 'TABL' ;
+TSORT . 'AX2' = AXG2 ;
+TSORT . 'AY2' = AYG2 ;
+TSORT . 'AZ2' = AZG2 ;
+FINSI ; 
+si (typmode ega 1) ;
+tsort . 'Q1' = tresu . deplacement . ptrep_ela_1  ;
+finsi ; 
+* On rétalbit la sortie par défaut:
+OPTI 'SORT' (CHAI 'data_dgibi/'script'_AC2_data_dgibi_T_' T '_h_' DTe'_NSORT_'NSORT) ;
+
+********************************************************************
+SI ( (RIGIDE EGA VRAI) ET (NON RECOTOT) ET (NON EVOLRECO)) ;
+ncolexce = 11 + 2 ;
+FINSI ;
+SI ( (RIGIDE EGA VRAI) ET (RECOTOT EGA VRAI) ET (NON EVOLRECO)) ;
+ncolexce = 20 + 2 ;
+FINSI ;
+SI ( (RIGIDE EGA VRAI) ET (RECOTOT EGA VRAI) ET (EVOLRECO EGA VRAI)) ;
+ncolexce = 29 + 2 ;
+FINSI ;
+si (typmode ega 1) ;
+ncolexce = ncolexce + 1 ;
+finsi ; 
+
+SORT 'EXCE' (TSORT) 'NCOL' ncolexce 'SEPA' 'VIRG' 'DIGI' 10 ;
+
+opti donn 5;
