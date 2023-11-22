@@ -1,5 +1,5 @@
       SUBROUTINE rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
-     &                   xasm,xopm1,finert,ind,ifex)
+     &                   xasm,xopm1,finert,ind,ifex,pdt)
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
 *-----------------------------------------------------------------------*
@@ -9,6 +9,8 @@
       REAL*8 XASM(NA1,*) 
       REAL*8 FTOTA(NA1,*),XOPM1(NB1,NB1,*),FAMOR(NA1),FINERT(NA1,*)
 
+      dt   = PDT
+      dt2=dt/2.D0
 *     ajout des forces de raideurs :
       CALL RKLK0(Q1,XK,FTOTA,NA1,NB1K,ind,ifex)
 *     ajout des forces d'amortissement :
@@ -34,9 +36,18 @@ c    -Cas C ou M pleine
         enddo
 c    -Cas C et M diagonales
       ELSE
+        write(*,*)'rkpasel : calcul q3'
         DO I=1,NA1
           UNSM = 1.D0 / ( XM(I,1) + dt2*XASM(I,1) - FINERT(I,1) )
+*          write(*,*)'   xm = ',xm(i,1)
+*          write(*,*)'   xasm = ',xasm(i,1)
+*          write(*,*)'   finer = ',finert(i,1)
+*          write(*,*)'   unsm = ',unsm
           Q3(I,ind) = (FTOTA(I,ifex)-FAMOR(I)) * UNSM
+*          write(*,*)'   ftota = ',ftota(i,ifex)
+*          write(*,*)'   unsm = ',unsm
+*          write(*,*)'   famor = ',famor(i)
+*          write(*,*)'   q3 = ',q3(i,ind)
         enddo
       ENDIF
       END
