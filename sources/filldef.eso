@@ -1,0 +1,144 @@
+      SUBROUTINE filldef(itbas,ktrot,ib,npts)
+*     SUBROUTINE filldef(itbas,xtphi,xcoophi,itrig,npt,na2,
+*    &                  ib,nsb)
+
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+************************************************************************
+*                             ACCDEF
+************************************************************************
+* FONCTION:
+* ---------
+* Compte les points de composantes 'UX' 'UY' 'UZ'
+*   de toutes les deformees modales d'une base / ss base
+*   (via ctdef) et prend le maximal. 
+************************************************************************
+-INC PPARAM
+* pour avoir ierr : include ccoptio
+-INC CCOPTIO
+-INC CCREEL
+-INC SMCHAML
+-INC SMELEME
+-INC SMMODEL
+-INC SMCOORD
+
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,5,NSB),OMEG2(3,5,NSB),OMEG3(3,5,NSB)
+         REAL*8 ROT(3,3,5,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
+         REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+
+      logical l0,l1,lcoo
+      character*8  typret,charre,monmot,cmot,morigi
+*     CHARACTER*4 NOMTRI(6),NOMAXI(6),NOMPLA(3),MOTCOMP
+*      real*8 xtphi(3,npdef,na2,nsb),xcoophi(3,npdef,nsb) 
+*      logical itrig(nsb,na2)
+      integer lpoi(npts)
+*
+      mtrot = ktrot
+      na2 = itrig(/2)
+      nsb = itrig(/1)
+      npdef = xtphi(/2)
+      write(*,*)'filldef : npdef = ',npdef
+*
+      lcoo = .false.
+      lphi = .false.
+*     initialisation list :
+      do ip=1,npdef
+        lpoi(ip) = 0
+      enddo
+*
+      write(*,*)'filldef : START'
+      write(*,*)'     itbas = ',itbas
+      write(*,*)'     na2 = ',na2
+
+*     pour utiliser itrig, on est oblige de compter 
+*     les modes elastiaues de la base / ss base ib quand on la parse :
+      inel = 0
+      in = 0
+*     on boucle sur le nbr maxi de modes / ss base : na2
+ 1    continue
+        in = in + 1
+*       acquisition du mode :
+        typret = ' '
+        call acctab(itbas,'ENTIER',in,x0,' ',l0,ip0,
+     &              typret,i1,x1,charre,l1,imod)
+        if (ierr.ne.0) return
+        write(*,*)'acquisition mode reussie'
+        if ((imod.ne.0).and.(typret.eq.'TABLE   ')) then
+          write(*,*)'typret = table'
+*         on saute les rotations rigides :
+          morigi = ' '
+          call acctab(imod,'MOT',i0,x0,'ROTATION_RIGIDE',l0,ip0,
+     &                      morigi,i1,x1,cmot,l1,ip1)
+          if (ierr.ne.0) return
+          if (morigi(1:3).eq.'MOT') then
+            if (cmot(1:4).eq.'VRAI') then 
+              write(*,*)'mode rigide saute'
+              goto 1
+            endif
+          endif
+          inel = inel + 1
+          write(*,*)'mode elastique : ',inel
+*         on prend la deformee modale :
+          call acctab(imod,'MOT',i0,x0,'DEFORMEE_MODALE',l0,ip0,
+     &                        'CHPOINT',i1,x1,' ',l1,icdm)
+          if (ierr.ne.0) return
+          write(*,*)'acquisistion def modale : ',icdm
+          if (.not.lcoo) then
+            lcoo = .true.
+            write(*,*)'call findpo'
+            call findpo(icdm,lpoi,npdef)
+            write(*,*)'end findpo'
+            write(*,*)'liste de pts : '
+            write(*,*)'idim = ',idim
+*           donne lpoi : liste des noeuds de la def modale comportant une composante 'UX'
+            do ip=1,npdef
+              write(*,*)'point : ',lpoi(ip)
+              ipoin = lpoi(ip)
+              if (.not.(ipoin.eq.0)) then
+                do id=1,idim
+                  xcoophi(id,ip,ib)=xcoor((ipoin-1)*(idim+1)+id)
+                enddo
+              endif
+            enddo
+          endif
+*         on saute les translations rigides : itrig vient d'etre rempli dans dyne26
+          if (itrig(ib,inel)) then 
+            write(*,*)'translation rigide sautee'
+            goto 1
+          endif
+*         sinon on rempli xtphi :
+          write(*,*)'boucle sur xtphi'
+          do ip=1,npdef
+            write(*,*)'ipoin = ',ipoin
+            ipoin = lpoi(ip)
+            if (.not.(ipoin.eq.0)) then
+              call extra9(icdm,ipoin,'UX',0,.false.,xval,iret)
+              WRITE(*,*)'xval = ',xval
+              xtphi(1,ip,in,ib) = xval
+              write(*,*)'ux = ',xval
+              call extra9(icdm,ipoin,'UY',0,.false.,xval,iret)
+              xtphi(2,ip,in,ib) = xval
+              write(*,*)'uy = ',xval
+              call extra9(icdm,ipoin,'UZ',0,.false.,xval,iret)
+              xtphi(3,ip,in,ib) = xval
+              write(*,*)'uz = ',xval
+            endif
+          enddo
+          goto 1
+* si typret n'est pas table, la boucle s'arrete
+        endif
+*
+      END
+
+ 
+ 
+ 

@@ -87,6 +87,7 @@ C DYNE26    SOURCE    CB215821  20/11/04    21:16:12     10766
       CHARACTER*8 CMOT,TYPRET,MORIGI,CHARRE,MONMOT,CMOT1
       REAL*8      XAXROT(3),XROTA(2,3),XXGP(3),XGRAV(3)
       REAL*8      JINERT(3,3),INERT2(3,3)
+*      real*8      lmode(na2)
 
 *
 *     si IFOMOD = -1  :  modele PLAN
@@ -109,7 +110,8 @@ C DYNE26    SOURCE    CB215821  20/11/04    21:16:12     10766
       MTLIAB = KTLIAB
       RIGIDE = (KTROT.NE.0)
       IF (RIGIDE) THEN
-        MTROT  = KTROT
+        MTROT = KTROT
+        npdef = xtphi(/2)
 *       Masse totale du solide
         XMTOT = 0.D0
 *       ICPRIG: pour remplissage IBASR (utile dans dyne18)      
@@ -514,42 +516,18 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
 *                 utiles au calculs des forces d'inertie
 ************************************************************************
       if ((rigide).and.(iarota(ib).ne.0)) then
-        do 3 in=1,inel
-          TYPRET = ' '
-          CALL ACCTAB(IBAS,'ENTIER',IN,X0,' ',L0,IP0,
-     &                  TYPRET,I1,X1,CHARRE,L1,IBAMOD)
-          IF (IERR.NE.0) RETURN
-*         -on a bien un objet de type table
-          IF ((IBAMOD.NE.0).and.(typret.eq.'TABLE   ')) THEN
-            CALL ACCTAB(IBAMOD,'MOT',I0,X0,'DEFORMEE_MODALE',L0,IP0,
-     &                        'CHPOINT',I1,X1,' ',L1,ICDM)
-            IF (IERR.NE.0) RETURN
-            IF (TYPRET.EQ.'TABLE   ') THEN
-              MORIGI = ' '
-              CALL ACCTAB(IBAMOD,'MOT',I0,X0,'ROTATION_RIGIDE',L0,IP0,
-     &                            MORIGI,I1,X1,CMOT,L1,IP1)
-              IF (IERR.NE.0) RETURN 
-              IF (MORIGI.EQ.'MOT') THEN
-                 IF ((CMOT(1:4).EQ.'VRAI').AND.(RIGIDE))  goto 3 
-              endif
-*           fin rigi : typret = table
-            endif
-*           activation de la rotation rigide :
-            CALL ACTOBJ('CHPOINT ',ICDM,1)
-*           remplissage de xcoola :
-             
-**             remplissage de la matrice st :
-*              mst(1,in,ib) = 0.d0
-*              mst(2,in,ib) = 0.d0
-*              mst(3,in,ib) = 0.d0
-*              call calcmst(ICDM,0,.FALSE.,mst,in,na2,ib,nsb)
-*              write(*,*)'dyne26 : mst mode in : '
-*              write(*,'(3(1X,F8.5))') , (mst(id,in,ib),id=1,3)
-*         fin if ibamod diff 0 & typret = table
-          endif
-*       fin boucle sur les modes
- 3      continue
-*     fin rigide et iarota diff 0
+      
+*       rq : ibas est deja la base de modes
+        write(*,*)'dyne26 : call filldef'
+        write(*,*)'         npdef = ',npdef
+        write(*,*)'         na2 = ',na2
+        write(*,*)'         nsb = ',nsb
+*       call filldef(ibas,xtphi,xcoophi,itrig,npdef,na2,
+*    &                  ib,nsb)
+
+       call filldef(ibas,ktrot,ib,npdef)
+*        call bidon(ibas,ktrot,npdef,na2,nsb)
+*        call exit(1)
       endif
 ************************************************************************
 ************************************************************************
