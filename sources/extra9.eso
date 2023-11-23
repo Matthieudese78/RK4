@@ -109,6 +109,7 @@ c             ENDIF
             IF (NUM(1,KJ).EQ.MPOINT) THEN
 *               WRITE(*,*)'extra9: noeud trouve!'
                XFLOT=VPOCHA(KJ,ICC)
+*               WRITE(*,*)'extra9: xflot = ',xflot
                IRET=1
                RETURN
             ENDIF

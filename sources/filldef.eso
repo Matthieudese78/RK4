@@ -1,6 +1,5 @@
       SUBROUTINE filldef(itbas,ktrot,ib,npts)
-*     SUBROUTINE filldef(itbas,xtphi,xcoophi,itrig,npt,na2,
-*    &                  ib,nsb)
+*      SUBROUTINE filldef(itbas,itphi,itcoo,itr,npts,na2,ib,nsb)
 
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -37,11 +36,12 @@
 
       logical l0,l1,lcoo
       character*8  typret,charre,monmot,cmot,morigi
-*     CHARACTER*4 NOMTRI(6),NOMAXI(6),NOMPLA(3),MOTCOMP
-*      real*8 xtphi(3,npdef,na2,nsb),xcoophi(3,npdef,nsb) 
-*      logical itrig(nsb,na2)
       integer lpoi(npts)
+*     CHARACTER*4 NOMTRI(6),NOMAXI(6),NOMPLA(3),MOTCOMP
+*      real*8 itphi(3,npts,na2,nsb),itcoo(3,npts,nsb) 
+*      logical itr(nsb,na2)
 *
+*      npdef = npts
       mtrot = ktrot
       na2 = itrig(/2)
       nsb = itrig(/1)
@@ -118,18 +118,17 @@
 *         sinon on rempli xtphi :
           write(*,*)'boucle sur xtphi'
           do ip=1,npdef
-            write(*,*)'ipoin = ',ipoin
             ipoin = lpoi(ip)
+            write(*,*)'ipoin = ',ipoin
             if (.not.(ipoin.eq.0)) then
               call extra9(icdm,ipoin,'UX',0,.false.,xval,iret)
-              WRITE(*,*)'xval = ',xval
-              xtphi(1,ip,in,ib) = xval
+              xtphi(1,ip,inel,ib) = xval
               write(*,*)'ux = ',xval
               call extra9(icdm,ipoin,'UY',0,.false.,xval,iret)
-              xtphi(2,ip,in,ib) = xval
+              xtphi(2,ip,inel,ib) = xval
               write(*,*)'uy = ',xval
               call extra9(icdm,ipoin,'UZ',0,.false.,xval,iret)
-              xtphi(3,ip,in,ib) = xval
+              xtphi(3,ip,inel,ib) = xval
               write(*,*)'uz = ',xval
             endif
           enddo

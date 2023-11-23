@@ -522,10 +522,10 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
         write(*,*)'         npdef = ',npdef
         write(*,*)'         na2 = ',na2
         write(*,*)'         nsb = ',nsb
-*       call filldef(ibas,xtphi,xcoophi,itrig,npdef,na2,
-*    &                  ib,nsb)
+*        call filldef(ibas,xtphi,xcoophi,itrig,npdef,na2,
+*     &                  ib,nsb)
 
-       call filldef(ibas,ktrot,ib,npdef)
+        call filldef(ibas,ktrot,ib,npdef)
 *        call bidon(ibas,ktrot,npdef,na2,nsb)
 *        call exit(1)
       endif
