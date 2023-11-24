@@ -106,6 +106,7 @@
               if (.not.(ipoin.eq.0)) then
                 do id=1,idim
                   xcoophi(id,ip,ib)=xcoor((ipoin-1)*(idim+1)+id)
+                  write(*,*)'coor = ',xcoophi(id,ip,ib)
                 enddo
               endif
             enddo
