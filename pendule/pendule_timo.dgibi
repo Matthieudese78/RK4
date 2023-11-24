@@ -54,7 +54,7 @@ opti impi 555 ;
 * DTE = 1.e-3 ;
 * NSORT =  50 ;
 * T = 10. ;
-T = 4.e-3 ;
+T = 7.e-3 ;
 DTE = 1.e-3 ;
 NSORT =  1 ;
 *
