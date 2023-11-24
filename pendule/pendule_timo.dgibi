@@ -53,10 +53,10 @@ opti impi 555 ;
 * T = 5. ;
 * DTE = 1.e-3 ;
 * NSORT =  50 ;
-T = 10. ;
-* T = 4.e-3 ;
+* T = 10. ;
+T = 4.e-3 ;
 DTE = 1.e-3 ;
-NSORT =  10 ;
+NSORT =  1 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -336,7 +336,7 @@ tprog = TRESU . TEMPS_DE_SORTIE;
 *
 Nt = dime tprog;
 *
-* opti donn 5 ; 
+opti donn 5 ; 
 ************************************************************************
 *     					POST TRAITEMENT
 ************************************************************************
