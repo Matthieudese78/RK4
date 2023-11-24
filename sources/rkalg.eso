@@ -156,6 +156,8 @@
 * Si INMSB de MTPHI venait a disparaitre (nbr de modes elastiques dans la ss base IB):
       IF (RIGIDE) THEN
         NSB =  OMEG1(/3)
+        na2 = xtphi(/3)
+        npdef = xtphi(/2)
       ENDIF
 *
 *     Boucle sur les pas de calcul:
@@ -180,7 +182,7 @@ c       write(*,*) 'Q3(:,2) =',(Q3(iou,2),iou=1,NA1)
      &            FTOTB,FTOTBA,XPTB,
      &            FEXPSM,FINERT,IERRD,FTEST,FTEST2,
      &            WEXT,WINT,XABSCI,XORDON,NIP,FTEXB,FEXB,KTROT,
-     &            KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M)
+     &            KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M,na2,nsb,npdef)
       IF (IERRD.NE.0) THEN
          IF (IERRD.EQ.1) CALL ERREUR(528)
          RETURN
@@ -242,7 +244,7 @@ c        if(I.le.5) write(*,*) '=== Calcul du pas ===',I
      &             XVALB,FTOTB,FTOTBA,XPTB,
      &             FEXPSM,FINERT,IERRD,FTEST,FTEST2,
      &             WEXT,WINT,XABSCI,XORDON,NIP,FTEXB,FEXB,KTROT,
-     &             KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M)
+     &             KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M,na2,nsb,npdef)
 *
 *
          IF (IERRD.NE.0) THEN

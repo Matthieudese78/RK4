@@ -6,7 +6,7 @@ c
      &   FTOTBA,XPTB,FEXPSM,
      &   FINERT,IERRD,FTEST,FTEST2,WEXT,WINT,
      &   XABSCI,XORDON,NIP,FTEXB,FEXB,KTROT,KTPHI,XCHPFB,
-     &   XOPM1,NB1,NB1K,NB1C,NB1M)
+     &   XOPM1,NB1,NB1K,NB1C,NB1M,nn2,nnsb,nndef) 
      
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -127,7 +127,6 @@ cbp,2020-09      REAL*8 XOPM1(NB1,NB1,*),Q2DEMI(NA1),FAMOR(NA1)
 *
 c     LOGICAL LWRITE
       LOGICAL RIGIDE,lxpinv,linert
-      LOGICAL QUATERNION,MATRICE
 * CMS : 
       REAL*8 FAMO1(NA1),FAMO2(NA1)
 cms : pour le couple resistant "hard code" : 
@@ -138,17 +137,17 @@ cms : pour le couple resistant "hard code" :
 *     vecteurs de rotations incrementaux :
       real*8 th1(3), th2(3), th3(3), th4(3), jw2(3), t2(3)
       real*8 dexpinv(3,3)
-*
-*      QUATERNION = .FALSE.
-       QUATERNION = .TRUE.
-*      MATRICE    = .TRUE.
-       MATRICE    = .FALSE.
+*     matrices pour la matrice de masse si couplage inertiel :
+      real*8 Xt(3),Xtcha(3,3),B(nn2,nndef,3,3),ntat(nn2,nndef,3)
+      real*8 mrth(3,3,4,nnsb),mfr(nn2,3,4,nnsb),mfth(nn2,3,4,nnsb)
+      real*8 mthth(3,3,4,nnsb)
+
 *     resistance au spin ?
       lrspin = .false.
 *     correction dexpinv ?
       lxpinv = .true.
 *     couplage inertiel ?
-      linert = .false.
+      linert = .true.
 *      lxpinv = .true.
 *     le cas echeant, base modale de l'adaptateur : 
       ibad = 1
@@ -156,6 +155,7 @@ cms : pour le couple resistant "hard code" :
       RIGIDE = (KTROT.NE.0)
       IF (RIGIDE) THEN
         MTROT = KTROT
+        npdef = xtphi(/2)
       ENDIF
       MTPHI  = KTPHI
       NSB = XPHILB(/1)
@@ -194,12 +194,10 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
       do id=1,3
          write(*,'(3(1X,F8.5))') , (inertie(id,j,1),j=1,3)
       enddo
-      write(*,*)'         omeg1 :'
-      WRITE(*,'(3(1X,F8.5))')((omeg1(id,5,isb),id=1,4),isb=1,nsb)
       write(*,*)'         omeg2 :'
-      WRITE(*,'(3(1X,F8.5))')((omeg2(id,5,isb),id=1,3),isb=1,nsb)
+      WRITE(*,'(3(1X,F8.5))')((omeg2(id,5,1),id=1,3),isb=1,nsb)
       write(*,*)'         omeg3 :'
-      WRITE(*,'(3(1X,F8.5))')((omeg3(id,5,isb),id=1,3),isb=1,nsb)
+      WRITE(*,'(3(1X,F8.5))')((omeg3(id,5,1),id=1,3),isb=1,nsb)
 ************************************************************************
 *     remplissage de fexb(ip,1,id) et ftota(i,1) : "les deux extremites du pas de temps"
 ************************************************************************
@@ -486,14 +484,49 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ******************************************************************
       if (linert) then
       if (rigide) then
-        ind1 = 5
+        ind1 = 4
         do 1 iib=1,nsb
+*          write(*,*)'rkpas : xcoophi'
+*          do ip = 1,npdef
+*           write(*,'(3(1X,F8.5))') , (xcoophi(id,ip,iib),id=1,3)
+*          enddo
+*          write(*,*)'rkpas : xtphi'
+*          do ip = 1,npdef
+*           do in=1,na2
+*           write(*,'(3(1X,F8.5))') , (xtphi(id,ip,1,iib),id=1,3)
+*           enddo
+*          enddo
+
 **         na3 : nombre de modes elastiques + translations rig
 **               dans la ss base iib.
           na3 = inmsb(iib)
 *         premier mode elast ou transl rigi de la sous base iib ds l'ensemble des modes elast + trans rigis
           ina1 = iorsb(iib) - 1
-******     M_{thR} : couplage rotas-trnaslas shabana p 320
+*         calcul de la matrice B(na2,npdef,3,3) = - rot chap(Xt)
+          do ip=1,npdef
+            Xt(1) = xcoophi(1,ip,iib)
+            Xt(2) = xcoophi(2,ip,iib)
+            Xt(3) = xcoophi(3,ip,iib)
+            do in = 1,na3
+              i2 = in + ina1
+              do id=1,3
+                Xt(id) = Xt(id) + 
+     &                (xtphi(id,ip,in,iib) * q1(i2,ind1))
+              enddo
+              call chap(Xt(1),Xtcha(1,1))
+              do id=1,3
+                do j=1,3
+                  B(in,ip,id,j) = 0.d0
+                  do k=1,3 
+                   B(in,ip,id,j) = B(in,ip,id,j) - 
+     &                     rot(id,k,ind1,iib) * Xtcha(k,j)
+                  enddo
+                enddo
+              enddo
+            enddo
+          enddo
+
+******     M_{Rth} : couplage rotas-trnaslas shabana p 320
 *           B^j = -rot * sum_nodes chap(X_i + u_f_i) ( * A plus tard)
 *             - X : coordonnes undeformed state dans le body frame --> XCOOPHI
 *             - u_f = q_i phi_i : depl. elastiques body frame, phi_i --> XTPHI
@@ -503,39 +536,15 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 * Rq 1. : la somme des profuits vect sum_i (v_i x A) = (sum_i v_i) x A
 *         --> on somme les positions dans le body frame.
 * Rq 2. : la fonction chapeau est lineairesa.
-
-* 1.      Xtcha = chap(sum_i mu_i * (X_i + u_f_i))
-          do id=1,3
-            mrth1(id) = 0.d0
-            Xt(1) = 0.d0
-            Xt(2) = 0.d0
-            Xt(3) = 0.d0
-            do 10 in = 1,na3
-              i2 = ina1 + in
-*             on saute les translation rigides
-*             if (itrig(iib,in)) goto 10           
-*             pas besoin car xtphi & xcoophi st nuls si in correspond a une translation rigide 
-*               - d2vini --> xcoophi & xtphi = 0 partout
-*               - filldef --> xcoophi & xtphi remplis que sur les deformees elastiques.
-              do ip=1,npdef
-*               Xt : somme des position dans le body frame a l'instant t : 
-*     question : pondere par la masse modale? on la masse / (norme du mode)^2 pr avoir une masse physique ?
-                do id=1,3
-                  Xt(id) = Xt(id) + xm(i2,1)*(xcoophi(id,ip) + 
-     &                (xtphi(id,ip,in,iib) * q1(i2,ind1)))
-                enddo
-              enddo
- 10          continue
-          enddo
-*         on applique la fonction chapeau (produit vect --> matriciel)
-          call chap(Xt(1),Xtcha(1,1))
-* 2.      M_{Rth} = - rot * Xtcha
           do id=1,3
             do j=1,3
               mrth(id,j,ind1,iib) = 0.d0
-              do k=1,3 
-               mrth(id,j,ind1,iib) = mrth(id,j,ind1,iib) - 
-     &                           rot(id,k,ind1,iib) * Xtcha(k,j)
+              do in=1,na3
+                i2 = ina1 + in
+                do ip=1,npdef
+                  mrth(id,j,ind1,iib) = mrth(id,j,ind1,iib) + 
+     &                    (xm(i2,1) * B(in,ip,id,j))
+                enddo
               enddo
             enddo
           enddo
@@ -545,7 +554,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *          mfr(in,id) = sum_nodes sum_modes (ph_i(node_i)^T) * rot^T
 *          considering Phi^T for one node :
 *           in is the line, id is the column
-          do 11 in=1,na3
+          do in=1,na3
 *           on saute les translations rigides :
 *           if (itrig(iib,in)) goto 11
 *           pas besoin car xtphi est nul si in correspond a une translation rigide 
@@ -555,52 +564,66 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             do j=1,3
               mfr(in,j,ind1,iib) = 0.d0
               do ip=1,npdef
-              do k=i,3
-               mfr(in,j,ind1,iib) = mfr(in,j,ind1,iib) + 
-     &                        xtphi(k,ip,in,iib)*rot(j,k,ind1,iib) 
+                ntat(in,ip,j) = 0.d0 
+                do k=i,3
+                 ntat(in,ip,j) = ntat(in,ip,j) + 
+     &                           xtphi(k,ip,in,iib)*rot(j,k,ind1,iib) 
+                enddo
+                mfr(in,j,ind1,iib) = mfr(in,j,ind1,iib) + ntat(in,ip,j)
               enddo
-              enddo
-              mfr(in,j,ind1,iib) = xm(i2,1) * mfr(in,j,ind1,iib)
+              mfr(in,j,ind1,iib) = xm(i2,1) * mfr(in,j,ind1,iib) 
             enddo
- 11       continue
+          enddo
 
-******     M_{fR} (dim : nmodes x 3) : couplage elas-translas shabana p 320
-*             mrth1(id) = mrth1(id) + xm(i2,1)*mst(id,in,iib)*q1(in,ind1) 
-**         on rajoute l'eventuel bras de levier
-**         du a l'origine du body frame :
-*          mrth1(1) = mtsb(iib)*xcg(1,iib) + mrth1(1)
-*          mrth1(2) = mtsb(iib)*xcg(2,iib) + mrth1(2)
-*          mrth1(3) = mtsb(iib)*xcg(3,iib) + mrth1(3)
-*          call chap(mrth1(1),mrth2(1,1))
-**         on passe dans le repere spatial et on rajoute un moins :
-*          do id=1,3
-*            do j=1,3
-*                mrth(id,j,ind1,iib) = 0.d0
-*              do k=1,3
-*               mrth(id,j,ind1,iib) = mrth(id,j,ind1,iib) -
-*     &                           rot(id,k,ind1,iib)*mrth2(k,j) 
-*              enddo
-*            enddo
-*          enddo
-*
-******   M_{Rf} : couplage translations rigides. depl. elastiques shabana p 274
-**       M_{Rf} = rot * MST :
-*          do 2 in=1,na3
-**           on saute les translations rigides
-*            if (itrig(iib,in)) goto 2
-*            do id=1,3
-*              do j=1,3
-*                mrf(id,in,ind1,iib) = mrf(id,in,ind1,iib) + 
-*     &              rot(id,j,ind1,iib) * 
-*     &            (mtsb(iib)*xcg(j,iib) + mst(j,in,iib)*q1(in,ind1))
-*              enddo
-*            enddo
-* 2        continue
-*
-**       fin boucle sur les ss bases 
+******    M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
+*         M_{fth} = sum_modes mu_i * N^T * rot^T * B^T
+*         ntat = N^T * A^T
+          do in=1,na3
+            i2 = ina1 + in
+            do j=1,3
+              mfth(in,j,ind1,iib) = 0.d0
+              do ip=1,npdef
+                do k=i,3
+                  mfth(in,j,ind1,iib) = mfth(in,j,ind1,iib) + 
+     &                                  (ntat(in,ip,k)*B(in,ip,k,j)) 
+                enddo
+              enddo
+              mfth(in,j,ind1,iib) = xm(i2,1)*mfth(in,j,ind1,iib)
+            enddo
+          enddo
+           
+******    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
+*                          (shabana p 320)
+*         methode 1 : Jdef = B^T * B 
+          do in=1,na3
+            i2 = ina1 + in 
+            do id=1,3
+              do j=1,3
+                mthth(id,j,ind1,iib) = 0.d0
+                do ip=1,npdef
+                  do k=1,3
+                    mthth(id,j,ind1,iib) = mthth(id,j,ind1,iib) + 
+     &                    (B(in,ip,k,id) * B(in,ip,k,j))
+                  enddo
+                enddo
+              enddo
+            enddo
+            mthth(id,j,ind1,iib) = xm(i2,1)*mthth(id,j,ind1,iib) 
+          enddo
+          write(*,*)'inertia tensor : ind',ind1
+          write(*,*)'inertia tensor : undeformed state'
+          do id=1,3
+             write(*,'(3(1X,F8.5))') , (inertie(id,j,iib),j=1,3)
+          enddo
+          write(*,*)'inertia tensor : deformed state'
+          do id=1,3
+             write(*,'(3(1X,F8.5))') , (mthth(id,j,ind1,iib),j=1,3)
+          enddo
+**     fin boucle sur les ss bases
  1      continue
 **     fin if rigide
       endif
+**     fin if rigide
       endif
 ************************************************************************
 *     Energies
