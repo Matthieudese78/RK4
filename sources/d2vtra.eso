@@ -127,9 +127,12 @@ c     segment local : calcule l operateur et son inverse
          mtrot = ktrot
          nsb = omeg1(/3)
          npdef = xtphi(/2)
+         write(*,*)'npdef = ',npdef
+         write(*,*)'na2 = ',na2
+         write(*,*)'xtphi(/2) = ',xtphi(/2)
          do ib=1,nsb
            do in=1,na2
-             itrig(in,ib) = .false.
+             itrig(ib,in) = .false.
            enddo
          enddo
          do ib=1,nsb
