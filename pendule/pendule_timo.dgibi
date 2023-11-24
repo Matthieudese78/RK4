@@ -15,34 +15,32 @@ opti impi 555 ;
  M = 2.;
 * Gravite:
  g = 10. ;
-* Module d'Young:
- eac = 20.e6; 
+* Module d'Young: 20 MPa
+ eac = 210.e9; 
 * Coefficient de Poisson:
  nuac = 0.3;
-* Masse volumique:
- rho_ac = 8000;
+* Masse volumique: en kg/m^3
+ rho_ac = 8000 ;
 *
 ****** Geometrie:
 * longueur de la poutre: 
  h = 1.5 ;
-* Moment d'inertie / centre de gravite:
- Jx_G = 5. - (M*((2.*h/3.)**2)) ;
- Jy_G = 5. - (M*((2.*h/3.)**2)) ;
- Jz_G = 1.                      ; 
-* Momens d inertie / centre de rotation:
- Jx_C = 5. ;
- Jy_C = 5.;
- Jz_C = 1.; 
 * Rayon:
- R = (2.*Jz_C/(rho_ac*h))**0.25 ;
+ R = 5.e-2 ;
 * Section de la poutre :
  sectpou = (Pi*(R**2)) ;
+* Volume:
+ V = (Pi*(R**2.)*h) ;
+* masse totale du solide utilisee dans tmode , rotas rigides :
+ M = V * rho_ac ;
+* Moment d'inertie / centre de gravite:
+ Jx_G = 0.5*M*(R**2) ;
+ Jy_G = 0.5*M*(R**2) ;
+ Jz_G = (1./12.)*M*(h**2) ; 
 * Moments quadratiques de la poutre:
  IGx = (Pi*((2.*R)**4))/64. ;
  IGy = (Pi*((2.*R)**4))/64. ;
  IG = (Pi*((2.*R)**4))/32. ;
-* Volume:
- V = (Pi*(R**2.)*h) ;
 *Position du centre de gravite:
  LG = (h/2.);
 
@@ -123,7 +121,7 @@ P2 = 0. 0. h ;
 * Centre de masse theorique:
 G1 = 0. 0. LG ; 
 ***** Maillage: nombre d'element de la poutre:
- npou = 10 ;
+ npou = 40 ;
  L1 = d npou P1 P2 ;
  MESHPOU = L1 ;
 *  OPTI 'TRAC' X ; 
@@ -161,10 +159,11 @@ CLRX = BLOQ 'RY' 'RZ' meshpou;
 CLRY = BLOQ 'RX' 'RZ' meshpou;
 CLRZ = BLOQ 'RX' 'RY' meshpou;
 CLela = BLOQ 'DEPL' 'ROTA' P1;
+Clela2 = bloq 'ROTA' p2 ;
 KRX = K et CLRX;
 KRY = K et CLRY;
 KRZ = K et CLRZ;
-Kela = K et CLela;
+Kela = K et clela et clela2 ;
 *********************************************************************
 *                          Calculs des modes: 
 *********************************************************************
@@ -173,15 +172,17 @@ Tmode_RX  = vibr 'IRAM' 0.5 1 KRX M1 ;
 Tmode_RY  = vibr 'IRAM' 0.5 1 KRY M1 ;
 Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
 * On teste egalemetn en presence de modes elastiques:
-Tmode_ela = vibr 'IRAM' 1. 1 Kela M1;
-postvibr tmode_ela ;
+Tmode_ela = vibr 'IRAM' 1. 8 Kela M1;
+* on teste
 
 * postvibr:
 
+* opti trac x ;
 postvibr Tmode_RX ;
 postvibr Tmode_RY ;
 postvibr Tmode_RZ ;
 postvibr Tmode_ela ;
+* opti donn 5 ; 
 *
 ptrep_RX =    Tmode_RX . 'MODES' . 1 . 'POINT_REPERE';
 ptrep_RY =    Tmode_RY . 'MODES' . 1 . 'POINT_REPERE';
@@ -194,9 +195,9 @@ ptrep_ela_1 =    Tmode_ela . 'MODES' . 1 . 'POINT_REPERE';
 *********************************************************************
 * Si l'on veut avoir les bons moments d'inertie (theoriques), 
 * on les rentre manuellement en tant que masses generalisees:
-     Tmode_RX . modes . 1 . masse_generalisee = Jx_C;
-     Tmode_RY . modes . 1 . masse_generalisee = Jy_C;
-     Tmode_RZ . modes . 1 . masse_generalisee = Jz_C;
+     Tmode_RX . modes . 1 . masse_generalisee = Jx_G;
+     Tmode_RY . modes . 1 . masse_generalisee = Jy_G;
+     Tmode_RZ . modes . 1 . masse_generalisee = Jz_G;
 * Pour les rotas rigides:
 Tmode_RX . modes . 1 . frequence = 0. ;
 Tmode_RY . modes . 1 . frequence = 0. ;
