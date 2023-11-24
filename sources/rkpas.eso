@@ -140,7 +140,8 @@ cms : pour le couple resistant "hard code" :
 *     matrices pour la matrice de masse si couplage inertiel :
       real*8 Xt(3),Xtcha(3,3),B(nn2,nndef,3,3),ntat(nn2,nndef,3)
       real*8 mrth(3,3,nnsb),mfr(nn2,3,nnsb),mfth(nn2,3,nnsb)
-      real*8 mthth(3,3,nnsb),xnor(nn2)
+      real*8 mthth(3,3,nnsb),xnorm(nn2)
+      real*8 Xt2(3),Xt2cha(3,3)
 
 *     resistance au spin ?
       lrspin = .false.
@@ -507,20 +508,23 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           do 33 in=1,na3
             write(*,*)'rkpas : xm(ina1+1,1) = ',xm(ina1+in,iib)
 *           test on norme le mode :
-            xnor = 0.d0
+            xnorm(in) = 0.d0
             do ip=1,npdef
               do id=1,3
-                xnor = xnor + xtphi(id,ip,in,iib)*xtphi(id,ip,in,iib)
+                xnorm(in) = xnorm(in) +
+     &          xtphi(id,ip,in,iib)*xtphi(id,ip,in,iib)
               enddo
             enddo
-            if (xnor.le.xzprec) goto 33
-            xnortot = xnortot + (xm(ina1+in,iib)/xnor)
-            write(*,*)'(norme du mode)^2 = ',xnor
-            write(*,*)'XM / (norme du mode)^2 = ',xm(ina1+in,iib)/xnor
+            if (xnorm(in).le.xzprec) goto 33
+            xnortot = xnortot + (xm(ina1+in,iib)/xnorm(in))
+            write(*,*)'(norme du mode)^2 = ',xnorm(in)
+            write(*,*)'XM / (norme du mode)^2 = ',
+     &                 xm(ina1+in,iib)/xnorm(in)
             write(*,*)'%age de la masse associee : ',
-     &                100.*(xm(ina1+in,iib)/xnor)/mtsb(iib)
+     &                100.*(xm(ina1+in,iib)/xnorm(in))/mtsb(iib)
  33       continue
           write(*,*)'%age de ts les modes : ',100.*(xnortot)/mtsb(iib)
+****
           
 *         calcul de la matrice B(na2,npdef,3,3) = - rot chap(Xt)
           do ip=1,npdef
@@ -559,13 +563,14 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           do id=1,3
             do j=1,3
               mrth(id,j,iib) = 0.d0
-              do in=1,na3
+              do 10 in=1,na3
+                if (xnorm(in).le.xzprec) goto 10
                 i2 = ina1 + in
                 do ip=1,npdef
                   mrth(id,j,iib) = mrth(id,j,iib) + 
-     &                    (xm(i2,1) * B(in,ip,id,j))
+     &                    ((xm(i2,1)/xnorm(in)) * B(in,ip,id,j))
                 enddo
-              enddo
+ 10           continue
             enddo
           enddo
 
@@ -574,7 +579,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *          mfr(in,id) = sum_nodes sum_modes (ph_i(node_i)^T) * rot^T
 *          considering Phi^T for one node :
 *           in is the line, id is the column
-          do in=1,na3
+          do 11 in=1,na3
 *           on saute les translations rigides :
 *           if (itrig(iib,in)) goto 11
 *           pas besoin car xtphi est nul si in correspond a une translation rigide 
@@ -583,6 +588,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             i2 = ina1 + in
             do j=1,3
               mfr(in,j,iib) = 0.d0
+              if (xnorm(in).le.xzprec) goto 11
               do ip=1,npdef
                 ntat(in,ip,j) = 0.d0 
                 do k=i,3
@@ -591,45 +597,79 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
                 enddo
                 mfr(in,j,iib) = mfr(in,j,iib) + ntat(in,ip,j)
               enddo
-              mfr(in,j,iib) = xm(i2,1) * mfr(in,j,iib) 
+              mfr(in,j,iib) = (xm(i2,1)/xnorm(in)) * mfr(in,j,iib) 
             enddo
-          enddo
+ 11       continue
 
 ******    M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
 *         M_{fth} = sum_modes mu_i * N^T * rot^T * B^T
 *         ntat = N^T * A^T
-          do in=1,na3
+          do 12 in=1,na3
             i2 = ina1 + in
             do j=1,3
               mfth(in,j,iib) = 0.d0
+              if (xnorm(in).le.xzprec) goto 12
               do ip=1,npdef
                 do k=i,3
                   mfth(in,j,iib) = mfth(in,j,iib) + 
      &                                  (ntat(in,ip,k)*B(in,ip,k,j)) 
                 enddo
               enddo
-              mfth(in,j,iib) = xm(i2,1)*mfth(in,j,iib)
+              mfth(in,j,iib) = (xm(i2,1)/xnorm(in))*mfth(in,j,iib)
             enddo
-          enddo
+ 12       continue
            
 ******    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
 *                          (shabana p 320)
 *         methode 1 : Jdef = B^T * B 
-          do in=1,na3
+          do 13 in=1,na3
             i2 = ina1 + in 
             do id=1,3
               do j=1,3
                 mthth(id,j,iib) = 0.d0
+                if (xnorm(in).le.xzprec) goto 13
                 do ip=1,npdef
                   do k=1,3
                     mthth(id,j,iib) = mthth(id,j,iib) + 
      &                    (B(in,ip,k,id) * B(in,ip,k,j))
                   enddo
                 enddo
+                mthth(id,j,iib) = (xm(i2,1)/xnorm(in))*mthth(id,j,iib) 
               enddo
             enddo
-            mthth(id,j,iib) = xm(i2,1)*mthth(id,j,iib) 
+ 13       continue
+*         methode 2 : on rajoute seulement la correction
+          do ip=1,npdef
+            Xt(1) = xcoophi(1,ip,iib)
+            Xt(2) = xcoophi(2,ip,iib)
+            Xt(3) = xcoophi(3,ip,iib)
+            Xt2(1) = 0.d0
+            Xt2(2) = 0.d0
+            Xt2(3) = 0.d0
+            do 14 in = 1,na3
+              i2 = in + ina1
+              do id=1,3
+                Xt(id) = Xt(id) + 
+     &                (xtphi(id,ip,in,iib) * q1(i2,ind1))
+                Xt2(id) = (xtphi(id,ip,in,iib) * q1(i2,ind1))
+              enddo
+              call chap(Xt(1),Xtcha(1,1))
+              call chap(Xt2(1),Xt2cha(1,1))
+              do id=1,3
+                do j=1,3
+                  mthth(in,id,j) = 0.d0
+                  if (xnorm(in).le.xzprec) goto 14
+                  do k=1,3
+                    mthth(in,id,j) = Xt2cha(k,id)*Xtcha(k,j)*
+     &                                  (xm(i2,1)/xnorm(in)) 
+                  enddo
+              mthth(in,id,j) = mthth(in,id,j)+inertie(id,j,iib)
+                enddo
+              enddo
+ 14         continue
           enddo
+
+*
           write(*,*)'inertia tensor : ind',ind1
           write(*,*)'inertia tensor : undeformed state'
           do id=1,3
