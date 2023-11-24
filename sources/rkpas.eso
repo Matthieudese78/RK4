@@ -140,7 +140,7 @@ cms : pour le couple resistant "hard code" :
 *     matrices pour la matrice de masse si couplage inertiel :
       real*8 Xt(3),Xtcha(3,3),B(nn2,nndef,3,3),ntat(nn2,nndef,3)
       real*8 mrth(3,3,nnsb),mfr(nn2,3,nnsb),mfth(nn2,3,nnsb)
-      real*8 mthth(3,3,nnsb)
+      real*8 mthth(3,3,nnsb),xnor(nn2)
 
 *     resistance au spin ?
       lrspin = .false.
@@ -502,16 +502,26 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           na3 = inmsb(iib)
 *         premier mode elast ou transl rigi de la sous base iib ds l'ensemble des modes elast + trans rigis
           ina1 = iorsb(iib) - 1
-          write(*,*)'rkpas : xm(ina1+1,1) = ',xm(ina1+1,1)
-*         test on norme le mode :
-          xnor = 0.d0
-          do ip=1,npdef
-            do id=1,3
-              xnor = xnor + xtphi(id,ip,1,1)*xtphi(id,ip,1,1)
+*         teste sur les normes
+          xnortot = 0.d0
+          do 33 in=1,na3
+            write(*,*)'rkpas : xm(ina1+1,1) = ',xm(ina1+in,iib)
+*           test on norme le mode :
+            xnor = 0.d0
+            do ip=1,npdef
+              do id=1,3
+                xnor = xnor + xtphi(id,ip,in,iib)*xtphi(id,ip,in,iib)
+              enddo
             enddo
-          enddo
-          write(*,*)'(norme du mode)^2 = ',xnor
-          write(*,*)'XM / (norme du mode)^2 = ',xm(ina1+1,1)/xnor
+            if (xnor.le.xzprec) goto 33
+            xnortot = xnortot + (xm(ina1+in,iib)/xnor)
+            write(*,*)'(norme du mode)^2 = ',xnor
+            write(*,*)'XM / (norme du mode)^2 = ',xm(ina1+in,iib)/xnor
+            write(*,*)'%age de la masse associee : ',
+     &                100.*(xm(ina1+in,iib)/xnor)/mtsb(iib)
+ 33       continue
+          write(*,*)'%age de ts les modes : ',100.*(xnortot)/mtsb(iib)
+          
 *         calcul de la matrice B(na2,npdef,3,3) = - rot chap(Xt)
           do ip=1,npdef
             Xt(1) = xcoophi(1,ip,iib)
