@@ -258,21 +258,6 @@ cms   prendre en compte le moment au demi pas de temps dans d2vlf2 --> devmom ? 
           ENDDO
         ENDDO        
       ENDIF
-      do ib=1,nsb
-        do in=1,na2
-          itrig(in,ib) = .false.
-        enddo
-      enddo
-      do ib=1,nsb
-        do ip=1,npdef
-          do id=1,3
-            xcoophi(id,ip,ib) = 0.d0
-            do in=1,na2
-              xtphi(id,ip,in,ib) = 0.d0
-            enddo
-          enddo
-        enddo
-      enddo
 cms : test sur FEXA / FTOTA : 
       DO I=1,NA1
          WRITE(*,*)'D2VINI : START'
