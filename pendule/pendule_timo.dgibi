@@ -34,15 +34,15 @@ opti impi 555 ;
 * masse totale du solide utilisee dans tmode , rotas rigides :
  M = V * rho_ac ;
 * Moment d'inertie / centre de gravite:
- Jx_G = 0.5*M*(R**2) ;
- Jy_G = 0.5*M*(R**2) ;
- Jz_G = (1./12.)*M*(h**2) ; 
+ Jx_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
+ Jy_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
+ Jz_G = 0.5*M*(R**2) ; 
 * Moments quadratiques de la poutre:
  IGx = (Pi*((2.*R)**4))/64. ;
  IGy = (Pi*((2.*R)**4))/64. ;
  IG = (Pi*((2.*R)**4))/32. ;
 *Position du centre de gravite:
- LG = (h/2.);
+ LG = (h/2.) ;
 
 *
 * Centre de rotation = P1 ci-dessous = origine (0. 0. 0.).
