@@ -140,7 +140,7 @@ cms : pour le couple resistant "hard code" :
 *     matrices pour la matrice de masse si couplage inertiel :
       real*8 Xt(3),Xtcha(3,3),B(nn2,nndef,3,3),ntat(nn2,nndef,3)
       real*8 mrth(3,3),mfr(nn2,3),mfth(nn2,3)
-      real*8 mthth(3,3),xnorm(nn2)
+      real*8 mthth(3,3,nnsb),xnorm(nn2)
       real*8 Xt2(3),Xt2cha(3,3)
 
 *     resistance au spin ?
@@ -487,7 +487,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ******************************************************************
       if (linert) then
       if (rigide) then
-        ind1 = 4
+        do ind1=2,5
         do 1 iib=1,nsb
 *          write(*,*)'rkpas : xcoophi'
 *          do ip = 1,npdef
@@ -640,7 +640,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *         methode 1 : Jdef = B^T * B 
           do id=1,3
             do j=1,3
-              mthth(id,j) = 0.d0
+              mthth(id,j,iib) = 0.d0
             enddo
           enddo
           do 13 in=1,na3
@@ -650,17 +650,17 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
                 if (xnorm(in).le.xzprec) goto 13
                 do ip=1,npdef
                   do k=1,3
-                    mthth(id,j) = mthth(id,j) + 
+                    mthth(id,j,iib) = mthth(id,j,iib) + 
      &                    (B(in,ip,k,id) * B(in,ip,k,j))
                   enddo
                 enddo
-                mthth(id,j) = (xm(i2,1)/xnorm(in))*mthth(id,j) 
+                mthth(id,j,iib) = (xm(i2,1)/xnorm(in))*mthth(id,j,iib) 
               enddo
             enddo
  13       continue
           write(*,*)'inertia tensor : deformed state method1 :'
           do id=1,3
-             write(*,'(3(1X,F8.5))') , (mthth(id,j),j=1,3)
+             write(*,'(3(1X,F8.5))') , (mthth(id,j,iib),j=1,3)
           enddo
           endif
 
@@ -668,7 +668,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *         methode 2 : on rajoute seulement la correction
           do id=1,3
             do j=1,3
-              mthth(id,j) = inertie(id,j,iib)
+              mthth(id,j,iib,iib) = inertie(id,j,iib)
             enddo
           enddo
 *
@@ -697,7 +697,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             do id=1,3
               do j=1,3
                 do k=1,3
-                  mthth(id,j) = mthth(id,j) +
+                  mthth(id,j,iib) = mthth(id,j,iib) +
      &                              (Xt2cha(k,id)*Xtcha(k,j))
                 enddo
               enddo
@@ -713,10 +713,34 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           enddo
           write(*,*)'inertia tensor : deformed state method2 :'
           do id=1,3
-             write(*,'(3(1X,F8.5))') , (mthth(id,j),j=1,3)
+             write(*,'(3(1X,F8.5))') , (mthth(id,j,iib),j=1,3)
           enddo
+*
+*      on implemente les forces d'inertie d'entrainement
+*      dues aux blocs non diagonnaux de la matrice de masse :
+        do in=1,na3
+          i2 = ina1 + in
+          if (itrig(ib,in)) then
+            do id=1,3
+             fer(id,iib) = fer(id,iib) + mfr(in,id)*q3(i2,ind1) 
+            enddo
+          endif
+        enddo
+        do id=1,3
+          fer(id,iib) = fer(id,iib) + (mrth(id,j)*omeg3(j,ind1,iib))
+        enddo
+        do in=1,na3
+          i2 = ina1 + in
+          if (itrig(ib,in)) then
+            do id=1,3
+             feth(id,iib) = feth(id,iib) + (mrth(id,j)*q3(i2,ind1))
+            enddo
+          endif
+        enddo
 **     fin boucle sur les ss bases
  1      continue
+**     fin boucle sur les indices 1,4
+        enddo
 **     fin if rigide
       endif
 **     fin if rigide
