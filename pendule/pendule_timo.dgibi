@@ -159,11 +159,12 @@ CLRX = BLOQ 'RY' 'RZ' meshpou;
 CLRY = BLOQ 'RX' 'RZ' meshpou;
 CLRZ = BLOQ 'RX' 'RY' meshpou;
 CLela = BLOQ 'DEPL' 'ROTA' P1;
-Clela2 = bloq 'ROTA' p2 ;
+* Clela2 = bloq 'ROTA' p2 ;
 KRX = K et CLRX;
 KRY = K et CLRY;
 KRZ = K et CLRZ;
-Kela = K et clela et clela2 ;
+Kela = K et clela ;
+* Kela = K et clela et clela2 ;
 *********************************************************************
 *                          Calculs des modes: 
 *********************************************************************
