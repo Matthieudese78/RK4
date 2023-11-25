@@ -139,8 +139,8 @@ cms : pour le couple resistant "hard code" :
       real*8 dexpinv(3,3)
 *     matrices pour la matrice de masse si couplage inertiel :
       real*8 Xt(3),Xtcha(3,3),B(nn2,nndef,3,3),ntat(nn2,nndef,3)
-      real*8 mrth(3,3,nnsb),mfr(nn2,3,nnsb),mfth(nn2,3,nnsb)
-      real*8 mthth(3,3,nnsb),xnorm(nn2)
+      real*8 mrth(3,3),mfr(nn2,3),mfth(nn2,3)
+      real*8 mthth(3,3),xnorm(nn2)
       real*8 Xt2(3),Xt2cha(3,3)
 
 *     resistance au spin ?
@@ -564,12 +564,12 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 * Rq 2. : la fonction chapeau est lineairesa.
           do id=1,3
             do j=1,3
-              mrth(id,j,iib) = 0.d0
+              mrth(id,j) = 0.d0
               do 10 in=1,na3
                 if (xnorm(in).le.xzprec) goto 10
                 i2 = ina1 + in
                 do ip=1,npdef
-                  mrth(id,j,iib) = mrth(id,j,iib) + 
+                  mrth(id,j) = mrth(id,j) + 
      &                    ((xm(i2,1)/xnorm(in)) * B(in,ip,id,j))
                 enddo
  10           continue
@@ -589,7 +589,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *             - filldef --> xcoophi rempli que sur les deformees elastiques.
             i2 = ina1 + in
             do j=1,3
-              mfr(in,j,iib) = 0.d0
+              mfr(in,j) = 0.d0
               if (xnorm(in).le.xzprec) goto 11
               do ip=1,npdef
                 ntat(in,ip,j) = 0.d0 
@@ -597,29 +597,38 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
                  ntat(in,ip,j) = ntat(in,ip,j) + 
      &                           xtphi(k,ip,in,iib)*rot(j,k,ind1,iib) 
                 enddo
-                mfr(in,j,iib) = mfr(in,j,iib) + ntat(in,ip,j)
+                mfr(in,j) = mfr(in,j) + ntat(in,ip,j)
               enddo
-              mfr(in,j,iib) = (xm(i2,1)/xnorm(in)) * mfr(in,j,iib) 
+              mfr(in,j) = (xm(i2,1)/xnorm(in)) * mfr(in,j) 
             enddo
  11       continue
 
+          write(*,*)'MFR :'
+          do in=1,na3
+             write(*,'(3(1X,F8.5))') , (mfr(in,id),id=1,3)
+          enddo
 ******    M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
 *         M_{fth} = sum_modes mu_i * N^T * rot^T * B^T
 *         ntat = N^T * A^T
           do 12 in=1,na3
             i2 = ina1 + in
             do j=1,3
-              mfth(in,j,iib) = 0.d0
+              mfth(in,j) = 0.d0
               if (xnorm(in).le.xzprec) goto 12
               do ip=1,npdef
                 do k=i,3
-                  mfth(in,j,iib) = mfth(in,j,iib) + 
+                  mfth(in,j) = mfth(in,j) + 
      &                                  (ntat(in,ip,k)*B(in,ip,k,j)) 
                 enddo
               enddo
-              mfth(in,j,iib) = (xm(i2,1)/xnorm(in))*mfth(in,j,iib)
+              mfth(in,j) = (xm(i2,1)/xnorm(in))*mfth(in,j)
             enddo
  12       continue
+
+          write(*,*)'MFTH :'
+          do in=1,na3
+             write(*,'(3(1X,F8.5))') , (mfth(in,id),id=1,3)
+          enddo
            
 ******    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
 *                          (shabana p 320)
@@ -631,7 +640,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *         methode 1 : Jdef = B^T * B 
           do id=1,3
             do j=1,3
-              mthth(id,j,iib) = 0.d0
+              mthth(id,j) = 0.d0
             enddo
           enddo
           do 13 in=1,na3
@@ -641,17 +650,17 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
                 if (xnorm(in).le.xzprec) goto 13
                 do ip=1,npdef
                   do k=1,3
-                    mthth(id,j,iib) = mthth(id,j,iib) + 
+                    mthth(id,j) = mthth(id,j) + 
      &                    (B(in,ip,k,id) * B(in,ip,k,j))
                   enddo
                 enddo
-                mthth(id,j,iib) = (xm(i2,1)/xnorm(in))*mthth(id,j,iib) 
+                mthth(id,j) = (xm(i2,1)/xnorm(in))*mthth(id,j) 
               enddo
             enddo
  13       continue
           write(*,*)'inertia tensor : deformed state method1 :'
           do id=1,3
-             write(*,'(3(1X,F8.5))') , (mthth(id,j,iib),j=1,3)
+             write(*,'(3(1X,F8.5))') , (mthth(id,j),j=1,3)
           enddo
           endif
 
@@ -659,7 +668,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *         methode 2 : on rajoute seulement la correction
           do id=1,3
             do j=1,3
-              mthth(id,j,iib) = inertie(id,j,iib)
+              mthth(id,j) = inertie(id,j,iib)
             enddo
           enddo
 *
@@ -688,7 +697,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             do id=1,3
               do j=1,3
                 do k=1,3
-                  mthth(id,j,iib) = mthth(id,j,iib) +
+                  mthth(id,j) = mthth(id,j) +
      &                              (Xt2cha(k,id)*Xtcha(k,j))
                 enddo
               enddo
@@ -704,7 +713,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           enddo
           write(*,*)'inertia tensor : deformed state method2 :'
           do id=1,3
-             write(*,'(3(1X,F8.5))') , (mthth(id,j,iib),j=1,3)
+             write(*,'(3(1X,F8.5))') , (mthth(id,j),j=1,3)
           enddo
 **     fin boucle sur les ss bases
  1      continue
