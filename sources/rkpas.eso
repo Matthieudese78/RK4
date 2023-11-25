@@ -648,34 +648,6 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *         ==> on garde J = inertie + perturbation due aux modes. en developpant J = chap(X+u)^T * chap(X+u) :
 *         perturbation = chap(u_f)^T * (chap(X) + chap(u_f))
 ******************************************************************
-          if (methJ1) then
-*         methode 1 : Jdef = B^T * B 
-          do id=1,3
-            do j=1,3
-              mthth(id,j,iib) = 0.d0
-            enddo
-          enddo
-          do 13 in=1,na3
-            i2 = ina1 + in 
-            do id=1,3
-              do j=1,3
-                if (xnorm(in).le.xzprec) goto 13
-                do ip=1,npdef
-                  do k=1,3
-                    mthth(id,j,iib) = mthth(id,j,iib) + 
-     &                    (B(in,ip,k,id) * B(in,ip,k,j))
-                  enddo
-                enddo
-                mthth(id,j,iib) = (xm(i2,1)/xnorm(in))*mthth(id,j,iib) 
-              enddo
-            enddo
- 13       continue
-          write(*,*)'inertia tensor : deformed state method1 :'
-          do id=1,3
-             write(*,'(3(1X,F8.5))') , (mthth(id,j,iib),j=1,3)
-          enddo
-          endif
-
           if (methJ2) then
 *         methode 2 : on rajoute seulement la correction
           do id=1,3
