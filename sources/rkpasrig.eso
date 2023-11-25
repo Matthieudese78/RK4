@@ -18,17 +18,17 @@
       real*8 xcoo(3),rtgex(3)
       logical lxpinv
 
-         write(*,*)'rkpasrig : ind = ',ind
-         write(*,*)'rkpasrig : rot :'
-         do id=1,3
-            write(*,'(3(1X,F8.5))') , (rot(id,j,ind,ib),j=1,3)
-         enddo
-         write(*,*)'rkpasrig : omeg2 :'
-         write(*,'(3(1X,F8.5))') , (omeg2(id,ind,ib),id=1,3)
+*        write(*,*)'rkpasrig : ind = ',ind
+*        write(*,*)'rkpasrig : rot :'
+*        do id=1,3
+*           write(*,'(3(1X,F8.5))') , (rot(id,j,ind,ib),j=1,3)
+*        enddo
+*        write(*,*)'rkpasrig : omeg2 :'
+*        write(*,'(3(1X,F8.5))') , (omeg2(id,ind,ib),id=1,3)
 
         do ip=1,nplb
-          write(*,*)'rkpasrig : fexb '
-          write(*,'(3(1X,F8.5))') , (fexb(ip,ind,id),id=1,3)
+*         write(*,*)'rkpasrig : fexb '
+*         write(*,'(3(1X,F8.5))') , (fexb(ip,ind,id),id=1,3)
 *         on est obliges de calcule le moment en base B 
           do id=1,3
             xcoo(id) = 0.d0
@@ -36,8 +36,8 @@
               xcoo(id) = xcoo(id) + rot(id,j,ind,ib)*xcoolb(j,ib,ip) 
             enddo
           enddo
-          write(*,*)'rkpasrig : xcoo en base b '
-          write(*,'(3(1X,F8.5))') , (xcoo(id),id=1,3)
+*         write(*,*)'rkpasrig : xcoo en base b '
+*         write(*,'(3(1X,F8.5))') , (xcoo(id),id=1,3)
           fmomtot(1,ind,ib) = fmomtot(1,ind,ib) + 
      &     xcoo(2)*fexb(ip,ifex,3) -
      &     xcoo(3)*fexb(ip,ifex,2)
@@ -47,8 +47,8 @@
           fmomtot(3,ind,ib) = fmomtot(3,ind,ib) + 
      &     xcoo(1)*fexb(ip,ifex,2) -
      &     xcoo(2)*fexb(ip,ifex,1)
-          write(*,*)'rkpasrig : fmomtot en base b '
-          write(*,'(3(1X,F8.5))') , (fmomtot(id,ind,ib),id=1,3)
+*         write(*,*)'rkpasrig : fmomtot en base b '
+*         write(*,'(3(1X,F8.5))') , (fmomtot(id,ind,ib),id=1,3)
         enddo
 *        calcul du terme convectif du 2nd membre : W X J W
 *            JW : + on repasse le moment dans le body frame :
@@ -61,14 +61,14 @@
           enddo
         enddo
 
-          write(*,*)'rkpasrig : rtgex body frame '
-          write(*,'(3(1X,F8.5))') , (rtgex(id),id=1,3)
+*         write(*,*)'rkpasrig : rtgex body frame '
+*         write(*,'(3(1X,F8.5))') , (rtgex(id),id=1,3)
 *            W X JW
         t2(1) = omeg2(2,ind,ib)*jw(3) - omeg2(3,ind,ib)*jw(2) 
         t2(2) = omeg2(3,ind,ib)*jw(1) - omeg2(1,ind,ib)*jw(3) 
         t2(3) = omeg2(1,ind,ib)*jw(2) - omeg2(2,ind,ib)*jw(1) 
-          write(*,*)'rkpasrig : 2nd membre eq dyn '
-          write(*,'(3(1X,F8.5))') , (t2(id),id=1,3)
+*         write(*,*)'rkpasrig : 2nd membre eq dyn '
+*         write(*,'(3(1X,F8.5))') , (t2(id),id=1,3)
 *        calcul de l'acceleration : A = J^-1 * (-t2 + Gext)
         do id = 1,3
           omeg3(id,ind,ib) = 0.d0

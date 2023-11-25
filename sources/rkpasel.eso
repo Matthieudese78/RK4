@@ -36,7 +36,7 @@ c    -Cas C ou M pleine
         enddo
 c    -Cas C et M diagonales
       ELSE
-        write(*,*)'rkpasel : calcul q3'
+*       write(*,*)'rkpasel : calcul q3'
         DO I=1,NA1
           UNSM = 1.D0 / ( XM(I,1) + dt2*XASM(I,1) - FINERT(I,1) )
 *          write(*,*)'   xm = ',xm(i,1)

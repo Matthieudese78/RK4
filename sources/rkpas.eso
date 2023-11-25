@@ -144,6 +144,8 @@ cms : pour le couple resistant "hard code" :
       real*8 Xt2(3),Xt2cha(3,3)
       real*8 fer(3,4,nnsb),feth(3,4,nnsb),fef(nn2,4,nnsb)
       real*8 fr(3,nnsb),fth(3,nnsb),ff(nn2,nnsb)
+      real*8 jw(3),rtgex(3),qf(nn2,nnsb),qr(3,nnsb),qth(3,nnsb)
+      real*8 wchap(3,3),wchap2(3,3)
 
 *     resistance au spin ?
       lrspin = .false.
@@ -194,15 +196,15 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
       dt2 = dt/2.D0
       dt22 = dt*dt2
 
-      write(*,*)'rkpas : indice 5 :'
-      write(*,*)'        mat. inertie :'
-      do id=1,3
-         write(*,'(3(1X,F8.5))') , (inertie(id,j,1),j=1,3)
-      enddo
-      write(*,*)'         omeg2 :'
-      WRITE(*,'(3(1X,F8.5))')((omeg2(id,5,1),id=1,3),isb=1,nsb)
-      write(*,*)'         omeg3 :'
-      WRITE(*,'(3(1X,F8.5))')((omeg3(id,5,1),id=1,3),isb=1,nsb)
+*     write(*,*)'rkpas : indice 5 :'
+*     write(*,*)'        mat. inertie :'
+*     do id=1,3
+*        write(*,'(3(1X,F8.5))') , (inertie(id,j,1),j=1,3)
+*     enddo
+*     write(*,*)'         omeg2 :'
+*     WRITE(*,'(3(1X,F8.5))')((omeg2(id,5,1),id=1,3),isb=1,nsb)
+*     write(*,*)'         omeg3 :'
+*     WRITE(*,'(3(1X,F8.5))')((omeg3(id,5,1),id=1,3),isb=1,nsb)
 ************************************************************************
 *     remplissage de fexb(ip,1,id) et ftota(i,1) : "les deux extremites du pas de temps"
 ************************************************************************
@@ -358,14 +360,16 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
      &                             + 2.d0*omeg3(id,3) 
      &                             + omeg3(id,2)) 
           enddo
-*          equilibre dynamique :
+          if (.not.linert) then
+*           equilibre dynamique :
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
-     &             dtheta(1,iib),fmomtot,xcoolb,fexb,nplb,1,1,.false.)
-*          MAJ vitesse angulaire :
+     &              dtheta(1,iib),fmomtot,xcoolb,fexb,nplb,1,1,.false.)
+*           MAJ vitesse angulaire :
           do id = 1,3
             omeg2(id,1,iib) = omeg2(id,5,iib) + 
-     &                     (dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
+     &                      (dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
           enddo
+          endif
 ******** fin boucle sur les ss bases
  7      continue
       ENDIF
@@ -383,7 +387,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *      write(*,*)'q2 :',q2(i,5)
 *      enddo
 
-      write(*,*)'rkpas 1st pred :'
+*     write(*,*)'rkpas 1st pred :'
       do i = 1,na1
         q1(i,4) = q1(i,5) + q2(i,5) * dt2
         q2(i,4) = q2(i,5) + q3(i,5) * dt2
@@ -402,7 +406,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *     k2 = (q2(i,4), q3(i,4))^T
 *     u3 = y + k2*dt2
 ************************************************************************
-      write(*,*)'rkpas 2nd pred :'
+*     write(*,*)'rkpas 2nd pred :'
       do i = 1,na1
         q1(i,3) = q1(i,5) + q2(i,4) * dt2
         q2(i,3) = q2(i,5) + q3(i,4) * dt2
@@ -417,7 +421,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *     k3 = (q2(i,3), q3(i,3))^T
 *     u4 = y + k3*dt
 ************************************************************************
-      write(*,*)'rkpas 3rd pred :'
+*     write(*,*)'rkpas 3rd pred :'
       do i = 1,na1
         q1(i,2) = q1(i,5) + q2(i,3) * dt2
         q2(i,2) = q2(i,5) + q3(i,3) * dt2
@@ -444,17 +448,18 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *      write(*,*)'q2 :',q2(i,1)
 *      write(*,*)'q2 :',q2(i,1)
       enddo
+      if (.not.linert) then
+        call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
+     &               xasm,xopm1,finert,1,1,pdt)
 
-      call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
-     &             xasm,xopm1,finert,1,1,pdt)
-
-*      write(*,*)'rkpas avant liaison :'
-*      write(*,*)'q1 :',q1(i,ind)
-*      write(*,*)'q1 :',q1(i,ind)
-*     MAJ vitesse generalisee :
-      do in=1,na1
-        q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,1)+q3(in,1))
-      enddo
+*        write(*,*)'rkpas avant liaison :'
+*        write(*,*)'q1 :',q1(i,ind)
+*        write(*,*)'q1 :',q1(i,ind)
+*       MAJ vitesse generalisee :
+        do in=1,na1
+          q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,1)+q3(in,1))
+        enddo
+      endif
 
 ************************************************************************
 *     Calcul des forces de liaisons
@@ -504,16 +509,30 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 
 ******************************************************************
         do 1 iib=1,nsb
+**        na3 : nombre de modes elastiques + translations rig
+**              dans la ss base iib.
+        na3 = inmsb(iib)
+*        premier mode elast ou transl rigi de la sous base iib ds l'ensemble des modes elast + trans rigis
+        ina1 = iorsb(iib) - 1
+*        initialisation des forces d'inertie, pour ttes les ss bases!
+*         --> apparaissent apres dans l'equilibre dynamique
+        do id=1,3
+          fr(id,iib) = 0.d0
+          fth(id,iib) = 0.d0
+          qr(id,iib) = 0.d0
+          qth(id,iib) = 0.d0
+        enddo
+        do in=1,na3
+          ff(in,iib) = 0.d0
+          qf(in,iib) = 0.d0
+        enddo
+*       maintenant on peut sauter les ss bases ss rotas rigides :
+        if (iarota(iib).eq.0) goto 1
         do ind1=2,5
-**         na3 : nombre de modes elastiques + translations rig
-**               dans la ss base iib.
-          na3 = inmsb(iib)
-*         premier mode elast ou transl rigi de la sous base iib ds l'ensemble des modes elast + trans rigis
-          ina1 = iorsb(iib) - 1
-*         teste sur les normes
+*         calcul des normes des modes au carre :
           xnortot = 0.d0
           do 33 in=1,na3
-            write(*,*)'rkpas : xm(ina1+1,1) = ',xm(ina1+in,iib)
+*           write(*,*)'rkpas : xm(ina1+1,1) = ',xm(ina1+in,iib)
 *           test on norme le mode :
             xnorm(in) = 0.d0
             do ip=1,npdef
@@ -524,13 +543,13 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             enddo
             if (xnorm(in).le.xzprec) goto 33
             xnortot = xnortot + (xm(ina1+in,iib)/xnorm(in))
-            write(*,*)'(norme du mode)^2 = ',xnorm(in)
-            write(*,*)'XM / (norme du mode)^2 = ',
-     &                 xm(ina1+in,iib)/xnorm(in)
-            write(*,*)'%age de la masse associee : ',
-     &                100.*(xm(ina1+in,iib)/xnorm(in))/mtsb(iib)
+*           write(*,*)'(norme du mode)^2 = ',xnorm(in)
+*           write(*,*)'XM / (norme du mode)^2 = ',
+*    &                 xm(ina1+in,iib)/xnorm(in)
+*           write(*,*)'%age de la masse associee : ',
+*    &                100.*(xm(ina1+in,iib)/xnorm(in))/mtsb(iib)
  33       continue
-          write(*,*)'%age de ts les modes : ',100.*(xnortot)/mtsb(iib)
+*         write(*,*)'%age de ts les modes : ',100.*(xnortot)/mtsb(iib)
 ******************************************************************
 *         calcul de la matrice B(na2,npdef,3,3) = - rot chap(Xt)
 ******************************************************************
@@ -610,10 +629,10 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             enddo
  11       continue
 
-          write(*,*)'MFR :'
-          do in=1,na3
-             write(*,'(3(1X,F8.5))') , (mfr(in,id),id=1,3)
-          enddo
+*          write(*,*)'MFR :'
+*          do in=1,na3
+*             write(*,'(3(1X,F8.5))') , (mfr(in,id),id=1,3)
+*          enddo
 
 ******************************************************************
 *    M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
@@ -635,24 +654,24 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             enddo
  12       continue
 
-          write(*,*)'MFTH :'
-          do in=1,na3
-             write(*,'(3(1X,F8.5))') , (mfth(in,id),id=1,3)
-          enddo
+*          write(*,*)'MFTH :'
+*          do in=1,na3
+*             write(*,'(3(1X,F8.5))') , (mfth(in,id),id=1,3)
+*          enddo
            
 ******************************************************************
 *    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
 *                          (shabana p 320)
 *         on utilise la methode 2 :
 *         - comme on ne considere pas forcement bcp de modes, reconstruire un tenseur d'inertie seulement avec la matrice B parait illusoire (perte d'infos).
-*         ==> on garde J = inertie + perturbation due aux modes. en developpant J = chap(X+u)^T * chap(X+u) :
+*         ==> on garde mthth = perturbation due aux modes. en developpant J = chap(X+u)^T * chap(X+u) :
 *         perturbation = chap(u_f)^T * (chap(X) + chap(u_f))
 ******************************************************************
           if (methJ2) then
-*         methode 2 : on rajoute seulement la correction
+*         methode 2 : on calcul seulement la perturbation
           do id=1,3
             do j=1,3
-              mthth(id,j,iib) = inertie(id,j,iib)
+              mthth(id,j,iib) = 0.d0
             enddo
           enddo
 *
@@ -690,15 +709,15 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *         fin method 2
           endif
 *
-          write(*,*)'inertia tensor : ind',ind1
-          write(*,*)'inertia tensor : undeformed state'
-          do id=1,3
-             write(*,'(3(1X,F8.5))') , (inertie(id,j,iib),j=1,3)
-          enddo
-          write(*,*)'inertia tensor : deformed state method2 :'
-          do id=1,3
-             write(*,'(3(1X,F8.5))') , (mthth(id,j,iib),j=1,3)
-          enddo
+*         write(*,*)'inertia tensor : ind',ind1
+*         write(*,*)'inertia tensor : undeformed state'
+*         do id=1,3
+*            write(*,'(3(1X,F8.5))') , (inertie(id,j,iib),j=1,3)
+*         enddo
+*         write(*,*)'inertia tensor : deformed state method2 :'
+*         do id=1,3
+*            write(*,'(3(1X,F8.5))') , (mthth(id,j,iib),j=1,3)
+*         enddo
 *
 *      on implemente les forces d'inertie d'entrainement
 *      dues aux blocs non diagonnaux de la matrice de masse :
@@ -764,32 +783,138 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           enddo
         enddo
 
-***** vecteur quadratique de rotation :
-
+***** quadratic velocity vector : incluant l'effet de coriolis et les forces centrifuges
+*       Qr : -rot * (chap(omeg1)^2 * sum_i m_i (X + u_f) + 2 chap(omeg1) * sum_i m_i q2(i)
+        call chap(omeg1(1,ind1,iib),wchap(1,1))
+        do id=1,3
+          do j=1,3
+            wchap2(id,j) = 0.d0
+            do k=1,3
+              wchap2(id,j) = wchap2(id,j) + wchap(id,k) * wchap(k,j)
+            enddo
+          enddo
+        enddo
+        
 ***********************************************************************
 *               fin boucle sur les indices 1,4
 ***********************************************************************
         enddo
 ***********************************************************************
-
         do id=1,3
+*
         fr(id,iib) = (fer(id,4,iib) + (5.d-1*fer(id,3,iib)) + 
      &                (5.d-1*fer(id,2,iib)) + fer(id,1,iib))/6.d0
-
         fth(id,iib) = (feth(id,4,iib) + (5.d-1*feth(id,3,iib)) + 
      &                (5.d-1*feth(id,2,iib)) + feth(id,1,iib))/6.d0
         enddo
+*        write(*,*)'rkpas : FR'
+*        write(*,'(3(1X,F8.5))') , (fr(id,iib),id=1,3)
+*        write(*,*)'rkpas : FTH'
+*        write(*,'(3(1X,F8.5))') , (fth(id,iib),id=1,3)
+
+*        write(*,*)'rkpas : FF'
         do in=1,na3
         ff(in,iib) = (fef(in,4,iib) + (5.d-1*fef(in,3,iib)) + 
      &                (5.d-1*fef(in,2,iib)) + fef(in,1,iib))/6.d0
+*        write(*,'(1X,F8.5)') , ff(in,iib)
+*
         enddo
-
 ***********************************************************************
 **     fin boucle sur les ss bases
  1      continue
 **     fin if rigide
       endif
-**     fin if linert
+************************************************************************
+*     equilibre dynamique a t_n+1
+************************************************************************
+*     coordonnees modales : modes elastiques + translations rigides 
+************************************************************************
+*     ajout des forces de raideurs :
+      CALL RKLK0(Q1,XK,FTOTA,NA1,NB1K,1,ifex)
+*     ajout des forces d'amortissement :
+      IF (NB1C.GT.1) THEN
+        DO I=1,NA1
+           FAMOR(I) = 0.D0
+          DO J=1,NB1
+            FAMOR(I) = FAMOR(I) + XASM(I,J) * Q2(J,1)
+          enddo
+        enddo
+      ELSE
+        DO I=1,NA1
+           FAMOR(I) = XASM(I,1) * Q2(I,1)
+        enddo
+      ENDIF
+c    -Cas C ou M pleine : pas de prise en compte des forces d'inertie
+      IF (NB1.NE.1) THEN
+        DO I=1,NA1
+          Q3(I,1) = 0.D0
+          DO J=1,NB1
+          Q3(I,1) = Q3(I,1) + XOPM1(I,J,1)*(FTOTA(J,1)-FAMOR(J))
+          enddo
+        enddo
+c    -Cas C et M diagonales : on prend en compte les forces d'inertie
+      ELSE
+        do iib=1,nsb
+        na3 = inmsb(iib)
+        ina1 = iorsb(iib) - 1
+        do i=1,na3
+          i2 = ina1 + i
+          unsm = 1.d0 / ( xm(i2,1) + dt2*xasm(i2,1) - finert(i2,1) )
+          j=0
+          if (itrig(iib,i)) then
+            j = j+1
+            q3(i2,1) = (ftota(i2,1)-famor(i2)-fr(j,iib)) * unsm
+          endif
+          if (.not.itrig(iib,i)) then
+            q3(i2,1) = (ftota(i2,1)-famor(i2)-ff(i,iib)) * unsm
+          endif
+        enddo
+        enddo
+      endif
+*     MAJ des vitesses :
+      do in=1,na1
+        q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,1)+q3(in,1))
+      enddo
+************************************************************************
+*     rotations rigides :  
+************************************************************************
+      if (rigide) then
+       if (lrspin) then 
+         fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + tspin(1)
+         fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + tspin(2)
+         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + tspin(3)
+       endif
+       do 17 iib=1,nsb
+          if (iarota(iib).eq.0) goto 17
+          do id=1,3
+            jw(id) = 0.d0
+            rtgex(id) = 0.d0
+            do j=1,3
+          rtgex(id) = rtgex(id) + rot(j,id,1,iib)*fmomtot(j,1,iib)
+          jw(id) = jw(id) + inertie(id,j,iib)*omeg2(j,1,iib)
+            enddo
+          enddo
+          t2(1) = omeg2(2,1,iib)*jw(3) - omeg2(3,1,iib)*jw(2) 
+          t2(2) = omeg2(3,1,iib)*jw(1) - omeg2(1,1,iib)*jw(3) 
+          t2(3) = omeg2(1,1,iib)*jw(2) - omeg2(2,1,iib)*jw(1) 
+          do id = 1,3
+            omeg3(id,1,iib) = 0.d0
+            do j = 1,3
+              omeg3(id,1,iib) = omeg3(id,1,iib) + 
+     &         invinert(id,j,iib) * (-t2(j) + rtgex(id) - fth(id,iib))
+            enddo
+          enddo
+*          MAJ vitesse angulaire :
+          do id = 1,3
+            omeg2(id,1,iib) = omeg2(id,5,iib) + 
+     &                 (dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
+          enddo
+ 17    continue
+      endif
+
+************************************************************************
+*     fin if linert
+************************************************************************
       endif
 ************************************************************************
 *     Energies
