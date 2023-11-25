@@ -51,10 +51,10 @@ opti impi 555 ;
 * T = 5. ;
 * DTE = 1.e-3 ;
 * NSORT =  50 ;
-* T = 10. ;
-T = 7.e-3 ;
-DTE = 1.e-3 ;
-NSORT =  1 ;
+T = 5. ;
+* T = 10.e-3 ;
+DTE = 1.e-4 ;
+NSORT =  100 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -172,7 +172,7 @@ Tmode_RX  = vibr 'IRAM' 0.5 1 KRX M1 ;
 Tmode_RY  = vibr 'IRAM' 0.5 1 KRY M1 ;
 Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
 * On teste egalemetn en presence de modes elastiques:
-Tmode_ela = vibr 'IRAM' 1. 8 Kela M1;
+Tmode_ela = vibr 'IRAM' 1. 2 Kela M1;
 * on teste
 
 * postvibr:
@@ -208,17 +208,17 @@ Tmode_RZ . modes . 1 . frequence = 0. ;
 * On triche pour ne pas avoir de modif via MAJINERT: 
 * CENTRE DE ROTATION = G1 ! 
 Tmode_RX . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
-Tmode_RX . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= P1;
+Tmode_RX . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= G1 ;
 Tmode_RX . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P1;
 Tmode_RX . 'MODES' . 1 . 'MASSE'= M ;
 Tmode_RX . 'MODES' . 1 . 'COMPOSANTE' = 'RX' ;
 Tmode_RY . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
-Tmode_RY . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= P1 ;
+Tmode_RY . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= G1  ;
 Tmode_RY . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P1 ;
 Tmode_RY . 'MODES' . 1 . 'MASSE'= M ;
 Tmode_RY . 'MODES' . 1 . 'COMPOSANTE' = 'RY' ;
 Tmode_RZ . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
-Tmode_RZ . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= P1 ;
+Tmode_RZ . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= G1  ;
 Tmode_RZ . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P1 ;
 Tmode_RZ . 'MODES' . 1 . 'MASSE'= M ;
 Tmode_RZ . 'MODES' . 1 . 'COMPOSANTE' = 'RZ' ;
@@ -337,7 +337,7 @@ tprog = TRESU . TEMPS_DE_SORTIE;
 *
 Nt = dime tprog;
 *
-opti donn 5 ; 
+* opti donn 5 ; 
 ************************************************************************
 *     					POST TRAITEMENT
 ************************************************************************
