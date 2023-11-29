@@ -149,7 +149,7 @@ M1 = mass modpou matpou ;
 ****************************************************************************
 *                       Conditions limites 
 ****************************************************************************
-CL1 = BLOQ 'DEPL' P2;
+CL1 = BLOQ 'DEPL' P1;
 K = K et cl1 ; 
 *********************************************************************
 *                            CLs 
@@ -158,7 +158,7 @@ K = K et cl1 ;
 CLRX = BLOQ 'RY' 'RZ' meshpou;
 CLRY = BLOQ 'RX' 'RZ' meshpou;
 CLRZ = BLOQ 'RX' 'RY' meshpou;
-CLela = BLOQ 'DEPL' 'ROTA' P1;
+CLela = BLOQ 'ROTA' P1;
 * Clela2 = bloq 'ROTA' p2 ;
 KRX = K et CLRX;
 KRY = K et CLRY;
