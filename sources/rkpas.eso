@@ -903,8 +903,6 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
         enddo
         enddo
  21     continue
-
-
         
 ***********************************************************************
 *               fin boucle sur les indices 1,4
@@ -985,11 +983,11 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
           j=0
           if (itrig(iib,i)) then
             j = j+1
-            q3(i2,1) = (ftota(i2,1)-famor(i2)-fr(j,iib)) * unsm
+            q3(i2,1) = (ftota(i2,1)-famor(i2)-fr(j,iib)+qr(j,iib)) * unsm
 *           q3(i2,1) = (ftota(i2,1)-famor(i2)) * unsm
           endif
           if (.not.itrig(iib,i)) then
-            q3(i2,1) = (ftota(i2,1)-famor(i2)-ff(i,iib)) * unsm
+            q3(i2,1)=(ftota(i2,1)-famor(i2)-ff(i,iib)+qf(in,iib)) * unsm
 *           q3(i2,1) = (ftota(i2,1)-famor(i2)) * unsm
           endif
         enddo
@@ -1026,7 +1024,8 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
             omeg3(id,1,iib) = 0.d0
             do j = 1,3
               omeg3(id,1,iib) = omeg3(id,1,iib) + 
-     &         invinert(id,j,iib) * (-t2(j) + rtgex(id) - fth(id,iib))
+     &         invinert(id,j,iib) * 
+     &        (-t2(j) + rtgex(id) - fth(id,iib) + qth(id,iib))
 *     &         invinert(id,j,iib) * (-t2(j) + rtgex(id))
             enddo
           enddo
