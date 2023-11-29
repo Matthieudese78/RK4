@@ -270,8 +270,6 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             th2(id) = omeg2(id,5,iib) * dt2
             omeg2(id,4,iib)  = omeg2(id,5,iib) + omeg3(id,5,iib) * dt2
           enddo
-*           write(*,*)'rkpas : 1st pred :'
-*           write(*,'(3(1X,F8.5))') , (omeg2(j,4,iib),j=1,3)
 
 ************************************************************************
 *          calcul de EXPTH pour eq. dynamique:
@@ -701,15 +699,15 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *         fin method 2
           endif
 *
-*         write(*,*)'inertia tensor : ind',ind1
-*         write(*,*)'inertia tensor : undeformed state'
-*         do id=1,3
-*            write(*,'(3(1X,F8.5))') , (inertie(id,j,iib),j=1,3)
-*         enddo
-*         write(*,*)'inertia tensor : deformed state method2 :'
-*         do id=1,3
-*            write(*,'(3(1X,F8.5))') , (mthth(id,j,iib),j=1,3)
-*         enddo
+          write(*,*)'inertia tensor : ind',ind1
+          write(*,*)'inertia tensor : undeformed state'
+          do id=1,3
+             write(*,'(3(1X,F8.5))') , (inertie(id,j,iib),j=1,3)
+          enddo
+          write(*,*)'inertia tensor : perturbation :'
+          do id=1,3
+             write(*,'(3(1X,F8.5))') , (mthth(id,j,iib),j=1,3)
+          enddo
 *
 *      on implemente les forces d'inertie d'entrainement
 *      dues aux blocs non diagonnaux de la matrice de masse :
@@ -736,6 +734,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *   FETH : attention ! il faut que les modes de translas soient dans l'ordre 
 *       X,Y,Z dans la base modale !
 * contribution accel translation a l'accel angulaire de rotation
+*        write(*,*)'calcul feth :'
         do id = 1,3
         j = 0
         do in=1,na3
@@ -758,6 +757,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
         enddo
 
 * contribution accel translation sur l'accel elastique 
+*        write(*,*)'calcul fef :'
         do in=1,na3
           j = 0
           do in1=1,na3
@@ -779,6 +779,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 
 ***** quadratic velocity vector : incluant l'effet de coriolis et les forces centrifuges
 *       Qr : -rot * (chap(omeg1)^2 * sum_i m_i (X + u_f) + 2 chap(omeg1) * sum_i m_i q2(i)
+*       write(*,*)'calcul qr :'
+*       write(*,*)'calcul wchap2 :'
         call chap(omeg2(1,ind1,iib),wchap(1,1))
         do id=1,3
           do j=1,3
@@ -799,6 +801,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
      &                  (xtphi(id,ip,in,iib) * q1(i2,ind1))) *
      &                  (xm(i2,1)/xnorm(in)) 
             enddo
+
+*       write(*,*)'calcul qr2 :'
             do id=1,3
               do j=1,3
                 qr2(id,iib) = qr(id,iib) + wchap2(id,j) * Xt(j)
@@ -814,6 +818,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
  18       continue
         enddo
 *       qr1 = -rot * qr2
+*       write(*,*)'calcul qr :'
         do id=1,3
           qr(id,iib) = 0.d0
           do j=1,3
@@ -830,6 +835,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
      &           (inertie(id,j,iib)+mthth(id,j,iib))*omeg2(j,1,iib)
           enddo
         enddo
+        
 * Qv : 
 
         
@@ -877,6 +883,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ************************************************************************
 *     coordonnees modales : modes elastiques + translations rigides 
 ************************************************************************
+*      write(*,*)'   eq. dyn :'
 *     ajout des forces de raideurs :
       CALL RKLK0(Q1,XK,FTOTA,NA1,NB1K,1,ifex)
 *     ajout des forces d'amortissement :
@@ -912,9 +919,11 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
           if (itrig(iib,i)) then
             j = j+1
             q3(i2,1) = (ftota(i2,1)-famor(i2)-fr(j,iib)) * unsm
+*           q3(i2,1) = (ftota(i2,1)-famor(i2)) * unsm
           endif
           if (.not.itrig(iib,i)) then
             q3(i2,1) = (ftota(i2,1)-famor(i2)-ff(i,iib)) * unsm
+*           q3(i2,1) = (ftota(i2,1)-famor(i2)) * unsm
           endif
         enddo
         enddo
@@ -951,6 +960,7 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
             do j = 1,3
               omeg3(id,1,iib) = omeg3(id,1,iib) + 
      &         invinert(id,j,iib) * (-t2(j) + rtgex(id) - fth(id,iib))
+*     &         invinert(id,j,iib) * (-t2(j) + rtgex(id))
             enddo
           enddo
 *          MAJ vitesse angulaire :
