@@ -529,7 +529,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
         enddo
 *       maintenant on peut sauter les ss bases ss rotas rigides :
         if (iarota(iib).eq.0) goto 1
-        do ind1=2,5
+*       do ind1=2,5
+        do ind1=1,1
 *         calcul des normes des modes au carre :
           xnortot = 0.d0
           do 33 in=1,na3
@@ -714,7 +715,9 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *      dues aux blocs non diagonnaux de la matrice de masse :
 * contribution modes elastiques a l'acceleration en translation :
 *       indice :
-        ind2 = ind1-1
+*        ind2 = ind1-1
+*        write(*,*)'calcul fer :'
+        ind2 = ind1
         do id=1,3
         do 15 in=1,na3
           if (itrig(iib,in)) goto 15
@@ -834,24 +837,34 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ***********************************************************************
         enddo
 ***********************************************************************
+*       si on a fait les forces d'inertie sur les 4 indices :
+*        do id=1,3
+**
+*        fr(id,iib) = (fer(id,4,iib) + (5.d-1*fer(id,3,iib)) + 
+*     &                (5.d-1*fer(id,2,iib)) + fer(id,1,iib))/6.d0
+*        fth(id,iib) = (feth(id,4,iib) + (5.d-1*feth(id,3,iib)) + 
+*     &                (5.d-1*feth(id,2,iib)) + feth(id,1,iib))/6.d0
+*        enddo
+*       forces d'inertie sur les ddls elastiques :
+*        do in=1,na3
+*        ff(in,iib) = (fef(in,4,iib) + (5.d-1*fef(in,3,iib)) + 
+*     &                (5.d-1*fef(in,2,iib)) + fef(in,1,iib))/6.d0
+**        write(*,'(1X,F8.5)') , ff(in,iib)
+**
+*        enddo
+*       si on a fait les forces d'inertie que sur l'indice 1 :
+*       write(*,*)'calcul fr, fth, ff :'
         do id=1,3
-*
-        fr(id,iib) = (fer(id,4,iib) + (5.d-1*fer(id,3,iib)) + 
-     &                (5.d-1*fer(id,2,iib)) + fer(id,1,iib))/6.d0
-        fth(id,iib) = (feth(id,4,iib) + (5.d-1*feth(id,3,iib)) + 
-     &                (5.d-1*feth(id,2,iib)) + feth(id,1,iib))/6.d0
+          fr(id,iib) = fer(id,1,iib) 
+          fth(id,iib) = feth(id,1,iib) 
         enddo
 *        write(*,*)'rkpas : FR'
 *        write(*,'(3(1X,F8.5))') , (fr(id,iib),id=1,3)
 *        write(*,*)'rkpas : FTH'
 *        write(*,'(3(1X,F8.5))') , (fth(id,iib),id=1,3)
-
-*        write(*,*)'rkpas : FF'
         do in=1,na3
-        ff(in,iib) = (fef(in,4,iib) + (5.d-1*fef(in,3,iib)) + 
-     &                (5.d-1*fef(in,2,iib)) + fef(in,1,iib))/6.d0
+          ff(in,iib) = fef(in,1,iib) 
 *        write(*,'(1X,F8.5)') , ff(in,iib)
-*
         enddo
 ***********************************************************************
 **     fin boucle sur les ss bases
