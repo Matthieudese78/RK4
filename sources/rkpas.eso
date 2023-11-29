@@ -939,7 +939,8 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
             rtgex(id) = 0.d0
             do j=1,3
           rtgex(id) = rtgex(id) + rot(j,id,1,iib)*fmomtot(j,1,iib)
-          jw(id) = jw(id) + inertie(id,j,iib)*omeg2(j,1,iib)
+          jw(id) = jw(id) + (mthth(id,j,iib) + inertie(id,j,iib))*
+     &                      omeg2(j,1,iib)
             enddo
           enddo
           t2(1) = omeg2(2,1,iib)*jw(3) - omeg2(3,1,iib)*jw(2) 
