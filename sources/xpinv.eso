@@ -22,7 +22,8 @@
         xang = xang + (vect(id)**2)
       enddo
       xang = dsqrt(xang)
-      if (xang.le.xzprec) then 
+*      if (xang.le.dsqrt(xzprec)) then 
+      if (xang.le.1.d-6) then 
         write(*,*)'xpinv : angle trop petit' 
         goto 1
       endif
@@ -33,7 +34,7 @@
       call chap(u2(1),uchap(1,1))
 
 *     write(*,*)'xpinv : u2 '
-*        write(*,'(3(1X,F8.5))') , (u2(id),id=1,3)
+*       write(*,'(3(1X,F8.5))') , (u2(id),id=1,3)
 
       do id = 1,3
         do j = 1,3
@@ -49,9 +50,8 @@
           mat(id,j) = -(uchap(id,j)/2.d0)
         enddo
       enddo
-*      write(*,*)'dxpinv : dcotan(0.1) : ',dcotan(0.1) 
-*      write(*,*)'         dcos(0.1)/dsin(0.1) : ',dcos(0.1)/dsin(0.1)
-      if (dabs(xang).ge.xzprec) then
+      write(*,*)'dxpinv : dcotan(xang) : ',dcotan(xang) 
+      if (dabs(xang).ge.dsqrt(xzprec)) then
         do id=1,3
           do j=1,3
             mat(id,j) = -(uchap(id,j)/2.d0) + 
