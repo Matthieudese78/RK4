@@ -40,7 +40,7 @@ c       INTEGER IFEXA(*)
 *     Boucle sur les points de chargement:
 *
       
-      write(*,*)'d2vfxa loop na1 ' 
+*      write(*,*)'d2vfxa loop na1 ' 
       DO 100 I=1,NPFEXA
          FTOTA(I,1) = FEXA(I,NPAS,1)
                 write(*,*)' ftota = ',ftota(I,1) 
@@ -54,11 +54,11 @@ c       INTEGER IFEXA(*)
          ELSE
              IDIM = 2
          ENDIF
-         write(*,*)'d2vfxa loop nplb ' 
+*         write(*,*)'d2vfxa loop nplb ' 
          DO 200 IP=1,NPLB
              DO 210 ID=1,IDIM
                 FEXB(IP,1,ID) = FTEXB(IP,NPAS,1,ID)
-                write(*,*)' fexb = ',FEXB(IP,1,ID) 
+*                write(*,*)' fexb = ',FEXB(IP,1,ID) 
  210         CONTINUE
  200     CONTINUE
       ENDIF
