@@ -4,7 +4,8 @@
 * AND MOMENTUM
 rk4 = vrai ;
 sw = faux ;
-xpinv = vrai ;
+xpinv = faux ;
+linert = vrai ;
 *********************************************************************
 *                       Valeurs numeriques 
 *********************************************************************
@@ -52,9 +53,9 @@ opti impi 555 ;
 * DTE = 1.e-3 ;
 * NSORT =  50 ;
 T = 5. ;
-* T = 10.e-3 ;
-DTE = 1.e-4 ;
-NSORT =  100 ;
+* T = 100.e-4 ;
+DTE = 1.e-3 ;
+NSORT =  10 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -62,7 +63,7 @@ tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
 * rigide = vrai si presence de rotas rigides dans la base modale:
 rigide = vrai ;
 * Rotas rigides et modes elastiques:
-  typmode = 1;
+  typmode = 1 ; 
 * Que rotas rigides:
 * typmode = 2;
 * Que modes elastiques:
@@ -94,6 +95,9 @@ script = (chai script'_sw_') ;
 finsi ;
 si xpinv ;
 script = (chai script'xpinv') ;
+finsi ;
+si linert ;
+script = (chai script'_inert') ;
 finsi ;
 opti 'FTRA ' (chai 'fig/'script'_T_'T'_h_'Dte'_NSORT_'NSORT'.ps' );
 opti 'EPTR' 5;
