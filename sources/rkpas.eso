@@ -944,6 +944,25 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           ff(in,iib) = fef(in,1,iib) 
 *        write(*,'(1X,F8.5)') , ff(in,iib)
         enddo
+
+***********************************************************************
+*      on totalise sur ftota et fmomtot :
+***********************************************************************
+        do in=1,na3
+          i2 = ina1 + in
+          j=0
+          if (itrig(iib,in)) then
+            j = j + 1
+*           ftota(i2,1) = ftota(i2,1) + fr(j,iib) 
+            ftota(i2,1) = ftota(i2,1)  
+          endif
+          if (.not.itrig(iib,in)) then
+*           ftota(i2,1) = ftota(i2,1) + ff(in,iib) 
+            ftota(i2,1) = ftota(i2,1)  
+          endif
+        enddo
+* Pour les rotas rigides fmomtot est calcule en base B alors que fth et qth
+* sont calcules en base A. on les integre dans l'eq dynamique direct.
 ***********************************************************************
 **     fin boucle sur les ss bases
  1      continue
@@ -987,15 +1006,7 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
           i2 = ina1 + i
           unsm = 1.d0 / ( xm(i2,1) + dt2*xasm(i2,1) - finert(i2,1) )
           j=0
-          if (itrig(iib,i)) then
-            j = j+1
-            q3(i2,1) = (ftota(i2,1)-famor(i2)-fr(j,iib)+qr(j,iib)) * unsm
-*           q3(i2,1) = (ftota(i2,1)-famor(i2)) * unsm
-          endif
-          if (.not.itrig(iib,i)) then
-            q3(i2,1)=(ftota(i2,1)-famor(i2)-ff(i,iib)+qf(in,iib)) * unsm
-*           q3(i2,1) = (ftota(i2,1)-famor(i2)) * unsm
-          endif
+          q3(i2,1) = (ftota(i2,1)-famor(i2)) * unsm
         enddo
         enddo
       endif
