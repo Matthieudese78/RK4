@@ -1114,6 +1114,8 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
      &                      omeg2(j,1,iib)
               ine(id,j) = (mthth(id,j,iib) + inertie(id,j,iib))
             enddo
+*           on rajoute les forces d'inertie a rtgex :
+            rtgex(id) = rtgex(id) + qth(id,iib) - fth(id,iib)
           enddo
           t2(1) = omeg2(2,1,iib)*jw(3) - omeg2(3,1,iib)*jw(2) 
           t2(2) = omeg2(3,1,iib)*jw(1) - omeg2(1,1,iib)*jw(3) 
