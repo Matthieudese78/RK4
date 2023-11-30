@@ -151,7 +151,7 @@ cms : pour le couple resistant "hard code" :
 *     resistance au spin ?
       lrspin = .false.
 *     correction dexpinv ?
-      lxpinv = .true.
+      lxpinv = .false.
 *     couplage inertiel ?
       linert = .true.
 *     method de calcul de la MAJ du tenseur d'inertie J ?
@@ -286,7 +286,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 
 *          equilibre dynamique : 1/2 pdt --> ifex = 3
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
-     &                  th2,fmomtot,xcoolb,fexb,nplb,4,3,lxpinv)
+     &                  th2,fmomtot,xcoolb,fexb,nplb,4,3,lxpinv,.true.)
 
 ************************************************************************
 *         "rappatriement" sur le plan tangent en t_n de :
@@ -312,7 +312,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL QUAT2MAT(OMEG1(1,3,IIB),ROT(1,1,3,IIB)) 
 *          equilibre dynamique : 1/2 pdt --> ifex = 3
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
-     &                  th3,fmomtot,xcoolb,fexb,nplb,3,3,lxpinv)
+     &                  th3,fmomtot,xcoolb,fexb,nplb,3,3,lxpinv,.true.)
 ************************************************************************
 *         k3 = (w3,a3)^T avec :
 *           - w3 = omeg2(id,3,iib)
@@ -333,7 +333,7 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL QUAT2MAT(OMEG1(1,2,IIB),ROT(1,1,2,IIB)) 
 *          equilibre dynamique : t_n+1 --> ifex = 1
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
-     &                  th4,fmomtot,xcoolb,fexb,nplb,2,1,lxpinv)
+     &                  th4,fmomtot,xcoolb,fexb,nplb,2,1,lxpinv,.true.)
 ************************************************************************
 *         k4 = (w4,a4)^T avec :
 *           - w4 = omeg2(id,2,iib)
