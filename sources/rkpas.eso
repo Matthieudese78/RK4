@@ -412,8 +412,8 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 ************************************************************************
 *     write(*,*)'rkpas 3rd pred :'
       do i = 1,na1
-        q1(i,2) = q1(i,5) + q2(i,3) * dt2
-        q2(i,2) = q2(i,5) + q3(i,3) * dt2
+        q1(i,2) = q1(i,5) + q2(i,3) * dt
+        q2(i,2) = q2(i,5) + q3(i,3) * dt
 *        write(*,*)'q1 :',q1(i,2)
 *        write(*,*)'q2 :',q2(i,2)
       enddo
@@ -425,10 +425,10 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 ************************************************************************
       do i=1,na1
 *       position :
-      q1(i,1)=q1(i,2)+(dt/6.d0)*(q2(i,5) + 2.d0*q2(i,4) + 2.d0*q2(i,3) +
+      q1(i,1)=q1(i,5)+(dt/6.d0)*(q2(i,5) + 2.d0*q2(i,4) + 2.d0*q2(i,3) +
      &                       q2(i,2))
 *       vitesse :
-      q2(i,1)=q2(i,2)+(dt/6.d0)*(q3(i,5) + 2.d0*q3(i,4) + 2.d0*q3(i,3) +
+      q2(i,1)=q2(i,5)+(dt/6.d0)*(q3(i,5) + 2.d0*q3(i,4) + 2.d0*q3(i,3) +
      &                       q3(i,2))
 
 *      write(*,*)'rkpas avant liaison :'
@@ -1012,7 +1012,7 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
       endif
 *     MAJ des vitesses :
       do in=1,na1
-        q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,1)+q3(in,1))
+        q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,5)+q3(in,1))
       enddo
 ************************************************************************
 *     rotations rigides :  
