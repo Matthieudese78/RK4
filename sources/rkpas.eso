@@ -1080,17 +1080,6 @@ c    -Cas C ou M pleine : pas de prise en compte des forces d'inertie
         enddo
 c    -Cas C et M diagonales : on prend en compte les forces d'inertie
       else
-*       do iib=1,nsb
-*       na3 = inmsb(iib)
-*       ina1 = iorsb(iib) - 1
-*       do i=1,na3
-*         i2 = ina1 + i
-*         unsm = 1.d0 / ( xm(i2,1) + dt2*xasm(i2,1) - finert(i2,1) )
-*         j=0
-*         q3(i2,1) = (ftota(i2,1)-famor(i2)) * unsm
-*       enddo
-*       enddo
-
         DO I=1,NA1
           UNSM = 1.D0 / ( XM(I,1) + dt2*XASM(I,1) - FINERT(I,1) )
           Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) * UNSM
