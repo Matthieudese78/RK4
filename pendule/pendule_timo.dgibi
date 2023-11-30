@@ -53,9 +53,9 @@ opti impi 555 ;
 * DTE = 1.e-3 ;
 * NSORT =  50 ;
 T = 5. ;
-* T = 100.e-4 ;
-DTE = 1.e-3 ;
-NSORT =  10 ;
+* T = 10.e-4 ;
+DTE = 1.e-4 ;
+NSORT =  50 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -75,7 +75,7 @@ finsi;
 *
 ***** Conditions initiales:
 * nutation initiale de la toupie (Castem: angles en degres!):
-theta_ini = 0.3 ;
+theta_ini = 0.5 ;
 * Vitesses angulaires de rotation inititales ds le repere du solide:
 WXini = 0. ;
 WYini = 0. ;
@@ -177,7 +177,7 @@ Tmode_RX  = vibr 'IRAM' 0.5 1 KRX M1 ;
 Tmode_RY  = vibr 'IRAM' 0.5 1 KRY M1 ;
 Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
 * On teste egalemetn en presence de modes elastiques:
-Tmode_ela = vibr 'IRAM' 1. 2 Kela M1;
+Tmode_ela = vibr 'IRAM' 1. 1 Kela M1;
 * on teste
 
 * postvibr:
@@ -319,13 +319,26 @@ TCHAR = TABL 'CHARGEMENT';
 	 TL1.'JEU'           =  10.              ;
 *
 
-    TLIAI = TABLE 'LIAISON'   ;
-    TTLB = TABLE 'LIAISON_B' ;
-    TLIAI .'LIAISON_B' = TTLB  ;
-    TTLB . 1 = TL1 ;
-*   TTLA = TABLE 'LIAISON_A' ;
-*   TLIAI . 'LIAISON_A' = TTLA ;
-*   TTLA . 1 = TL1 ;
+   Normale_PPLAN = 0. 0. -1. ;
+   Jeu1 = h/2. ;
+   Kchoc = 2.E+03;
+   K_T= 0.01*Kchoc ;
+   mu = 0.3 ;
+   adh = mu ;
+   Cchoc = 0.1*((M*Kchoc)**0.5) ;
+	 TL2  =  TABLE  'LIAISON_ELEMENTAIRE'    ;
+	 TL2.'TYPE_LIAISON'  =  MOT 'POINT_PLAN' ;
+	 TL2.'SUPPORT'       =  p2              ;
+	 TL2.'RAIDEUR'       =  Kchoc              ;
+	 TL2.'NORMALE' = NORMALE_PPLAN ;
+	 TL2.'JEU'           =  jeu1              ;
+
+   TLIAI = TABLE 'LIAISON'   ;
+   TTLB = TABLE 'LIAISON_B' ;
+   TLIAI .'LIAISON_B' = TTLB  ;
+   TTLB . 1 = TL1 ;
+   TTLB . 2 = TL2 ;
+
 ************************************************************************
 *     					Resolution DYNE
 ************************************************************************
