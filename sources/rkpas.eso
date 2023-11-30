@@ -1102,24 +1102,29 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
        endif
        do 17 iib=1,nsb
           if (iarota(iib).eq.0) goto 17
+*         inversion de la matrice d'inertie :
+
           do id=1,3
             jw(id) = 0.d0
             rtgex(id) = 0.d0
             do j=1,3
           rtgex(id) = rtgex(id) + rot(j,id,1,iib)*fmomtot(j,1,iib)
-*         jw(id) = jw(id) + (mthth(id,j,iib) + inertie(id,j,iib))*
-          jw(id) = jw(id) + (inertie(id,j,iib))*
+*         jw(id) = jw(id) + (inertie(id,j,iib))*
+          jw(id) = jw(id) + (mthth(id,j,iib) + inertie(id,j,iib))*
      &                      omeg2(j,1,iib)
+              ine(id,j) = (mthth(id,j,iib) + inertie(id,j,iib))
             enddo
           enddo
           t2(1) = omeg2(2,1,iib)*jw(3) - omeg2(3,1,iib)*jw(2) 
           t2(2) = omeg2(3,1,iib)*jw(1) - omeg2(1,1,iib)*jw(3) 
           t2(3) = omeg2(1,1,iib)*jw(2) - omeg2(2,1,iib)*jw(1) 
+*         On calcul l'inverse de la matrice d'inertie :
+          call hinv33(ine(1,1),invine(1,1))
           do id = 1,3
             omeg3(id,1,iib) = 0.d0
             do j = 1,3
               omeg3(id,1,iib) = omeg3(id,1,iib) + 
-     &         invinert(id,j,iib) * (-t2(j) + rtgex(id))
+     &         invine(id,j) * (-t2(j) + rtgex(j))
 *     &        (-t2(j) + rtgex(id) - fth(id,iib))
             enddo
           enddo
