@@ -538,7 +538,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *       maintenant on peut sauter les ss bases ss rotas rigides :
         if (iarota(iib).eq.0) goto 1
 *       do ind1=2,5
-        do ind1=1,1
+        ind1=1
 *         calcul des normes des modes au carre :
           xnortot = 0.d0
           do 33 in=1,na3
@@ -913,7 +913,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ***********************************************************************
 *               fin boucle sur les indices 1,4
 ***********************************************************************
-        enddo
+*       enddo
 ***********************************************************************
 *       si on a fait les forces d'inertie sur les 4 indices :
 *        do id=1,3
