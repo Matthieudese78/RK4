@@ -621,7 +621,10 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *           in is the line, id is the column
           do 11 in=1,na3
 *           on saute les translations rigides :
-*           if (itrig(iib,in)) goto 11
+            mfr(in,1) = 0.d0
+            mfr(in,2) = 0.d0
+            mfr(in,3) = 0.d0
+            if (itrig(iib,in)) goto 11
 *           pas besoin car xtphi est nul si in correspond a une translation rigide 
 *             - d2vini --> xcoophi = 0 partout
 *             - filldef --> xcoophi rempli que sur les deformees elastiques.
@@ -629,9 +632,9 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             write(*,*)'ntat pour in = ',in
             do j=1,3
               mfr(in,j) = 0.d0
-              if (xnorm(in).le.xzprec) goto 11
               do ip=1,npdef
                 ntat(in,ip,j) = 0.d0 
+                if (xnorm(in).le.xzprec) goto 11
                 do k=i,3
                  ntat(in,ip,j) = ntat(in,ip,j) + 
      &                           xtphi(k,ip,in,iib)*rot(j,k,ind1,iib) 
@@ -840,12 +843,13 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *       write(*,'(3(1X,F8.5))') , (fef(in,ind2,iib))
 *       enddo
 * contribution accel angulaire sur l'accel elastique :
-        do in=1,na3
+        do 23 in=1,na3
+          if (itrig(iib,in)) goto 23
           do j=1,3
           fef(in,ind2,iib) = fef(in,ind2,iib) +
      &              (mfth(in,j)*omeg3(j,ind1,iib))
           enddo
-        enddo
+ 23     continue
 
 *       write(*,*)'fef + mfth :'
 *       do in = 1,na3
