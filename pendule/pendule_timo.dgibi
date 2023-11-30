@@ -27,7 +27,7 @@ opti impi 555 ;
 * longueur de la poutre: 
  h = 1.5 ;
 * Rayon:
- R = 5.e-2 ;
+ R = 2.e-2 ;
 * Section de la poutre :
  sectpou = (Pi*(R**2)) ;
 * Volume:
@@ -53,9 +53,9 @@ opti impi 555 ;
 * DTE = 1.e-3 ;
 * NSORT =  50 ;
 T = 5. ;
-* T = 10.e-4 ;
-DTE = 1.e-4 ;
-NSORT =  50 ;
+* T = 100.e-4 ;
+DTE = 1.e-5 ;
+NSORT =  500 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -177,7 +177,7 @@ Tmode_RX  = vibr 'IRAM' 0.5 1 KRX M1 ;
 Tmode_RY  = vibr 'IRAM' 0.5 1 KRY M1 ;
 Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
 * On teste egalemetn en presence de modes elastiques:
-Tmode_ela = vibr 'IRAM' 1. 1 Kela M1;
+Tmode_ela = vibr 'IRAM' 1. 8 Kela M1 ;
 * on teste
 
 * postvibr:
