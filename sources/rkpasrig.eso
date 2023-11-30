@@ -32,6 +32,9 @@
 * calcul du couple exterieur :
 ************************************************************************
         if (lmom) then
+        fmom(1) = 0.d0
+        fmom(2) = 0.d0
+        fmom(3) = 0.d0
         do ip=1,nplb
 *         write(*,*)'rkpasrig : fexb '
 *         write(*,'(3(1X,F8.5))') , (fexb(ip,ind,id),id=1,3)
@@ -44,13 +47,13 @@
           enddo
 *         write(*,*)'rkpasrig : xcoo en base b '
 *         write(*,'(3(1X,F8.5))') , (xcoo(id),id=1,3)
-          fmomtot(1,ind,ib) = fmomtot(1,ind,ib) + 
+          fmom(1) = fmom(1) + 
      &     xcoo(2)*fexb(ip,ifex,3) -
      &     xcoo(3)*fexb(ip,ifex,2)
-          fmomtot(2,ind,ib) = fmomtot(2,ind,ib) + 
+          fmom(2) = fmom(2) + 
      &     xcoo(3)*fexb(ip,ifex,1) -
      &     xcoo(1)*fexb(ip,ifex,3)
-          fmomtot(3,ind,ib) = fmomtot(3,ind,ib) + 
+          fmom(3) = fmom(3) + 
      &     xcoo(1)*fexb(ip,ifex,2) -
      &     xcoo(2)*fexb(ip,ifex,1)
 *         write(*,*)'rkpasrig : fmomtot en base b '
@@ -63,10 +66,18 @@
         do id=1,3
           jw(id) = 0.d0
           rtgex(id) = 0.d0
-          do j=1,3
+          if (lmom) then
+            do j=1,3
+        rtgex(id) = rtgex(id) + rot(j,id,ind,ib)*fmom(j)
+        jw(id) = jw(id) + inertie(id,j,ib)*omeg2(j,ind,ib)
+            enddo
+          endif
+          if (.not.lmom) then
+            do j=1,3
         rtgex(id) = rtgex(id) + rot(j,id,ind,ib)*fmomtot(j,ind,ib)
         jw(id) = jw(id) + inertie(id,j,ib)*omeg2(j,ind,ib)
-          enddo
+            enddo
+          endif
         enddo
 
 *         write(*,*)'rkpasrig : rtgex body frame '

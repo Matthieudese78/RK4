@@ -986,7 +986,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ************************************************************************
 *      write(*,*)'   eq. dyn :'
 *     ajout des forces de raideurs :
-      CALL RKLK0(Q1,XK,FTOTA,NA1,NB1K,1,ifex)
+      CALL RKLK0(Q1,XK,FTOTA,NA1,NB1K,1,1)
 *     ajout des forces d'amortissement :
       IF (NB1C.GT.1) THEN
         DO I=1,NA1
@@ -1009,22 +1009,29 @@ c    -Cas C ou M pleine : pas de prise en compte des forces d'inertie
           enddo
         enddo
 c    -Cas C et M diagonales : on prend en compte les forces d'inertie
-      ELSE
-        do iib=1,nsb
-        na3 = inmsb(iib)
-        ina1 = iorsb(iib) - 1
-        do i=1,na3
-          i2 = ina1 + i
-          unsm = 1.d0 / ( xm(i2,1) + dt2*xasm(i2,1) - finert(i2,1) )
-          j=0
-          q3(i2,1) = (ftota(i2,1)-famor(i2)) * unsm
-        enddo
+      else
+*       do iib=1,nsb
+*       na3 = inmsb(iib)
+*       ina1 = iorsb(iib) - 1
+*       do i=1,na3
+*         i2 = ina1 + i
+*         unsm = 1.d0 / ( xm(i2,1) + dt2*xasm(i2,1) - finert(i2,1) )
+*         j=0
+*         q3(i2,1) = (ftota(i2,1)-famor(i2)) * unsm
+*       enddo
+*       enddo
+
+        DO I=1,NA1
+          UNSM = 1.D0 / ( XM(I,1) + dt2*XASM(I,1) - FINERT(I,1) )
+          Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) * UNSM
         enddo
       endif
+
 *     MAJ des vitesses :
       do in=1,na1
         q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,5)+q3(in,1))
       enddo
+
 ************************************************************************
 *     rotations rigides :  
 ************************************************************************
