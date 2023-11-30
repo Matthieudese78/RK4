@@ -1034,12 +1034,12 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           j=0
           if (itrig(iib,in)) then
             j = j + 1
-*           ftota(i2,1) = ftota(i2,1) + fr(j,iib) 
-            ftota(i2,1) = ftota(i2,1)  
+            ftota(i2,1) = ftota(i2,1) - fr(j,iib) + qr(j,iib) 
+*            ftota(i2,1) = ftota(i2,1)  
           endif
           if (.not.itrig(iib,in)) then
-*           ftota(i2,1) = ftota(i2,1) + ff(in,iib) 
-            ftota(i2,1) = ftota(i2,1)  
+            ftota(i2,1) = ftota(i2,1) - ff(in,iib) + qf(in,iib) 
+*           ftota(i2,1) = ftota(i2,1)  
           endif
         enddo
 * Pour les rotas rigides fmomtot est calcule en base B alors que fth et qth
