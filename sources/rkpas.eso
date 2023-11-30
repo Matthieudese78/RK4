@@ -139,7 +139,7 @@ cms : pour le couple resistant "hard code" :
       real*8 dexpinv(3,3)
 *     matrices pour la matrice de masse si couplage inertiel :
       real*8 Xt(3),Xtcha(3,3),B(nn2,nndef,3,3),ntat(nn2,nndef,3)
-      real*8 mrth(3,3),mfr(nn2,3),mfth(nn2,3)
+      real*8 mrth(3,3),mfr(nn2,3),mfth(nn2,3),mthf(3,nn2)
       real*8 mthth(3,3,nnsb),xnorm(nn2)
       real*8 Xt2(3),Xt2cha(3,3)
       real*8 fer(3,4,nnsb),feth(3,4,nnsb),fef(nn2,4,nnsb)
@@ -653,7 +653,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
               mfth(in,j) = 0.d0
               if (xnorm(in).le.xzprec) goto 12
               do ip=1,npdef
-                do k=i,3
+                do k=1,3
                   mfth(in,j) = mfth(in,j) + 
      &                                  (ntat(in,ip,k)*B(in,ip,k,j)) 
                 enddo
@@ -666,6 +666,37 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *          do in=1,na3
 *             write(*,'(3(1X,F8.5))') , (mfth(in,id),id=1,3)
 *          enddo
+* pour etre sur : mthf :
+          do 24 in = 1,na3
+            i2 = in + ina1
+            mthf(1,in) = 0.d0
+            mthf(2,in) = 0.d0
+            mthf(3,in) = 0.d0
+            if (xnorm(in).le.xzprec) goto 24
+*           pour 1 point :
+            do ip=1,npdef
+*             on prend ses coord en base A :
+              do id=1,3
+                mthf(id,in) = 0.d0
+                Xt(id) = xcoophi(id,ip,iib) - xcent(id,iib) + 
+     &                (xtphi(id,ip,in,iib) * q1(i2,ind1))
+              enddo
+*             on applique la fonction chapeau :
+              call chap(Xt(1),Xtcha(1,1))
+*             on multiplie par le mode in en ponderant :
+              do id=1,3
+                do k=1,3 
+                    mthf(id,in) = mthf(id,in) +
+     &      ((xtcha(id,k)*xtphi(k,ip,in,iib))*(xm(i2,1)/xnorm(in)))
+                enddo
+              enddo
+            enddo
+ 24       continue
+
+*        write(*,*)'MTHF :'
+*        do in=1,na3
+*           write(*,'(3(1X,F8.5))') , (mfth(id,in),id=1,3)
+*        enddo
            
 ******************************************************************
 *    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
@@ -763,15 +794,28 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           endif
         enddo
         enddo
+*       write(*,*)'feth via mrth :'
+*       write(*,'(3(1X,F8.5))') , (feth(id,ind2,iib),id=1,3)
 * contribution accel elastique sur l'accel angulaire de rotation
+*       do id=1,3
+*       do 16 in=1,na3
+*         if (itrig(iib,in)) goto 16
+*         i2 = ina1 + in
+*         feth(id,ind2,iib) = feth(id,ind2,iib) +
+*    &            mfth(in,id)*q3(i2,ind1) 
+*16     continue
+*       enddo
+
         do id=1,3
         do 16 in=1,na3
           if (itrig(iib,in)) goto 16
           i2 = ina1 + in
           feth(id,ind2,iib) = feth(id,ind2,iib) +
-     &            mfth(in,id)*q3(i2,ind1) 
+     &            mthf(id,in)*q3(i2,ind1) 
  16     continue
         enddo
+*       write(*,*)'feth + mfth :'
+*       write(*,'(3(1X,F8.5))') , (feth(id,ind2,iib),id=1,3)
 
 * contribution accel translation sur l'accel elastique 
 *        write(*,*)'calcul fef :'
