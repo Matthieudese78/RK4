@@ -146,7 +146,7 @@ cms : pour le couple resistant "hard code" :
       real*8 fr(3,nnsb),fth(3,nnsb),ff(nn2,nnsb)
       real*8 jw(3),rtgex(3),qf(nn2,nnsb),qr(3,nnsb),qth(3,nnsb)
       real*8 qr2(3,nnsb),qth2(3,3,nnsb)
-      real*8 wchap(3,3),wchap2(3,3)
+      real*8 wchap(3,3),wchap2(3,3),ine(3,3),invine(3,3)
 
 *     resistance au spin ?
       lrspin = .false.
@@ -990,6 +990,11 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
         do id=1,3
           fr(id,iib) = fer(id,1,iib) 
           fth(id,iib) = feth(id,1,iib) 
+          if ((fr(id,iib).ne.fr(id,iib)).or.
+     &      (fth(id,iib).ne.fth(id,iib))) then
+            write(*,*)'Nan dans les forces d inertie'
+            call exit(1)
+          endif
         enddo
 *        write(*,*)'rkpas : FR'
 *        write(*,'(3(1X,F8.5))') , (fr(id,iib),id=1,3)
@@ -997,6 +1002,10 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *        write(*,'(3(1X,F8.5))') , (fth(id,iib),id=1,3)
         do in=1,na3
           ff(in,iib) = fef(in,1,iib) 
+          if (ff(in,iib).ne.ff(in,iib)) then
+            write(*,*)'Nan dans les forces d inertie'
+            call exit(1)
+          endif
 *        write(*,'(1X,F8.5)') , ff(in,iib)
         enddo
 
