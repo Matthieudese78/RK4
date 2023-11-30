@@ -400,10 +400,14 @@ cmsw    &                               XPTB(IP,2,(ID+3))
 *--------------------------------------------------------------------*
  10   CONTINUE
 *
-*      WRITE(*,*)'devrco end : depl. recombines :'
-*      WRITE(*,'(20F20.18)')((xptb(ip,1,id),ip= 1,nplb),id= 1,3)     
-*      WRITE(*,*)'devrco end : vite. recombines :'
-*      WRITE(*,'(20F20.18)')((xptb(ip,2,id),ip= 1,nplb),id= 1,3)     
+*     WRITE(*,*)'devrco end : depl. recombines :'
+*     do ip=1,nplb
+*     WRITE(*,'(3X(1X,F8.5))')((xptb(ip,1,id)),id= 1,3)     
+*     enddo
+*     WRITE(*,*)'devrco end : vite. recombines :'
+*     do ip=1,nplb
+*     WRITE(*,'(3X(1X,F8.5))')((xptb(ip,2,id)),id= 1,3)     
+*     enddo
 
       IF (IIMPI.EQ.333) THEN
             WRITE(IOIMP,*)'DEVRCO: END'

@@ -59,8 +59,8 @@ C DEVFX0    SOURCE    KK2000    97/09/08    21:16:59     2809
       MPREF = KPREF
       NPREF = IPOREF(/1)
       NPC1 = XDT(/1)
-      WRITE(*,*)'D2VFX0 : NPC1 = ',NPC1
-      WRITE(*,*)'D2VFX0 : temps tot = ',XDT(NPC1)
+*      WRITE(*,*)'D2VFX0 : NPC1 = ',NPC1
+*      WRITE(*,*)'D2VFX0 : temps tot = ',XDT(NPC1)
 *
 *     On extrait les chargements de la table
 *
@@ -104,10 +104,10 @@ C DEVFX0    SOURCE    KK2000    97/09/08    21:16:59     2809
                DO 30 J=1,N
                   DO 35 K=1,NC
                      KNOE = NUM(1,J)
-                     WRITE(*,*)'D2VFX0: KNOE = ',KNOE
-                     CALL PLACE2(IPOREF,NPREF,IPOS,KNOE)
-                      WRITE(*,*)'position pt de chgmt IPOS = ',
-     &                                               IPOS
+*                   WRITE(*,*)'D2VFX0: KNOE = ',KNOE
+                    CALL PLACE2(IPOREF,NPREF,IPOS,KNOE)
+*                     WRITE(*,*)'position pt de chgmt IPOS = ',
+*     &                                               IPOS
 *                     WRITE(*,*)' IPOREF(',IPOS,') = ',
 *     &                           IPOREF(IPOS)
                      IF (IPOS.NE.0) THEN
@@ -123,10 +123,10 @@ C DEVFX0    SOURCE    KK2000    97/09/08    21:16:59     2809
                            IT2 = IT + 1
                            FEXA(IPOS,IT,1) = FEXA(IPOS,IT,1) +
      &                                       ( XFORCA * FTCHG(IT2) )
-                  WRITE(*,*)'D2VFX0: FEXA(',IPOS,IT,2,') = ',
-     &                    FEXA(IPOS,IT,2)
-                  WRITE(*,*)'D2VFX0: FEXA(',IPOS,IT,1,') = ',
-     &                    FEXA(IPOS,IT,1)     
+*                  WRITE(*,*)'D2VFX0: FEXA(',IPOS,IT,2,') = ',
+*     &                    FEXA(IPOS,IT,2)
+*                   WRITE(*,*)'D2VFX0: FEXA(',IPOS,IT,1,') = ',
+*     &                    FEXA(IPOS,IT,1)     
  36                        CONTINUE
 *                       end do
                      ENDIF

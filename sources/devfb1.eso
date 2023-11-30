@@ -55,6 +55,11 @@ C DEVFB1    SOURCE    BP208322  20/09/18    21:15:26     10718
 *
       IF (ITYP.EQ.1 .OR. ITYP.EQ.100
      &   .OR. ITYP.EQ.101 .OR. ITYP.EQ.102) THEN
+*        write(*,*)'devfb1 : point plan '
+*        write(*,*)'         xptb = '
+*        do ip = 1,nplb
+*        write(*,'(3X(1X,F8.5))') , ((xptb(ip,1,id)),id=1,3)
+*        enddo
          NPOI   = IPLIB(I,1)
          IDIM   = IPALB(I,3)
          IPERM  = IPALB(I,4)
@@ -82,6 +87,8 @@ c        XVIT   : vitesse normale    = v(t_{ind})*n
             XDEP = XDEP + XDE2 * XPALB(I,ID1+ID)
  10      CONTINUE
 *         WRITE(*,*)'DEVFB1: XDEP = ',XDEP
+*         WRITE(*,*)'DEVFB1: XJEU = ',XJEU
+*         WRITE(*,*)'DEVFB1: XDEP - XJEU = ',XDEP - XJEU
 c          XDEPM1 = 0.D0
 c          DO 12 ID = 1,IDIM
 c             XDM2 = XPTB(NPOI,IND2,ID) + FEXPSM(NPOI,NPAM1,INDM1,ID)

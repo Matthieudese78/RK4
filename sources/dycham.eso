@@ -34,10 +34,10 @@ cbp         ENDIF
       ELSEIF (ETA.EQ.0.D0) THEN
          IF ((XDEP.GE.XJEU).AND.(iannul.EQ.0)) THEN
             XVAL = XDEP - XJEU
-*            WRITE(*,*)'DYCHAM: XDEP = ',XDEP
-*            WRITE(*,*)'DYCHAM: XJEU = ',XJEU
-*            WRITE(*,*)'DYCHAM: penetration XVAL = XDEP - XJEU = ',
-*     &                                     XVAL
+*           WRITE(*,*)'DYCHAM: XDEP = ',XDEP
+*           WRITE(*,*)'DYCHAM: XJEU = ',XJEU
+*           WRITE(*,*)'DYCHAM: penetration XVAL = XDEP - XJEU = ',
+*    &                                     XVAL
             XFL  = -XRAID*XVAL - XAMO*XVIT
 *            WRITE(*,*)'DYCHAM: XFL (<0)  = ',XFL
             DFDX = -XRAID
