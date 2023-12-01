@@ -552,6 +552,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
      &          xtphi(id,ip,in,iib)*xtphi(id,ip,in,iib)
               enddo
             enddo
+            xnorm(in) = dsqrt(xnorm(in))
             if (xnorm(in).le.xzprec) goto 33
             xnortot = xnortot + (xm(ina1+in,iib)/xnorm(in))
 *           write(*,*)'(norme du mode)^2 = ',xnorm(in)
