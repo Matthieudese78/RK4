@@ -43,7 +43,7 @@ c       INTEGER IFEXA(*)
 *      write(*,*)'d2vfxa loop na1 ' 
       DO 100 I=1,NPFEXA
          FTOTA(I,1) = FEXA(I,NPAS,1)
-                write(*,*)' ftota = ',ftota(I,1) 
+*               write(*,*)' ftota = ',ftota(I,1) 
  100     CONTINUE
 *     END DO
 *
