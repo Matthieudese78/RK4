@@ -1,4 +1,4 @@
-      SUBROUTINE filldef(itbas,ktrot,ib,npts)
+      SUBROUTINE filldef(itbas,ktrot,ib,npts,iorsb,nsb,xm,na1,nb1m)
 *      SUBROUTINE filldef(itbas,itphi,itcoo,itr,npts,na2,ib,nsb)
 
       IMPLICIT INTEGER(I-N)
@@ -30,6 +30,7 @@
          REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
          REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
          REAL*8 XTPHIN(3,NPDEF,NA2,NSB),XMNO(NA2,NSB)
+         REAL*8 XMPOI(NPDEF,NA2,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
          LOGICAL ITRIG(NSB,NA2)
@@ -38,6 +39,7 @@
       logical l0,l1,lcoo
       character*8  typret,charre,monmot,cmot,morigi
       integer lpoi(npts)
+      real*8 IORSB(NSB),xm(na1,nb1m)
 *     CHARACTER*4 NOMTRI(6),NOMAXI(6),NOMPLA(3),MOTCOMP
 *      real*8 itphi(3,npts,na2,nsb),itcoo(3,npts,nsb) 
 *      logical itr(nsb,na2)
@@ -67,6 +69,8 @@
 *     on boucle sur le nbr maxi de modes / ss base : na2
  1    continue
         in = in + 1
+*       valeur max des composantes :
+        xcmax = 0.d0
 *       acquisition du mode :
         typret = ' '
         call acctab(itbas,'ENTIER',in,x0,' ',l0,ip0,
@@ -82,7 +86,7 @@
           if (ierr.ne.0) return
           if (morigi(1:3).eq.'MOT') then
             if (cmot(1:4).eq.'VRAI') then 
-              write(*,*)'mode rigide saute'
+              write(*,*)'filldef : rota rigide sautee'
               goto 1
             endif
           endif
@@ -112,9 +116,9 @@
               endif
             enddo
           endif
-*         on saute les translations rigides : itrig vient d'etre rempli dans dyne26
+*         on saute les translations rigides : itrig vient d'etre remplie dans dyne26
           if (itrig(ib,inel)) then 
-            write(*,*)'translation rigide sautee'
+            write(*,*)'filldef : translation rigide sautee'
             goto 1
           endif
 *         sinon on rempli xtphi :
@@ -125,15 +129,56 @@
             if (.not.(ipoin.eq.0)) then
               call extra9(icdm,ipoin,'UX',0,.false.,xval,iret)
               xtphi(1,ip,inel,ib) = xval
+*             MAJ max des composantes :
+              xcmax = max(xcmax,dabs(xval))
               write(*,*)'ux = ',xval
               call extra9(icdm,ipoin,'UY',0,.false.,xval,iret)
               xtphi(2,ip,inel,ib) = xval
+*             MAJ max des composantes :
+              xcmax = max(xcmax,dabs(xval))
               write(*,*)'uy = ',xval
               call extra9(icdm,ipoin,'UZ',0,.false.,xval,iret)
               xtphi(3,ip,inel,ib) = xval
+*             MAJ max des composantes :
+              xcmax = max(xcmax,dabs(xval))
               write(*,*)'uz = ',xval
             endif
           enddo
+*         on rempli xtphin avec la base modale normee / comp max : 
+          if (xcmax.gt.xzprec) then
+            xnortot = 0.d0
+            do ip=1,npdef
+              xtphin(1,ip,inel,ib) = xtphin(1,ip,inel,ib)/xcmax
+              xtphin(2,ip,inel,ib) = xtphin(2,ip,inel,ib)/xcmax
+              xtphin(3,ip,inel,ib) = xtphin(3,ip,inel,ib)/xcmax
+              xnortot = xnortot + ((xtphi(1,ip,inel,ib)**2) +
+     &                             (xtphi(2,ip,inel,ib)**2) +
+     &                             (xtphi(3,ip,inel,ib)**2))
+            enddo
+            xnortot = dsqrt(xnortot)
+*           on xmno avec la masse modale normee / comp max : 
+            ina1 = iorsb(ib) - 1
+            i2 = ina1 + inel
+            xmno(inel,ib) = xm(i2,1) / (xcmax**2)
+            write(*,*)'  xmno mode inel ',inel
+            write(*,*)'                 ',xmno(inel,ib)
+*           masses ponctuelles individuelles : 
+            do ip=1,npdef
+              xnor = dsqrt((xtphi(1,ip,inel,ib)**2) + 
+     &                     (xtphi(2,ip,inel,ib)**2) +
+     &                     (xtphi(3,ip,inel,ib)**2))
+              xmpoi(ip,inel,ib) = xmno(inel,ib) * (xnor/xnortot)
+            enddo
+          else 
+            xmno(inel,ib) = 0.d0
+            do ip = 1,npdef
+              do id=1,3
+                xtphin(id,ip,inel,ib) = 0.d0
+              enddo
+              xmpoi(ip,inel,ib) = 0.d0
+            enddo
+          endif
+*           
           goto 1
 * si typret n'est pas table, la boucle s'arrete
         endif
