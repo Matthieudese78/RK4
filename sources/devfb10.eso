@@ -43,7 +43,7 @@ cms : pour detecter les Nan
 * -INC SMCOORD
 * -INC CCOPTIO
 *     WRITE(*,*)'DEVFB10 : NECH = ',NECH
-* Matthieu: Segment rotas rigides:
+*     Segment des modes de rotations rigides
       SEGMENT,MTROT
          REAL*8 OMEG1(4,5,NSB),OMEG2(3,5,NSB),OMEG3(3,5,NSB)
          REAL*8 ROT(3,3,5,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
@@ -52,6 +52,7 @@ cms : pour detecter les Nan
          REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
          REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
          REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
+         REAL*8 XTPHIN(3,NPDEF,NA2,NSB),XMNO(NA2,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
          LOGICAL ITRIG(NSB,NA2)
@@ -806,10 +807,11 @@ cmsw     WRITE(*,*)'DEVFB10 : YCEC = YCEG + YGC'
         ELSE
 *         Critere sur la norme du produit vectoriel entre :
 *         CP et la normale a l'ellipse en P n(P).
-          write(*,*)'call findp3'
-*         	CALL FINDP2(XA,XB,XPROJ2(1),XPROJ2(2),CRIT,MAXIT,XP,YP,XDMIN)
-         	CALL FINDP3(XA,XB,XPROJ2(1),XPROJ2(2),CRIT,MAXIT,XP,YP,
-     &                XDMIN,niter,xres)
+*         write(*,*)'call findp3'
+          write(*,*)'call findp2'
+         	CALL FINDP2(XA,XB,XPROJ2(1),XPROJ2(2),CRIT,MAXIT,XP,YP,XDMIN)
+*        	CALL FINDP3(XA,XB,XPROJ2(1),XPROJ2(2),CRIT,MAXIT,XP,YP,
+*    &                XDMIN,niter,xres)
         ENDIF
 *        Penetration radiale :
          XDR = XDMIN - XRAYP
@@ -855,7 +857,7 @@ cmsw     WRITE(*,*)'     NPEY = ',YSIG/dsqrt(PSXNPE)
          ENDDO
 *     Saut dans le cas ou l'incidence se fait le long d'un axe de l'ellipse :
  30   CONTINUE
-*      write(*,*)'30 continue'
+      write(*,*)'30 continue'
 *      write(*,*)'        npe = '
 *      write(*,'(1X,F8.5)') , (npe(id),id=1,3)
 *      write(*,*)'        tpe = '
@@ -1151,7 +1153,7 @@ cmsw        WRITE(*,*)'         Chertz = ',XChertz
 *         Arguments dans calcvtb : 
 *         IBCO = -1 car mm si le cone est mobile. C'est bien 
 *         les vitesses sur le profile du cercle en base B que l'on veut.
-          write(*,*)'call calcvtb cercle'
+*         write(*,*)'call calcvtb cercle'
           CALL CALCVTB(NPOI,XTHMAX,NPE,TPE,XCE,YCE,XCO,ZCO,
      &                  XRAYP,XNUT,XALPHA,
      &                  XNCONE,YNCONE,ZNCONE,XDTH,NECH,KTROT,ISB,IND,
@@ -1170,7 +1172,7 @@ cmsw        WRITE(*,*)'         Chertz = ',XChertz
 *         SCE = XPTP2 : vecteur SconeCcercle en base B
           IF (ISBC.GT.0) THEN
 cmsw        WRITE(*,*)'DEVFB10 : RECO vite profile CONE'
-            write(*,*)'call calcvtb cone'
+*           write(*,*)'call calcvtb cone'
             CALL CALCVTB(IPSOM,XTHMAX,NPE,TPE,XCE,YCE,XCO,ZCO,
      &                   XRAYP,XNUT,XALPHA,
      &                   XNCONE,YNCONE,ZNCONE,XDTH,NECH,KTROT,ISBC,IND,
@@ -1208,7 +1210,7 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 *                   --> FTB(3,NECH) XPUS(NECH)
 ************************************************************************  
          write(*,*)'call calcftb'
-         CALL CALCFTB(FNB,VTB,NECH,XGLIS,VLIM,FTB,XPUS,XPUSTOT,IDIM,
+         CALL CALCFTB(FNB,VTB,NECH,XGLIS,VLIM,FTB,XPUS,XPUSTOT,
      &                xglisadh)
 *        write(*,*)'devfb10 : post-calcftb xglisadh = ',xglisadh
 ************************************************************************  
@@ -1247,15 +1249,24 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
           write(*,*)'     % incline : ',(xnut/thlim)*100.
           write(*,*)'     % flat : ',((thlim-xnut)/thlim)*100.
           xkvert =  3.27043021 * (10.d0**9)
-          call calcflat(xnut,xalpha,xdn,xthmax,xkvert,nech,xrayp,
+          call calcflat(xnut,xalpha,xdn,xthmf,xkvert,nech,xrayp,
      &                  xincid,xgc,ygc,xd,
      &                  xco,zco,xce,yce,zce,npe,tpe,
      &                  npoi,ipsom,isb,isbc,nplb,ind,xptb,xptp2,
-     &                  ktrot,xamor,xglis,
+     &                  ktrot,xamor,xglis,vlim,
      &                  fnbresf,ftbresf,gresf)
-*         write(*,*)'fnbf(1) = ',fnbf(1)
-*         write(*,*)'fnbf(2) = ',fnbf(2)
-*         write(*,*)'fnbf(3) = ',fnbf(3)
+*         write(*,*)'fnbresf(1) = ',fnbresf(1)
+*         write(*,*)'fnbresf(2) = ',fnbresf(2)
+*         write(*,*)'fnbresf(3) = ',fnbresf(3)
+* 
+*         write(*,*)'ftbresf(1) = ',ftbresf(1)
+*         write(*,*)'ftbresf(2) = ',ftbresf(2)
+*         write(*,*)'ftbresf(3) = ',ftbresf(3)
+* 
+*         write(*,*)'gresf(1) = ',gresf(1)
+*         write(*,*)'gresf(2) = ',gresf(2)
+*         write(*,*)'gresf(3) = ',gresf(3)
+
           ftotb(npoi,1) = ftotb(npoi,1) + 
      &                    ((thlim-xnut)/thlim)*(fnbresf(1)+ftbresf(1))+
      &                    (xnut/thlim)*(fnbres(1)+ftbres(1))
@@ -1299,7 +1310,7 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
           endif
 
          IF (ISBC.GT.0) THEN
-*          Implementation de FTOTB au point de liaison du cone :
+*          Implementation de FTOTB au point de liason du cone :
 *          Fres_cone = - Fres_cercle
 *          todo : mettre un autre point de liaison pour le vrai point 
 *          d'application de la force qui ne se fait pas au sommet du cone!!
@@ -1381,10 +1392,10 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 *      XVALB(I,IND,29) = xptp2(2) + (xp-xgc)*xce(2) + (yp-ygc)*yce(2) 
 *      XVALB(I,IND,30) = xptp2(3) + (xp-xgc)*xce(3) + (yp-ygc)*yce(3) 
       ENDIF
-      write(*,*)'ind = ',ind
-      write(*,*)'XVALB(I,IND,28) = ',XVALB(I,IND,28) 
-      write(*,*)'XVALB(I,IND,29) = ',XVALB(I,IND,29)
-      write(*,*)'XVALB(I,IND,30) = ',XVALB(I,IND,30)
+*     write(*,*)'ind = ',ind
+*     write(*,*)'XVALB(I,IND,28) = ',XVALB(I,IND,28) 
+*     write(*,*)'XVALB(I,IND,29) = ',XVALB(I,IND,29)
+*     write(*,*)'XVALB(I,IND,30) = ',XVALB(I,IND,30)
       if (ind.eq.2) then
         XVALB(I,IND,28) = 0.d0 
         XVALB(I,IND,29) = 0.d0 

@@ -1,5 +1,5 @@
-      SUBROUTINE CALCFTB(FNB,VTB,NECH,XGLISS,VLIM,FTB,XPUS,XPUSTOT,
-     &                   IDIM,XGLAD)
+      SUBROUTINE CALCFTB(fnb2,vtb2,NECH,XGLISS,VLIM,ftb2,xpus2,XPUSTOT,
+     &                   XGLAD)
 
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -24,27 +24,40 @@
 *                                                                       *
 *-----------------------------------------------------------------------*      
 *     INTEGER NECH
-      REAL*8 VTB(3,NECH),FNB(NECH),FTB(3,NECH),XPUS(NECH),XPUSTOT
+      REAL*8 vtb2(3,NECH),fnb2(NECH),ftb2(3,NECH),xpus2(NECH)
+
+*     write(*,*)'calcvtb arguments :'
+*     write(*,*)' nech :',nech
+*     write(*,*)' xgliss :',xgliss
+*     write(*,*)' vlim :',vlim
+*     write(*,*)'fnb2 :'
+*     do iprof=1,nech
+*       write(*,'(1X,F8.5)'),(fnb2(iprof))
+*     enddo
+*     write(*,*)'vtb2 :'
+*     do iprof = 1,nech
+*       write(*,'(3X(1X,F8.5))'),(vtb2(id,iprof),id=1,3)
+*     enddo
 *
 *     IGP = 1
 *     EPSI = XAMOT
-      XPUS = 0.D0
       NGLIS = 0
       NADH = 0
+
 ************************************************************************ 
 *     LOOP ON PROFILE 
 ************************************************************************  
       XPUSTOT = 0.D0
       DO IPROF=1,NECH
-        FTB(1,IPROF) = 0.D0
-        FTB(2,IPROF) = 0.D0
-        FTB(3,IPROF) = 0.D0
+        ftb2(1,IPROF) = 0.D0
+        ftb2(2,IPROF) = 0.D0
+        ftb2(3,IPROF) = 0.D0
 *
-        XPUS(IRPOF) = 0.D0
+        xpus2(IPROF) = 0.D0
 *       calcul du module  de la vitesse tangentielle :
         PSV = 0.D0
-        DO ID = 1,3
-           PSV = PSV + VTB(ID,IPROF) * VTB(ID,IPROF)
+        DO ID=1,3
+           PSV = PSV + vtb2(ID,IPROF) * vtb2(ID,IPROF)
         ENDDO
         VITT = dsqrt(PSV)
 cmsw    WRITE(*,*)'CALCFTB : VITT = ',VITT
@@ -53,23 +66,23 @@ cmsw    WRITE(*,*)'CALCFTB : VITT = ',VITT
           IF (IIMPI.EQ.555) THEN
             WRITE(IOIMP,*)'       DOMAINE COULOMB'
           ENDIF
-          XFT = - XGLISS * dabs(FNB(IPROF))
+          XFT = - XGLISS * dabs(fnb2(IPROF))
 cmsw      WRITE(*,*)'   glissement : XFT = ',XFT
 *         par convention, on prend la force normale pour le calcul d'usure :
-*         XPUS(IPROF) = dabs(XFT * VITT)
-          XPUS(IPROF) = dabs(FNB(IPROF)) * VITT
-          XPUSTOT = XPUSTOT + XPUS(IPROF)
+*         xpus2(IPROF) = dabs(XFT * VITT)
+          xpus2(IPROF) = dabs(fnb2(IPROF)) * VITT
+          XPUSTOT = XPUSTOT + xpus2(IPROF)
           IF (VITT.GT.(0.D0)) THEN
-             DO ID = 1,IDIM
-                FTB(ID,IPROF) = XFT * VTB(ID,IPROF) / VITT
-cmsw            WRITE(*,*)'glissement : FTB(',ID,IPROF,') = ',
-cmsw  &                               FTB(ID,IPROF)
+             DO ID = 1,3
+                ftb2(ID,IPROF) = XFT * vtb2(ID,IPROF) / VITT
+cmsw            WRITE(*,*)'glissement : ftb2(',ID,IPROF,') = ',
+cmsw  &                               ftb2(ID,IPROF)
              ENDDO
           ELSE
-             DO ID = 1,IDIM
-                FTB(ID,IPROF) = 0.D0
-cmsw            WRITE(*,*)'glissement : FTB(',ID,IPROF,') = ',
-cmsw  &                               FTB(ID,IPROF)
+             DO ID = 1,3
+                ftb2(ID,IPROF) = 0.D0
+*           WRITE(*,*)'glissement : ftb2(',ID,IPROF,') = ',
+*    &                               ftb2(ID,IPROF)
              ENDDO
           ENDIF
         ELSE
@@ -79,21 +92,22 @@ cmsw  &                               FTB(ID,IPROF)
             WRITE(IOIMP,*)'       DOMAINE REGULARISE'
           ENDIF
           PSXFT = 0.D0
-          DO ID = 1,IDIM
-            XFTT = - XGLISS * dabs(FNB(IPROF))
-cmsw        WRITE(*,*)'   adherence : XFT = ',XFTT
-            FTB(ID,IPROF) = XFTT *
-     &                      (2.d0 - (VITT/VLIM)) * VTB(ID,IPROF)/VLIM
-            PSXFT = PSXFT + FTB(ID,IRPOF) * FTB(ID,IRPOF)
-cmsw        WRITE(*,*)'adherence : FTB(',ID,IPROF,') = ',
-cmsw  &                              FTB(ID,IPROF)
+          DO ID = 1,3
+            XFTT = - XGLISS * dabs(fnb2(IPROF))
+*           WRITE(*,*)'   adherence : XFT = ',XFTT
+            ftb2(ID,IPROF) = XFTT *
+     &                      (2.d0 - (VITT/VLIM)) * vtb2(ID,IPROF)/VLIM
+            PSXFT = PSXFT + ftb2(ID,IPROF) * ftb2(ID,IPROF)
+*           WRITE(*,*)'adherence : ftb2(',ID,IPROF,') = ',
+*    &                              ftb2(ID,IPROF)
           ENDDO
           XFT = dsqrt(PSXFT)
 *         Dans le domaine regularise, on considere l'usure comme nulle : 
-*         XPUS(IPROF) = dabs(XFT * VITT) * (VITT/VLIM)
+*          xpus2(IPROF) = dabs(XFT * VITT) * (VITT/VLIM)
+          xpus2(IPROF) = 0.d0
         ENDIF
 *       DO ID=1,3
-*         WRITE(*,*)'CALCFTB : FTB(',ID,IPROF,') = ',FTB(ID,IPROF)
+*         WRITE(*,*)'CALCFTB : ftb2(',ID,IPROF,') = ',ftb2(ID,IPROF)
 *       ENDDO
 ************************************************************************ 
 *     END LOOP ON PROFILE
@@ -102,5 +116,11 @@ cmsw  &                              FTB(ID,IPROF)
 *     Calcul du pourcentage glissement / adherence :
       XGLAD = 100. * (REAL(NADH) / REAL(NECH))
 *     WRITE(*,*)'CALCFTB : XGLAD = ',XGLAD
+*
+*     write(*,*)'end calcftb :'
+*     write(*,*)'ftb2 :'
+*     do iprof=1,nech
+*       write(*,'(3X(1X,F8.5))'),(ftb2(id,iprof),id=1,3)
+*     enddo
 *
       END
