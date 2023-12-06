@@ -34,7 +34,7 @@
          SEGACT MSOUPO
          NC = NOCOMP(/2)
          if (ifopoi.eq.1) then
-            write(*,*)'calcmst : couplage inertiel rotas - transl rig'
+            write(*,*)'ctdef : couplage inertiel rotas - transl rig'
             write(*,*)'  Fourrier non pris en charge ici!'
             call exit(1)
          else
