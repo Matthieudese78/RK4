@@ -1,4 +1,4 @@
-      SUBROUTINE cmthth(Q1,KTROT,NA1,NB1M,IB,mrth,mthr,ind) 
+      SUBROUTINE cmthth(Q1,KTROT,NA1,NB1M,IB,mthth,ind) 
      
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
