@@ -550,233 +550,27 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
         enddo
 *       maintenant on peut sauter les ss bases ss rotas rigides :
         if (iarota(iib).eq.0) goto 1
-*       do ind1=2,5
+******************************************************************
+*       indice auquel sont calculees les forces d'inertie :
+******************************************************************
         ind1=1
-*         calcul des normes des modes au carre :
-          xnortot = 0.d0
-          do 33 in=1,na3
-*           write(*,*)'rkpas : xm(ina1+1,1) = ',xm(ina1+in,iib)
-*           test on norme le mode :
-            xnorm(in) = 0.d0
-            do ip=1,npdef
-              do id=1,3
-                xnorm(in) = xnorm(in) +
-     &          xtphi(id,ip,in,iib)*xtphi(id,ip,in,iib)
-              enddo
-            enddo
-            xnorm(in) = dsqrt(xnorm(in))
-            if (xnorm(in).le.xzprec) goto 33
-            xnortot = xnortot + (xm(ina1+in,iib)/xnorm(in))
-*           write(*,*)'(norme du mode)^2 = ',xnorm(in)
-*           write(*,*)'XM / (norme du mode)^2 = ',
-*     &                 xm(ina1+in,iib)/xnorm(in)
-*           write(*,*)'%age de la masse associee : ',
-*     &                100.*(xm(ina1+in,iib)/xnorm(in))/mtsb(iib)
- 33       continue
-*         write(*,*)'%age de ts les modes : ',100.*(xnortot)/mtsb(iib)
-******************************************************************
-*         calcul de la matrice B(na2,npdef,3,3) = - rot chap(Xt)
-******************************************************************
-          do ip=1,npdef
-            do in = 1,na3
-              i2 = in + ina1
-              do id=1,3
-                Xt(id) = xcoophi(id,ip,iib) - xcent(id,iib) + 
-     &                (xtphi(id,ip,in,iib) * q1(i2,ind1))
-              enddo
-              call chap(Xt(1),Xtcha(1,1))
-              do id=1,3
-                do j=1,3
-                  B(in,ip,id,j) = 0.d0
-                  do k=1,3 
-                   B(in,ip,id,j) = B(in,ip,id,j) - 
-     &                     rot(id,k,ind1,iib) * Xtcha(k,j)
-                  enddo
-                enddo
-              enddo
-            enddo
-          enddo
 ******************************************************************
 *     M_{Rth} : couplage rotas-trnaslas shabana p 320
-*           B^j = -rot * sum_nodes chap(X_i + u_f_i) ( * A plus tard)
-*             - X : coordonnes undeformed state dans le body frame --> XCOOPHI
-*             - u_f = q_i phi_i : depl. elastiques body frame, phi_i --> XTPHI
-*             - A : acceleration angulaire body frame
-*           M_{thR} = sum_modes mu_j * B_j^T
-*           M_{Rth} = sum_modes mu_j * B_j
-* Rq 1. : la somme des profuits vect sum_i (v_i x A) = (sum_i v_i) x A
-*         --> on somme les positions dans le body frame.
-* Rq 2. : la fonction chapeau est lineairesa.
 ******************************************************************
-          do id=1,3
-            do j=1,3
-              mrth(id,j) = 0.d0
-              do 10 in=1,na3
-                if (xnorm(in).le.xzprec) goto 10
-                i2 = ina1 + in
-                do ip=1,npdef
-                  mrth(id,j) = mrth(id,j) + 
-     &            ((xm(i2,1)/xnorm(in)) * B(in,ip,id,j))
-                enddo
- 10           continue
-            enddo
-          enddo
-
-*        write(*,*)'MRTH :'
-*        do id=1,3
-*           write(*,'(3(1X,F8.5))') , (mrth(id,j),j=1,3)
-*        enddo
+        call cmrth(Q1,KTROT,NA1,NB1M,IIB,mrth,mthr,ind1) 
 ******************************************************************
 *     M_{fR} (dim : nmodes x 3) : couplage elas-translas shabana p 320
-*          M_{fR} = sum_modes mu_i * Phi^T * rot^T
-*          mfr(in,id) = sum_nodes sum_modes (ph_i(node_i)^T) * rot^T
-*          considering Phi^T for one node :
-*           in is the line, id is the column
-          do 11 in=1,na3
-*           on saute les translations rigides :
-            mfr(in,1) = 0.d0
-            mfr(in,2) = 0.d0
-            mfr(in,3) = 0.d0
-            if (itrig(iib,in)) goto 11
-*           pas besoin car xtphi est nul si in correspond a une translation rigide 
-*             - d2vini --> xcoophi = 0 partout
-*             - filldef --> xcoophi rempli que sur les deformees elastiques.
-            i2 = ina1 + in
-*           write(*,*)'ntat pour in = ',in
-            do j=1,3
-              mfr(in,j) = 0.d0
-              do ip=1,npdef
-                ntat(in,ip,j) = 0.d0 
-                if (xnorm(in).le.xzprec) goto 11
-                do k=i,3
-                 ntat(in,ip,j) = ntat(in,ip,j) + 
-     &                           xtphi(k,ip,in,iib)*rot(j,k,ind1,iib) 
-                enddo
-                mfr(in,j) = mfr(in,j) + ntat(in,ip,j)
-              enddo
-              mfr(in,j) = (xm(i2,1)/xnorm(in)) * mfr(in,j) 
-            enddo
- 11       continue
-
-*          write(*,*)'MFR :'
-*          do in=1,na3
-*             write(*,'(3(1X,F8.5))') , (mfr(in,id),id=1,3)
-*          enddo
-
 ******************************************************************
-*    M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
-*         M_{fth} = sum_modes mu_i * N^T * rot^T * B^T
-*         ntat = N^T * A^T
+        call cmfr(Q1,KTROT,NA1,NB1M,IIB,mfr,mrf,ind1,na2) 
 ******************************************************************
-          do 12 in=1,na3
-            i2 = ina1 + in
-            do j=1,3
-              mfth(in,j) = 0.d0
-              if (xnorm(in).le.xzprec) goto 12
-              do ip=1,npdef
-                do k=1,3
-                  mfth(in,j) = mfth(in,j) + 
-     &                                  (ntat(in,ip,k)*B(in,ip,k,j)) 
-                enddo
-              enddo
-              mfth(in,j) = (xm(i2,1)/xnorm(in))*mfth(in,j)
-            enddo
- 12       continue
-
-*        write(*,*)'MFTH :'
-*        do in=1,na3
-*           write(*,'(3(1X,F8.5))') , (mfth(in,id),id=1,3)
-*        enddo
-* pour etre sur : mthf :
-          do 24 in = 1,na3
-            i2 = in + ina1
-            mthf(1,in) = 0.d0
-            mthf(2,in) = 0.d0
-            mthf(3,in) = 0.d0
-            if (xnorm(in).le.xzprec) goto 24
-*           pour 1 point :
-            do ip=1,npdef
-*             on prend ses coord en base A :
-              do id=1,3
-                mthf(id,in) = 0.d0
-                Xt(id) = xcoophi(id,ip,iib) - xcent(id,iib) + 
-     &                (xtphi(id,ip,in,iib) * q1(i2,ind1))
-              enddo
-*             on applique la fonction chapeau :
-              call chap(Xt(1),Xtcha(1,1))
-*             on multiplie par le mode in en ponderant :
-              do id=1,3
-                do k=1,3 
-                    mthf(id,in) = mthf(id,in) +
-     &      ((xtcha(id,k)*xtphi(k,ip,in,iib))*(xm(i2,1)/xnorm(in)))
-                enddo
-              enddo
-            enddo
- 24       continue
-
-*       write(*,*)'MTHF :'
-*       do in=1,na3
-*          write(*,'(3(1X,F8.5))') , (mfth(id,in),id=1,3)
-*       enddo
-           
+*     M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
+******************************************************************
+        call cmfth(Q1,KTROT,NA1,NB1M,IIB,mfth,mthf,ind1,na2) 
 ******************************************************************
 *    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
 *                          (shabana p 320)
-*         on utilise la methode 2 :
-*         - comme on ne considere pas forcement bcp de modes, reconstruire un tenseur d'inertie seulement avec la matrice B parait illusoire (perte d'infos).
-*         ==> on garde mthth = perturbation due aux modes. en developpant J = chap(X+u)^T * chap(X+u) :
-*         perturbation = chap(u_f)^T * (chap(X) + chap(u_f))
 ******************************************************************
-          if (methJ2) then
-*         methode 2 : on calcul seulement la perturbation = 
-*         chap(u_f)^T * chap(u_f) dont la participation pour chaque mode est pondere par le norme du mode
-          do id=1,3
-            do j=1,3
-              mthth(id,j,iib) = 0.d0
-            enddo
-          enddo
-*
-          do ip=1,npdef
-            do 14 in = 1,na3
-              if (xnorm(in).le.xzprec) goto 14
-              i2 = in + ina1
-*             write(*,*)'i2 = ',i2
-*             write(*,*)'q1(i2,ind1) = ',q1(i2,ind1)
-              do id=1,3
-                Xt(id) = (xtphi(id,ip,in,iib) * q1(i2,ind1))
-              enddo
-              
-              call chap(Xt(1),Xtcha(1,1))
-              do id=1,3
-                do j=1,3
-                  do k=1,3
-                    mthth(id,j,iib) = mthth(id,j,iib) +
-     &              (Xtcha(k,id)*Xtcha(k,j))*(xm(i2,1)/xnorm(in)) 
-                  enddo
-                enddo
-              enddo
-
-*            write(*,*)'Xt(id) = '
-*            write(*,'(3(1X,F12.9))') , (Xt(id),id=1,3)
-*             if (mthth(1,1,iib).ge.10) then
-*               write(*,*)'mthth too big!'
-*               call exit(1)
-*             endif
-
- 14         continue
-        enddo
-*         fin method 2
-          endif
-*
-*        write(*,*)'inertia tensor : ind',ind1
-*        write(*,*)'inertia tensor : undeformed state'
-*        do id=1,3
-*           write(*,'(3(1X,F8.5))') , (inertie(id,j,iib),j=1,3)
-*        enddo
-*        write(*,*)'inertia tensor : perturbation :'
-*        do id=1,3
-*           write(*,'(3(1X,F12.9))') , (mthth(id,j,iib),j=1,3)
-*        enddo
+        call cmthth(Q1,KTROT,NA1,NB1M,IIB,mthth,ind1) 
 *
 *      on implemente les forces d'inertie d'entrainement
 *      dues aux blocs non diagonnaux de la matrice de masse :
