@@ -1,5 +1,4 @@
-      SUBROUTINE filldef(itbas,ktrot,ib,npts,iorsb,nsb,xm,na1,nb1m)
-*      SUBROUTINE filldef(itbas,itphi,itcoo,itr,npts,na2,ib,nsb)
+      SUBROUTINE filldef(itbas,ib,ktphi,ktrot,ktkam,npts)
 
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -36,34 +35,60 @@
          LOGICAL ITRIG(NSB,NA2)
       ENDSEGMENT
 
+      SEGMENT,MTKAM
+         REAL*8 XK(NA1,NB1K),XASM(NA1,NB1C),XM(NA1,NB1M)
+         REAL*8 XOPER(NB1,NB1,NOPER)
+      ENDSEGMENT
+
+      SEGMENT,MTPHI
+         INTEGER IBASB(NPLB),IPLSB(NPLB),INMSB(NSB),IORSB(NSB)
+         INTEGER IAROTA(NSB)
+         REAL*8 XPHILB(NSB,NPLSB,NA2,IDIMB)
+      ENDSEGMENT
+
       logical l0,l1,lcoo
       character*8  typret,charre,monmot,cmot,morigi
       integer lpoi(npts)
-      real*8 IORSB(NSB),xm(na1,nb1m)
-*     CHARACTER*4 NOMTRI(6),NOMAXI(6),NOMPLA(3),MOTCOMP
-*      real*8 itphi(3,npts,na2,nsb),itcoo(3,npts,nsb) 
-*      logical itr(nsb,na2)
 *
-*      npdef = npts
       mtrot = ktrot
+      mtkam = ktkam
+      mtphi = ktphi
+*
+      na1 = xm(/1)
       na2 = itrig(/2)
       nsb = itrig(/1)
       npdef = xtphi(/2)
+*
+      write(*,*)'filldef : START'
       write(*,*)'filldef : npdef = ',npdef
+      write(*,*)'          nsb = ',nsb
+      write(*,*)'          na1 = ',na1
 *
       lcoo = .false.
-      lphi = .false.
 *     initialisation list :
       do ip=1,npdef
         lpoi(ip) = 0
       enddo
 *
-      write(*,*)'filldef : START'
-      write(*,*)'     itbas = ',itbas
-      write(*,*)'     na2 = ',na2
 
+*     write(*,*)'filldef : xm'
+*     do in = 1,na1
+*      write(*,'(1X,F8.5)') , (xm(in,1))
+*     enddo
+*     write(*,*)'filldef : xcoophi'
+*     do ip = 1,npdef
+*      write(*,'(3(1X,F8.5))') , (xcoophi(id,ip,ib),id=1,3)
+*     enddo
+*     write(*,*)'filldef : xtphi'
+*     do ip = 1,npdef
+*      do in=1,na2
+*      write(*,'(3(1X,F8.5))') , (xtphi(id,ip,in,ib),id=1,3)
+*      enddo
+*     enddo
+*
+      write(*,*)'     itbas = ',itbas
 *     pour utiliser itrig, on est oblige de compter 
-*     les modes elastiaues de la base / ss base ib quand on la parse :
+*     les modes elastiques de la base / ss base ib quand on la parse :
       inel = 0
       in = 0
 *     on boucle sur le nbr maxi de modes / ss base : na2
@@ -73,8 +98,10 @@
         xcmax = 0.d0
 *       acquisition du mode :
         typret = ' '
+        write(*,*)'1er acctab :'
         call acctab(itbas,'ENTIER',in,x0,' ',l0,ip0,
      &              typret,i1,x1,charre,l1,imod)
+        write(*,*)'imod = ',imod
         if (ierr.ne.0) return
         write(*,*)'acquisition mode reussie'
         if ((imod.ne.0).and.(typret.eq.'TABLE   ')) then
@@ -156,7 +183,7 @@
      &                             (xtphi(3,ip,inel,ib)**2))
             enddo
             xnortot = dsqrt(xnortot)
-*           on xmno avec la masse modale normee / comp max : 
+*           on remplit xmno avec la masse modale normee / comp max : 
             ina1 = iorsb(ib) - 1
             i2 = ina1 + inel
             xmno(inel,ib) = xm(i2,1) / (xcmax**2)
@@ -182,6 +209,8 @@
           goto 1
 * si typret n'est pas table, la boucle s'arrete
         endif
+*       write(*,*)'filldef : pause'
+*       call exit(1)
 *
       END
 

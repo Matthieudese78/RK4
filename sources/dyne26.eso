@@ -522,13 +522,14 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
       
 *       rq : ibas est deja la base de modes
         write(*,*)'dyne26 : call filldef'
-        write(*,*)'         npdef = ',npdef
-        write(*,*)'         na2 = ',na2
-        write(*,*)'         nsb = ',nsb
-*        call filldef(ibas,xtphi,xcoophi,itrig,npdef,na2,
-*     &                  ib,nsb)
-
-        call filldef(ibas,ktrot,ib,npdef)
+*       write(*,*)'         npdef = ',npdef
+*       write(*,*)'         na2 = ',na2
+*       write(*,*)'         nsb = ',nsb
+*       write(*,*)'         na1 = ',na1
+*       write(*,*)'         nb1m = ',nb1m
+*
+        call filldef(ibas,ib,ktphi,ktrot,ktkam,npdef)
+*
         write(*,*)'dyne26 : xcoophi'
         do ip = 1,npdef
          write(*,'(3(1X,F8.5))') , (xcoophi(id,ip,ib),id=1,3)
@@ -539,8 +540,6 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
          write(*,'(3(1X,F8.5))') , (xtphi(id,ip,in,ib),id=1,3)
          enddo
         enddo
-*        call bidon(ibas,ktrot,npdef,na2,nsb)
-*        call exit(1)
       endif
 ************************************************************************
 ************************************************************************
