@@ -1,15 +1,23 @@
-      SUBROUTINE cmfr(Q1,KTROT,NA1,NB1M,IB,mfth,mthf,ind,nn2) 
+      SUBROUTINE cmthth(Q1,KTROT,NA1,NB1M,IB,mrth,mthr,ind) 
      
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
 ******************************************************************
 *         BRAS de levier : seulement si le centred rotation n'est pas confondu avec le centre de gravite
 ******************************************************************
-*   consistent mass : shabana p 274 : mrf = A * int_V rho phi dV
+*   consistent mass  : shabana p 321 : mthth = Ithth
+*                    : shabana p 275 :
+*   Ithth = int_V rho chap(X + u_f)^T * chap(X + u_f) dV 
 *   lumped masses : shabana p 320 :
-*   mfr_i = sum_j m_ij * phi_ij^T * A^T , i = mode , j = node
+*   mthth = sum_j m_ij * B_ij^T*B_ij , i = mode , j = node, B = - A chap(X+u_f)
+*   tous les modes ne sont pas pris en compte, on divise en :
+*     - une partie statique : le tenseur d'inertie du solide calcule analytiquement. 
+*     mthth_stat = J (INERTIE ds mtrot) 
+*     - une partie corrective :  
+*     mthth_corr = - sum_i sum_j m_ij * chap(phi_ij * qf_i)^T * chap(phi_ij * qf_i), i = mode , j = node 
 *
-*   Rq : on saute les translations rigides
+*   Rq  : on ne calcule ici que la partie corrective
+*   Rq  : on saute les translations rigides
 ******************************************************************
 
       SEGMENT,MTROT
@@ -26,11 +34,10 @@
          CHARACTER*4 ITCOMP(NSB2)
          LOGICAL ITRIG(NSB,NA2)
       ENDSEGMENT
-      
 *
       REAL*8 Q1(NA1,*)
-      REAL*8 xtcha(3,3),xt(3)
-      REAL*8 mfr(nn2,3),mrf(3,nn2)
+      REAL*8 xcgcha(3,3),xtcha(3,3),xt(3),xtcha2(3,3)
+      REAL*8 mrth(3,3),mthr(3,3)
 ******************************************************************
       mtrot = ktrot
 ******************************************************************
@@ -42,41 +49,39 @@
 *     1er mode elast ou transl rigi de la sous base ib ds l'ensemble des modes elast + trans rigis
       ina1 = iorsb(ib) - 1
 ******************************************************************
+*     Partie corrective :
+******************************************************************
       do ip=1,npdef
 ******************************************************************
         do 1 in = 1,na3
           if (itrig(ib,in)) goto 1
           i2 = ina1 + in
-*         mfr :
           do id=1,3
-            mfr(in,id) = 0.d0
-            do j=1,3
-              mfr(in,id) = mfr(in,id) + 
-     &                    (xtphi(j,ip,in,ib) * rot(id,j,ind,ib))
-            enddo
-            mfr(in,id) = xmpoi(ip,in,ib) * mfr(in,id)
+            Xt(id) = xtphi(id,ip,in,ib) * q1(i2,ind) 
           enddo
-*         mrf :
+          call chap(Xt(1),Xtcha(1,1)) 
+*         on calcule Xtcha2 : 
           do id=1,3
-            mrf(in,id) = 0.d0
             do j=1,3
-              mrf(in,id) = mrf(in,id) +
-     &                    (rot(id,j,ind,ib) * xtphi(j,ip,in,ib))
+              xtcha2(id,j) = 0.d0
+              do k=1,3
+                xtcha2(id,j) = Xtcha2(id,j) + (Xtcha(k,id)*Xtcha(k,j))
+              enddo
             enddo
-            mrf(in,id) = xmpoi(ip,in,ib) * mrf(in,id)
+          enddo
+*         mthth :
+          do id=1,3
+            do j=1,3
+              mthth(id,j) = mthth(id,j) + (Xtcha2(id,j)*xmpoi(ip,in,ib))
+            enddo
           enddo
  1      continue
 ***** fin boucle sur les points 
       enddo
-
-       write(*,*)'MFR :'
-       do in=1,na3
-          write(*,'(3(1X,F8.5))') , (mfr(in,id),id=1,3)
-       enddo
-       write(*,*)'MRF :'
+*
+       write(*,*)'MTHTH :'
        do id=1,3
-          write(*,'(3(1X,F8.5))') , (mrf(id,in),in=1,na3)
+          write(*,'(3(1X,F8.5))') , (mthth(id,j),j=1,3)
        enddo
-
 *
       END

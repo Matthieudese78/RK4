@@ -54,7 +54,7 @@
           if (itrig(ib,in)) goto 1
           i2 = ina1 + in
           do id=1,3
-            Xt(id) = xtphi(id,ip,ib) - xcent(id,ib) + 
+            Xt(id) = xcoophi(id,ip,ib) - xcent(id,ib) + 
      &              (xtphi(id,ip,in,ib) * q1(i2,ind)) 
           enddo
           call chap(Xt(1),Xtcha(1,1)) 
@@ -68,9 +68,9 @@
           enddo
 *         mthf :
           do id=1,3
-            mfth(id,in) = 0.d0
+            mthf(id,in) = 0.d0
             do j=1,3
-                mthf(id,in) = mthr(id,in) + Xtcha(id,j) * xtphi(j,ip,in,ib)
+                mthf(id,in) = mthf(id,in) + Xtcha(id,j) * xtphi(j,ip,in,ib)
             enddo
             mthf(id,in) =  xmpoi(ip,in,ib) * mthf(id,in)
           enddo
@@ -78,11 +78,11 @@
 ***** fin boucle sur les points 
       enddo
 
-       write(*,*)'MTHF :'
+       write(*,*)'MFTH :'
        do in=1,na3
           write(*,'(3(1X,F8.5))') , (mfth(in,id),id=1,3)
        enddo
-       write(*,*)'MFTH :'
+       write(*,*)'MTHF :'
        do id=1,3
           write(*,'(3(1X,F8.5))') , (mthf(id,in),in=1,na3)
        enddo
