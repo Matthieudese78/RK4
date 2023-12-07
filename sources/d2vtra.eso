@@ -143,6 +143,7 @@ c     segment local : calcule l operateur et son inverse
              do id=1,3
                xcoophi(id,ip,ib) = 0.d0
                do in=1,na2
+                 xmpoi(ip,in,ib) = 0.d0
                  xtphi(id,ip,in,ib) = 0.d0
                  xtphin(id,ip,in,ib) = 0.d0
                enddo
