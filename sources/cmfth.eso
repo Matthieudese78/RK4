@@ -1,0 +1,91 @@
+      SUBROUTINE cmfth(Q1,KTROT,NA1,NB1M,IB,mfth,mthf,ind,nn2) 
+     
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+******************************************************************
+*         BRAS de levier : seulement si le centred rotation n'est pas confondu avec le centre de gravite
+******************************************************************
+*   consistent mass  : shabana p 321 : mthf = Ithf
+*                    : shabana p 276 : Ithf = int_V rho chpa(X + u_f) * phi
+*   lumped masses : shabana p 320 :
+*   mfth_i = sum_j m_ij * phi_ij^T * A^T * B_ij , i = mode , j = node, B = - A chap(X+u_f)
+*     - une partie time-invariant : 
+*     mfth_stat_ij = - m_ij * phi_ij^T * chap(X_j) , j = node 
+*     - une partie corrective :  
+*     mfth_corr_ij = - m_ij * phi_ij^T * chap(u_f^ij) , i = mode, j = node 
+*     chap est associatif donc on calcule les 2 en mm temps 
+*
+*   Rq : on saute les translations rigides
+******************************************************************
+
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,5,NSB),OMEG2(3,5,NSB),OMEG3(3,5,NSB)
+         REAL*8 ROT(3,3,5,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
+         REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
+         REAL*8 XTPHIN(3,NPDEF,NA2,NSB),XMNO(NA2,NSB)
+         REAL*8 XMPOI(NPDEF,NA2,NSB)
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+      
+*
+      REAL*8 Q1(NA1,*)
+      REAL*8 xtcha(3,3),xt(3)
+      REAL*8 mfth(nn2,3),mthf(3,nn2)
+******************************************************************
+      mtrot = ktrot
+******************************************************************
+      npdef = xtphi(/2)
+******************************************************************
+*     nbr de modes elastiques dans la sous bases :
+******************************************************************
+      na3 = inmsb(ib)
+*     1er mode elast ou transl rigi de la sous base ib ds l'ensemble des modes elast + trans rigis
+      ina1 = iorsb(ib) - 1
+******************************************************************
+      do ip=1,npdef
+******************************************************************
+        do 1 in = 1,na3
+          if (itrig(ib,in)) goto 1
+          i2 = ina1 + in
+          do id=1,3
+            Xt(id) = xtphi(id,ip,ib) - xcent(id,ib) + 
+     &              (xtphi(id,ip,in,ib) * q1(i2,ind)) 
+          enddo
+          call chap(Xt(1),Xtcha(1,1)) 
+*         mfth :
+          do id=1,3
+            mfth(in,id) = 0.d0
+            do j=1,3
+              mfth(in,id) = mfth(in,id) - xtphi(j,ip,in,ib) * Xtcha(j,id)
+            enddo
+            mfth(in,id) = xmpoi(ip,in,ib) * mfth(in,id)
+          enddo
+*         mthf :
+          do id=1,3
+            mfth(id,in) = 0.d0
+            do j=1,3
+                mthf(id,in) = mthr(id,in) + Xtcha(id,j) * xtphi(j,ip,in,ib)
+            enddo
+            mthf(id,in) =  xmpoi(ip,in,ib) * mthf(id,in)
+          enddo
+ 1      continue
+***** fin boucle sur les points 
+      enddo
+
+       write(*,*)'MTHF :'
+       do in=1,na3
+          write(*,'(3(1X,F8.5))') , (mfth(in,id),id=1,3)
+       enddo
+       write(*,*)'MFTH :'
+       do id=1,3
+          write(*,'(3(1X,F8.5))') , (mthf(id,in),in=1,na3)
+       enddo
+
+*
+      END

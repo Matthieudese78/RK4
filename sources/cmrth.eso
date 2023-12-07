@@ -1,0 +1,110 @@
+      SUBROUTINE cmrth(Q1,KTROT,NA1,NB1M,IB,mrth,mthr,ind) 
+     
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+******************************************************************
+*         BRAS de levier : seulement si le centred rotation n'est pas confondu avec le centre de gravite
+******************************************************************
+*   consistent mass  : shabana p 272 :
+*   mrth = - A * int_V rho chap(X + u_f) dV 
+*   lumped masses : shabana p 320 :
+*   mthr = sum_j m_ij * B^T , i = mode , j = node, B = - A chap(X+u_f)
+*   tous les modes ne sont pas pris en compte, on divise en :
+*     - une partie statique : la masse totale du solide qui est egale en th. a la somme de toutes les lumped masses si on les prenaient toutes en compte
+*     mrth_stat = - Mtot * A * chap(X_j) , j = node 
+*     - une partie corrective :  
+*     mrth_corr = - sum_i sum_j m_ij * A * chap(phi_ij * qf_i), i = mode , j = node 
+*
+*   Rq partie corrective : on saute les translations rigides
+******************************************************************
+
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,5,NSB),OMEG2(3,5,NSB),OMEG3(3,5,NSB)
+         REAL*8 ROT(3,3,5,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
+         REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
+         REAL*8 XTPHIN(3,NPDEF,NA2,NSB),XMNO(NA2,NSB)
+         REAL*8 XMPOI(NPDEF,NA2,NSB)
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+*
+      REAL*8 Q1(NA1,*)
+      REAL*8 xcgcha(3,3),xtcha(3,3),xt(3)
+      REAL*8 mrth(3,3),mthr(3,3)
+******************************************************************
+      mtrot = ktrot
+******************************************************************
+      npdef = xtphi(/2)
+******************************************************************
+*     nbr de modes elastiques dans la sous bases :
+******************************************************************
+      na3 = inmsb(ib)
+*     1er mode elast ou transl rigi de la sous base ib ds l'ensemble des modes elast + trans rigis
+      ina1 = iorsb(ib) - 1
+******************************************************************
+*   Partie statique
+******************************************************************
+      call chap(XCG(1,ib),XCGcha(1,1)) 
+      do id=1,3
+        do j=1,3
+          mrth(id,j) = 0.d0
+          do k=1,3
+            mrth(id,j) = mrth(id,j) - rot(id,k,ind,ib) * XCGcha(k,j)
+          enddo
+          mrth(id,j) = mtsb(ib) * mrth(id,j)
+          mthr(id,j) = 0.d0
+          do k=1,3
+            mthr(id,j) = mthr(id,j) + XCGcha(id,k) * rot(j,k,ind,ib)
+          enddo
+          mthr(id,j) = mtsb(ib) * mthr(id,j)
+        enddo
+      enddo
+******************************************************************
+*     Partie corrective :
+******************************************************************
+      do ip=1,npdef
+******************************************************************
+        do 1 in = 1,na3
+          if (itrig(ib,in)) goto 1
+          i2 = ina1 + in
+          do id=1,3
+            Xt(id) = xtphi(id,ip,in,ib) * q1(i2,ind) 
+          enddo
+          call chap(Xt(1),Xtcha(1,1)) 
+*         mrth :
+          do id=1,3
+            do j=1,3
+              do k=1,3
+                mrth(id,j) = mrth(id,j) - rot(id,k,ind,ib) * Xtcha(k,j)
+              enddo
+              mrth(id,j) =  xmpoi(ip,in,ib) * mrth(id,j)
+            enddo
+          enddo
+*         mthr :
+          do id=1,3
+            do j=1,3
+              do k=1,3
+                mthr(id,j) = mthr(id,j) + Xtcha(id,k) * rot(j,k,ind,ib)
+              enddo
+              mthr(id,j) =  xmpoi(ip,in,ib) * mthr(id,j)
+            enddo
+          enddo
+ 1      continue
+***** fin boucle sur les points 
+      enddo
+*
+       write(*,*)'MRTH :'
+       do id=1,3
+          write(*,'(3(1X,F8.5))') , (mrth(id,j),j=1,3)
+       enddo
+       write(*,*)'MTHR :'
+       do id=1,3
+          write(*,'(3(1X,F8.5))') , (mthr(id,j),j=1,na3)
+       enddo
+*
+      END
