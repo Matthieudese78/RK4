@@ -141,7 +141,8 @@ cms : pour le couple resistant "hard code" :
       real*8 dexpinv(3,3)
 *     matrices pour la matrice de masse si couplage inertiel :
       real*8 Xt(3),Xtcha(3,3),B(nn2,nndef,3,3),ntat(nn2,nndef,3)
-      real*8 mrth(3,3),mfr(nn2,3),mfth(nn2,3),mthf(3,nn2)
+      real*8 mrth(3,3),mthr(3,3),mfr(nn2,3),mrf(3,nn2)
+      real*8 mfth(nn2,3),mthf(3,nn2)
       real*8 mthth(3,3,nnsb),xnorm(nn2)
       real*8 Xt2(3),Xt2cha(3,3)
       real*8 fer(3,4,nnsb),feth(3,4,nnsb),fef(nn2,4,nnsb)
