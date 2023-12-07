@@ -533,11 +533,20 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           qr2(id,iib) = 0.d0
           do j=1,3
             qth2(id,j,iib) = 0.d0
+            mrth(id,j) = 0.d0
+            mthr(id,j) = 0.d0
+            mthth(id,j) = 0.d0
           enddo
         enddo
         do in=1,na3
           ff(in,iib) = 0.d0
           qf(in,iib) = 0.d0
+          do id=1,3
+            mfr(in,id) = 0.d0
+            mrf(id,in) = 0.d0
+            mfth(in,id) = 0.d0
+            mthf(id,in) = 0.d0
+          enddo
         enddo
 *       maintenant on peut sauter les ss bases ss rotas rigides :
         if (iarota(iib).eq.0) goto 1
