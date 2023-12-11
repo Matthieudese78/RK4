@@ -17,6 +17,7 @@
 *
 *   2nd partie : 
 *     - 2. : 2 * chap(W) * sum_j m_ij phi_ij dot(q_f^i) 
+*
 *   final : qvr = -A * (1.1 + 1.2 + 2.)
 *
 *   Rq : on saute les translations rigides

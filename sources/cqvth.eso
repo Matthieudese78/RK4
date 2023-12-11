@@ -1,0 +1,143 @@
+      SUBROUTINE cqvth(Q1,q2,mthth,mthf,KTROT,NA1,IB,qvth,ind,
+     &                 nnsb,na3,ina1) 
+*     
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+******************************************************************
+*     Effet inertiels de la deformation sur le tenseur d'inertie
+******************************************************************
+*   Consistent mass : shabana p 321 : 
+*     qvr = 
+*           - chap(W) * I_thth * W  --> Ithth = (J + mthth) pris en compte plus tard
+*           - dot(I_thth) * W       --> 1. : calcule ici
+*           - chap(W) * (I_thf * dot(q_f)) --> 2 : calcule ici
+*
+*     I_thth = int_V rho chap(X + u_f)^T * chap(X + u_f) dV
+*     I_thf = int_V rho chap(X + u_f) * Phi dV
+*
+*           Ithth comporte :
+*     - une partie statique : le tenseur d'inertie du solide calcule analytiquement. 
+*     mthth_stat = J (INERTIE ds mtrot) > De derivee nulle.
+*
+*     - une partie corrective : calculee dans dans mthth.eso 
+*     mthth_corr = - sum_i sum_j m_ij * chap(phi_ij * qf_i)^T * chap(phi_ij * qf_i), i = mode , j = node 
+*
+*           --> sa derivee vaut : 
+* dot(Ithth) = d/dt( m_ij * (chap(phi_ij)^T * chap(phi_ij) ) * q_f^i**2 ) = 
+*          m_ij * (chap(phi_ij)^T * chap(phi_ij) ) * 2 * q_f^i * dot(q_f^i)
+*
+*   Rq  : on ne calcule ici que la derivee de la partie corrective
+*   Rq : on saute les translations rigides
+******************************************************************
+
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,5,NSB),OMEG2(3,5,NSB),OMEG3(3,5,NSB)
+         REAL*8 ROT(3,3,5,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
+         REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
+         REAL*8 XTPHIN(3,NPDEF,NA2,NSB),XMNO(NA2,NSB)
+         REAL*8 XMPOI(NPDEF,NA2,NSB)
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+      
+*
+      REAL*8 Q2(NA1,*),q2(na1,*)
+      REAL*8 qvth(3,nnsb),mthth(3,3),mthf(3,3)
+      real*8 x1(3),x1cha(3,3),x1cha2(3,3),jw(3)
+******************************************************************
+      mtrot = ktrot
+******************************************************************
+      npdef = xtphi(/2)
+******************************************************************
+*     nbr de modes elastiques dans la sous bases :
+******************************************************************
+*     na3 = inmsb(ib)
+*     1er mode elast ou transl rigi de la sous base ib ds l'ensemble des modes elast + trans rigis
+*     ina1 = iorsb(ib) - 1
+
+
+******************************************************************
+      do ip=1,npdef
+******************************************************************
+        do 1 in = 1,na3
+          if (itrig(ib,in)) goto 1
+          i2 = ina1 + in
+******************************************************************
+*     2eme partie : 
+*     - dot(I_thth) * W = - 2 * m_ij * (chap(phi_ij)^T * chap(phi_ij) ) * q_f^i * dot(q_f^i) * W
+******************************************************************
+          do id=1,3
+            do id=1,3
+              x1(id) = xtphi(id,ip,in,ib)
+            enddo
+            call chap(x1(1),x1cha(1,1)) 
+*           chap(phi_ij)^T * chap(ph_ij) :
+            do id=1,3
+              do j=1,3
+                x1cha2(id,j) = 0.d0
+                do k=1,3
+                  x1cha2(id,j) = x1cha2(id,j) + (x1cha(k,id)*x1cha(k,j))
+                enddo
+              enddo
+            enddo
+          enddo
+*
+          do id=1,3
+            qvth(id,ib) = 0.d0
+            do j=1,3
+             qvth(id,ib) = qvth(id,ib) - (2. * xmpoi(ip,in,ib) * 
+     &      (x1cha2(id,j) * q1(i2,ind) * q2(i2,ind)) * omeg2(j,ind,ib))
+            enddo
+          enddo
+*
+ 1      continue
+***** fin boucle sur les points 
+      enddo
+******************************************************************
+
+******************************************************************
+*       3. : - chap(W) * (I_thf * dot(q_f)) 
+******************************************************************
+      do 2 in=1,na3
+        if (itrig(ib,in)) goto 2
+        i2 = ina1 + in
+      qvth(1,ib) = qvth(1,ib) - 
+     &  (omeg2(3,ind,ib)*(mthf(2,in)*q2(i2,ind)) -
+     &   omeg2(2,ind,ib)*(mthf(3,in)*q2(i2,ind)))
+      qvth(2,ib) = qvth(2,ib) - 
+     &  (omeg2(3,ind,ib)*(mthf(1,in)*q2(i2,ind)) -
+     &   omeg2(1,ind,ib)*(mthf(3,in)*q2(i2,ind)))
+      qvth(3,ib) = qvth(3,ib) - 
+     &  (omeg2(1,ind,ib)*(mthf(2,in)*q2(i2,ind)) -
+     &   omeg2(2,ind,ib)*(mthf(1,in)*q2(i2,ind)))
+ 2    continue
+
+******************************************************************
+*       1. : - chap(W) * (I_thth * W) , Ithth = (J + mthth) 
+******************************************************************
+      do id=1,3
+        jw(id) = 0.d0 
+        do j=1,3
+          jw(id) = jw(id) + 
+     &    (inertie(id,j,ib)+mthth(id,j))*omeg2(id,ind,ib)
+        enddo
+      enddo
+      qvth(1,ib) = qvth(1,ib) - 
+     &  (omeg2(3,ind,ib)*jw(2) -
+     &   omeg2(2,ind,ib)*jw(3))
+      qvth(2,ib) = qvth(2,ib) - 
+     &  (omeg2(3,ind,ib)*jw(1) -
+     &   omeg2(1,ind,ib)*jw(3))
+      qvth(3,ib) = qvth(3,ib) - 
+     &  (omeg2(1,ind,ib)*jw(2) -
+     &   omeg2(2,ind,ib)*jw(1))
+* 
+      write(*,*)'QVTH :'
+      write(*,'(3(1X,F8.5))') , (qvth(id,ib),id=1,3)
+*
+      END
