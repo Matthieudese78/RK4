@@ -1,4 +1,4 @@
-      SUBROUTINE cmfr(Q1,KTROT,NA1,NB1M,IB,mfr,mrf,ind,nn2) 
+      SUBROUTINE cmfr(Q1,KTROT,NA1,NB1M,IB,mfr,mrf,ind,nn2,na3,ina1) 
      
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -38,9 +38,9 @@
 ******************************************************************
 *     nbr de modes elastiques dans la sous bases :
 ******************************************************************
-      na3 = inmsb(ib)
+*     na3 = inmsb(ib)
 *     1er mode elast ou transl rigi de la sous base ib ds l'ensemble des modes elast + trans rigis
-      ina1 = iorsb(ib) - 1
+*     ina1 = iorsb(ib) - 1
 ******************************************************************
       do ip=1,npdef
 ******************************************************************

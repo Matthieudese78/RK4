@@ -557,21 +557,20 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ******************************************************************
 *     M_{Rth} : couplage rotas-trnaslas shabana p 320
 ******************************************************************
-        call cmrth(Q1,KTROT,NA1,NB1M,IIB,mrth,mthr,ind1) 
+        call cmrth(Q1,KTROT,NA1,NB1M,IIB,mrth,mthr,ind1,na3,ina1) 
 ******************************************************************
 *     M_{fR} (dim : nmodes x 3) : couplage elas-translas shabana p 320
 ******************************************************************
-        call cmfr(Q1,KTROT,NA1,NB1M,IIB,mfr,mrf,ind1,na2) 
+        call cmfr(Q1,KTROT,NA1,NB1M,IIB,mfr,mrf,ind1,na2,na3,ina1) 
 ******************************************************************
 *     M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
 ******************************************************************
-        call cmfth(Q1,KTROT,NA1,NB1M,IIB,mfth,mthf,ind1,na2) 
+        call cmfth(Q1,KTROT,NA1,NB1M,IIB,mfth,mthf,ind1,na2,na3,ina1) 
 ******************************************************************
 *    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
 *                          (shabana p 320)
 ******************************************************************
-        call cmthth(Q1,KTROT,NA1,NB1M,IIB,mthth,ind1) 
-*
+        call cmthth(Q1,KTROT,NA1,NB1M,IIB,mthth,ind1,na3,ina1) 
 *      on implemente les forces d'inertie d'entrainement
 *      dues aux blocs non diagonnaux de la matrice de masse :
 * contribution modes elastiques a l'acceleration en translation :
