@@ -141,7 +141,7 @@ cbp, supprime le 2019-01-15  ftotb0 (ik,jk) = ftotb(ik,jk)
              CALL DEVFB3(jTYP,ftest,XPTB,IPALB,IPLIB,XPALB,XVALB,Nliab,
      &                NPLB,IND,IND1,INDM1,NPA,NPAM1,IND2,PDT,PDTS2,
      &                FEXPSM,NPC1,jpliai,iannul,
-     &                KTOTXB,KTOTVB,IDIMB,.false.)
+     &                KTOTXB,KTOTVB,IDIMB,.false.,ktrot,ibasb)
              ELSEIF (jTYP.EQ.31 .OR. jTYP.EQ.32) THEN
              CALL DEVFB4(jTYP,ftest,XPTB,IPALB,IPLIB,XPALB,XVALB,nliab,
      &               NPLB,IND,IND1,INDM1,NPA,NPAM1,IND2,PDT,PDTS2,
@@ -210,11 +210,11 @@ cmsw             WRITE(*,*)'D2VLB1: appel DEVFB10 : cercle-cone'
      &                  FEXPSM,NPC1,I,iannul,
      &                  KTOTXB,KTOTVB,IDIMB,GETJAC,IBASB,KTROT,NECH)
 cmsw            WRITE(*,*)'D2VLB1 : sortie DEVFB10 :'
-            DO IP=1,NPLB
-              DO ID=1,IDIMB
+*           DO IP=1,NPLB
+*             DO ID=1,IDIMB
 cmsw                WRITE(*,*)'FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
-              ENDDO
-            ENDDO
+*             ENDDO
+*           ENDDO
 
 * ------ choc ..._POINT
 *
@@ -244,7 +244,7 @@ cmsw                WRITE(*,*)'FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
              CALL DEVFB3(ITYP,FTOTB,XPTB,IPALB,IPLIB,XPALB,XVALB,NLIAB,
      &                  NPLB,IND,IND1,INDM1,NPA,NPAM1,IND2,PDT,PDTS2,
      &                  FEXPSM,NPC1,I,iannul,
-     &                  KTOTXB,KTOTVB,IDIMB,GETJAC)
+     &                  KTOTXB,KTOTVB,IDIMB,GETJAC,ktrot,ibasb)
 *
 * ------ choc PROFIL_PROFIL_...
 *

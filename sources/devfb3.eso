@@ -2,7 +2,7 @@ C DEVFB3    SOURCE    BP208322  20/09/18    21:15:28     10718
       SUBROUTINE DEVFB3(ITYP,FTOTB,XPTB,IPALB,IPLIB,XPALB,XVALB,NLIAB,
      &                  NPLB,IND,IND1,INDM1,NPA,NPAM1,IND2,PDT,PDTS2,
      &                  FEXPSM,NPC1,I,iannul,
-     &                  KTOTXB,KTOTVB,IDIMB,GETJAC)
+     &                  KTOTXB,KTOTVB,IDIMB,GETJAC,ktrot,ibasb)
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
 *--------------------------------------------------------------------*
@@ -40,8 +40,25 @@ C DEVFB3    SOURCE    BP208322  20/09/18    21:15:28     10718
       REAL*8  XVPC0(3),XN2(3),XVPCT(3)
 *     en + pour DYNC :      
       REAL*8  KTOTXB(NPLB,IDIMB,IDIMB),KTOTVB(NPLB,IDIMB,IDIMB)
+*     pour excentration et normale tournees a l'instant t : 
+      real*8 exc2(3),n2(3)
+      integer ibasb(nplb)
       LOGICAL GETJAC
 
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,5,NSB),OMEG2(3,5,NSB),OMEG3(3,5,NSB)
+         REAL*8 ROT(3,3,5,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
+         REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
+         REAL*8 XTPHIN(3,NPDEF,NA2,NSB),XMNO(NA2,NSB)
+         REAL*8 XMPOI(NPDEF,NA2,NSB)
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
 *--------------------------------------------------------------------*
 * --- choc elementaire point_cercle
 *                      avec ou sans amortissement
@@ -383,6 +400,31 @@ cbp         INTER  = IPALB(I,4)
          ID7 = ID1 + 6*IDIM
          ID8 = ID1 + 7*IDIM
          ID9 = ID1 + 8*IDIM
+
+* matthieu : si rotas rigides ds la sous base : on fait tourner :
+*              - l'excentration 
+*         if ((ktrot.gt.0).and.(iarota(ibasb(iplib(i,1))).gt.0)) then 
+* pas besoin de iarota : rot initialisee a l'identite dans ttes les sous bases (d2vini)
+         if (ktrot.gt.0) then 
+*          write(*,*)'devfb3 : ibasb(iplib(i,1)) = ',ibasb(iplib(i,1))
+           do id=1,3 
+              exc2(id) = 0.d0
+              do j=1,3
+               exc2(id) = exc2(id) +
+     &         (rot(id,j,ind,ibasb(iplib(i,1))) * xpalb(i,id2+j))
+              enddo
+           enddo
+         endif
+*              - la normale du cercle : NON elle ne varie pas sinon faut tout changer.  
+*        if ((ktrot.gt.0).and.(iarota(ibasb(iplib(i,2))).gt.0)) then 
+*          do id=1,3 
+*             n2(id) = 0.d0
+*             do j=1,3
+*              n2(id) = n2(id) +
+*    &         (rot(id,j,ind,ibasb(iplib(i,2))) * xpalb(i,id1+j))
+*             enddo
+*          enddo
+*        endif
 *  si pas d'adherence (c.a.d. glissement ou pas de contact) au pas precedent,
 *  reactualisation de la position ecart origine d'adherence
          IF (IGP.EQ.1 .OR. IGP.EQ.-1) THEN
@@ -395,6 +437,8 @@ cbp         INTER  = IPALB(I,4)
          ENDIF
 *  calcul du deplacement courant relatif (PS) sur la normale au cercle
          PS = 0.D0
+*        matthieu : psexc : pour projection de l'excentration sur la normale :
+         psexc = 0.D0
          DO 332 ID = 1,IDIM
             IDD2 = 3 + ID
 c           x_n = xA_n - xB_n
@@ -414,6 +458,9 @@ c           dx_adhe = x_n - x_adherence0
             XPALB(I,ID5+ID) = XDE2 - XPALB(I,ID7+ID)
 c           PS = x_n * nCercle 
             PS = PS + XDE2 * XPALB(I,ID1+ID)
+*           projection de l'excentration ini sur la mormale aucercle :
+*           psexc = psexc + (XPALB(I,ID2+ID) * XPALB(I,ID1+ID))
+            psexc = psexc + (exc2(id) * XPALB(I,ID1+ID))
  332     CONTINUE
 
 *  calcul de la valeur du deplacement relatif suivant la normale
@@ -427,14 +474,26 @@ c           x_n = xA_n - xB_n
      &                  - FEXPSM(NPOb,NPA,IND1,ID)
 c           x' = x_n - (x_n * nCercle) * nCercle
             XPRIM = XDE2 - PS * XPALB(I,ID1+ID)
+*            write(*,*)'devfb3 : "in plane" displ comp ',id
+*            write(*,*),xprim
+*            write(*,*)'         "in plane" exc '
+*            write(*,*),(XPALB(I,ID2+ID) - psexc*XPALB(I,ID1+ID))
 c           x" = x'-e  et  XDEP = sqrt(x"*x")
 c           rem bp : excentration hors plan fausse l'enfoncement, non ?
-            XPME = XPRIM - (XPALB(I,ID2+ID) -
-     &                     XPALB(I,ID2+ID)*XPALB(I,ID1+ID))
+*           XPME = XPRIM - (XPALB(I,ID2+ID) -
+*    &                     XPALB(I,ID2+ID)*XPALB(I,ID1+ID))
+*  matthieu : correction xprim - partie "in plane" de l'excentration :
+*           XPME = XPRIM - (XPALB(I,ID2+ID) -
+*    &                     psexc*XPALB(I,ID1+ID))
+            XPME = XPRIM - (exc2(id) -
+     &                     psexc*XPALB(I,ID1+ID))
             XPALB(I,ID3+ID) = XPME
             PSXPME = PSXPME + XPME**2
  334     CONTINUE
          XDEP = SQRT(PSXPME)
+*         write(*,*)'devfb3 : pcercle mobile : "in plane" displ - exc :'
+*         write(*,'(3(1X,F8.5))') , (xpalb(i,id3+id),id=1,3)
+*         write(*,*)'devfb3 : jeu = ',xpalb(i,2)
 
 * normale au plan tangent = direction normale du choc = n
 *         IF(XDEP.GT.1.D-20) THEN
@@ -458,10 +517,12 @@ cbp,2020-09     &                         /PDTS2
  340     CONTINUE
 *  calcul de la force de choc
          IF (ITYP.EQ.33 .or. ITYP.EQ.133) THEN
+*            write(*,*)'devfb3 : pt_cercle_mobile call dyche3 :'
             CALL DYCHE3(XDEP,IDIM,IGP,XPALB,NLIAB,I,INTER
      &                 ,XFN,XFT,XPUS,iannul)
          ELSE
 cbp,2020-09            XVITN = PSN / PDTS2
+*            write(*,*)'devfb3 : pt_cercle_mobile call dycha3 :'
             XVALB(I,IND,3) = XVITN
             CALL DYCHA3(XDEP,XVITN,IDIM,IGP,XPALB,NLIAB,I,INTER
      &                 ,XFN,XFT,XPUS,iannul)
@@ -491,6 +552,13 @@ cbp,2020-09            XVITN = PSN / PDTS2
          ENDIF
 *        fA = fA + |fn|*n + ft
 *        fB = fB - |fn|*n + ft
+*         if (dabs(xdep).gt.abs(xpalb(i,2))) then 
+*            write(*,*)'force normale exercee sur le point : '
+*            write(*,'(3(1X,F8.5))') , (xfn*xpalb(i,id3+id),id=1,3)
+*            write(*,*)'force tangentielle exercee sur le point : '
+*            write(*,'(3(1X,F8.5))') , (xpalb(i,id6+id),id=1,3)
+**           call exit(1)
+*         endif
          DO 344 ID = 1,IDIM
             FTOTB(NPOA,ID) = FTOTB(NPOA,ID) + XFN*XPALB(I,ID3+ID)
      &                                      + XPALB(I,ID6+ID)

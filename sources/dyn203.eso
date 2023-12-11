@@ -310,6 +310,10 @@ c        NORMALE et EXCENTREMENT
          CALL ACCTAB(ITLB,'MOT',I1,X0,'AMORTISSEMENT',L0,IP0,
      &                    MONAMO,I0,XAMON,CHARRE,L1,IP1)
          IF (IERR.NE.0) RETURN
+c        NORMALE et EXCENTREMENT (TYPE POINT)
+         CALL ACCTAB(ITLB,'MOT',I0,X0,'EXCENTRATION',L0,IP0,
+     &                    'POINT',I1,X1,CHARRE,L1,IEXC)
+         IF (IERR.NE.0) RETURN
 *
          IPALB(I,1) = ITYP
          IPALB(I,3) = IDIM
@@ -325,12 +329,14 @@ cbp           IPALB(I,4) = 0
          XPALB(I,4) = XADHE
          XPALB(I,5) = XRAIT
          XPALB(I,6) = XAMOT
+*        write(*,*)'dyn203 : xrain = ',xrain
 *
 *        normalisation de la normale
 *
          IPNV  = (IDIM + 1) * (IPOI - 1)
          IPNOA  = (IDIM + 1) * (INOA - 1)
          IPNOB  = (IDIM + 1) * (INOB - 1)
+         IPEX  = (IDIM + 1) * (IEXC - 1)
          PS = 0.D0
          DO 202 ID = 1,IDIM
             XC = XCOOR(IPNV + ID)
@@ -354,8 +360,12 @@ cbp         IPALB(I,1) = 34
 c        stockage de la normale et du vecteur POINT -> Centre_du_Cercle
          DO 222 ID = 1,IDIM
             XPALB(I,ID1+ID) = XCOOR(IPNV + ID) / SQRT(PS)
-            XPALB(I,ID2+ID) = XCOOR(IPNOB+ID) - XCOOR(IPNOA+ID)
- 222        CONTINUE
+            XPALB(I,ID2+ID) = XCOOR(IPNOB+ID) - XCOOR(IPNOA+ID) - 
+     &                        XCOOR(ipex + id)
+ 222     CONTINUE
+         write(*,*)'dyn203 pt_cercle_mobile : excentration: '
+         write(*,'(3(1X,F8.5))') , (xcoor(ipex+id),id=1,3)
+         write(*,'(3(1X,F8.5))') , (xpalb(i,id2+id),id=1,3)
          CALL PLACE2(JPLIB,NPLB,IPLAC,INOA)
          IPLIB(I,1) = IPLAC
          CALL PLACE2(JPLIB,NPLB,IPLAC,INOB)
