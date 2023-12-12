@@ -11,9 +11,12 @@ linert = vrai ;
 *********************************************************************
 opti impi 555 ;
 ***** General:
+* nbr de modes elastiques : 
+nmode_ela = 4 ;
+nnoeuds = 100 ;
 * On prend une toupie conique en acier:
 * Masse:
- M = 2.;
+* M = 2.;
 * Gravite:
  g = 10. ;
 * Module d'Young: 20 MPa
@@ -21,13 +24,16 @@ opti impi 555 ;
 * Coefficient de Poisson:
  nuac = 0.3;
 * Masse volumique: en kg/m^3
- rho_ac = 8000 ;
+* Stoianovici & Hurmuzlu :
+ rho_ac = 7876.74 ;
 *
 ****** Geometrie:
 * longueur de la poutre: 
  h = 1.5 ;
 * Rayon:
- R = 2.e-2 ;
+* R = (1.27e-2/2.) ;
+ R = (5.e-2) ;
+
 * Section de la poutre :
  sectpou = (Pi*(R**2)) ;
 * Volume:
@@ -52,12 +58,13 @@ opti impi 555 ;
 * T = 5. ;
 * DTE = 1.e-3 ;
 * NSORT =  50 ;
-T = 5. ;
-* T = 100.e-4 ;
-DTE = 1.e-5 ;
-NSORT =  500 ;
+T = 3. ;
+T = 10.e-4 ;
+DTE = 1.e-6 ;
+NSORT =  5000 ;
+NSORT =  1 ;
 *
-NPASe = (ENTI 'PROCH' (T / DTe)) - 1;
+NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
 ***** Base modale:
 * rigide = vrai si presence de rotas rigides dans la base modale:
@@ -75,7 +82,7 @@ finsi;
 *
 ***** Conditions initiales:
 * nutation initiale de la toupie (Castem: angles en degres!):
-theta_ini = 0.5 ;
+theta_ini = 45. ;
 * Vitesses angulaires de rotation inititales ds le repere du solide:
 WXini = 0. ;
 WYini = 0. ;
@@ -125,8 +132,7 @@ P2 = 0. 0. h ;
 * Centre de masse theorique:
 G1 = 0. 0. LG ; 
 ***** Maillage: nombre d'element de la poutre:
- npou = 40 ;
- L1 = d npou P1 P2 ;
+ L1 = d nnoeuds P1 P2 ;
  MESHPOU = L1 ;
 *  OPTI 'TRAC' X ; 
  TRAC 'QUAL' meshpou ;
@@ -162,13 +168,12 @@ K = K et cl1 ;
 CLRX = BLOQ 'RY' 'RZ' meshpou;
 CLRY = BLOQ 'RX' 'RZ' meshpou;
 CLRZ = BLOQ 'RX' 'RY' meshpou;
-CLela = BLOQ 'ROTA' P1;
-* Clela2 = bloq 'ROTA' p2 ;
+* CLela = BLOQ 'ROTA' P1;
 KRX = K et CLRX;
 KRY = K et CLRY;
 KRZ = K et CLRZ;
-Kela = K et clela ;
-* Kela = K et clela et clela2 ;
+* Kela = K et clela ;
+Kela = K ;
 *********************************************************************
 *                          Calculs des modes: 
 *********************************************************************
@@ -176,18 +181,33 @@ Kela = K et clela ;
 Tmode_RX  = vibr 'IRAM' 0.5 1 KRX M1 ; 
 Tmode_RY  = vibr 'IRAM' 0.5 1 KRY M1 ;
 Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
-* On teste egalemetn en presence de modes elastiques:
-Tmode_ela = vibr 'IRAM' 1. 8 Kela M1 ;
-* on teste
-
+* On teste egalement en presence de modes elastiques:
+Tmode_ela = vibr 'IRAM' 1. nmode_ela Kela M1 ;
+* 
+* opti donn 5 ; 
+tmodela = table 'BASE_MODALE' ;
+tmodela . 'MODES' = table 'BASE_DE_MODES' ;
+tmodela . 'MODES' . 'MAILLAGE' = meshpou ;
+repe bmode (NMODE_ELA - 3) ;
+  tmodela . modes . &bmode                                = table 'MODE' ;
+  tmodela . modes . &bmode . 'NUMERO_MODE'                = &bmode ;
+  tmodela . modes . &bmode . 'POINT_REPERE'               = tmode_ela . modes . (&bmode + 3) . point_repere ;
+  tmodela . modes . &bmode . 'FREQUENCE'                  = tmode_ela . modes . (&bmode + 3) . frequence ;
+  tmodela . modes . &bmode . 'MASSE_GENERALISEE'          = tmode_ela . modes . (&bmode + 3) . masse_generalisee ;
+  tmodela . modes . &bmode . 'DEPLACEMENTS_GENERALISES'   = tmode_ela . modes . (&bmode + 3) . deplacements_generalises ;
+  tmodela . modes . &bmode . 'DEFORMEE_MODALE'            = tmode_ela . modes . (&bmode + 3) . deformee_modale ;
+fin bmode ;
+* tmode_ela = tmodela ;
 * postvibr:
-
 * opti trac x ;
 postvibr Tmode_RX ;
 postvibr Tmode_RY ;
 postvibr Tmode_RZ ;
 postvibr Tmode_ela ;
+postvibr Tmodela ;
+
 * opti donn 5 ; 
+
 *
 ptrep_RX =    Tmode_RX . 'MODES' . 1 . 'POINT_REPERE';
 ptrep_RY =    Tmode_RY . 'MODES' . 1 . 'POINT_REPERE';
@@ -234,6 +254,7 @@ Tmode_RZ . 'MODES' . 1 . 'COMPOSANTE' = 'RZ' ;
 *
 * Rotas rigides et modes elastiques:
 SI (typmode EGA 1);
+* Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ et Tmode_ela) ;
 Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ et Tmode_ela) ;
 FINSI;
 * Que rotas rigides:
@@ -245,6 +266,7 @@ SI (typmode EGA 3);
 Tmode = (Tmode_ela) ;
 FINSI;
 *
+* opti donn 5 ;
 ************************************************************************
 *     					Parametrage DYNE
 ************************************************************************
@@ -262,7 +284,7 @@ TSORT . 'VARIABLE' . 'TRAVAIL_EXTERIEUR' = VRAI ;
 *
 *** TINI:
 * Deplacements:
- U0_RX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' theta_ini ;
+ U0_RX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' (theta_ini*pi/180.) ;
  U0_RY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' 0. ;
  U0_RZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' 0. ;
  U0_ela_1 = MANU 'CHPO' ptrep_ela_1 'NATUR' 'DIFFUS' 'ALFA' 0. ;
@@ -319,19 +341,25 @@ TCHAR = TABL 'CHARGEMENT';
 	 TL1.'JEU'           =  10.              ;
 *
 
-   Normale_PPLAN = 0. 0. -1. ;
-   Jeu1 = h/2. ;
-   Kchoc = 2.E+03;
+   Normale_PPLAN = 0. 0. -1. ; 
+*  Stoianovici : 
+   Jeu1 = 2.*h*(sin theta_ini) ;
+*  Stoianovici : 
+*  Kchoc = 5.5E+07 ;
+   Kchoc = 5.5E+07 ;
+   Bamo = 2.0E+01 ;
    K_T= 0.01*Kchoc ;
-   mu = 0.3 ;
+*  static friction coeff : 
+   mu = 0.1 ;
    adh = mu ;
-   Cchoc = 0.1*((M*Kchoc)**0.5) ;
+*  Cchoc = 0.1*((M*Kchoc)**0.5) ;
 	 TL2  =  TABLE  'LIAISON_ELEMENTAIRE'    ;
 	 TL2.'TYPE_LIAISON'  =  MOT 'POINT_PLAN' ;
-	 TL2.'SUPPORT'       =  p2              ;
-	 TL2.'RAIDEUR'       =  Kchoc              ;
-	 TL2.'NORMALE' = NORMALE_PPLAN ;
-	 TL2.'JEU'           =  jeu1              ;
+	 TL2.'SUPPORT'       =  p2 ;
+	 TL2.'RAIDEUR'       =  Kchoc ;
+	 TL2.'AMORTISSEMENT' =  Bamo ;
+	 TL2.'NORMALE'       =  NORMALE_PPLAN ;
+	 TL2.'JEU'           =  jeu1 ;
 
    TLIAI = TABLE 'LIAISON'   ;
    TTLB = TABLE 'LIAISON_B' ;
@@ -355,7 +383,7 @@ tprog = TRESU . TEMPS_DE_SORTIE;
 *
 Nt = dime tprog;
 *
-* opti donn 5 ; 
+opti donn 5 ; 
 ************************************************************************
 *     					POST TRAITEMENT
 ************************************************************************
