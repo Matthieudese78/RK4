@@ -67,10 +67,7 @@ c
 *     IORSB   Position du 1er mode de la sous-base dans ens. modes   *
 *     IAROTA  Indique la position des modes de rotation              *
 *     NSB     Nombre de sous-bases                                   *
-*     NPLSB   Nombre de points de liaison par sous-base              *
-*     NA2     Nombre d'inconnues dans la sous-base                   *
-*     FEXPSM  Pseudo-Modes base B                                    *
-*     FINERT  Forces d'inertie base B                                *
+*     NPLSB   Nombre de points de liaison par sous base              *
 *     IERRD   Indicateur d'erreur                                    *
 * -   FTEST   Tableau local FTEST de la subroutine D2VLFA            *
 * -   FTEST2  Tableau local FTEST de la subroutine DEVLB1            *
@@ -134,22 +131,19 @@ c     LOGICAL LWRITE
 cms : pour le couple resistant "hard code" : 
       real*8 tspin(3)
 *     pour le calcul des forces d'inerties :
-      real*8 chxcg(3,3),chmst(3,3)
       logical lrspin
 *     vecteurs de rotations incrementaux :
       real*8 th1(3), th2(3), th3(3), th4(3), jw2(3), t2(3)
       real*8 dexpinv(3,3)
 *     matrices pour la matrice de masse si couplage inertiel :
-      real*8 Xt(3),Xtcha(3,3),B(nn2,nndef,3,3),ntat(nn2,nndef,3)
-      real*8 mrth(3,3),mthr(3,3),mfr(nn2,3),mrf(3,nn2)
+*     accelerations translations rigides : 
+      real*8 atrans(3)
+      real*8 mrth(3,3),mthr(3,3)
+      real*8 mfr(nn2,3),mrf(3,nn2)
       real*8 mfth(nn2,3),mthf(3,nn2)
-      real*8 mthth(3,3,nnsb),xnorm(nn2)
-      real*8 Xt2(3),Xt2cha(3,3)
-      real*8 fer(3,4,nnsb),feth(3,4,nnsb),fef(nn2,4,nnsb)
-      real*8 fr(3,nnsb),fth(3,nnsb),ff(nn2,nnsb)
-      real*8 jw(3),rtgex(3),qf(nn2,nnsb),qr(3,nnsb),qth(3,nnsb)
-      real*8 qr2(3,nnsb),qth2(3,3,nnsb)
-      real*8 wchap(3,3),wchap2(3,3),ine(3,3),invine(3,3)
+      real*8 mthth(3,3,nnsb)
+      real*8 rtgex(3),qvf(nn2,nnsb),qvr(3,nnsb),qvth(3,nnsb)
+      real*8 ine(3,3),invine(3,3)
 
 *     resistance au spin ?
       lrspin = .false.
@@ -526,21 +520,16 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *        initialisation des forces d'inertie, pour ttes les ss bases!
 *         --> apparaissent apres dans l'equilibre dynamique
         do id=1,3
-          fr(id,iib) = 0.d0
-          fth(id,iib) = 0.d0
-          qr(id,iib) = 0.d0
-          qth(id,iib) = 0.d0
-          qr2(id,iib) = 0.d0
+          qvr(id,iib) = 0.d0
+          qvth(id,iib) = 0.d0
           do j=1,3
-            qth2(id,j,iib) = 0.d0
             mrth(id,j) = 0.d0
             mthr(id,j) = 0.d0
             mthth(id,j) = 0.d0
           enddo
         enddo
         do in=1,na3
-          ff(in,iib) = 0.d0
-          qf(in,iib) = 0.d0
+          qvf(in,iib) = 0.d0
           do id=1,3
             mfr(in,id) = 0.d0
             mrf(id,in) = 0.d0
@@ -571,289 +560,91 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *                          (shabana p 320)
 ******************************************************************
         call cmthth(Q1,KTROT,NA1,NB1M,IIB,mthth,ind1,na3,ina1) 
+******************************************************************
+*       Quadratic velocity vector : coriolis, centrifuge ...
+******************************************************************
+*       translation : 
+        call cqvr(Q1,q2,qvr,KTROT,NA1,IIB,ind1,nsb,na3,ina1) 
+*       rotation : 
+        call cqvth(Q1,q2,qvth,mthth,mthf,KTROT,NA1,IIB,ind1,nsb,
+     &             na3,ina1) 
+*       coordonnees modales : 
+        call cqvf(Q1,q2,qvf,KTROT,NA1,IIB,ind1,na2,nsb,na3,ina1) 
+******************************************************************
 *      on implemente les forces d'inertie d'entrainement
-*      dues aux blocs non diagonnaux de la matrice de masse :
-* contribution modes elastiques a l'acceleration en translation :
-*       indice :
-*        ind2 = ind1-1
-*        write(*,*)'calcul fer :'
-        ind2 = ind1
-        do id=1,3
-        do 15 in=1,na3
-          if (itrig(iib,in)) goto 15
-          i2 = ina1 + in
-          fer(id,ind2,iib) = fer(id,ind2,iib) + mfr(in,id)*q3(i2,ind1) 
- 15     continue
-        enddo
-* contribution accel angulaire de rotation a l'acceleration en translation
-        do id=1,3
-          do j=1,3
-          fer(id,ind2,iib) = fer(id,ind2,iib) +
-     &           (mrth(id,j)*omeg3(j,ind1,iib))
-          enddo
-        enddo
-
-*   FETH : attention ! il faut que les modes de translas soient dans l'ordre 
-*       X,Y,Z dans la base modale !
-* contribution accel translation a l'accel angulaire de rotation
-*        write(*,*)'calcul feth :'
-        do id = 1,3
-        j = 0
+*      dues aux blocs non diagonnaux de la matrice de masse ET
+*      au "quadratic velocity vector" :
+*      * mthr, mrth, mthf, mfth, mrf, mfr
+*      * qvr, qvth, qvf
+******************************************************************
+*       on recupere les comp de l'acceleration en translation :
+*       Attention : ici il faut qu'il soit dans l'ordre x,y,z ds la base modale.
+        id=0
         do in=1,na3
           i2 = ina1 + in
-          if (itrig(iib,in)) then
-            j = j + 1
-            feth(id,ind2,iib) = feth(id,ind2,iib) +
-     &           (mrth(j,id)*q3(i2,ind1))
+          if (itrig(iib,in)) then 
+            id = id+1
+            atrans(id) = q3(i2,ind1)
+*           MRTH :
+            do j=1,3
+              ftota(i2,ind1) = ftota(i2,ind1) - mrth(id,j)*omeg3(j,ind1,iib)
+            enddo
           endif
         enddo
-        enddo
-*       write(*,*)'feth via mrth :'
-*       write(*,'(3(1X,F8.5))') , (feth(id,ind2,iib),id=1,3)
-* contribution accel elastique sur l'accel angulaire de rotation
-*       do id=1,3
-*       do 16 in=1,na3
-*         if (itrig(iib,in)) goto 16
-*         i2 = ina1 + in
-*         feth(id,ind2,iib) = feth(id,ind2,iib) +
-*    &            mfth(in,id)*q3(i2,ind1) 
-*16     continue
-*       enddo
-
-        do id=1,3
-        do 16 in=1,na3
-          if (itrig(iib,in)) goto 16
-          i2 = ina1 + in
-          feth(id,ind2,iib) = feth(id,ind2,iib) +
-     &            mthf(id,in)*q3(i2,ind1) 
- 16     continue
-        enddo
-*       write(*,*)'feth + mfth :'
-*       write(*,'(3(1X,F8.5))') , (feth(id,ind2,iib),id=1,3)
-
-* contribution accel translation sur l'accel elastique 
-*        write(*,*)'calcul fef :'
+*
         do in=1,na3
-          j = 0
-          do in1=1,na3
-            i2 = ina1 + in1
-            if (itrig(iib,in1)) then
-              j = j + 1
-              fef(in,ind2,iib) = fef(in,ind2,iib) +
-     &               (mfr(in1,j)*q3(i2,ind1))
-            endif
-          enddo
-        enddo
-*       write(*,*)'fef via mfr :'
-*       do in = 1,na3
-*       write(*,'(3(1X,F8.5))') , (fef(in,ind2,iib))
-*       enddo
-* contribution accel angulaire sur l'accel elastique :
-        do 23 in=1,na3
-          if (itrig(iib,in)) goto 23
-          do j=1,3
-          fef(in,ind2,iib) = fef(in,ind2,iib) +
-     &              (mfth(in,j)*omeg3(j,ind1,iib))
-          enddo
- 23     continue
-
-*       write(*,*)'fef + mfth :'
-*       do in = 1,na3
-*       write(*,'(3(1X,F8.5))') , (fef(in,ind2,iib))
-*       enddo
-***** quadratic velocity vector : incluant l'effet de coriolis et les forces centrifuges
-*       Qr : -rot * (chap(omeg1)^2 * sum_i m_i (X + u_f) + 2 chap(omeg1) * sum_i m_i q2(i)
-*       write(*,*)'calcul qr :'
-*       write(*,*)'calcul wchap2 :'
-        call chap(omeg2(1,ind1,iib),wchap(1,1))
-        do id=1,3
-          do j=1,3
-            wchap2(id,j) = 0.d0
-            do k=1,3
-              wchap2(id,j) = wchap2(id,j) + wchap(id,k) * wchap(k,j)
+          i2 = ina1 + in
+          if (.not.itrig(iib,in)) then 
+*           QVF : 
+            ftota(i2,ind1) = ftota(i2,ind1) + qvf(in,iib)
+            do j=1,3
+*             MFR :
+              ftota(i2,ind1) = ftota(i2,ind1) - mfr(in,j) * atrans(j) 
+*             MTHF :
+              fmomtot(j,ind1,iib) = fmomtot(j,ind1,iib) -
+     &                               mthf(j,in) * q3(i2,iib)
+*             MFTH :
+              ftota(i2,ind1) = ftota(i2,ind1) -
+     &                         mfth(in,j) * omeg3(j,ind1,iib)  
             enddo
+          endif
+        enddo
+*
+*       MTHR :
+        do id=1,3
+*         QVTH : 
+          fmomtot(id,ind1,iib) = fmomtot(id,ind1,iib) + qvth(id,iib)
+          do j=1,3
+            fmomtot(id,ind1,iib) = fmomtot(id,ind1,iib) -
+     &                              mthr(id,j) * atrans(j)
+          enddo
           enddo
         enddo
 *
-        do ip=1,npdef
-          do 18 in = 1,na3
-            if (xnorm(in).le.xzprec) goto 18
-            if (itrig(iib,in)) goto 18
-            i2 = in + ina1
-            do id=1,3
-              Xt(id) = (xcoophi(id,ip,iib) - xcent(id,iib) + 
-     &                  (xtphi(id,ip,in,iib) * q1(i2,ind1))) *
-     &                  (xm(i2,1)/xnorm(in)) 
-            enddo
-
-*       write(*,*)'calcul qr2 :'
-            do id=1,3
-              do j=1,3
-                qr2(id,iib) = qr2(id,iib) + wchap2(id,j) * Xt(j)
-              enddo
-            enddo
-            do id=1,3
-              do j=1,3
-                qr2(id,iib) = qr(id,iib) + (2.d0*wchap(id,j)*
-     &                      xtphi(j,ip,in,iib)*q2(i2,1)*
-     &                      (xm(i2,1)/xnorm(in)))
-              enddo
-            enddo
- 18       continue
-        enddo
-*       qr1 = -rot * qr2
-*       write(*,*)'calcul qr :'
-        do id=1,3
-          qr(id,iib) = 0.d0
-          do j=1,3
-            qr(id,iib) = qr(id,iib) - rot(id,j,ind1,iib) * qr2(j,iib)
-          enddo
-        enddo
-* Qth : shabana p 321
-*     - la 1ere partie de Qth est calculee au moment de l'eq dyn.
-*     - 2eme partie : dot(Ithth) = chap(dot(u_f))^T * chap(u_f) +
-*                                  chap(u_f)^T * chap(dot(u_f)) 
-        do ip=1,npdef
-          do 19 in = 1,na3
-            if (xnorm(in).le.xzprec) goto 19
-            i2 = in + ina1
-            do id=1,3
-              Xt(id) = (xtphi(id,ip,in,iib) * q1(i2,ind1))
-              Xt2(id) = (xtphi(id,ip,in,iib) * q2(i2,ind1))
-            enddo
-            call chap(Xt(1),Xtcha(1,1))
-            call chap(Xt2(1),Xt2cha(1,1))
-            do id=1,3
-              do j=1,3
-                do k=1,3
-                   qth2(id,j,iib) =  qth2(id,j,iib) +
-     &             (Xt2cha(k,id)*Xtcha(k,j))*(xm(i2,1)/xnorm(in)) +
-     &             (Xtcha(k,id))*Xt2cha(k,j)*(xm(i2,1)/xnorm(in))
-                enddo
-              enddo
-            enddo
-            do id = 1,3
-              do j = 1,3
-                qth(id,iib) = qth(id,iib) -
-     &                       (qth2(id,j,iib) * omeg2(j,ind1,iib)) 
-              enddo
-            enddo
- 19       continue
-        enddo
-*       write(*,*)'QTH : 2eme partie : '
-*       write(*,'(3(1X,F8.5))') , (qth(id,iib),id=1,3)
-*       QTH 3eme partie : -W vect (Ithf q2)
-        do ip=1,npdef
-          do 20 in = 1,na3
-            if (xnorm(in).le.xzprec) goto 20
-            i2 = in + ina1
-            do id=1,3
-              Xt(id) = (xcoophi(id,ip,iib) - xcent(id,iib)) + 
-     &                  xtphi(id,ip,in,iib) * q1(i2,ind1)
-            enddo
-            call chap(Xt(1),Xtcha(1,1))
-            do id=1,3
-              Xt(id) = 0.d0
-              do j=1,3
-                Xt(id) = Xt(id) + 
-     &          (Xtcha(id,j)*xtphi(j,ip,in,iib)*q2(i2,ind1)*
-     &          (xm(i2,1)/xnorm(in)))
-              enddo
-            enddo
-            qth(1,iib) = qth(1,iib) -
-     &      (omeg2(2,ind1,iib)*Xt(3) - omeg2(3,ind1,iib)*Xt(2))
-            qth(2,iib) = qth(2,iib) -
-     &      (omeg2(3,ind1,iib)*Xt(1) - omeg2(1,ind1,iib)*Xt(3))
-            qth(3,iib) = qth(3,iib) -
-     &      (omeg2(1,ind1,iib)*Xt(2) - omeg2(2,ind1,iib)*Xt(1))
- 20       continue
-        enddo
-* Qf :  
-        do 21 in = 1,na3
-          qf(in,iib) = 0.d0
-          if (xnorm(in).le.xzprec) goto 21
-          i2 = in + ina1
-        do ip=1,npdef
-        do id=1,3
-          Xt(id) = 0.d0
-          do j=1,3
-            Xt(id) = Xt(id) + 
-     &              ((wchap2(id,j) *
-     &(xcoophi(j,ip,iib)-xcent(j,iib)+xtphi(j,ip,in,iib)*q1(i2,ind1)))
-     &  + ( 2.d0*wchap(id,j)*(xtphi(j,ip,in,iib)*q2(i2,ind1)) ))
-          enddo
-          qf(in,iib) = qf(in,iib) -
-     &    ((xtphi(id,ip,in,iib) * Xt(id)) * (xm(i2,1)/xnorm(in)))
-        enddo
-        enddo
- 21     continue
-        
-***********************************************************************
-*               fin boucle sur les indices 1,4
-***********************************************************************
-*       enddo
-***********************************************************************
-*       si on a fait les forces d'inertie sur les 4 indices :
-*        do id=1,3
-**
-*        fr(id,iib) = (fer(id,4,iib) + (5.d-1*fer(id,3,iib)) + 
-*     &                (5.d-1*fer(id,2,iib)) + fer(id,1,iib))/6.d0
-*        fth(id,iib) = (feth(id,4,iib) + (5.d-1*feth(id,3,iib)) + 
-*     &                (5.d-1*feth(id,2,iib)) + feth(id,1,iib))/6.d0
-*        enddo
-*       forces d'inertie sur les ddls elastiques :
-*        do in=1,na3
-*        ff(in,iib) = (fef(in,4,iib) + (5.d-1*fef(in,3,iib)) + 
-*     &                (5.d-1*fef(in,2,iib)) + fef(in,1,iib))/6.d0
-**        write(*,'(1X,F8.5)') , ff(in,iib)
-**
-*        enddo
-*       si on a fait les forces d'inertie que sur l'indice 1 :
-*       write(*,*)'calcul fr, fth, ff :'
-        do id=1,3
-          fr(id,iib) = fer(id,1,iib) 
-          fth(id,iib) = feth(id,1,iib) 
-          if ((fr(id,iib).ne.fr(id,iib)).or.
-     &      (fth(id,iib).ne.fth(id,iib))) then
-            write(*,*)'Nan dans les FTH'
-            call exit(1)
-          endif
-        enddo
-*        write(*,*)'rkpas : FR'
-*        write(*,'(3(1X,F8.5))') , (fr(id,iib),id=1,3)
-*        write(*,*)'rkpas : FTH'
-*        write(*,'(3(1X,F8.5))') , (fth(id,iib),id=1,3)
+*       MRF :
+        id = 0
         do in=1,na3
-          ff(in,iib) = fef(in,1,iib) 
-          if (ff(in,iib).ne.ff(in,iib)) then
-            write(*,*)'Nan dans FF'
-            call exit(1)
-          endif
-*        write(*,'(1X,F8.5)') , ff(in,iib)
-        enddo
-
-***********************************************************************
-*      on totalise sur ftota et fmomtot :
-***********************************************************************
-        do in=1,na3
-          i2 = ina1 + in
-          j=0
+          i2=ina1+in
           if (itrig(iib,in)) then
-            j = j + 1
-            ftota(i2,1) = ftota(i2,1) - fr(j,iib) + qr(j,iib) 
-*            ftota(i2,1) = ftota(i2,1)  
-          endif
-          if (.not.itrig(iib,in)) then
-            ftota(i2,1) = ftota(i2,1) - ff(in,iib) + qf(in,iib) 
-*           ftota(i2,1) = ftota(i2,1)  
+            id = id + 1
+*           QVR : 
+            ftota(i2,ind1) = ftota(i2,ind1) + qvr(id,iib)
+            do in2=1,na3
+              if (.not.itrig(iib,in2)) then
+                ftota(i2,ind1) = ftota(i2,ind1) -
+     &                           mrf(id,in2) * q3(in2,ind1)
+              endif
+            enddo
           endif
         enddo
-* Pour les rotas rigides fmomtot est calcule en base B alors que fth et qth
-* sont calcules en base A. on les integre dans l'eq dynamique direct.
+
 ***********************************************************************
-**     fin boucle sur les ss bases
+*     FIN boucle sur les ss bases
+***********************************************************************
  1      continue
-**     fin if rigide
+***********************************************************************
+*     FIN IF RIGIDE
+***********************************************************************
       endif
 ************************************************************************
 *     equilibre dynamique a t_n+1
@@ -911,31 +702,22 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
 *         inversion de la matrice d'inertie :
 
           do id=1,3
-            jw(id) = 0.d0
             rtgex(id) = 0.d0
             do j=1,3
-          rtgex(id) = rtgex(id) + rot(j,id,1,iib)*fmomtot(j,1,iib)
-*         jw(id) = jw(id) + (inertie(id,j,iib))*
-          jw(id) = jw(id) + (mthth(id,j,iib) + inertie(id,j,iib))*
-     &                      omeg2(j,1,iib)
+              rtgex(id) = rtgex(id) + rot(j,id,1,iib)*fmomtot(j,1,iib)
               ine(id,j) = (mthth(id,j,iib) + inertie(id,j,iib))
             enddo
-*           on rajoute les forces d'inertie a rtgex :
-            rtgex(id) = rtgex(id) + qth(id,iib) - fth(id,iib)
           enddo
-          t2(1) = omeg2(2,1,iib)*jw(3) - omeg2(3,1,iib)*jw(2) 
-          t2(2) = omeg2(3,1,iib)*jw(1) - omeg2(1,1,iib)*jw(3) 
-          t2(3) = omeg2(1,1,iib)*jw(2) - omeg2(2,1,iib)*jw(1) 
-*         On calcul l'inverse de la matrice d'inertie :
+*         On calcul l'inverse de la matrice d'inertie : Ithth
           call hinv33(ine(1,1),invine(1,1))
           do id = 1,3
             omeg3(id,1,iib) = 0.d0
             do j = 1,3
               omeg3(id,1,iib) = omeg3(id,1,iib) + 
-     &         invine(id,j) * (-t2(j) + rtgex(j))
-*     &        (-t2(j) + rtgex(id) - fth(id,iib))
+     &                          invine(id,j) * rtgex(j)
             enddo
           enddo
+*
 *          MAJ vitesse angulaire :
           do id = 1,3
             omeg2(id,1,iib) = omeg2(id,5,iib) + 
