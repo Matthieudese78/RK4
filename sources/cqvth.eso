@@ -1,4 +1,4 @@
-      SUBROUTINE cqvth(Q1,q2,mthth,mthf,KTROT,NA1,IB,qvth,ind,
+      SUBROUTINE cqvth(Q1,q2,qvth,mthth,mthf,KTROT,NA1,IB,ind,
      &                 nnsb,na3,ina1) 
 *     
       IMPLICIT INTEGER(I-N)
@@ -46,7 +46,7 @@
       ENDSEGMENT
       
 *
-      REAL*8 Q2(NA1,*),q2(na1,*)
+      REAL*8 Q1(NA1,*),q2(na1,*)
       REAL*8 qvth(3,nnsb),mthth(3,3),mthf(3,3)
       real*8 x1(3),x1cha(3,3),x1cha2(3,3),jw(3)
 ******************************************************************
@@ -72,17 +72,15 @@
 *     - dot(I_thth) * W = - 2 * m_ij * (chap(phi_ij)^T * chap(phi_ij) ) * q_f^i * dot(q_f^i) * W
 ******************************************************************
           do id=1,3
-            do id=1,3
-              x1(id) = xtphi(id,ip,in,ib)
-            enddo
-            call chap(x1(1),x1cha(1,1)) 
-*           chap(phi_ij)^T * chap(ph_ij) :
-            do id=1,3
-              do j=1,3
-                x1cha2(id,j) = 0.d0
-                do k=1,3
-                  x1cha2(id,j) = x1cha2(id,j) + (x1cha(k,id)*x1cha(k,j))
-                enddo
+            x1(id) = xtphi(id,ip,in,ib)
+          enddo
+          call chap(x1(1),x1cha(1,1)) 
+*         chap(phi_ij)^T * chap(ph_ij) :
+          do id=1,3
+            do j=1,3
+              x1cha2(id,j) = 0.d0
+              do k=1,3
+                x1cha2(id,j) = x1cha2(id,j) + (x1cha(k,id)*x1cha(k,j))
               enddo
             enddo
           enddo
@@ -124,7 +122,7 @@
         jw(id) = 0.d0 
         do j=1,3
           jw(id) = jw(id) + 
-     &    (inertie(id,j,ib)+mthth(id,j))*omeg2(id,ind,ib)
+     &    (inertie(id,j,ib)+mthth(id,j))*omeg2(j,ind,ib)
         enddo
       enddo
       qvth(1,ib) = qvth(1,ib) - 
