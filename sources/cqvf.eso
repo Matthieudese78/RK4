@@ -1,0 +1,107 @@
+      SUBROUTINE cqvf(Q1,q2,qvf,KTROT,NA1,IB,ind,nn2,nnsb,na3,ina1) 
+*     
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+******************************************************************
+*     Effet inertiels de la deformation sur le tenseur d'inertie
+******************************************************************
+*   Consistent mass : shabana p 300 : 
+*     qvf = 
+*           - int_V Phi^T * (chap(W)**2 * (X+u_f) + 2*chap(W)*dot(u_f)
+*
+*   Lumped masses : 
+*     - sum_j m_ij * phi_ij^T * (chap(W)**2 * (X + q_i*ph_ij) + 2 chap(W) phi_ij dot(q_j)
+*   Rq : on saute les translations rigides
+******************************************************************
+
+      SEGMENT,MTROT
+         REAL*8 OMEG1(4,5,NSB),OMEG2(3,5,NSB),OMEG3(3,5,NSB)
+         REAL*8 ROT(3,3,5,NSB),EXPTH(3,3,2,NSB),INERTIE(3,3,NSB)
+         REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
+         REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
+         REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
+         REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
+         REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
+         REAL*8 XTPHIN(3,NPDEF,NA2,NSB),XMNO(NA2,NSB)
+         REAL*8 XMPOI(NPDEF,NA2,NSB)
+         INTEGER IBASR(NSB2)
+         CHARACTER*4 ITCOMP(NSB2)
+         LOGICAL ITRIG(NSB,NA2)
+      ENDSEGMENT
+*
+      REAL*8 Q1(NA1,*),q2(na1,*)
+      REAL*8 qvf(nn2,nnsb),qv1(3)
+      real*8 wchap(3,3),wchap2(3,3),x1(3)
+******************************************************************
+      mtrot = ktrot
+******************************************************************
+      npdef = xtphi(/2)
+      na2 = xtphi(/3)
+******* initialisation :
+      do in=1,na2
+        qvf(in,ib) = 0.d0
+      enddo
+******************************************************************
+*     nbr de modes elastiques dans la sous bases :
+******************************************************************
+*     na3 = inmsb(ib)
+*     1er mode elast ou transl rigi de la sous base ib ds l'ensemble des modes elast + trans rigis
+*     ina1 = iorsb(ib) - 1
+******************************************************************
+*     calcul de chap(W), chap(W)**2 :
+******************************************************************
+      call chap(omeg2(1,ind,ib),wchap(1,1))
+      do id=1,3
+        do j=1,3
+          wchap2(id,j) = 0.d0
+          do k=1,3
+            wchap2(id,j) = wchap2(id,j) + wchap(id,k) * wchap(k,j)
+          enddo
+        enddo
+      enddo
+
+******************************************************************
+      do ip=1,npdef
+******************************************************************
+        do 1 in = 1,na3
+          if (itrig(ib,in)) goto 1
+          i2 = ina1 + in
+******************************************************************
+*         part 1 :
+******************************************************************
+          do id=1,3
+            x1(id) = xcoophi(id,ip,ib) - xcent(id,ib) +
+     &              (xtphi(id,ip,in,ib) * q1(i2,ind))
+          enddo
+          do id=1,3
+            qv1(id) = 0.d0
+            do j=1,3
+              qv1(id) = qv1(id) + (wchap2(id,j)*x1(j))
+            enddo
+          enddo
+******************************************************************
+*         part 2 :
+******************************************************************
+          do id=1,3
+            do j=1,3
+          qv1(id) = qv1(id) +
+     &    (2. * wchap(id,j) * (xtphi(j,ip,in,ib)*q2(i2,ind)))
+            enddo
+*           ponderation par la masse ponctuelle : 
+            qv1(id) = qv1(id) *  xmpoi(ip,in,ib)
+          enddo
+******************************************************************
+*         projection sur le mode : (avec le signe -)
+******************************************************************
+          do id=1,3
+            qvf(in,ib) = qvf(in,ib) - (xtphi(id,ip,in,ib) * qv1(id))
+          enddo
+*
+ 1      continue
+***** fin boucle sur les points 
+      enddo
+* 
+      write(*,*)'QVF :'
+      write(*,'(3(1X,F8.5))') , (qvf(in,ib),in=1,na3)
+*
+      END
