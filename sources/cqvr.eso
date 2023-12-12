@@ -1,4 +1,4 @@
-      SUBROUTINE cqvr(Q1,q2,KTROT,NA1,IB,qvr,ind,nnsb,na3,ina1) 
+      SUBROUTINE cqvr(Q1,q2,qvr,KTROT,NA1,IB,ind,nnsb,na3,ina1) 
      
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -39,8 +39,9 @@
       ENDSEGMENT
       
 *
-      REAL*8 Q2(NA1,*),q2(na1,*)
+      REAL*8 Q1(NA1,*),q2(na1,*)
       REAL*8 qvr(3,nnsb),qv2(3)
+      REAL*8 wchap(3,3),wchap2(3,3)
 ******************************************************************
       mtrot = ktrot
 ******************************************************************
@@ -89,8 +90,7 @@
           do id=1,3
             do j=1,3
               qvr(id,ib) = qvr(id,ib) +
-     &        (xmpoi(ip,in,ib) *  wchap2(id,j) *
-     &        (xtphi(j,ip,in,ib) * q1(i2,ind)))
+     &        (wchap2(id,j) * (xtphi(j,ip,in,ib) * q1(i2,ind)))
             enddo
           enddo
 ******************************************************************
@@ -98,9 +98,11 @@
 ******************************************************************
           do id=1,3
             do j=1,3
-              qvr(id,ib) = qvr(id,ib) + (xmpoi(ip,in,ib) * 
-     &        (2. * wchap(id,j) * xtphi(j,ip,in,ib) * q2(i2,ind)))
+              qvr(id,ib) = qvr(id,ib) +  
+     &        (2. * wchap(id,j) * xtphi(j,ip,in,ib) * q2(i2,ind))
             enddo
+*           ponderation par la masse ponctuelle :
+            qvr(id,ib) = qvr(id,ib) * xmpoi(ip,in,ib)
           enddo
  1      continue
 ***** fin boucle sur les points 
@@ -113,8 +115,10 @@
         do j=1,3
           qv2(id) = qv2(id) - (rot(id,j,ind,ib) * qvr(j,ib))
         enddo
-        qvr(id,ib) = qv2(id) 
       enddo
+      qvr(1,ib) = qv2(1) 
+      qvr(2,ib) = qv2(2) 
+      qvr(3,ib) = qv2(3) 
 ******************************************************************
       write(*,*)'QVR :'
       write(*,'(3(1X,F8.5))') , (qvr(id,ib),id=1,3)
