@@ -62,7 +62,8 @@
           do id=1,3
             mfth(in,id) = 0.d0
             do j=1,3
-              mfth(in,id) = mfth(in,id) - xtphi(j,ip,in,ib) * Xtcha(j,id)
+              mfth(in,id) = mfth(in,id) - 
+     &                      xtphi(j,ip,in,ib) * Xtcha(j,id)
             enddo
             mfth(in,id) = xmpoi(ip,in,ib) * mfth(in,id)
           enddo
@@ -70,7 +71,8 @@
           do id=1,3
             mthf(id,in) = 0.d0
             do j=1,3
-                mthf(id,in) = mthf(id,in) + Xtcha(id,j) * xtphi(j,ip,in,ib)
+                mthf(id,in) = mthf(id,in) +
+     &                        Xtcha(id,j) * xtphi(j,ip,in,ib)
             enddo
             mthf(id,in) =  xmpoi(ip,in,ib) * mthf(id,in)
           enddo
