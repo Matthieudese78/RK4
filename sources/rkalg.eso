@@ -157,8 +157,6 @@
       IERRD = 0
 * Si INMSB de MTPHI venait a disparaitre (nbr de modes elastiques dans la ss base IB):
       IF (RIGIDE) THEN
-        NSB =  OMEG1(/3)
-        na2 = xtphi(/3)
         npdef = xtphi(/2)
         write(*,*)'rkalg : xcoophi'
         do ip = 1,npdef

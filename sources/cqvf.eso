@@ -76,7 +76,8 @@
           do id=1,3
             qv1(id) = 0.d0
             do j=1,3
-              qv1(id) = qv1(id) + (wchap2(id,j)*x1(j))
+              qv1(id) = qv1(id) +
+     &        ((wchap2(id,j)*x1(j)) * xmpoi(ip,in,ib)) 
             enddo
           enddo
 ******************************************************************
@@ -85,10 +86,11 @@
           do id=1,3
             do j=1,3
           qv1(id) = qv1(id) +
-     &    (2. * wchap(id,j) * (xtphi(j,ip,in,ib)*q2(i2,ind)))
+     &    (2. * wchap(id,j) * (xtphi(j,ip,in,ib)*q2(i2,ind)) *
+     &                xmpoi(ip,in,ib))
             enddo
-*           ponderation par la masse ponctuelle : 
-            qv1(id) = qv1(id) *  xmpoi(ip,in,ib)
+**           ponderation par la masse ponctuelle : 
+*            qv1(id) = qv1(id) * xmpoi(ip,in,ib)
           enddo
 ******************************************************************
 *         projection sur le mode : (avec le signe -)
@@ -101,7 +103,7 @@
 ***** fin boucle sur les points 
       enddo
 * 
-      write(*,*)'QVF :'
-      write(*,'(3(1X,F8.5))') , (qvf(in,ib),in=1,na3)
+*     write(*,*)'QVF :'
+*     write(*,'(3(1X,F8.5))') , (qvf(in,ib),in=1,na3)
 *
       END

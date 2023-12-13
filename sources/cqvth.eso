@@ -1,5 +1,5 @@
-      SUBROUTINE cqvth(Q1,q2,qvth,mthth,mthf,KTROT,NA1,IB,ind,
-     &                 nnsb,na3,ina1) 
+      SUBROUTINE cqvth(Q1,q2,qvth,mthth,mfth,KTROT,NA1,IB,ind,
+     &                 nnsb,nn2,na3,ina1) 
 *     
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -47,8 +47,10 @@
       
 *
       REAL*8 Q1(NA1,*),q2(na1,*)
-      REAL*8 qvth(3,nnsb),mthth(3,3),mthf(3,3)
+      REAL*8 qvth(3,nnsb),mthth(3,3),mfth(nn2,3)
       real*8 x1(3),x1cha(3,3),x1cha2(3,3),jw(3)
+      REAL*8 xco(3),xcocha(3,3)
+      REAL*8 xcof(3,3),xfco(3,3)
 ******************************************************************
       mtrot = ktrot
 ******************************************************************
@@ -73,14 +75,20 @@
 ******************************************************************
           do id=1,3
             x1(id) = xtphi(id,ip,in,ib)
+            xco(id) = xcoophi(id,ip,ib)
           enddo
           call chap(x1(1),x1cha(1,1)) 
+          call chap(xco(1),xcocha(1,1))
 *         chap(phi_ij)^T * chap(ph_ij) :
           do id=1,3
             do j=1,3
               x1cha2(id,j) = 0.d0
+              xcof(id,j) = 0.d0
+              xfco(id,j) = 0.d0
               do k=1,3
                 x1cha2(id,j) = x1cha2(id,j) + (x1cha(k,id)*x1cha(k,j))
+                xcof(id,j) = Xcof(id,j) + (xcocha(k,id)*X1cha(k,j))
+                xfco(id,j) = Xfco(id,j) + (x1cha(k,id)*Xcocha(k,j))
               enddo
             enddo
           enddo
@@ -88,8 +96,11 @@
           do id=1,3
             qvth(id,ib) = 0.d0
             do j=1,3
-             qvth(id,ib) = qvth(id,ib) - (2. * xmpoi(ip,in,ib) * 
-     &      (x1cha2(id,j) * q1(i2,ind) * q2(i2,ind)) * omeg2(j,ind,ib))
+             qvth(id,ib) = qvth(id,ib) - (2.*xmpoi(ip,in,ib) * 
+     &      (x1cha2(id,j)*q1(i2,ind)*q2(i2,ind))*omeg2(j,ind,ib)) -
+     &      (xmpoi(ip,in,ib)*(xcof(id,j)+xfco(id,j))*q2(i2,ind)*
+     &         omeg2(j,ind,ib))
+              write(*,*)'xfco+xcof(id,j) = ',(xcof(id,j)+xfco(id,j))
             enddo
           enddo
 *
@@ -105,14 +116,14 @@
         if (itrig(ib,in)) goto 2
         i2 = ina1 + in
       qvth(1,ib) = qvth(1,ib) - 
-     &  (omeg2(3,ind,ib)*(mthf(2,in)*q2(i2,ind)) -
-     &   omeg2(2,ind,ib)*(mthf(3,in)*q2(i2,ind)))
+     &  (omeg2(3,ind,ib)*(mfth(in,2)*q2(i2,ind)) -
+     &   omeg2(2,ind,ib)*(mfth(in,3)*q2(i2,ind)))
       qvth(2,ib) = qvth(2,ib) - 
-     &  (omeg2(3,ind,ib)*(mthf(1,in)*q2(i2,ind)) -
-     &   omeg2(1,ind,ib)*(mthf(3,in)*q2(i2,ind)))
+     &  (omeg2(3,ind,ib)*(mfth(1,in)*q2(i2,ind)) -
+     &   omeg2(1,ind,ib)*(mfth(3,in)*q2(i2,ind)))
       qvth(3,ib) = qvth(3,ib) - 
-     &  (omeg2(1,ind,ib)*(mthf(2,in)*q2(i2,ind)) -
-     &   omeg2(2,ind,ib)*(mthf(1,in)*q2(i2,ind)))
+     &  (omeg2(1,ind,ib)*(mfth(2,in)*q2(i2,ind)) -
+     &   omeg2(2,ind,ib)*(mfth(1,in)*q2(i2,ind)))
  2    continue
 
 ******************************************************************

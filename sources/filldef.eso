@@ -172,36 +172,45 @@
             endif
           enddo
 *         on rempli xtphin avec la base modale normee / comp max : 
-          if (xcmax.gt.xzprec) then
+          if (xcmax.gt.1.d-4) then
             xnortot = 0.d0
             do ip=1,npdef
-              xtphin(1,ip,inel,ib) = xtphin(1,ip,inel,ib)/xcmax
-              xtphin(2,ip,inel,ib) = xtphin(2,ip,inel,ib)/xcmax
-              xtphin(3,ip,inel,ib) = xtphin(3,ip,inel,ib)/xcmax
+*             xtphin(1,ip,inel,ib) = xtphin(1,ip,inel,ib)/xcmax
+*             xtphin(2,ip,inel,ib) = xtphin(2,ip,inel,ib)/xcmax
+*             xtphin(3,ip,inel,ib) = xtphin(3,ip,inel,ib)/xcmax
               xnortot = xnortot + ((xtphi(1,ip,inel,ib)**2) +
      &                             (xtphi(2,ip,inel,ib)**2) +
      &                             (xtphi(3,ip,inel,ib)**2))
             enddo
             xnortot = dsqrt(xnortot)
+            write(*,*)'xnortot inel = ',xnortot
 *           on remplit xmno avec la masse modale normee / comp max : 
             ina1 = iorsb(ib) - 1
             i2 = ina1 + inel
             xmno(inel,ib) = xm(i2,1) / (xcmax**2)
             write(*,*)'  xmno mode inel ',inel
             write(*,*)'                 ',xmno(inel,ib)
+*           warning : 
+            if (xmno(inel,ib).gt.mtsb(ib)) then
+              write(*,*)'filldef : '
+              write(*,*)'masse mode norme > masse totale ss base!!!'
+              call exit(1)
+            endif
 *           masses ponctuelles individuelles : 
             do ip=1,npdef
               xnor = dsqrt((xtphi(1,ip,inel,ib)**2) + 
      &                     (xtphi(2,ip,inel,ib)**2) +
      &                     (xtphi(3,ip,inel,ib)**2))
               xmpoi(ip,inel,ib) = xmno(inel,ib) * (xnor/xnortot)
+              write(*,*)'xmpoi = '
+              write(*,'((1X,F9.6))') , (xmpoi(ip,inel,ib))
             enddo
           else 
             xmno(inel,ib) = 0.d0
             do ip = 1,npdef
-              do id=1,3
-                xtphin(id,ip,inel,ib) = 0.d0
-              enddo
+*             do id=1,3
+*               xtphin(id,ip,inel,ib) = 0.d0
+*             enddo
               xmpoi(ip,inel,ib) = 0.d0
             enddo
           endif

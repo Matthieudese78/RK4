@@ -358,6 +358,7 @@ C DYNE26    SOURCE    CB215821  20/11/04    21:16:12     10766
            IF (IERR.NE.0) RETURN
            OMEGA = XFREQ * DEUXPI
            XK(IA1,1) = XMASSE * OMEGA * OMEGA
+           WRITE(*,*)'DYNE26 :   XK(',IA1,') =',XK(IA1,1)
            IF (IIMPI.EQ.333) THEN
               WRITE(IOIMP,*)'DYNE26 :   XM(',IA1,') =',XMASSE
               WRITE(IOIMP,*)'DYNE26 :   XK(',IA1,') =',XK(IA1,1)

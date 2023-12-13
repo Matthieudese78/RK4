@@ -133,16 +133,21 @@ cms : pour le couple resistant "hard code" :
 *     pour le calcul des forces d'inerties :
       logical lrspin
 *     vecteurs de rotations incrementaux :
-      real*8 th1(3), th2(3), th3(3), th4(3), jw2(3), t2(3)
+      real*8 th1(3), th2(3), th3(3), th4(3) 
       real*8 dexpinv(3,3)
 *     matrices pour la matrice de masse si couplage inertiel :
 *     accelerations translations rigides : 
       real*8 atrans(3)
-      real*8 mrth(3,3),mthr(3,3)
-      real*8 mfr(nn2,3),mrf(3,nn2)
-      real*8 mfth(nn2,3),mthf(3,nn2)
+      real*8 mrth(3,3)
+*     real*8 mthr(3,3)
+      real*8 mfth(nn2,3)
+      real*8 mfr(nn2,3)
       real*8 mthth(3,3)
-      real*8 rtgex(3),qvf(nn2,nnsb),qvr(3,nnsb),qvth(3,nnsb)
+*     real*8 mrf(3,nn2)
+      real*8 rtgex(3)
+      real*8 qvr(3,nnsb)
+      real*8 qvth(3,nnsb)
+      real*8 qvf(nn2,nnsb)
       real*8 ine(3,3),invine(3,3)
 
 *     resistance au spin ?
@@ -244,6 +249,10 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
 CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
 cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           IF (IAROTA(IIB).EQ.0) GOTO 7
+          write(*,*)'rkpas : rot tt debut : indice 5'
+          do id=1,3
+              write(*,'(3(1X,F8.5))') , (rot(id,j,5,iib),j=1,3)
+          enddo
 *         mise a 0 des couples ext. :
           do id=1,3
             fmomtot(id,1,iib) = 0.d0
@@ -275,11 +284,21 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL PQUAT(OMEG1(1,5,IIB),DQUAT,OMEG1(1,4,IIB))
 *          quaternion a l'instant tn+1:
           CALL QUAT2MAT(OMEG1(1,4,IIB),ROT(1,1,4,IIB)) 
-
-*          write(*,*)'rkpas : rot 1st pred : indice 4'
-*          do id=1,3
-*              write(*,'(3(1X,F8.5))') , (rot(id,j,4,iib),j=1,3)
-*          enddo
+           write(*,*)'rkpas : rot 1st pred : indice 4'
+           write(*,*)'        omeg2 :'
+           write(*,'((1X,F8.5))') , (omeg2(id,5,iib),id=1,3)
+           write(*,*)'        omeg3 :'
+           write(*,'((1X,F8.5))') , (omeg3(id,5,iib),id=1,3)
+           write(*,*)'        th2 :'
+           write(*,'((1X,F8.5))') , (th2(id),id=1,3)
+           write(*,*)'        dquat :'
+           write(*,'((1X,F8.5))') , (dquat(id),id=1,4)
+           write(*,*)'        omeg1 :'
+           write(*,'((1X,F8.5))') , (omeg1(id,4,iib),id=1,4)
+           write(*,*)'        rot :'
+           do id=1,3
+               write(*,'(3(1X,F8.5))') , (rot(id,j,4,iib),j=1,3)
+           enddo
 
 *          equilibre dynamique : 1/2 pdt --> ifex = 3
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
@@ -511,7 +530,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           qvth(id,iib) = 0.d0
           do j=1,3
             mrth(id,j) = 0.d0
-            mthr(id,j) = 0.d0
+*            mthr(id,j) = 0.d0
             mthth(id,j) = 0.d0
           enddo
         enddo
@@ -519,9 +538,9 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           qvf(in,iib) = 0.d0
           do id=1,3
             mfr(in,id) = 0.d0
-            mrf(id,in) = 0.d0
+*           mrf(id,in) = 0.d0
             mfth(in,id) = 0.d0
-            mthf(id,in) = 0.d0
+*           mthf(id,in) = 0.d0
           enddo
         enddo
 *       maintenant on peut sauter les ss bases ss rotas rigides :
@@ -533,30 +552,41 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ******************************************************************
 *     M_{Rth} : couplage rotas-trnaslas shabana p 320
 ******************************************************************
-        call cmrth(Q1,KTROT,NA1,NB1M,IIB,mrth,mthr,ind1,na3,ina1) 
+        write(*,*)'rkpas call cmrth : rot :'
+        do id=1,3
+           write(*,'(3(1X,F8.5))') , (rot(id,j,ind1,iib),j=1,3)
+        enddo
+        call cmrth(Q1,KTROT,NA1,NB1M,IIB,mrth,ind1,na3,ina1) 
+******************************************************************
 ******************************************************************
 *     M_{fR} (dim : nmodes x 3) : couplage elas-translas shabana p 320
 ******************************************************************
-        call cmfr(Q1,KTROT,NA1,NB1M,IIB,mfr,mrf,ind1,na2,na3,ina1) 
+      call cmfr(Q1,KTROT,NA1,NB1M,IIB,mfr,ind1,na2,na3,ina1) 
+******************************************************************
 ******************************************************************
 *     M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
 ******************************************************************
-        call cmfth(Q1,KTROT,NA1,NB1M,IIB,mfth,mthf,ind1,na2,na3,ina1) 
+      call cmfth(Q1,KTROT,NA1,NB1M,IIB,mfth,ind1,na2,na3,ina1) 
+*******************************************************************
 ******************************************************************
 *    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
 *                          (shabana p 320)
 ******************************************************************
-        call cmthth(Q1,KTROT,NA1,NB1M,IIB,mthth,ind1,na3,ina1) 
-******************************************************************
+      call cmthth(Q1,KTROT,NA1,NB1M,IIB,mthth,ind1,na3,ina1) 
+*******************************************************************
+*******************************************************************
 *       Quadratic velocity vector : coriolis, centrifuge ...
 ******************************************************************
 *       translation : 
-        call cqvr(Q1,q2,qvr,KTROT,NA1,IIB,ind1,nsb,na3,ina1) 
+      call cqvr(Q1,q2,qvr,KTROT,NA1,IIB,ind1,nsb,na3,ina1) 
+******************************************************************
 *       rotation : 
-        call cqvth(Q1,q2,qvth,mthth,mthf,KTROT,NA1,IIB,ind1,nsb,
-     &             na3,ina1) 
+       call cqvth(Q1,q2,qvth,mthth,mfth,KTROT,NA1,IIB,ind1,nsb,
+     &             na3,na2,ina1) 
+******************************************************************
 *       coordonnees modales : 
         call cqvf(Q1,q2,qvf,KTROT,NA1,IIB,ind1,na2,nsb,na3,ina1) 
+******************************************************************
 ******************************************************************
 *      on implemente les forces d'inertie d'entrainement
 *      dues aux blocs non diagonnaux de la matrice de masse ET
@@ -566,7 +596,14 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ******************************************************************
 *       on recupere les comp de l'acceleration en translation :
 *       Attention : ici il faut qu'il soit dans l'ordre x,y,z ds la base modale.
+*
+        write(*,*)'        fmomtot : avant forces inert '
+        write(*,'((1X,F8.5))') , (fmomtot(id,1,iib),id=1,3)
+*
         id=0
+        atrans(1) = 0.d0
+        atrans(2) = 0.d0
+        atrans(3) = 0.d0
         do in=1,na3
           i2 = ina1 + in
           if (itrig(iib,in)) then 
@@ -579,7 +616,14 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             enddo
           endif
         enddo
+        write(*,*)'        atrans :  '
+        write(*,'((1X,F8.5))') , (atrans(id),id=1,3)
 *
+
+        write(*,*)'        fmomtot : avant qvf '
+        write(*,'((1X,F8.5))') , (fmomtot(id,1,iib),id=1,3)
+*       if (fmomtot(1,1,iib).ne.fmomtot(1,1,iib)) call exit(1)
+
         do in=1,na3
           i2 = ina1 + in
           if (.not.itrig(iib,in)) then 
@@ -590,7 +634,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
               ftota(i2,ind1) = ftota(i2,ind1) - mfr(in,j) * atrans(j) 
 *             MTHF :
               fmomtot(j,ind1,iib) = fmomtot(j,ind1,iib) -
-     &                               mthf(j,in) * q3(i2,iib)
+     &                               mfth(in,j) * q3(i2,iib)
 *             MFTH :
               ftota(i2,ind1) = ftota(i2,ind1) -
      &                         mfth(in,j) * omeg3(j,ind1,iib)  
@@ -598,16 +642,22 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           endif
         enddo
 *
+
+        write(*,*)'        fmomtot : avant mthr '
+        write(*,'((1X,F8.5))') , (fmomtot(id,1,iib),id=1,3)
 *       MTHR :
         do id=1,3
 *         QVTH : 
           fmomtot(id,ind1,iib) = fmomtot(id,ind1,iib) + qvth(id,iib)
           do j=1,3
             fmomtot(id,ind1,iib) = fmomtot(id,ind1,iib) -
-     &                              mthr(id,j) * atrans(j)
+     &                              mrth(j,id) * atrans(j)
           enddo
         enddo
 *
+
+        write(*,*)'        fmomtot : avant mrf '
+        write(*,'((1X,F8.5))') , (fmomtot(id,1,iib),id=1,3)
 *       MRF :
         id = 0
         do in=1,na3
@@ -619,12 +669,14 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             do in2=1,na3
               if (.not.itrig(iib,in2)) then
                 ftota(i2,ind1) = ftota(i2,ind1) -
-     &                           mrf(id,in2) * q3(in2,ind1)
+     &                           mfr(in2,id) * q3(in2,ind1)
               endif
             enddo
           endif
         enddo
 
+        write(*,*)'        fmomtot : fin forces inert '
+        write(*,'((1X,F8.5))') , (fmomtot(id,1,iib),id=1,3)
 ***********************************************************************
 *     FIN boucle sur les ss bases
 ***********************************************************************
@@ -696,6 +748,14 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
           enddo
 *         On calcul l'inverse de la matrice d'inertie : Ithth
           call hinv33(ine(1,1),invine(1,1))
+          write(*,*)'rkpas invine : '
+          do id=1,3
+             write(*,'(3(1X,F8.5))') , (invine(id,j),j=1,3)
+             if (invine(id,1).ne.invine(id,1)) then 
+              write(*,*)'invine = NaN!!!'
+              call exit(1)
+             endif
+          enddo
           do id = 1,3
             omeg3(id,1,iib) = 0.d0
             do j = 1,3
@@ -708,6 +768,16 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
             omeg2(id,1,iib) = omeg2(id,5,iib) + 
      &                 (dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
           enddo
+
+           write(*,*)'rkpas : fin du pas indice 1 : '
+           write(*,*)'        rtgex :'
+           write(*,'((1X,F8.5))') , (rtgex(id),id=1,3)
+           write(*,*)'        fmomtot :'
+           write(*,'((1X,F8.5))') , (fmomtot(id,1,iib),id=1,3)
+           write(*,*)'        omeg2 :'
+           write(*,'((1X,F8.5))') , (omeg2(id,1,iib),id=1,3)
+           write(*,*)'        omeg3 :'
+           write(*,'((1X,F8.5))') , (omeg3(id,1,iib),id=1,3)
  17    continue
       endif
 
@@ -767,6 +837,7 @@ CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
           if (nliab.ne.0) then
             epot(iib) = xptb(1,1,3)*mtsb(iib)*9.81 
           endif
+          write(*,*)'tcin = ',tcin(iib)
  8     CONTINUE
 * fin boucle ss bases
       ENDIF

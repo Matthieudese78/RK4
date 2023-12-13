@@ -12,8 +12,8 @@ linert = vrai ;
 opti impi 555 ;
 ***** General:
 * nbr de modes elastiques : 
-nmode_ela = 4 ;
-nnoeuds = 100 ;
+nmode_ela = 2 ;
+nnoeuds = 5 ;
 * On prend une toupie conique en acier:
 * Masse:
 * M = 2.;
@@ -29,10 +29,12 @@ nnoeuds = 100 ;
 *
 ****** Geometrie:
 * longueur de la poutre: 
- h = 1.5 ;
+*  h = 1.5 ;
+ h = 0.5 ;
 * Rayon:
 * R = (1.27e-2/2.) ;
- R = (5.e-2) ;
+*  R = (5.e-2) ;
+ R = (2.e-2) ;
 
 * Section de la poutre :
  sectpou = (Pi*(R**2)) ;
@@ -58,11 +60,12 @@ nnoeuds = 100 ;
 * T = 5. ;
 * DTE = 1.e-3 ;
 * NSORT =  50 ;
-T = 3. ;
-T = 10.e-4 ;
-DTE = 1.e-6 ;
+* T = 3. ;
+T = 1.e-5 ;
+T = 1. ;
+DTE = 1.e-5 ;
 NSORT =  5000 ;
-NSORT =  1 ;
+* NSORT =  1 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -168,12 +171,12 @@ K = K et cl1 ;
 CLRX = BLOQ 'RY' 'RZ' meshpou;
 CLRY = BLOQ 'RX' 'RZ' meshpou;
 CLRZ = BLOQ 'RX' 'RY' meshpou;
-* CLela = BLOQ 'ROTA' P1;
+CLela = BLOQ 'ROTA' P1;
 KRX = K et CLRX;
 KRY = K et CLRY;
 KRZ = K et CLRZ;
-* Kela = K et clela ;
-Kela = K ;
+Kela = K et clela ;
+* Kela = K ;
 *********************************************************************
 *                          Calculs des modes: 
 *********************************************************************
@@ -185,6 +188,8 @@ Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
 Tmode_ela = vibr 'IRAM' 1. nmode_ela Kela M1 ;
 * 
 * opti donn 5 ; 
+si (NMODE_ELA >EG 4) ;
+
 tmodela = table 'BASE_MODALE' ;
 tmodela . 'MODES' = table 'BASE_DE_MODES' ;
 tmodela . 'MODES' . 'MAILLAGE' = meshpou ;
@@ -197,6 +202,12 @@ repe bmode (NMODE_ELA - 3) ;
   tmodela . modes . &bmode . 'DEPLACEMENTS_GENERALISES'   = tmode_ela . modes . (&bmode + 3) . deplacements_generalises ;
   tmodela . modes . &bmode . 'DEFORMEE_MODALE'            = tmode_ela . modes . (&bmode + 3) . deformee_modale ;
 fin bmode ;
+
+sinon ; 
+
+tmodela = tmode_ela ;
+
+finsi ;
 * tmode_ela = tmodela ;
 * postvibr:
 * opti trac x ;
@@ -255,7 +266,7 @@ Tmode_RZ . 'MODES' . 1 . 'COMPOSANTE' = 'RZ' ;
 * Rotas rigides et modes elastiques:
 SI (typmode EGA 1);
 * Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ et Tmode_ela) ;
-Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ et Tmode_ela) ;
+Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ et Tmodela) ;
 FINSI;
 * Que rotas rigides:
 SI (typmode EGA 2);
@@ -383,7 +394,7 @@ tprog = TRESU . TEMPS_DE_SORTIE;
 *
 Nt = dime tprog;
 *
-opti donn 5 ; 
+* opti donn 5 ; 
 ************************************************************************
 *     					POST TRAITEMENT
 ************************************************************************
