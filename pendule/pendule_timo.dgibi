@@ -4,7 +4,7 @@
 * AND MOMENTUM
 rk4 = vrai ;
 sw = faux ;
-xpinv = faux ;
+xpinv = vrai ;
 linert = vrai ;
 *********************************************************************
 *                       Valeurs numeriques 
@@ -12,8 +12,16 @@ linert = vrai ;
 opti impi 555 ;
 ***** General:
 * nbr de modes elastiques : 
-nmode_ela = 2 ;
-nnoeuds = 5 ;
+* qui marche :
+* nmode_ela = 2 ;
+* nnoeuds = 5 ;
+
+nmode_ela = 6 ;
+
+ltronq = vrai ; 
+ntronq = 2 ;
+
+nnoeuds = 40 ;
 * On prend une toupie conique en acier:
 * Masse:
 * M = 2.;
@@ -29,12 +37,14 @@ nnoeuds = 5 ;
 *
 ****** Geometrie:
 * longueur de la poutre: 
-*  h = 1.5 ;
- h = 0.5 ;
+*  qui marche avec nnoeuds = 500 :
+*  h = 0.5 ;
+ R = (2.e-2) ;
+
 * Rayon:
+h = 0.5 ;
 * R = (1.27e-2/2.) ;
 *  R = (5.e-2) ;
- R = (2.e-2) ;
 
 * Section de la poutre :
  sectpou = (Pi*(R**2)) ;
@@ -57,13 +67,9 @@ nnoeuds = 5 ;
 * Centre de rotation = P1 ci-dessous = origine (0. 0. 0.).
 *
 ***** Temporel:
-* T = 5. ;
-* DTE = 1.e-3 ;
-* NSORT =  50 ;
-* T = 3. ;
-T = 1.e-5 ;
-T = 1. ;
-DTE = 1.e-5 ;
+* T = 5.e-5 ;
+T = 3. ;
+DTE = 1.e-6 ;
 NSORT =  5000 ;
 * NSORT =  1 ;
 *
@@ -171,7 +177,9 @@ K = K et cl1 ;
 CLRX = BLOQ 'RY' 'RZ' meshpou;
 CLRY = BLOQ 'RX' 'RZ' meshpou;
 CLRZ = BLOQ 'RX' 'RY' meshpou;
-CLela = BLOQ 'ROTA' P1;
+* CLela = BLOQ 'RZ' meshpou ;
+* CLela = BLOQ 'ROTA' p1 ;
+CLela = BLOQ 'UX' meshpou ;
 KRX = K et CLRX;
 KRY = K et CLRY;
 KRZ = K et CLRZ;
@@ -185,37 +193,34 @@ Tmode_RX  = vibr 'IRAM' 0.5 1 KRX M1 ;
 Tmode_RY  = vibr 'IRAM' 0.5 1 KRY M1 ;
 Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
 * On teste egalement en presence de modes elastiques:
-Tmode_ela = vibr 'IRAM' 1. nmode_ela Kela M1 ;
+Tmode_ela = vibr 'IRAM' 20. nmode_ela Kela M1 ;
 * 
+tmodela = tmode_ela ;
 * opti donn 5 ; 
-si (NMODE_ELA >EG 4) ;
+si (ltronq) ;
 
 tmodela = table 'BASE_MODALE' ;
 tmodela . 'MODES' = table 'BASE_DE_MODES' ;
 tmodela . 'MODES' . 'MAILLAGE' = meshpou ;
-repe bmode (NMODE_ELA - 3) ;
+repe bmode (NMODE_ELA - ntronq) ;
   tmodela . modes . &bmode                                = table 'MODE' ;
   tmodela . modes . &bmode . 'NUMERO_MODE'                = &bmode ;
-  tmodela . modes . &bmode . 'POINT_REPERE'               = tmode_ela . modes . (&bmode + 3) . point_repere ;
-  tmodela . modes . &bmode . 'FREQUENCE'                  = tmode_ela . modes . (&bmode + 3) . frequence ;
-  tmodela . modes . &bmode . 'MASSE_GENERALISEE'          = tmode_ela . modes . (&bmode + 3) . masse_generalisee ;
-  tmodela . modes . &bmode . 'DEPLACEMENTS_GENERALISES'   = tmode_ela . modes . (&bmode + 3) . deplacements_generalises ;
-  tmodela . modes . &bmode . 'DEFORMEE_MODALE'            = tmode_ela . modes . (&bmode + 3) . deformee_modale ;
+  tmodela . modes . &bmode . 'POINT_REPERE'               = tmode_ela . modes . (&bmode + ntronq) . point_repere ;
+  tmodela . modes . &bmode . 'FREQUENCE'                  = tmode_ela . modes . (&bmode + ntronq) . frequence ;
+  tmodela . modes . &bmode . 'MASSE_GENERALISEE'          = tmode_ela . modes . (&bmode + ntronq) . masse_generalisee ;
+  tmodela . modes . &bmode . 'DEPLACEMENTS_GENERALISES'   = tmode_ela . modes . (&bmode + ntronq) . deplacements_generalises ;
+  tmodela . modes . &bmode . 'DEFORMEE_MODALE'            = tmode_ela . modes . (&bmode + ntronq) . deformee_modale ;
 fin bmode ;
-
-sinon ; 
-
-tmodela = tmode_ela ;
 
 finsi ;
 * tmode_ela = tmodela ;
 * postvibr:
 * opti trac x ;
-postvibr Tmode_RX ;
-postvibr Tmode_RY ;
-postvibr Tmode_RZ ;
+*postvibr Tmode_RX ;
+*postvibr Tmode_RY ;
+*postvibr Tmode_RZ ;
 postvibr Tmode_ela ;
-postvibr Tmodela ;
+* postvibr Tmodela ;
 
 * opti donn 5 ; 
 
@@ -223,8 +228,10 @@ postvibr Tmodela ;
 ptrep_RX =    Tmode_RX . 'MODES' . 1 . 'POINT_REPERE';
 ptrep_RY =    Tmode_RY . 'MODES' . 1 . 'POINT_REPERE';
 ptrep_RZ =    Tmode_RZ . 'MODES' . 1 . 'POINT_REPERE';
-ptrep_ela_1 =    Tmode_ela . 'MODES' . 1 . 'POINT_REPERE';
-* ptrep_ela_2 =    Tmode_ela . 'MODES' . 2 . 'POINT_REPERE';
+ptrep_ela_1 =    Tmodela . 'MODES' . 1 . 'POINT_REPERE';
+ptrep_ela_2 =    Tmodela . 'MODES' . 2 . 'POINT_REPERE';
+* ptrep_ela_3 =    Tmodela . 'MODES' . 3 . 'POINT_REPERE';
+* ptrep_ela_4 =    Tmodela . 'MODES' . 4 . 'POINT_REPERE';
 *
 *********************************************************************
 *                     Traitement rotations rigides: 
@@ -650,10 +657,38 @@ FINSI ;
 *
 si (typmode ega 1) ;
 q1 = tresu . deplacement . ptrep_ela_1 ;
+q2 = tresu . deplacement . ptrep_ela_2 ;
+* q3 = tresu . deplacement . ptrep_ela_3 ;
+* q4 = tresu . deplacement . ptrep_ela_4 ;
 q1_ev = EVOL 'ROUG' MANU 't' tprog 'q1' q1 ;
+q2_ev = EVOL 'ROUG' MANU 't' tprog 'q1' q2 ;
+* q3_ev = EVOL 'ROUG' MANU 't' tprog 'q1' q3 ;
+* q4_ev = EVOL 'ROUG' MANU 't' tprog 'q1' q4 ;
 TAB1 . 'TITRE' . 1 = 'q1';	
 Dess q1_ev  'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
+TAB1 . 'TITRE' . 1 = 'q2';	
+Dess q2_ev  'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
+* TAB1 . 'TITRE' . 1 = 'q3';	
+* Dess q3_ev  'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
+* TAB1 . 'TITRE' . 1 = 'q4';	
+* Dess q4_ev  'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
 finsi ;
+
+UXp1_ev = EVOL 'ROUG' 'RECO' TRESU tmode 'DEPL' p1 'UX' ;
+UYp1_ev = EVOL 'VERT' 'RECO' TRESU tmode 'DEPL' p1 'UY' ;
+UZp1_ev = EVOL 'BLEU' 'RECO' TRESU tmode 'DEPL' p1 'UZ' ;
+UXp1 = EXTR uxp1_ev 'ORDO' 1 ;
+UYp1 = EXTR uyp1_ev 'ORDO' 1 ;
+UZp1 = EXTR uzp1_ev 'ORDO' 1 ;
+dess (uxp1_ev et uYp1_ev et uzp1_ev) 'TITRE' 'P1' ;
+
+UXp2_ev = EVOL 'ROUG' 'RECO' TRESU tmode 'DEPL' p2 'UX' ;
+UYp2_ev = EVOL 'VERT' 'RECO' TRESU tmode 'DEPL' p2 'UY' ;
+UZp2_ev = EVOL 'BLEU' 'RECO' TRESU tmode 'DEPL' p2 'UZ' ;
+UXp2 = EXTR uxp2_ev 'ORDO' 1 ;
+UYp2 = EXTR uyp2_ev 'ORDO' 1 ;
+UZp2 = EXTR uzp2_ev 'ORDO' 1 ;
+dess (uxp2_ev et uYp2_ev et uzp2_ev) 'TITRE' 'P2' ;
 ***************************************************************************
 *                  SORTIE
 
@@ -685,6 +720,18 @@ TSORT . 'EP' = 'TABL' ;
 TSORT . 'EP' = EP1 ;
 TSORT . 'ET' = 'TABL' ;
 TSORT . 'ET' = ET1 ;
+TSORT . 'UXP1' = 'TABL' ;
+TSORT . 'UYP1' = 'TABL' ;
+TSORT . 'UZP1' = 'TABL' ;
+TSORT . 'UXP1' = UXP1 ;
+TSORT . 'UYP1' = UYP1 ;
+TSORT . 'UZP1' = UZP1 ;
+TSORT . 'UXP2' = 'TABL' ;
+TSORT . 'UYP2' = 'TABL' ;
+TSORT . 'UZP2' = 'TABL' ;
+TSORT . 'UXP2' = UXP2 ;
+TSORT . 'UYP2' = UYP2 ;
+TSORT . 'UZP2' = UZP2 ;
 * RECOTOT : 
 SI (RECOTOT EGA VRAI) ;
 TSORT . 'UX1' = 'TABL' ;
@@ -735,13 +782,13 @@ OPTI 'SORT' (CHAI 'data_dgibi/'script'_AC2_data_dgibi_T_' T '_h_' DTe'_NSORT_'NS
 
 ********************************************************************
 SI ( (RIGIDE EGA VRAI) ET (NON RECOTOT) ET (NON EVOLRECO)) ;
-ncolexce = 11 + 2 ;
+ncolexce = 18 + 2 ;
 FINSI ;
 SI ( (RIGIDE EGA VRAI) ET (RECOTOT EGA VRAI) ET (NON EVOLRECO)) ;
-ncolexce = 20 + 2 ;
+ncolexce = 27 + 2 ;
 FINSI ;
 SI ( (RIGIDE EGA VRAI) ET (RECOTOT EGA VRAI) ET (EVOLRECO EGA VRAI)) ;
-ncolexce = 29 + 2 ;
+ncolexce = 36 + 2 ;
 FINSI ;
 si (typmode ega 1) ;
 ncolexce = ncolexce + 1 ;
