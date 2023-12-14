@@ -95,7 +95,9 @@ c
          REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
          REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
          REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
-         REAL*8 XTPHIN(3,NPDEF,NA2,NSB),XMNO(NA2,NSB)
+         REAL*8 XMNO(NA2,NSB),QVTH(3,NSB),QVR(3,NSB),QVF(NA2,NSB)
+         REAL*8 MRTH(3,3,NSB),MTHTH(3,3,NSB)
+         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB)
          REAL*8 XMPOI(NPDEF,NA2,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
@@ -200,7 +202,7 @@ cmsw          WRITE(*,*)'     Prediction DTHETA ss base ',IIB
 *           IF (IIMPI.EQ.555) THEN
 cmsw             WRITE(*,*)'OMEG2(',I,2,IIB,')',OMEG2(I,2,IIB)
 cmsw             WRITE(*,*)'OMEG3(',I,2,IIB,')',OMEG3(I,2,IIB)
-             WRITE(*,*)'DTHETA(',I,IIB,')',DTHETA(I,IIB)
+*            WRITE(*,*)'DTHETA(',I,IIB,')',DTHETA(I,IIB)
 *           ENDIF
           ENDDO
 *         calcul de EXPTH pour eq. dynamique:
@@ -243,12 +245,12 @@ cmsw            WRITE(*,'(20F20.18)')((ROT(k,j,1,IIB),j= 1,3),k= 1,3)
             ENDDO
             CALL MAT2QUAT(ROT(1,1,1,IIB),OMEG1(1,1,IIB))
           ENDIF
-          write(*,*)'d2vpas : prediction matrice de rotation :'
-          write(*,*)'         ss base ',iib,' :'
-          write(*,*)'         ind 1 :'
-         do id=1,3
-            write(*,'(3(1X,F8.5))') , (rot(id,j,1,iib),j=1,3)
-         enddo
+*         write(*,*)'d2vpas : prediction matrice de rotation :'
+*         write(*,*)'         ss base ',iib,' :'
+*         write(*,*)'         ind 1 :'
+*        do id=1,3
+*           write(*,'(3(1X,F8.5))') , (rot(id,j,1,iib),j=1,3)
+*        enddo
 * fin boucle sur les sous bases
 cms 07/23 :  Prediction en vitesse pour les forces de liaisons :
 *             rq : on prend au 1/2 pas de temps. (Simo & Wong)
@@ -280,20 +282,20 @@ cmsw         WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VFXA'
         CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &              NPLB,IDIMB,RIGIDE)
 
-      write(*,*)'d2vpas : post-d2vfxa ftota :'
-      do in=1,na1
-        do id=1,3
-          write(*,*)'          ',ftota(in,1)
-          write(*,*)'          ',ftota(in,1)
-          write(*,*)'          ',ftota(in,1)
-        enddo
-      enddo
-      write(*,*)'d2vpas : post-d2vfxa fexb :'
-      do ip=1,nplb
-        do id=1,3
-          write(*,*)'          ',fexb(ip,1,id)
-        enddo
-      enddo
+*     write(*,*)'d2vpas : post-d2vfxa ftota :'
+*     do in=1,na1
+*       do id=1,3
+*         write(*,*)'          ',ftota(in,1)
+*         write(*,*)'          ',ftota(in,1)
+*         write(*,*)'          ',ftota(in,1)
+*       enddo
+*     enddo
+*     write(*,*)'d2vpas : post-d2vfxa fexb :'
+*     do ip=1,nplb
+*       do id=1,3
+*         write(*,*)'          ',fexb(ip,1,id)
+*       enddo
+*     enddo
 *     estimation de la vitesse (ici plutot que dans DEVLF*, bp,2020-09):
 *     \dot{q}_n ~ \dot{q}_{n+1/2} = ({q}_n - {q}_{n-1}) / dt
 *     on utilise Q2(I,1) temporairement (il sera "bien" rempli � la fin du pas)
@@ -316,7 +318,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFA'
          IF (IIMPI.EQ.333) THEN
 cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
          ENDIF      
-         WRITE(*,*)'D2VPAS : appel au sous-programme D2VLFB'
+*        WRITE(*,*)'D2VPAS : appel au sous-programme D2VLFB'
          CALL D2VLFB(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,NLIAB,
      &               XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,dt,tfin,
      &               NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,1,
@@ -400,8 +402,8 @@ cmsw          WRITE(*,*)'D2VPAS: apres equilibre dynamique :'
             OMEG3(ID,1,IIB)=(OMEG2(ID,1,IIB)-OMEG2(ID,2,IIB))/DT
 cmsw            WRITE(*,*)'D2VPAS : apres equilibre dynamique :'
 cmsw            WRITE(*,*)'         base IIB = ',IIB
-            WRITE(*,*)'         OMEG2=',OMEG2(ID,1,IIB)
-            WRITE(*,*)'         OMEG3=',OMEG3(ID,1,IIB)
+*            WRITE(*,*)'         OMEG2=',OMEG2(ID,1,IIB)
+*            WRITE(*,*)'         OMEG3=',OMEG3(ID,1,IIB)
           ENDDO
 *          write(*,*)'        OMEG2 :'
 *          write(*,'(1X,F8.5)') , (omeg2(id,1,iib),id=1,3)
@@ -499,7 +501,7 @@ cmsw               WRITE(*,*)' XTC = ',XTC
 *           - la gravite est en -ez
 *           - le cdm du solide est le point de liaison numero 1 
           if (nliab.ne.0) then
-            write(*,'(3(1X,F8.5))') , (xptb(1,1,id),id=1,3)
+*           write(*,'(3(1X,F8.5))') , (xptb(1,1,id),id=1,3)
             epot(iib) = xptb(1,1,3)*mtsb(iib)*9.81 
           endif
 cmsw          WRITE(*,*)'D2VPAS : transl. + rota + flex. TCIN = ',TCIN(IIB)

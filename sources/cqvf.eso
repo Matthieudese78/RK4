@@ -1,4 +1,4 @@
-      SUBROUTINE cqvf(Q1,q2,qvf,KTROT,NA1,IB,ind,nn2,nnsb,na3,ina1) 
+      SUBROUTINE cqvf(Q1,q2,KTROT,NA1,IB,ind,na3,ina1) 
 *     
       IMPLICIT INTEGER(I-N)
       IMPLICIT REAL*8(A-H,O-Z)
@@ -22,7 +22,9 @@
          REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
          REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
          REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
-         REAL*8 XTPHIN(3,NPDEF,NA2,NSB),XMNO(NA2,NSB)
+         REAL*8 XMNO(NA2,NSB),QVTH(3,NSB),QVR(3,NSB),QVF(NA2,NSB)
+         REAL*8 MRTH(3,3,NSB),MTHTH(3,3,NSB)
+         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB)
          REAL*8 XMPOI(NPDEF,NA2,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
@@ -30,7 +32,7 @@
       ENDSEGMENT
 *
       REAL*8 Q1(NA1,*),q2(na1,*)
-      REAL*8 qvf(nn2,nnsb),qv1(3)
+      REAL*8 qv1(3)
       real*8 wchap(3,3),wchap2(3,3),x1(3)
 ******************************************************************
       mtrot = ktrot

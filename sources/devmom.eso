@@ -86,7 +86,9 @@ C DEVMOM    SOURCE    CHAT      05/01/12    22:46:46     5004
          REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
          REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
          REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
-         REAL*8 XTPHIN(3,NPDEF,NA2,NSB),XMNO(NA2,NSB)
+         REAL*8 XMNO(NA2,NSB),QVTH(3,NSB),QVR(3,NSB),QVF(NA2,NSB)
+         REAL*8 MRTH(3,3,NSB),MTHTH(3,3,NSB)
+         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB)
          REAL*8 XMPOI(NPDEF,NA2,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
@@ -105,7 +107,7 @@ C DEVMOM    SOURCE    CHAT      05/01/12    22:46:46     5004
       RIGIDE=(KTROT.NE.0)
 *
 
-      write(*,*)'devmom : start, ind = ',ind
+*     write(*,*)'devmom : start, ind = ',ind
 * FMOMTOT: couple exterieur total = somme couple pts de liaison B
 *             au demi-pas ed temps
 * Initialisation FMOMTOT:
@@ -126,17 +128,17 @@ C DEVMOM    SOURCE    CHAT      05/01/12    22:46:46     5004
 cmsw        WRITE(*,*)'DEVMOM : NPLB = ',NPLB
         DO 10 IP=1,NPLB
             ISB=IBASB(IP)
-         write(*,*)'devmom : dtheta'
-         write(*,'(3(1X,F8.5))') , (dtheta(id,isb),id=1,3)
+*        write(*,*)'devmom : dtheta'
+*        write(*,'(3(1X,F8.5))') , (dtheta(id,isb),id=1,3)
 
-         WRITE(*,*)'devmom : dtheta(1,ISB) = ',
-     &                                     DTHETA(1,ISB)
+*        WRITE(*,*)'devmom : dtheta(1,ISB) = ',
+*    &                                     DTHETA(1,ISB)
 
-         WRITE(*,*)'devmom : dtheta(2,ISB) = ',
-     &                                     DTHETA(2,ISB)
+*        WRITE(*,*)'devmom : dtheta(2,ISB) = ',
+*    &                                     DTHETA(2,ISB)
 
-         WRITE(*,*)'devmom : dtheta(3,ISB) = ',
-     &                                     DTHETA(3,ISB)
+*        WRITE(*,*)'devmom : dtheta(3,ISB) = ',
+*    &                                     DTHETA(3,ISB)
 cmsw            WRITE(*,*)'   Pt liai IP = ',IP
 cmsw            WRITE(*,*)'   ss base ISB  = ',ISB
 *           Produit vectoriel GP^F
@@ -173,7 +175,7 @@ cmsw            WRITE(*,*)'   ss base ISB  = ',ISB
              FORCE(ID) = FEXB(IP,IND,ID)+FTOTB(IP,ID)
 *             WRITE(*,*)'DEVMOM : bilan des forces en base B :'
 *             WRITE(*,*)'         Forces exterieures :'
-              WRITE(*,*)'devmom :  FEXB = ',FEXB(IP,IND,ID)
+*             WRITE(*,*)'devmom :  FEXB = ',FEXB(IP,IND,ID)
 *             WRITE(*,*)'         Forces NL :'
 *             WRITE(*,*)'         FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
 *             WRITE(*,*)'         Moment déjà calule ? :'
@@ -219,7 +221,7 @@ cmsw            WRITE(*,*)'   ss base ISB  = ',ISB
 * il ne nous reste plus qu a sommer FMOMTOT et FTOTB (relation de chasles):
 * TODO: moment au demi pas de temps --> corriger FTOTB(4-6) qui est a t_n+1!!
 *                WRITE(*,*)'DEVMOM: avant somme FMOMTOT'
-                 WRITE(*,*)'       FMOM(',I,') = ',FMOM(I)
+*                WRITE(*,*)'       FMOM(',I,') = ',FMOM(I)
 *                 WRITE(*,*)'       FTOTB(',IP,I2,') = ',
 *     &                            FTOTB(IP,I2)
                 FMOMTOT(I,IND,ISB) = FMOMTOT(I,IND,ISB) + FMOM(I)+
