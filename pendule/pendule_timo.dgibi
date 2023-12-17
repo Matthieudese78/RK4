@@ -2,10 +2,11 @@
 * UNCONDITIONALLY STABLE ALGORITHMS FOR RIGID
 * BODY DYNAMICS THAT EXACTLY PRESERVE ENERGY
 * AND MOMENTUM
-rk4 = vrai ;
+rk4 = faux ;
 sw = faux ;
-xpinv = vrai ;
-linert = vrai ;
+xpinv = faux ;
+linert = faux ;
+nmb = vrai ; 
 *********************************************************************
 *                       Valeurs numeriques 
 *********************************************************************
@@ -105,6 +106,9 @@ opti 'TRAC' PSC ;
 script = 'pendule_timo';
 si (rk4) ;
 script = (chai script'_rk4_') ;
+finsi ;
+si (nmb) ;
+script = (chai script'_nmb_') ;
 finsi ;
 si (sw) ;
 script = (chai script'_sw_') ;
@@ -391,6 +395,9 @@ TCHAR = TABL 'CHARGEMENT';
 *
 si (sw) ;
   TRESU = DYNE 'DIFFERENCES_CENTREES' Tmode TLIAI TCHAR TINI TSORT NPASe DTe NSORT;
+finsi ;
+si (nmb) ;
+  TRESU = DYNE 'NMB' Tmode TLIAI TCHAR TINI TSORT NPASe DTe NSORT;
 finsi ;
 si (rk4) ;
   TRESU = DYNE 'RKMK4' Tmode TLIAI TCHAR TINI TSORT NPASe DTe NSORT;
