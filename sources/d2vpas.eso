@@ -93,7 +93,7 @@ c
          REAL*8 XCENT(3,NSB),XCOOLB(3,NSB,NPLB),DTHETA(3,NSB)
          REAL*8 FMOMTOT(3,5,NSB),INVINERT(3,3,NSB),MTSB(NSB)
          REAL*8 UFLEX(NPLB,NSB,3,2),VFLEX(NPLB,NSB,3,2)
-         REAL*8 PICIN(NSB,3),TCIN(NSB),EPOT(NSB),XCG(3,NSB)
+         REAL*8 PICIN(NSB,3),TCIN(NSB),EDEF(NSB),XCG(3,NSB)
          REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
          REAL*8 XMNO(NA2,NSB),QVTH(3,NSB),QVR(3,NSB),QVF(NA2,NSB)
          REAL*8 MRTH(3,3,NSB),MTHTH(3,3,NSB)
@@ -469,7 +469,15 @@ c           Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) / (XM(I,1) - FINERT(I,1))
       IF (RIGIDE) THEN
 CMS : one ne profite pour recompter les modes elastiques non translation rigide :
         DO 9 IIB=1,NSB
-cmsw          WRITE(*,*)'D2VPAS : Calcul TCIN ssbase : ',IIB
+CMS :     pour l'energie de deformation, on a calule pour ttes les ss bases, rots rigides ou non : 
+          edef(iib) = 0.d0
+          ina2 = iorsb(iib) - 1
+          do in=1,na3
+            i2 = in + ina2
+            if (.not.itrig(iib,in)) then
+             edef(iib) = edef(iib) + (xk(i2,1) * (q1(i2,1)**2)/2.d0)
+            endif
+          enddo
 CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
           IF (IAROTA(IIB).EQ.0) GOTO 9
 ***       Calcul de l'energie cinetique en translation :
@@ -500,10 +508,10 @@ cmsw               WRITE(*,*)' XTC = ',XTC
 *         Energie potentielle de pesanteur : 
 *           - la gravite est en -ez
 *           - le cdm du solide est le point de liaison numero 1 
-          if (nliab.ne.0) then
-*           write(*,'(3(1X,F8.5))') , (xptb(1,1,id),id=1,3)
-            epot(iib) = xptb(1,1,3)*mtsb(iib)*9.81 
-          endif
+*          if (nliab.ne.0) then
+**           write(*,'(3(1X,F8.5))') , (xptb(1,1,id),id=1,3)
+*            epot(iib) = xptb(1,1,3)*mtsb(iib)*9.81 
+*          endif
 cmsw          WRITE(*,*)'D2VPAS : transl. + rota + flex. TCIN = ',TCIN(IIB)
  9      CONTINUE
       ENDIF
