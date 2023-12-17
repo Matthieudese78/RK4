@@ -32,6 +32,8 @@ c     GAMMA=0.5 et BETA=...(selon l'algo)
         BETA=1.D0/12.D0      
       ELSEIF(IALGO.EQ.5) THEN
         write(*,*)'dyndif : rkmk4' 
+      ELSEIF(IALGO.EQ.6) THEN
+        write(*,*)'dyndif : nmb' 
       ELSE 
 c       on ne devrait jamais arriver ici car deja teste en amont
         CALL ERREUR(477)
@@ -60,7 +62,8 @@ c       on ne devrait jamais arriver ici car deja teste en amont
       WRITE(IOIMP,*)'DYNDIF : apres lappel au sous-programme DEVLIR'
       ENDIF
       RIGIDE = (KCPRIG.ne.0)
-      IF ((IALGO.NE.2).and.(IALGO.NE.5).AND.(RIGIDE)) THEN
+      IF ((IALGO.NE.2).and.(IALGO.NE.5).and.
+     &    (ialgo.ne.6).AND.(RIGIDE)) THEN
         WRITE(*,*)'DYNDIF: D3VALG incompatible avec rotations rigides'
         CALL exit(1)
         RETURN
@@ -242,6 +245,10 @@ cms : on liste
      &              KTNUM,KPREF,NINS,KOCLFA,KOCLB1,REPRIS,KTROT)
       ELSEIF(IALGO.EQ.5) THEN
         CALL RKALG(KTQ,KTKAM,KTPHI,KTLIAA,KTLIAB,KTFEX,KTPAS,KTRES,
+     &              KTNUM,KPREF,NINS,KOCLFA,KOCLB1,REPRIS,KTROT)
+
+      ELSEIF(IALGO.EQ.6) THEN
+        CALL NMBALG(KTQ,KTKAM,KTPHI,KTLIAA,KTLIAB,KTFEX,KTPAS,KTRES,
      &              KTNUM,KPREF,NINS,KOCLFA,KOCLB1,REPRIS,KTROT)
       ELSEIF(IALGO.GE.3) THEN
         CALL D3VALG(KTQ,KTKAM,KTPHI,KTLIAA,KTLIAB,KTFEX,KTPAS,KTRES,

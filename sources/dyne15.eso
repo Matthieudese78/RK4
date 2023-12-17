@@ -135,7 +135,6 @@ c       PARAMETER ( NBLS = 2010 )
       NCRIG = 0
       NPRIG = IPORIG(/1)
       IF (RIGIDE) THEN
-      
 *        WRITE(*,*)'DYNE15: NCRIG = 4*NSB = ',4*NSB
 *        NCRIG = 4*NSB 
 * Attention: (certaines sous-bases peuvent ne pas contenir de rotas rigides)
@@ -222,6 +221,8 @@ c       PARAMETER ( NBLS = 2010 )
       NLSA   = 0
       NLSB   = 0
       II     = 10
+cms : si on rajoute l'energie des ssbases de deformation et les forces d'inerties sur les ddls de rotations et de translations :  
+*     ii = ii + 1 + 3 + 3
       ILIAA  = 0
       ILIAB  = 0
       ITABV  = 0

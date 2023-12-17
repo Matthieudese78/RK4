@@ -24,7 +24,7 @@ C DYNE      SOURCE    CB215821  18/09/21    21:15:35     9930
 *
       CHARACTER*6 MOPLEX
       character*5 morkmk4
-      CHARACTER*20 MODEVO,MOALG,MODIFF,MORK4  
+      CHARACTER*20 MODEVO,MOALG,MODIFF,MORK4,MONMB  
       CHARACTER*20 MONEWM(2)
       DATA MOPLEX /'PLEXUS'/
       DATA MODEVO /'DE_VOGELAERE'/
@@ -34,6 +34,7 @@ c                   12345678901234567890   12345678901
       DATA MORK4  /'RUNGE_KUTTA_4'/
 * ms : rk4 mmunthe-kaas dedies SO(3) :
       DATA MORKMK4  /'RKMK4'/
+      DATA MONMB  /'NMB'/
 *
 *     Quel algorithme a-t-on choisi ?
 *
@@ -66,10 +67,15 @@ c          CALL DYNPLX
          CALL DYNDIF(4)
          RETURN
          
-*     Algorithmes implicites de Newmark
+*     Algorithme runge kutta munthe kaas (MS) :
       ELSE IF (MOALG(1:5).EQ.MORKMK4) THEN
          write(*,*)'dyne : algo reconnu'
          CALL DYNDIF(5)
+         RETURN
+*     Algorithme newmark body frame (MS) :
+      ELSE IF (MOALG(1:3).EQ.MONMB) THEN
+         write(*,*)'dyne : algo reconnu'
+         CALL DYNDIF(6)
          RETURN
 *     Erreur dans le choix de l'algorithme
       ELSE
