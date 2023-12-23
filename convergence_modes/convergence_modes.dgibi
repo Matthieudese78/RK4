@@ -1,0 +1,127 @@
+***** dime et typel:
+Opti dime 3 ; 
+opti elem CUB8 ; 
+*** convergence des modes en fonction du nombre de noeuds :
+nmode_ela = 10 ;
+
+ltronq = vrai ; 
+ntronq = 2 ;
+* Masse:
+* Gravite:
+ g = 10. ;
+* Module d'Young: 20 MPa
+ eac = 210.e9; 
+* Coefficient de Poisson:
+ nuac = 0.3;
+* Masse volumique: en kg/m^3
+* Stoianovici & Hurmuzlu :
+ rho_ac = 7876.74 ;
+*
+****** Geometrie:
+stoia = vrai ;
+manchette = faux ;
+* stoianovici & hurmuzlu : plus longue barre : 
+si (stoia) ;
+* Rayon:
+R = ((12.7e-3)/2.) ;
+* longueur de la poutre: 
+h = 0.6 ;
+* Section de la poutre :
+sectpou = (Pi*(R**2)) ;
+* Volume:
+V = (Pi*(R**2.)*h) ;
+* masse totale du solide utilisee dans tmode , rotas rigides :
+M = V * rho_ac ;
+* Moment d'inertie / centre de gravite:
+Jx_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
+Jy_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
+Jz_G = 0.5*M*(R**2) ; 
+* Moments quadratiques de la poutre:
+IGx = (Pi*((2.*R)**4))/64. ;
+IGy = (Pi*((2.*R)**4))/64. ;
+IG = (Pi*((2.*R)**4))/32. ;
+finsi ;
+*
+* si (manchette) ;
+
+* finsi; 
+
+*Position du centre de gravite: manchette ou stoianovici : 
+*  LG = (h/2.) ;
+*
+*********************************************************************
+*                            OPTIONS 
+*********************************************************************
+***** Figure:
+opti 'TRAC' PSC ; 
+script = 'convergence_modes';
+opti 'FTRA ' (chai 'fig/'script'_nnoeuds_'NNOEUDS'.ps' );
+opti 'EPTR' 5;
+***** OPIONS SORTIE EXCEL: 
+OPTI 'SORT' (CHAI 'data/'script'_nnoeuds_'nnoeuds) ;
+* initialisation de la table stockant les frequences :
+tabf = table 'frequence' ;
+tabm = table 'masse' ;
+numode = 1 ; 
+repe bini (nmode_ela - ntronq) ; 
+  si (non ((&bini ega 8) ou (&bini ega 9))) ;
+    tabf . numode = prog ;
+    tabm . numode = prog ;
+    numode = numode + 1 ;
+  finsi ;
+fin bini ; 
+
+* boucle sur le nbr de noeuds : 
+P1 = 0. 0. 0. ;
+P2 = 0. 0. h ; 
+* Centre de masse theorique:
+* G1 = 0. 0. LG ; 
+lnoe = lect 20 30 50 80 100 140 180 200 250 300 400 500 ;
+repe bnoe (dime lnoe) ;
+*********************************************************************
+*                            Maillage 
+*********************************************************************
+***** Maillage: nombre d'element de la poutre:
+ L1 = d (extr lnoe &bnoe) P1 P2 ;
+ MESHPOU = L1 ;
+*********************************************************************
+*                            MODELE 
+*********************************************************************
+modpou = mode meshpou 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
+matpou = MATE modpou 'YOUN' eac 'NU' nuac 'RHO' rho_ac  'SECT' sectpou 'INRZ' IGy 'INRY' IGx 'TORS' IG ;
+* matrice de raideur:
+K = rigi modpou matpou ;
+* matrice de masse:
+M1 = mass modpou matpou ;
+****************************************************************************
+*                       Conditions limites 
+****************************************************************************
+CL1 = BLOQ 'DEPL' P1;
+K = K et cl1 ; 
+*********************************************************************
+*                            CLs 
+*********************************************************************
+CLelaX = BLOQ 'UX' meshpou ;
+KelaX = K et clelaX ;
+*********************************************************************
+*                          Calculs des modes: 
+*********************************************************************
+Tmode_elaX = vibr 'IRAM' 20. nmode_ela KelaX M1 ;
+numode = 1 ;
+repe bfm (nmode_ela - ntronq) ; 
+  si (non ((&bfm ega 8) ou (&bfm ega 9))) ;
+    tabf . numode = (tabf . numode) et (tmode_elax . modes . (&bfm + ntronq) . frequence) ; 
+    def = TMODE_ELAX . modes . &bfm . deformee_modale ; 
+    ly = extr def 'VALE' 'UY' ;
+    ymax = (maxi (abs ly)) ;
+    mno = TMODE_ELAX . modes . (&bfm + ntronq) . masse_generalisee ; 
+    tabm . numode = (tabm . numode) et (mno / (ymax**2)) ;
+    numode = numode + 1 ;
+  finsi ; 
+fin bfm ; 
+****** fin boucle sur les noeuds :
+fin bnoe ;
+
+postvibr TMODE_ELAX ;
+
+opti donn 5 ; 
