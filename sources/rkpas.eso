@@ -1,5 +1,3 @@
-C D2VPAS    SOURCE    BP208322  20/09/18    21:15:19     10718          
-c
       SUBROUTINE RKPAS(Q1,Q2,Q3,NA1,NPC1,XK,XASM,XM,PDT,T,NPAS,
      &   FTOTA,FEXA,NPFEXA,NLIAA,NLSA,IPALA,IPLIA,XPALA,XVALA,
      &   NLIAB,NLSB,NPLB,IDIMB,IPALB,IPLIB,JPLIB,XPALB,XVALB,FTOTB,
@@ -133,7 +131,7 @@ c     LOGICAL LWRITE
 cms : pour le couple resistant "hard code" : 
       real*8 tspin(3)
 *     pour le calcul des forces d'inerties :
-      logical lrspin
+      logical lrspin,lbt,lcb 
 *     vecteurs de rotations incrementaux :
       real*8 th1(3), th2(3), th3(3), th4(3) 
       real*8 dexpinv(3,3)
@@ -147,10 +145,17 @@ cms : pour le couple resistant "hard code" :
 *     correction dexpinv ?
       lxpinv = .true.
 *     couplage inertiel ?
-      linert = .true.
+      linert = .false.
 *     method de calcul de la MAJ du tenseur d'inertie J ?
       methJ1 = .false.
       methJ2 = .true.
+
+*     book toss ?
+      lbt = .false.
+
+*     coulombic soft wall ?
+      lcb = .true.
+
 *     le cas echeant, base modale de l'adaptateur : 
       ibad = 1
 
@@ -491,6 +496,39 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ************************************************************************
 * rotas rigides :
 ************************************************************************
+*       hard coded external torques :
+        if (lrspin) then 
+          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + tspin(1)
+          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + tspin(2)
+          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + tspin(3)
+        endif
+        if (lbt) then 
+          if (t.lt.(2.-pdt)) then 
+          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 20.
+          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
+          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
+          endif
+          if ((t.gt.(2.-pdt)).and.(t.lt.(2.+pdt))) then 
+          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
+          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + (2.d-1/pdt)
+          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
+          endif
+          if (t.ge.(2.+pdt)) then 
+          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
+          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
+          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
+          endif
+        endif
+        if (lcb) then 
+          xcgex = ((1.d-2*((1.1+rot(3,3,1,ibad))**(-11.d0))) -
+     &                     ((1.1+rot(3,3,1,ibad))**(-2.d0)))
+          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 
+     &                        -xcgex*rot(2,3,1,ibad)
+          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 
+     &                        xcgex*rot(1,3,1,ibad)
+          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 
+     &                        0.
+        endif
         do 22 iib=1,nsb
         if (iarota(iib).eq.0) goto 22
         call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
@@ -719,6 +757,33 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + tspin(2)
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + tspin(3)
        endif
+       if (lbt) then 
+         if (t.lt.(2.-pdt)) then 
+         fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 20.
+         fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
+         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
+         endif
+         if ((t.gt.(2.-pdt)).and.(t.lt.(2.+pdt))) then 
+         fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
+         fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + (2.d-1/pdt)
+         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
+         endif
+         if (t.ge.(2.+pdt)) then 
+         fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
+         fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
+         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
+         endif
+       endif
+       if (lcb) then 
+         xcgex = ((1.d-2*((1.1+rot(3,3,1,ibad))**(-11.d0))) -
+     &                    ((1.1+rot(3,3,1,ibad))**(-2.d0)))
+         fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 
+     &                       -xcgex*rot(2,3,1,ibad)
+         fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 
+     &                       xcgex*rot(1,3,1,ibad)
+         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 
+     &                       0.
+       endif
        do 17 iib=1,nsb
           if (iarota(iib).eq.0) goto 17
 *         inversion de la matrice d'inertie :
@@ -773,6 +838,7 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
 ************************************************************************
       IF (RIGIDE) THEN
        DO 8 IIB=1,NSB
+          na3  = inmsb(iib)
 CMS :     pour l'energie de deformation, on a calule pour ttes les ss bases, rots rigides ou non : 
           edef(iib) = 0.d0
           ina2 = iorsb(iib) - 1
@@ -782,6 +848,12 @@ CMS :     pour l'energie de deformation, on a calule pour ttes les ss bases, rot
              edef(iib) = edef(iib) + (xk(i2,1) * (q1(i2,1)**2)/2.d0)
             endif
           enddo
+          if (lcb) then 
+*           energie potentielle magnetique :
+            edef(iib) = edef(iib) - (- ((1.1+rot(3,3,1,ibad))**(-1.d0))
+     &               + (1.d-3*((1.1+rot(3,3,1,ibad))**(-10.d0))))
+          endif
+*         write(*,*)'rkpas : edef = ',edef(iib)
 CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
           IF (IAROTA(IIB).EQ.0) GOTO 8
 ***       Calcul du moment cinetique : 
@@ -805,9 +877,9 @@ CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
             ENDDO
             TCIN(IIB) = TCIN(IIB) + (OMEG2(I,1,IIB)*DYN2(I)/2.d0) 
           ENDDO
-          NA3  = INMSB(IIB)
+*          NA3  = INMSB(IIB)
 *              = nbr de modes elasiques ds la ss base (incluant les transl. rigides)
-          INA2 = IORSB(IIB) - 1
+*          INA2 = IORSB(IIB) - 1
           XTC = 0.D0
           DO IN = 1,NA3
             IN2 = INA2 + IN

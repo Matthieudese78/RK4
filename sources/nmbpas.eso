@@ -133,7 +133,7 @@ c     LOGICAL LWRITE
       REAL*8 FAMO1(NA1),FAMO2(NA1)
 cms : pour le couple resistant "hard code" : 
       real*8 tspin(3)
-      logical lrspin
+      logical lrspin,lbt,lcb
 *     specifique NMB : 
       real*8 w(3,2),a(3,2),wchap(3,3),achap(3,3),ja(3),jw(3)
       real*8 acj(3,3),wcj(3,3)
@@ -146,6 +146,13 @@ cms : pour le couple resistant "hard code" :
        MATRICE    = .FALSE.
 *     resistance au spin ?
       lrspin = .false.
+
+*     book toss ?
+      lbt = .false.
+
+*     coulombic soft wall ?
+      lcb = .true.
+
 *     le cas echeant, base modale de l'adaptateur : 
       ibad = 1
 
@@ -269,7 +276,9 @@ cms 07/23 :  Prediction en vitesse pour les forces de liaisons :
 
       DO I = 1,NA1
        Q1(I,1) = Q1(I,2) + Q2(I,2)*DT + Q3(I,2)*DT22
+*       WRITE(*,*)'nmbpas : Q1(',I,1,') = ',Q1(I,1)
       enddo
+
 
       IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VPAS: debut calcul des forces.'
 ************************************************************************
@@ -302,7 +311,7 @@ cmsw         WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VFXA'
 *     on utilise Q2(I,1) temporairement (il sera "bien" rempli � la fin du pas)
       DO I=1,NA1
         Q2(I,1)=(Q1(I,1)-Q1(I,2))/dt
-*        WRITE(*,*)'Q2(',I,1,') = ',Q2(I,1)
+*       WRITE(*,*)'nmbpas : Q2(',I,1,') = ',Q2(I,1)
       ENDDO
 
 *     Ajout des forces de liaison
@@ -373,6 +382,31 @@ cms    si on veut une resistance au spin, on rajoute
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + tspin(2)
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + tspin(3)
        endif
+       if (lbt) then 
+         if (t.lt.(2.-pdt)) then 
+         fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 20.
+         fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
+         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
+         endif
+         if ((t.gt.(2.-pdt)).and.(t.lt.(2.+pdt))) then 
+         fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
+         fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + (2.d-1/pdt)
+         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
+         endif
+         if (t.ge.(2.+pdt)) then 
+         fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
+         fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
+         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
+         endif
+       endif
+       if (lcb) then 
+         xcgex = ((1.d-2*((1.1+rot(3,3,1,ibad))**(-11.d0))) -
+     &                    ((1.1+rot(3,3,1,ibad))**(-2.d0)))
+         fmomtot(1,1,ibad) = fmomtot(1,1,ibad) - xcgex*rot(2,3,1,ibad)
+         fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + xcgex*rot(1,3,1,ibad)
+         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
+       endif
+*
        DO 8 IIB=1,NSB
 CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
           IF (IAROTA(IIB).EQ.0) GOTO 8
@@ -409,7 +443,7 @@ CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
 * Rq : l'accel angulaire est prise initialement nulle, donc :
 *       res^(0) = (W X JW) - R_{n+1}^T * Gext . donc res
           xcrit = 1.d-10
-          nmax = 15
+          nmax = 35
           do id=1,3
             w(id,1) = 0.d0
             w(id,2) = omeg2(id,1,iib)
@@ -469,12 +503,12 @@ CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
             enddo
 *           on inverse : 
             call hinv33(dres(1,1),dresinv(1,1))
-*            WRITE(*,*)'dres : '
-*            do id=1,3
-*            WRITE(*,'(3(1X,F8.5))')(dres(id,j),j=1,3)
-*            enddo
-*            WRITE(*,*)'res : '
-*            WRITE(*,'(3(1X,F8.5))')(res(id),id=1,3)
+*           WRITE(*,*)'dres : '
+*           do id=1,3
+*           WRITE(*,'(3(1X,F8.5))')(dres(id,j),j=1,3)
+*           enddo
+*           WRITE(*,*)'res *1.e9 : '
+*           WRITE(*,'(3(1X,F8.5))')(res(id)*1.d9,id=1,3)
 *           new accel angulaire : A^(i) = A^(i-1) - dresinv * Res^(i-1) :
             do id=1,3
               a(id,1) = a(id,2)
@@ -593,6 +627,7 @@ c           Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) / (XM(I,1) - FINERT(I,1))
 CMS : one ne profite pour recompter les modes elastiques non translation rigide :
         DO 9 IIB=1,NSB
 CMS :     pour l'energie de deformation, on a calule pour ttes les ss bases, rots rigides ou non : 
+          NA3  = INMSB(IIB)
           edef(iib) = 0.d0
           ina2 = iorsb(iib) - 1
           do in=1,na3
@@ -601,12 +636,18 @@ CMS :     pour l'energie de deformation, on a calule pour ttes les ss bases, rot
              edef(iib) = edef(iib) + (xk(i2,1) * (q1(i2,1)**2)/2.d0)
             endif
           enddo
+          if (lcb) then 
+*           energie potentielle magnetique :
+            edef(iib) = edef(iib) - (- ((1.1+rot(3,3,1,ibad))**(-1.d0))
+     &               + (1.d-3*((1.1+rot(3,3,1,ibad))**(-10.d0))))
+          endif
+*         write(*,*)'nmbpas : edef = ',edef(iib)
 CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
           IF (IAROTA(IIB).EQ.0) GOTO 9
 ***       Calcul de l'energie cinetique en translation :
-          NA3  = INMSB(IIB)
+*         NA3  = INMSB(IIB)
 *              = nbr de modes elasiques ds la ss base (incluant les transl. rigides)
-          INA2 = IORSB(IIB) - 1
+*         INA2 = IORSB(IIB) - 1
           XTC = 0.D0
           DO IN = 1,NA3
             IN2 = INA2 + IN
