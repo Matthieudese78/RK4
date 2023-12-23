@@ -2,27 +2,28 @@
 * UNCONDITIONALLY STABLE ALGORITHMS FOR RIGID
 * BODY DYNAMICS THAT EXACTLY PRESERVE ENERGY
 * AND MOMENTUM
-rk4 = faux ;
+rk4 = vrai ;
 sw = faux ;
-xpinv = faux ;
+xpinv = vrai ;
 linert = faux ;
-nmb = vrai ; 
+nmb = faux ; 
 *********************************************************************
 *                       Valeurs numeriques 
 *********************************************************************
 opti impi 555 ;
-***** General:
+***** General :
 * nbr de modes elastiques : 
 * qui marche :
 * nmode_ela = 2 ;
 * nnoeuds = 5 ;
 
-nmode_ela = 6 ;
+nmode_ela = 10 ;
 
 ltronq = vrai ; 
+* meme si on mets les modes 3d : on enleve que les 2 modes rigides en x et en y :
 ntronq = 2 ;
 
-nnoeuds = 40 ;
+nnoeuds = 200 ;
 * On prend une toupie conique en acier:
 * Masse:
 * M = 2.;
@@ -37,41 +38,45 @@ nnoeuds = 40 ;
  rho_ac = 7876.74 ;
 *
 ****** Geometrie:
-* longueur de la poutre: 
-*  qui marche avec nnoeuds = 500 :
-*  h = 0.5 ;
- R = (2.e-2) ;
-
+stoia = vrai ;
+manchette = faux ;
+* stoianovici & hurmuzlu : plus longue barre : 
+si (stoia) ;
 * Rayon:
-h = 0.5 ;
-* R = (1.27e-2/2.) ;
-*  R = (5.e-2) ;
-
+R = ((12.7e-3)/2.) ;
+* longueur de la poutre: 
+h = 0.6 ;
 * Section de la poutre :
- sectpou = (Pi*(R**2)) ;
+sectpou = (Pi*(R**2)) ;
 * Volume:
- V = (Pi*(R**2.)*h) ;
+V = (Pi*(R**2.)*h) ;
 * masse totale du solide utilisee dans tmode , rotas rigides :
- M = V * rho_ac ;
+M = V * rho_ac ;
 * Moment d'inertie / centre de gravite:
- Jx_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
- Jy_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
- Jz_G = 0.5*M*(R**2) ; 
+Jx_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
+Jy_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
+Jz_G = 0.5*M*(R**2) ; 
 * Moments quadratiques de la poutre:
- IGx = (Pi*((2.*R)**4))/64. ;
- IGy = (Pi*((2.*R)**4))/64. ;
- IG = (Pi*((2.*R)**4))/32. ;
-*Position du centre de gravite:
+IGx = (Pi*((2.*R)**4))/64. ;
+IGy = (Pi*((2.*R)**4))/64. ;
+IG = (Pi*((2.*R)**4))/32. ;
+finsi ;
+*
+* si (manchette) ;
+
+* finsi; 
+
+*Position du centre de gravite: manchette ou stoianovici : 
  LG = (h/2.) ;
 
 *
 * Centre de rotation = P1 ci-dessous = origine (0. 0. 0.).
 *
 ***** Temporel:
-* T = 5.e-5 ;
-T = 3. ;
+* T = 5.e-4 ;
+T = 4. ;
 DTE = 1.e-6 ;
-NSORT =  5000 ;
+NSORT =  2000 ;
 * NSORT =  1 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
@@ -136,12 +141,12 @@ opti elem CUB8;
 * opti impi 333;
 oeil1 = (5.*R) (5.*R) (0.5*h) ;
 ***** RECO totale voulue ?
-RECOTOT = VRAI ;
+RECOTOT = FAUX ;
 EVOLRECO = VRAI ;
 FLVTK = VRAI ;
-SI (RECOTOT EGA FAUX);
-  FLVTK = FAUX ;
-FINSI ;
+* SI (RECOTOT EGA FAUX);
+*   FLVTK = FAUX ;
+* FINSI ;
 *********************************************************************
 *                            Maillage 
 *********************************************************************
@@ -170,7 +175,7 @@ modpou = mode meshpou 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
 * Remarque: l'axe x est l'axe de la poutre contrairement au maillage.
 matpou = MATE modpou 'YOUN' eac 'NU' nuac 'RHO' rho_ac  'SECT' sectpou 'INRZ' IGy 'INRY' IGx 'TORS' IG ;
 *
-* matrice de raideur:
+* matrice de raideur :
 K = rigi modpou matpou ;
 * matrice de masse:
 M1 = mass modpou matpou ;
@@ -188,11 +193,13 @@ CLRY = BLOQ 'RX' 'RZ' meshpou;
 CLRZ = BLOQ 'RX' 'RY' meshpou;
 * CLela = BLOQ 'RZ' meshpou ;
 * CLela = BLOQ 'ROTA' p1 ;
-CLela = BLOQ 'UX' meshpou ;
+CLelaX = BLOQ 'UX' meshpou ;
+CLelaY = BLOQ 'UY' meshpou ;
 KRX = K et CLRX;
 KRY = K et CLRY;
 KRZ = K et CLRZ;
-Kela = K et clela ;
+KelaX = K et clelaX ;
+KelaY = K et clelaY ;
 * Kela = K ;
 *********************************************************************
 *                          Calculs des modes: 
@@ -202,35 +209,67 @@ Tmode_RX  = vibr 'IRAM' 0.5 1 KRX M1 ;
 Tmode_RY  = vibr 'IRAM' 0.5 1 KRY M1 ;
 Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
 * On teste egalement en presence de modes elastiques:
-Tmode_ela = vibr 'IRAM' 20. nmode_ela Kela M1 ;
+Tmode_elaX = vibr 'IRAM' 20. nmode_ela KelaX M1 ;
+Tmode_elaY = vibr 'IRAM' 20. nmode_ela KelaY M1 ;
 * 
-tmodela = tmode_ela ;
-* opti donn 5 ; 
+tmodela = tmode_elaX ;
+*
 si (ltronq) ;
-
+* mail1 = extr (TMODE_ELAX . modes . 1 . deformee_modale) 'MAIL' 'NOMU';
 tmodela = table 'BASE_MODALE' ;
 tmodela . 'MODES' = table 'BASE_DE_MODES' ;
 tmodela . 'MODES' . 'MAILLAGE' = meshpou ;
-repe bmode (NMODE_ELA - ntronq) ;
-  tmodela . modes . &bmode                                = table 'MODE' ;
-  tmodela . modes . &bmode . 'NUMERO_MODE'                = &bmode ;
-  tmodela . modes . &bmode . 'POINT_REPERE'               = tmode_ela . modes . (&bmode + ntronq) . point_repere ;
-  tmodela . modes . &bmode . 'FREQUENCE'                  = tmode_ela . modes . (&bmode + ntronq) . frequence ;
-  tmodela . modes . &bmode . 'MASSE_GENERALISEE'          = tmode_ela . modes . (&bmode + ntronq) . masse_generalisee ;
-  tmodela . modes . &bmode . 'DEPLACEMENTS_GENERALISES'   = tmode_ela . modes . (&bmode + ntronq) . deplacements_generalises ;
-  tmodela . modes . &bmode . 'DEFORMEE_MODALE'            = tmode_ela . modes . (&bmode + ntronq) . deformee_modale ;
+numode = 1 ;
+repe bmode (nmode_ela - ntronq) ;
+* si (non ((&bmode ega 6) ou (&bmode ega 7))) ;
+si (non (&bmode ega 7)) ;
+* X : 
+  tmodela . modes . numode                                = table 'MODE' ;
+  tmodela . modes . numode . 'NUMERO_MODE'                = numode ;
+  tmodela . modes . numode . 'POINT_REPERE'               = tmode_elaX . modes . (&bmode + ntronq) . point_repere ;
+  tmodela . modes . numode . 'FREQUENCE'                  = tmode_elaX . modes . (&bmode + ntronq) . frequence ;
+  tmodela . modes . numode . 'MASSE_GENERALISEE'          = tmode_elaX . modes . (&bmode + ntronq) . masse_generalisee ;
+  tmodela . modes . numode . 'DEPLACEMENTS_GENERALISES'   = tmode_elaX . modes . (&bmode + ntronq) . deplacements_generalises ;
+  tmodela . modes . numode . 'DEFORMEE_MODALE'            = tmode_elaX . modes . (&bmode + ntronq) . deformee_modale ;
+* transformation de la deformee modale en x a une deformee modale en y  :
+* defx = tmode_elaX . modes . (&bmode + ntronq) . deformee_modale ;
+* duy = extr defx 'VALE' 'UY' ;
+* l0 = (prog (nbno mail1)*0.) ;
+* defx = manu chpo mail1 3 'UX' l0 'UY' duy 'UZ' l0 nature diffus; 
+* defy = manu chpo mail1 3 'UX' duy 'UY' l0 'UZ' l0 nature diffus; 
+* tmodela . modes . numode . 'DEFORMEE_MODALE'            = defx ;
+si (non (&bmode ega 6)) ;
+* Y : 
+  tmodela . modes . (numode + 1)                                = table 'MODE' ;
+  tmodela . modes . (numode + 1) . 'NUMERO_MODE'                = (numode + 1) ;
+  tmodela . modes . (numode + 1) . 'POINT_REPERE'               = tmode_elaY . modes . (&bmode + ntronq) . point_repere ;
+* tmodela . modes . (numode + 1) . 'FREQUENCE'                  = tmode_elaX . modes . (&bmode + ntronq) . frequence ;
+* tmodela . modes . (numode + 1) . 'MASSE_GENERALISEE'          = tmode_elaX . modes . (&bmode + ntronq) . masse_generalisee ;
+  tmodela . modes . (numode + 1) . 'FREQUENCE'                  = tmode_elaY . modes . (&bmode + ntronq) . frequence ;
+  tmodela . modes . (numode + 1) . 'MASSE_GENERALISEE'          = tmode_elaY . modes . (&bmode + ntronq) . masse_generalisee ;
+  tmodela . modes . (numode + 1) . 'DEPLACEMENTS_GENERALISES'   = tmode_elaY . modes . (&bmode + ntronq) . deplacements_generalises ;
+  tmodela . modes . (numode + 1) . 'DEFORMEE_MODALE'            = tmode_elaY . modes . (&bmode + ntronq) . deformee_modale ;
+* incrementation de numode : 
+  numode = numode + 1 ;
+* fin si non bmode = 6
+finsi ; 
+  numode = numode + 1 ;
+* fin si non bmode = 7
+finsi ;
+
 fin bmode ;
 
 finsi ;
-* tmode_ela = tmodela ;
-* postvibr:
-* opti trac x ;
-*postvibr Tmode_RX ;
-*postvibr Tmode_RY ;
-*postvibr Tmode_RZ ;
-postvibr Tmode_ela ;
-* postvibr Tmodela ;
 
+* postvibr Tmode_elaX ;
+* postvibr Tmode_elaY ;
+
+postvibr Tmodela ;
+* calcul des xmno : 
+* nmno = (enti (2. * (nmode_ela - ntronq))) ;
+* repe bmno nmno ;
+
+* fin bmno ;
 * opti donn 5 ; 
 
 *
@@ -309,7 +348,6 @@ TSORT . 'VARIABLE' . 'VITESSE' = VRAI;
 TSORT . 'VARIABLE' . 'TRAVAIL_INTERIEUR' = VRAI ;
 * ENERGIE_CINETIQUE :
 TSORT . 'VARIABLE' . 'TRAVAIL_EXTERIEUR' = VRAI ;
-*
 *** TINI:
 * Deplacements:
  U0_RX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' (theta_ini*pi/180.) ;
@@ -372,28 +410,45 @@ TCHAR = TABL 'CHARGEMENT';
    Normale_PPLAN = 0. 0. -1. ; 
 *  Stoianovici : 
    Jeu1 = 2.*h*(sin theta_ini) ;
+*  Jeu1 = 2.h*(sin theta_ini) ;
+*  Jeu1 = 1.e-3 ;
 *  Stoianovici : 
 *  Kchoc = 5.5E+07 ;
+   muk = 0.075 ;
    Kchoc = 5.5E+07 ;
-   Bamo = 2.0E+01 ;
+   Bamo = 2.0E+04 ;
    K_T= 0.01*Kchoc ;
 *  static friction coeff : 
    mu = 0.1 ;
    adh = mu ;
 *  Cchoc = 0.1*((M*Kchoc)**0.5) ;
 	 TL2  =  TABLE  'LIAISON_ELEMENTAIRE'    ;
-	 TL2.'TYPE_LIAISON'  =  MOT 'POINT_PLAN' ;
-	 TL2.'SUPPORT'       =  p2 ;
-	 TL2.'RAIDEUR'       =  Kchoc ;
-	 TL2.'AMORTISSEMENT' =  Bamo ;
-	 TL2.'NORMALE'       =  NORMALE_PPLAN ;
-	 TL2.'JEU'           =  jeu1 ;
+	 TL2 . 'TYPE_LIAISON'  =  MOT 'POINT_PLAN_FROTTEMENT' ;
+	 TL2 . 'SUPPORT'       =  p2 ;
+	 TL2 . 'RAIDEUR'       =  Kchoc ;
+   TL2 . 'COEFFICIENT_GLISSEMENT' = muk ; 
+   TL2 . 'COEFFICIENT_ADHERENCE' = (0.1*muk) ; 
+   TL2 . 'RAIDEUR_TANGENTIELLE' = (0.001*Kchoc) ; 
+   TL2 . 'AMORTISSEMENT_TANGENTIEL' = 0. ; 
+	 TL2 . 'AMORTISSEMENT' =  Bamo ;
+	 TL2 . 'NORMALE'       =  NORMALE_PPLAN ;
+	 TL2 . 'JEU'           =  jeu1 ;
 
    TLIAI = TABLE 'LIAISON'   ;
    TTLB = TABLE 'LIAISON_B' ;
    TLIAI .'LIAISON_B' = TTLB  ;
    TTLB . 1 = TL1 ;
    TTLB . 2 = TL2 ;
+
+* sortie liaison point-plan :
+TSORL = TABLE 'LIAISON_B' ;
+TSORT . 'LIAISON_B' = TSORL ;
+TSTL2 = table ;
+TSTL2 . 'VITESSE_NORMALE' = VRAI ;
+TSTL2 . 'FORCE_DE_CHOC_NORMALE' = VRAI ;
+TSTL2 . 'FORCE_DE_CHOC_TANGENTIELLE' = VRAI ;
+TSTL2 . 'PUISSANCE_USURE_INSTANTANEE' = VRAI ;
+TSORL . TL2 = TSTL2 ; 
 
 ************************************************************************
 *     					Resolution DYNE
@@ -436,67 +491,61 @@ W1 = tresu . vitesse . ptrep_rig1;
 W2 = tresu . vitesse . ptrep_rig2;
 W3 = tresu . vitesse . ptrep_rig3;
 *
-W1_ev = EVOL 'ROSE' MANU 't' tprog 'W1' W1;
-W2_ev = EVOL 'VIOL' MANU 't' tprog 'W2' W2;
-W3_ev = EVOL 'BLEU' MANU 't' tprog 'W3' W3;
-*
+* W1_ev = EVOL 'ROSE' MANU 't' tprog 'W1' W1;
+* W2_ev = EVOL 'VIOL' MANU 't' tprog 'W2' W2;
+* W3_ev = EVOL 'BLEU' MANU 't' tprog 'W3' W3;
+* *
+* TAB1 . 'TITRE' . 1 = 'W1';
+* Dess (W1_ev) 'TITRE' 'W1 = f(t)' TAB1 'LEGE';
+* TAB1 . 'TITRE' . 1 = 'W2';
+* Dess (W2_ev) 'TITRE' 'W2 = f(t)' TAB1 'LEGE';
+* TAB1 . 'TITRE' . 1 = 'W3';
+* Dess (W3_ev) 'TITRE' 'W3 = f(t)' TAB1 'LEGE';
 *
 A1 = tresu . acceleration . ptrep_rig1;
 A2 = tresu . acceleration . ptrep_rig2;
 A3 = tresu . acceleration . ptrep_rig3;
 *
-A1_ev = EVOL 'ROSE' MANU 't' tprog 'A1' A1;
-A2_ev = EVOL 'VIOL' MANU 't' tprog 'A2' A2;
-A3_ev = EVOL 'BLEU' MANU 't' tprog 'A3' A3;
+* A1_ev = EVOL 'ROSE' MANU 't' tprog 'A1' A1;
+* A2_ev = EVOL 'VIOL' MANU 't' tprog 'A2' A2;
+* A3_ev = EVOL 'BLEU' MANU 't' tprog 'A3' A3;
 *
-TAB1 = TABL; TAB1 . 'TITRE' = TABL;
-	TAB1 . 'TITRE' . 2 = 'W2';	
-	TAB1 . 'TITRE' . 3 = 'W3';
-Dess (W1_ev et  W2_ev et W3_ev) 'TITRE' 'Ws = f(t)' TAB1 LEGE;
-*
-	TAB1 . 'TITRE' . 1 = 'W1';
-Dess (W1_ev) 'TITRE' 'W1 = f(t)' TAB1 LEGE;
-TAB1 . 'TITRE' . 1 = 'W2';
-Dess (W2_ev) 'TITRE' 'W2 = f(t)' TAB1 LEGE;
-TAB1 . 'TITRE' . 1 = 'W3';
-Dess (W3_ev) 'TITRE' 'W3 = f(t)' TAB1 LEGE;
-* Fin si RIGIDE = VRAI:
 *** Moment cinétique :
 PI1 = tresu . TRAVAIL_INTERIEUR . ptrep_rig1;
 PI2 = tresu . TRAVAIL_INTERIEUR . ptrep_rig2;
 PI3 = tresu . TRAVAIL_INTERIEUR . ptrep_rig3;
 *
-PI1_ev = EVOL 'ROSE' MANU 't' tprog 'PI1' PI1;
-PI2_ev = EVOL 'VIOL' MANU 't' tprog 'PI2' PI2;
-PI3_ev = EVOL 'BLEU' MANU 't' tprog 'PI3' PI3;
-TAB1 . 'TITRE' . 1 = 'PI1';
-Dess (PI1_ev) 'TITRE' 'PI1 = f(t)' TAB1 LEGE;
-TAB1 . 'TITRE' . 1 = 'PI2';
-Dess (PI2_ev) 'TITRE' 'PI2 = f(t)' TAB1 LEGE;
-TAB1 . 'TITRE' . 1 = 'PI3';
-Dess (PI3_ev) 'TITRE' 'PI3 = f(t)' TAB1 LEGE;
-TAB1 . 'TITRE' . 1 = 'PI1';
-TAB1 . 'TITRE' . 2 = 'PI2';
-TAB1 . 'TITRE' . 3 = 'PI3';
-Dess (PI3_ev et PI2_ev et PI3_ev) 'TITRE' 'PI = f(t)' TAB1 LEGE;
+* PI1_ev = EVOL 'ROSE' MANU 't' tprog 'PI1' PI1;
+* PI2_ev = EVOL 'VIOL' MANU 't' tprog 'PI2' PI2;
+* PI3_ev = EVOL 'BLEU' MANU 't' tprog 'PI3' PI3;
+* TAB1 . 'TITRE' . 1 = 'PI1';
+* Dess (PI1_ev) 'TITRE' 'PI1 = f(t)' TAB1 LEGE;
+* TAB1 . 'TITRE' . 1 = 'PI2';
+* Dess (PI2_ev) 'TITRE' 'PI2 = f(t)' TAB1 LEGE;
+* TAB1 . 'TITRE' . 1 = 'PI3';
+* Dess (PI3_ev) 'TITRE' 'PI3 = f(t)' TAB1 LEGE;
+* TAB1 . 'TITRE' . 1 = 'PI1';
+* TAB1 . 'TITRE' . 2 = 'PI2';
+* TAB1 . 'TITRE' . 3 = 'PI3';
+* Dess (PI3_ev et PI2_ev et PI3_ev) 'TITRE' 'PI = f(t)' TAB1 LEGE;
 *
 *** Energie cinetique :
 EC1 = tresu . TRAVAIL_EXTERIEUR . ptrep_rig1 ;
-EC1_ev = EVOL 'ROSE' MANU 't' tprog 'EC1' EC1 ;
-TAB1 . 'TITRE' . 1 = 'EC';
-Dess (EC1_ev) 'TITRE' 'EC = f(t)' TAB1 LEGE;
+* EC1_ev = EVOL 'ROSE' MANU 't' tprog 'EC1' EC1 ;
+* TAB1 . 'TITRE' . 1 = 'EC';
+* Dess (EC1_ev) 'TITRE' 'EC = f(t)' TAB1 LEGE;
 *
 *** Energie de deformation :
 EP1 = tresu . TRAVAIL_EXTERIEUR . ptrep_rig2 ;
-EP1_ev = EVOL 'ROSE' MANU 't' tprog 'EC1' EP1 ;
-TAB1 . 'TITRE' . 1 = 'EDEF';
-Dess (EP1_ev) 'TITRE' 'EDEF = f(t)' TAB1 LEGE;
+* EP1_ev = EVOL 'ROSE' MANU 't' tprog 'EC1' EP1 ;
+* TAB1 . 'TITRE' . 1 = 'EDEF';
+* Dess (EP1_ev) 'TITRE' 'EDEF = f(t)' TAB1 LEGE;
 
 *** Energie totale = hamiltonien :
 ET1 = EC1 + EP1 ;
-ET1_ev = EVOL 'ROSE' MANU 't' tprog 'EC1' ET1 ;
-TAB1 . 'TITRE' . 1 = 'Etot';
-Dess (ET1_ev) 'TITRE' 'ET = f(t)' TAB1 LEGE;
+* ET1_ev = EVOL 'ROSE' MANU 't' tprog 'EC1' ET1 ;
+* TAB1 . 'TITRE' . 1 = 'Etot';
+* Dess (ET1_ev) 'TITRE' 'ET = f(t)' TAB1 LEGE;
 FINSI;
 *
 ************************************************************************
@@ -592,6 +641,8 @@ Dess(AX_ev et AY_ev et AZ_ev) 'TITRE' 'recotot: Acceleration = f(t)' TAB1 LEGE;
 * Tmot = (chai 'FORMAT' (mot (F1.2)) T );
 * list Tmot;
 * DTe = (chai 'FORMAT' '(F1.2)' DTe);
+* FIN RECOTOT:
+FINSI;
 ******************** VTK *****************************************
   SI (FLVTK);
 *   REPE BVTK (enti ((Nt)/10tprog (&BVTK)) 'DEPL';
@@ -602,7 +653,7 @@ Dess(AX_ev et AY_ev et AZ_ev) 'TITRE' 'recotot: Acceleration = f(t)' TAB1 LEGE;
     DEP2 = D1 exco (mots 'UX' 'UY' 'UZ') ;
 *    DEP3 = CHAN 'CHAM' DEP2 mod1 'GRAVITE' ;
 *    DEP4 = CHAN 'CHAM' DEP2 VOL1 ;
-    T_I = (extr tprog &BVTK) ;
+     T_I = (extr tprog &BVTK) ;
 *    mess T_I ;
 *    VOL2 = EXTR DEP2 'MAIL';
 *    VOL3 = CHAN 'POI1' VOL1 ;
@@ -617,8 +668,6 @@ Dess(AX_ev et AY_ev et AZ_ev) 'TITRE' 'recotot: Acceleration = f(t)' TAB1 LEGE;
     FIN BVTK;
 * FIN FLVTK:
   FINSI;
-* FIN RECOTOT:
-FINSI;
 *********************************************************************
 *                     EVOL RECO au centre de gravite
 *********************************************************************
@@ -752,8 +801,18 @@ TSORT . 'uzp2' = table ;
 TSORT . 'uxp2' = uxp2 ;
 TSORT . 'uyp2' = uyp2 ;
 TSORT . 'uzp2' = uzp2 ;
+* Pusure durant les impacts : 
+TSORT . 'pusure' = table ;
+TSORT . 'fn' = table ;
+TSORT . 'ft' = table ;
+TSORT . 'vn' = table ;
+TSORT . 'pusure' = TRESU . TL2 . 'PUISSANCE_USURE_INSTANTANEE' ;
+TSORT . 'vn' = TRESU . TL2 . 'VITESSE_NORMALE' ;
+TSORT . 'fn' = TRESU . TL2 . 'FORCE_DE_CHOC_NORMALE' ;
+TSORT . 'ft' = TRESU . TL2 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
 *
-ncolexce = 21 ;
+ncolexce = 25 ;
+
 * RECOTOT : 
 SI (RECOTOT EGA VRAI) ;
 TSORT . 'ux1' = table ;
@@ -778,24 +837,24 @@ ncolexce = ncolexce + 9 ;
 FINSI ; 
 * EVOLRECO :
 SI (EVOLRECO EGA VRAI) ;
-TSORT . 'ux2' = table ;
-TSORT . 'uy2' = table ;
-TSORT . 'uz2' = table ;
-TSORT . 'ux2' = uxg2 ;
-TSORT . 'uy2' = uyg2 ;
-TSORT . 'uz2' = uzg2 ;
-TSORT . 'vx2' = table ;
-TSORT . 'vy2' = table ;
-TSORT . 'vz2' = table ;
-TSORT . 'vx2' = vxg2 ;
-TSORT . 'vy2' = vyg2 ;
-TSORT . 'vz2' = vzg2 ;
-TSORT . 'ax2' = table ;
-TSORT . 'ay2' = table ;
-TSORT . 'az2' = table ;
-TSORT . 'ax2' = axg2 ;
-TSORT . 'ay2' = ayg2 ;
-TSORT . 'az2' = azg2 ;
+TSORT . 'uxg' = table ;
+TSORT . 'uyg' = table ;
+TSORT . 'uzg' = table ;
+TSORT . 'uxg' = uxg2 ;
+TSORT . 'uyg' = uyg2 ;
+TSORT . 'uzg' = uzg2 ;
+TSORT . 'vxg' = table ;
+TSORT . 'vyg' = table ;
+TSORT . 'vzg' = table ;
+TSORT . 'vxg' = vxg2 ;
+TSORT . 'vyg' = vyg2 ;
+TSORT . 'vzg' = vzg2 ;
+TSORT . 'axg' = table ;
+TSORT . 'ayg' = table ;
+TSORT . 'azg' = table ;
+TSORT . 'axg' = axg2 ;
+TSORT . 'ayg' = ayg2 ;
+TSORT . 'azg' = azg2 ;
 ncolexce = ncolexce + 9 ;
 FINSI ; 
 si (typmode ega 1) ;
