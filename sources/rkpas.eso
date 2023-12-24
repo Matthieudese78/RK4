@@ -151,10 +151,10 @@ cms : pour le couple resistant "hard code" :
       methJ2 = .true.
 
 *     book toss ?
-      lbt = .false.
+      lbt = .true.
 
 *     coulombic soft wall ?
-      lcb = .true.
+      lcb = .false.
 
 *     le cas echeant, base modale de l'adaptateur : 
       ibad = 1
@@ -503,12 +503,12 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + tspin(3)
         endif
         if (lbt) then 
-          if (t.lt.(2.-pdt)) then 
+          if (t.le.(2.-pdt)) then 
           fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 20.
           fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
           fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
           endif
-          if ((t.gt.(2.-pdt)).and.(t.lt.(2.+pdt))) then 
+          if ((t.ge.(2.-(pdt/1.99))).and.(t.le.(2.+(pdt/1.99)))) then 
           fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
           fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + (2.d-1/pdt)
           fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
@@ -758,12 +758,12 @@ c    -Cas C et M diagonales : on prend en compte les forces d'inertie
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + tspin(3)
        endif
        if (lbt) then 
-         if (t.lt.(2.-pdt)) then 
+         if (t.le.(2.-pdt)) then 
          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 20.
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
          endif
-         if ((t.gt.(2.-pdt)).and.(t.lt.(2.+pdt))) then 
+         if ((t.ge.(2.-(pdt/1.99))).and.(t.le.(2.+(pdt/1.99)))) then 
          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + (2.d-1/pdt)
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.

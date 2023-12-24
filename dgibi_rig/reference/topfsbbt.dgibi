@@ -11,7 +11,7 @@ EVOLRECO = VRAI ;
 FLVTK = FAUX ;
 
 *# icas : 
-icas = 5 ;
+icas = 4 ;
 
 *# ialgo : 
 ialgo = 3 ;
@@ -27,7 +27,7 @@ algo = 'rk4' ;
 finsi ; 
 
 *# n : 
-n = 6 ;
+n = 9 ;
 
 *# h : 
 DTE = 2**((-1.)*(flott n)) ;
@@ -442,7 +442,7 @@ UZp2 = EXTR uzp2_ev 'ORDO' 1 ;
 *************************************************************************** sorties rotas rigides : 
 TSORT = table ;
 TSORT . 'icas' = table ;
-TSORT . 'algo' = table ;
+TSORT . 'ialgo' = table ;
 TSORT . 'n' = table ;
 TSORT . 'ctime' = table ;
 TSORT . 't' = table ;
@@ -450,7 +450,7 @@ TSORT . 'wx' = table ;
 TSORT . 'wy' = table ;
 TSORT . 'wz' = table ;
 TSORT . 'icas'  = (lect (dime tprog)*icas) ;
-TSORT . 'algo'  = (mots (dime tprog)*algo) ;
+TSORT . 'ialgo'  = (lect (dime tprog)*ialgo) ;
 TSORT . 'n'  = (lect (dime tprog)*n) ;
 TSORT . 'ctime' = (prog (dime tprog)*ctime) ;
 TSORT . 't'     = tprog ;

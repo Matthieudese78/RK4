@@ -6,20 +6,37 @@ import pandas as pd
 import trajectories as traj
 import rotation as rota
 import repchange as rc
+import matplotlib.pyplot as plt
 import os
 
 #%% usefull parameters :
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 view = [20, -50]
+
+#%% 1 ou plsrs calculs ? 
+lindiv = False
+#%% Cas test ? :
+icas1 = 3
+if (icas1==2):
+    n1 = 2
+    n2 = 3
+    n3 = 4
+
+if (icas1==3):
+    n1 = 7
+    n2 = 7
+    n3 = 7
 #%% point d'observation
 # pobs = np.array([0.2,0.2,0.2])
 pobs = np.array([1.,1.,1.])
 # %% quel type de modele ?
 lraidtimo = False
 # %% Scripts :
-script1 = f"cb"
+lscript = [f"fast_top",f"slow_top",f"fsb",f"bt",f"cb"]
+lalgo = ['sw','nmb','rkmk4']
+script1 = lscript[icas1]
 repload = f"./pickle/{script1}/"
-# %%
+# %% 
 rep_save = f"./fig/{script1}/"
 
 if not os.path.exists(rep_save):
@@ -42,6 +59,10 @@ rota.recopointdf(df, **kp)
     # en fonction du pdt :
 kcol = {'colx' : 'n', 'ampl' : 200., 'logcol' : False}
 dfcolpus = traj.color_from_value(df,**kcol)
+
+#%% pour un algo : 
+lindcas1 = [ [ df[(df['ialgo']==ialgi) & (df['icas']==(icas1+1)) & (df['n']==nj) ].index for i,ialgi in enumerate([1,2,3]) ] for j,nj in enumerate([n1,n2,n3]) ]
+
 #%%############################################
 #           PLOTS : grandeures temporelles :
 ###############################################
@@ -104,6 +125,7 @@ kwargs1 = {
     "color1": color1[0],
 }
 traj.pltraj2d(df, **kwargs1)
+
 kwargs1 = {
     "tile1": "Emag = f(t)" + "\n",
     "tile_save": "Emag_t",
@@ -131,402 +153,93 @@ kwargs1 = {
 traj.pltraj2d(df, **kwargs1)
 
 #%%############################################
-#           PLOTS : trajectoires relatives 2d:
+#           PLOTS : trajectoires 3d :
 ###############################################
-# repsect1 = f"{rep_save}traj_relatives_2d/"
-# if not os.path.exists(repsect1):
-#     os.makedirs(repsect1)
-#     print(f"FOLDER : {repsect1} created.")
-# else:
-#     print(f"FOLDER : {repsect1} already exists.")
-
-# # centre du cercle - vis a vis adapter : 
-# kwargs1 = {
-#     "tile1": "traj. relative PCcirc / PCad" + "\n",
-#     "tile_save": "traj2d_Ccirc",
-#     "colx": "uxcerela",
-#     "coly": "uycerela",
-#     "rep_save": repsect1,
-#     "label1": r"$C_{circ}$",
-#     "labelx": r"$X \quad (m)$",
-#     "labely": r"$Y \quad (m)$",
-#     "color1": 'black',
-#     "view": view,
-# }
-# traj.pltraj2d(df, **kwargs1)
-
-
-#%%############################################
-#           PLOTS : trajectoires relatives 3d :
-###############################################
-repsect1 = f"{rep_save}traj_3d/"
+repsect1 = f"{rep_save}traj_3d_pdts/"
 if not os.path.exists(repsect1):
     os.makedirs(repsect1)
     print(f"FOLDER : {repsect1} created.")
 else:
     print(f"FOLDER : {repsect1} already exists.")
-#
-# kwargs1 = {
-#     "tile1": "traj. relative p2" + "\n",
-#     "tile_save": "traj3d_p2",
-#     "colx": "uxp2",
-#     "coly": "uyp2",
-#     "colz": "uzp2",
-#     "rep_save": repsect1,
-#     "label1": r"$P_{2}$",
-#     "labelx": r"$X \quad (m)$",
-#     "labely": r"$Y \quad (m)$",
-#     "labelz": r"$Z \quad (m)$",
-#     "color1": color1[1],
-#     "view": view,
-# }
-# traj.pltraj3d(df, **kwargs1)
 
+ialgo = 0
 kwargs1 = {
-    "tile1": "traj. relative pobs" + "\n",
-    "tile_save": "traj3d_pobs",
+    "tile1": f"traj. 3d cas {lscript[icas1]} ialgo = {lalgo[ialgo]}" + "\n",
+    "tile_save": f"traj3d_pdts_{lscript[icas1]}_{lalgo[ialgo]}",
+    "ind": lindcas1[ialgo],
     "colx": "uxpobs",
     "coly": "uypobs",
     "colz": "uzpobs",
     "rep_save": repsect1,
-    "label1": r"$P_{obs}$",
+    "label1": [fr"$h = 1/2^{n1}$", fr"$h = 1/2^{n2}$", fr"$h = 1/2^{n3}$"],
     "labelx": r"$X \quad (m)$",
     "labely": r"$Y \quad (m)$",
     "labelz": r"$Z \quad (m)$",
-    "color1": color1[1],
+    "color1": color1,
     "view": view,
 }
-traj.pltraj3d(df, **kwargs1)
-
-#%%############################################
-#           PLOTS : forces de chocs :
-###############################################
-repsect1 = f"{rep_save}forces_de_choc/"
-if not os.path.exists(repsect1):
-    os.makedirs(repsect1)
-    print(f"FOLDER : {repsect1} created.")
-else:
-    print(f"FOLDER : {repsect1} already exists.")
-# pb 1 : 
-kwargs1 = {
-    "tile1": "FN pb1 = f(t)" + "\n",
-    "tile_save": "fn_pb1",
-    "colx": "t",
-    "coly": "FN_pb1",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$F_{n}^l \quad (N)$",
-    "color1": color1[0],
-}
-traj.pltraj2d(df, **kwargs1)
-
-# pb 2 : 
-kwargs1 = {
-    "tile1": "FN pb2 = f(t)" + "\n",
-    "tile_save": "fn_pb1",
-    "colx": "t",
-    "coly": "FN_pb2",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$F_{n}^l \quad (N)$",
-    "color1": color1[0],
-}
-traj.pltraj2d(df, **kwargs1)
-
-# pb 3 : 
-
-kwargs1 = {
-    "tile1": "FN pb3 = f(t)" + "\n",
-    "tile_save": "fn_pb3",
-    "colx": "t",
-    "coly": "FN_pb3",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$F_{n}^l \quad (N)$",
-    "color1": color1[0],
-}
-traj.pltraj2d(df, **kwargs1)
-
-# ph 1 : 
-kwargs1 = {
-    "tile1": "FN ph1 = f(t)" + "\n",
-    "tile_save": "fn_ph1",
-    "colx": "t",
-    "coly": "FN_ph1",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$F_{n}^l \quad (N)$",
-    "color1": color1[0],
-}
-traj.pltraj2d(df, **kwargs1)
-
-# ph 2 : 
-kwargs1 = {
-    "tile1": "FN ph2 = f(t)" + "\n",
-    "tile_save": "fn_ph2",
-    "colx": "t",
-    "coly": "FN_ph2",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$F_{n}^l \quad (N)$",
-    "color1": color1[0],
-}
-traj.pltraj2d(df, **kwargs1)
-
-# ph 3 : 
-kwargs1 = {
-    "tile1": "FN ph3 = f(t)" + "\n",
-    "tile_save": "fn_ph3",
-    "colx": "t",
-    "coly": "FN_ph3",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$P_{W}^l \quad (W)$",
-    "color1": color1[0],
-}
-traj.pltraj2d(df, **kwargs1)
-
-#%%############################################
-#           PLOTS : Puissance d'usure :
-###############################################
-repsect1 = f"{rep_save}Pusure/"
-if not os.path.exists(repsect1):
-    os.makedirs(repsect1)
-    print(f"FOLDER : {repsect1} created.")
-else:
-    print(f"FOLDER : {repsect1} already exists.")
-
-kwargs1 = {
-    "tile1": "Pus pb1 = f(t)" + "\n",
-    "tile_save": "pus_pb1",
-    "colx": "t",
-    "coly": "pusure_pb1",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$P_{W}^l \quad (W)$",
-    "color1": color1[0],
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "Pus pb2 = f(t)" + "\n",
-    "tile_save": "pus_pb2",
-    "colx": "t",
-    "coly": "pusure_pb2",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$P_{W}^l \quad (W)$",
-    "color1": color1[1],
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "Pus pb3 = f(t)" + "\n",
-    "tile_save": "pus_pb3",
-    "colx": "t",
-    "coly": "pusure_pb3",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$P_{W}^l \quad (W)$",
-    "color1": color1[2],
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "Pus ph1 = f(t)" + "\n",
-    "tile_save": "pus_ph1",
-    "colx": "t",
-    "coly": "pusure_ph1",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$P_{W}^u \quad (W)$",
-    "color1": color1[0],
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "Pus ph2 = f(t)" + "\n",
-    "tile_save": "pus_ph2",
-    "colx": "t",
-    "coly": "pusure_ph2",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$P_{W}^u \quad (W)$",
-    "color1": color1[1],
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "Pus ph3 = f(t)" + "\n",
-    "tile_save": "pus_ph3",
-    "colx": "t",
-    "coly": "pusure_ph3",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$P_{W}^u \quad (W)$",
-    "color1": color1[2],
-}
-traj.pltraj2d(df, **kwargs1)
-#%%############################################
-#           PLOTS : points de choc :
-###############################################
-repsect1 = f"{rep_save}point_choc/"
-if not os.path.exists(repsect1):
-    os.makedirs(repsect1)
-    print(f"FOLDER : {repsect1} created.")
-else:
-    print(f"FOLDER : {repsect1} already exists.")
-# %%
-kwargs1 = {
-    "tile1": "point d'impact" + "\n",
-    "tile_save": "pchocA_circ2d",
-    "colx": "uxpicircA",
-    "coly": "uypicircA",
-    "rep_save": repsect1,
-    "label1": r"$P_{choc}$",
-    "labelx": r"$X \quad (m)$",
-    "labely": r"$Y \quad (m)$",
-    "color1": 'red',
-    "msize" : 5,
-}
-traj.scat2d(df.loc[indchoc], **kwargs1)
-
-kwargs1 = {
-    "tile1": "point d'impact" + "\n",
-    "tile_save": "pchocA_circ3d",
-    "colx": "uxpicircA",
-    "coly": "uypicircA",
-    "colz": "uzpicircA",
-    "rep_save": repsect1,
-    "label1": r"$P_{choc}$",
-    "labelx": r"$X \quad (m)$",
-    "labely": r"$Y \quad (m)$",
-    "labelz": r"$Z \quad (m)$",
-    "color1": color1[1],
-    "view": view,
-}
-traj.scat3d(df.loc[indchoc], **kwargs1)
-
-# %%
-kwargs1 = {
-    "tile1": "point d'impact" + "\n",
-    "tile_save": "pchocB_circ3d",
-    "colx": "UXpincid",
-    "coly": "UYpincid",
-    "colz": "UZpincid",
-    "rep_save": repsect1,
-    "label1": r"$P_{choc}$",
-    "labelx": r"$X \quad (m)$",
-    "labely": r"$Y \quad (m)$",
-    "labelz": r"$Z \quad (m)$",
-    "color1": color1[1],
-    "view": view,
-}
-traj.scat3d(df.loc[indchoc], **kwargs1)
-# %%
-kwargs1 = {
-    "tile1": "point d'impact" + "\n",
-    "tile_save": "pchocB_cone2d",
-    "colx": "uxpisc",
-    "coly": "uypisc",
-    "rep_save": repsect1,
-    "label1": r"$P_{choc}$",
-    "labelx": r"$X \quad (m)$",
-    "labely": r"$Y \quad (m)$",
-    "color1": color1[1],
-}
-traj.scat2d(df.loc[indchoc], **kwargs1)
-kwargs1 = {
-    "tile1": "point d'impact" + "\n",
-    "tile_save": "pchocB_cone3d",
-    "colx": "uxpisc",
-    "coly": "uypisc",
-    "colz": "uzpisc",
-    "rep_save": repsect1,
-    "label1": r"$P_{choc}$",
-    "labelx": r"$X \quad (m)$",
-    "labely": r"$Y \quad (m)$",
-    "labelz": r"$Z \quad (m)$",
-    "color1": color1[1],
-    "view": view,
-}
-traj.scat3d(df.loc[indchoc], **kwargs1)
-
+traj.pltraj3d_ind(df, **kwargs1)
 #%%
+ialgo = 1
 kwargs1 = {
-    "tile1": "point d'impact color pusure" + "\n",
-    "tile_save": "pchocB_cone2d_colorbar_pusure",
-    "colx": "uxpisc",
-    "coly": "uypisc",
+    "tile1": f"traj. 3d cas {lscript[icas1]} ialgo = {lalgo[ialgo]}" + "\n",
+    "tile_save": f"traj3d_pdts_{lalgo[ialgo]}",
+    "ind": lindcas1[ialgo],
+    "colx": "uxpobs",
+    "coly": "uypobs",
+    "colz": "uzpobs",
     "rep_save": repsect1,
-    "label1": r"$P_{choc}$",
+    "label1": [fr"$h = 1/2^{n1}$", fr"$h = 1/2^{n2}$", fr"$h = 1/2^{n3}$"],
     "labelx": r"$X \quad (m)$",
     "labely": r"$Y \quad (m)$",
-    "mtype" : 'o',
-    "msize" : 4,
-    "colcol" : 'pusure_ccone',
-    "ampl" : 200.,
-    "title_colbar" : r"$log_{10}(1+$"+"Wear Power (W)"+r"$)$",
-    "leg" : False,
-    "logcol" : True
+    "labelz": r"$Z \quad (m)$",
+    "color1": color1,
+    "view": view,
 }
-traj.scat2d_df_colorbar(df.loc[indchoc], **kwargs1)
-#%%
+traj.pltraj3d_ind(df, **kwargs1)
+
+ialgo = 2
 kwargs1 = {
-    "tile1": "point d'impact color pusure" + "\n",
-    "tile_save": "pchocB_cone2d_colorbar_thmax",
-    "colx": "uxpisc",
-    "coly": "uypisc",
+    "tile1": f"traj. 3d cas {lscript[icas1]} ialgo = {lalgo[ialgo]}" + "\n",
+    "tile_save": f"traj3d_pdts_{lalgo[ialgo]}",
+    "ind": lindcas1[ialgo],
+    "colx": "uxpobs",
+    "coly": "uypobs",
+    "colz": "uzpobs",
     "rep_save": repsect1,
-    "label1": r"$P_{choc}$",
+    "label1": [fr"$h = 1/2^{n1}$", fr"$h = 1/2^{n2}$", fr"$h = 1/2^{n3}$"],
     "labelx": r"$X \quad (m)$",
     "labely": r"$Y \quad (m)$",
-    "mtype" : 'o',
-    "msize" : 4,
-    "colcol" : 'THMAX',
-    "ampl" : 200.,
-    # "title_colbar" : r"$log_{10}(1+$"+"Angular width ("+ r"$\degree$"+")"+r"$)$",
-    "title_colbar" : "Angular width ("+ r"$\degree$"+")",
-    "leg" : False,
-    "logcol" : False
+    "labelz": r"$Z \quad (m)$",
+    "color1": color1,
+    "view": view,
 }
-traj.scat2d_df_colorbar(df.loc[indchoc], **kwargs1)
+traj.pltraj3d_ind(df, **kwargs1)
+#%%############################################
+#           PLOTS : trajectoires relatives 3d :
+###############################################
+if (lindiv):
+    repsect1 = f"{rep_save}traj_3d_indiv/"
+    if not os.path.exists(repsect1):
+        os.makedirs(repsect1)
+        print(f"FOLDER : {repsect1} created.")
+    else:
+        print(f"FOLDER : {repsect1} already exists.")
+    #
+    kwargs1 = {
+        "tile1": "traj. pobs" + "\n",
+        "tile_save": "traj3d_pobs",
+        "colx": "uxpobs",
+        "coly": "uypobs",
+        "colz": "uzpobs",
+        "rep_save": repsect1,
+        "label1": r"$P_{obs}$",
+        "labelx": r"$X \quad (m)$",
+        "labely": r"$Y \quad (m)$",
+        "labelz": r"$Z \quad (m)$",
+        "color1": color1[1],
+        "view": view,
+    }
+    traj.pltraj3d(df, **kwargs1)
+
 # %%
-repsect1 = f"{rep_save}point_choc/"
-if not os.path.exists(repsect1):
-    os.makedirs(repsect1)
-    print(f"FOLDER : {repsect1} created.")
-else:
-    print(f"FOLDER : {repsect1} already exists.")
-#%%
-kwargs1 = {
-    "tile1": "point d'impact color pctg glisadh" + "\n",
-    "tile_save": "pchocB_cone2d_colorbar_glisad",
-    "colx": "uxcerela",
-    "coly": "uycerela",
-    "rep_save": repsect1,
-    "label1": r"$P_{choc}$",
-    "labelx": r"$X \quad (m)$",
-    "labely": r"$Y \quad (m)$",
-    "mtype" : 'o',
-    "msize" : 4,
-    "colcol" : 'PCTG_GLIS_ADH',
-    "ampl" : 200.,
-    # "title_colbar" : r"$log_{10}(1+$"+"Angular width ("+ r"$\degree$"+")"+r"$)$",
-    "title_colbar" : "Glide/Adhesion " + r"$Glide/Adhesion %$",
-    "leg" : False,
-    "logcol" : False
-}
-traj.scat2d_df_colorbar(df.loc[indchoc], **kwargs1)

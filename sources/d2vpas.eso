@@ -143,12 +143,11 @@ cms : pour le couple resistant "hard code" :
        MATRICE    = .FALSE.
 *     resistance au spin ?
       lrspin = .false.
-
 *     book toss ?
-      lbt = .false.
+      lbt = .true.
 
 *     coulombic soft wall ?
-      lcb = .true.
+      lcb = .false.
 
 *     le cas echeant, base modale de l'adaptateur : 
       ibad = 1
@@ -380,12 +379,12 @@ cms    si on veut une resistance au spin, on rajoute
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + tspin(3)
        endif
        if (lbt) then 
-         if (t.lt.(2.-pdt)) then 
+         if (t.le.(2.-pdt)) then 
          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 20.
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
          endif
-         if ((t.gt.(2.-pdt)).and.(t.lt.(2.+pdt))) then 
+         if ((t.ge.(2.-(pdt/1.99))).and.(t.le.(2.+(pdt/1.99)))) then 
          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + (2.d-1/pdt)
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
@@ -395,6 +394,10 @@ cms    si on veut une resistance au spin, on rajoute
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
          endif
+         write(*,*)'d2vpas : t = ',t
+         write(*,*)'         pdt = ',pdt
+         write(*,*)'         fmom x = ',fmomtot(1,1,ibad)
+         write(*,*)'         fmom y = ',fmomtot(2,1,ibad)
        endif
        if (lcb) then 
          xcgex = ((1.d-2*((1.1+rot(3,3,1,ibad))**(-11.d0))) -
