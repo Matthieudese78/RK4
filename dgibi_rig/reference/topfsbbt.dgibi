@@ -11,7 +11,7 @@ EVOLRECO = VRAI ;
 FLVTK = FAUX ;
 
 *# icas : 
-icas = 4 ;
+icas = 1 ;
 
 *# ialgo : 
 ialgo = 3 ;
@@ -27,7 +27,7 @@ algo = 'rk4' ;
 finsi ; 
 
 *# n : 
-n = 9 ;
+n = 10 ;
 
 *# h : 
 DTE = 2**((-1.)*(flott n)) ;

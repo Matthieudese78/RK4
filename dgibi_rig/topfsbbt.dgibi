@@ -12,10 +12,10 @@ EVOLRECO = VRAI ;
 FLVTK = FAUX ;
 
 *# icas : 
-icas = 4 ;
+icas = 1 ;
 
 *# ialgo : 
-ialgo = 1 ;
+ialgo = 3 ;
 
 si (ialgo ega 1) ;
 algo = 'sw' ;
