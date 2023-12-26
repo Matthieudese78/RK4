@@ -148,7 +148,7 @@ cms : pour le couple resistant "hard code" :
       lrspin = .false.
 
 *     book toss ?
-      lbt = .true.
+      lbt = .false.
 
 *     coulombic soft wall ?
       lcb = .false.
