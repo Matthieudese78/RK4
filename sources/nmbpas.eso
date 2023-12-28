@@ -141,14 +141,14 @@ cms : pour le couple resistant "hard code" :
       real*8 res(3),dres(3,3),dresinv(3,3)
 *
 *      QUATERNION = .FALSE.
-       QUATERNION = .TRUE.
+       QUATERNION = .true.
 *      MATRICE    = .TRUE.
-       MATRICE    = .FALSE.
+       MATRICE    = .false.
 *     resistance au spin ?
       lrspin = .false.
 
 *     book toss ?
-      lbt = .false.
+      lbt = .true.
 
 *     coulombic soft wall ?
       lcb = .false.
@@ -383,23 +383,25 @@ cms    si on veut une resistance au spin, on rajoute
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + tspin(3)
        endif
        if (lbt) then 
+         nd = floor(2.d0/pdt)
          if (t.lt.(2.-pdt)) then 
          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 20.
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
          endif
-         if ((t.ge.(2.-(pdt/1.99))).and.(t.le.(2.+(pdt/1.99)))) then 
+*         if ((t.ge.(2.-(pdt/1.99))).and.(t.le.(2.+(pdt/1.99)))) then 
+         if ((npas.eq.nd).or.(npas.eq.(nd+1))) then 
          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + (2.d-1/pdt)
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
          endif
-         if (t.ge.(2.+pdt)) then 
+         if (t.gt.(2.+(pdt/1.99))) then 
          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
          endif
        endif
-       if (lcb) then 
+       if (lcb) then
          xcgex = ((1.d-2*((1.1+rot(3,3,1,ibad))**(-11.d0))) -
      &                    ((1.1+rot(3,3,1,ibad))**(-2.d0)))
          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) - xcgex*rot(2,3,1,ibad)
@@ -443,7 +445,7 @@ CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
 * Rq : l'accel angulaire est prise initialement nulle, donc :
 *       res^(0) = (W X JW) - R_{n+1}^T * Gext . donc res
           xcrit = 1.d-10
-          nmax = 35
+          nmax = 50
           do id=1,3
             w(id,1) = 0.d0
             w(id,2) = omeg2(id,1,iib)

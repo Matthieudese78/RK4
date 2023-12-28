@@ -22,8 +22,8 @@
 
 *      WRITE(*,*)'MAT2QUAT: START'
 *
-      SPUR = .TRUE.
-      KLUMP = .FALSE.
+      SPUR = .True.
+      KLUMP = .false.
 *
       X0 = QUAT1(1)
       X1 = QUAT1(2)
@@ -39,8 +39,8 @@
       IF (ABS(ROT1(2,2)).GE.CRIT) IMAX=2
       IF (ABS(ROT1(3,3)).GE.CRIT) IMAX=3
       IF (IMAX.EQ.0) THEN
-*        WRITE(*,*)'MAT2QUAT: max de la diag non trouve!!'
-        RETURN
+        WRITE(*,*)'MAT2QUAT: max de la diag non trouve!!'
+        call exit(1)
       ENDIF
 *
       TRACE = ROT1(1,1) + ROT1(2,2) + ROT1(3,3) 
@@ -48,7 +48,7 @@
 *      
       
       IF (ABS(TRACE).GE.CRIT) THEN
-        QUAT1(1) = SQRT(ABS(1+TRACE))/2.D0
+        QUAT1(1) = DSQRT(ABS(1.d0+TRACE))/2.D0
         IF (QUAT1(1).LE.XSZPRE) GOTO 1
 *        WRITE(*,*)'MAT2QUAT: CAS1'
         QUAT1(2) = (ROT1(3,2) - ROT1(2,3))/(4.D0*QUAT1(1))
@@ -58,37 +58,36 @@
 *        WRITE(*,*)'MAT2QUAT: CAS2'
  1      CONTINUE
         IF (IMAX.EQ.1) THEN
-          X1 = SQRT(ABS(ROT1(1,1)/2.D0 + (1 - TRACE)/4.D0))
-          IF ((ROT1(3,2)-ROT1(2,3)).LT.0.D0) THEN
-            QUAT1(2) = -1.D0*X1
-          ELSE
-            QUAT1(2) = X1
-          ENDIF
-          
+          X1 = DSQRT(ABS(ROT1(1,1)/2.D0 + (1.d0 - TRACE)/4.D0))
+*          IF ((ROT1(3,2)-ROT1(2,3)).LT.0.D0) THEN
+*            QUAT1(2) = -1.D0*X1
+*          ELSE
+*            QUAT1(2) = X1
+*          ENDIF
+          quat1(2) = x1 * dsign(1.d0,rot1(3,2)-rot1(2,3))
           QUAT1(1) = (ROT1(3,2)-ROT1(2,3))/(4.D0*QUAT1(2))
-          
           QUAT1(3) = (ROT1(2,1) + ROT1(1,2))/(4.D0*QUAT1(2))
           QUAT1(4) = (ROT1(3,1) + ROT1(1,3))/(4.D0*QUAT1(2))
         ELSEIF (IMAX.EQ.2) THEN
-          X2 = SQRT(ABS(ROT1(2,2)/2.D0 + (1 - TRACE)/4.D0))
-          IF ((ROT1(1,3)-ROT1(3,1)).LT.0.D0) THEN
-                 QUAT1(3)=-1.D0*X2
-          ELSE
-                 QUAT1(3)=X2
-          ENDIF
+          X2 = DSQRT(ABS(ROT1(2,2)/2.D0 + (1.d0 - TRACE)/4.D0))
+*         IF ((ROT1(1,3)-ROT1(3,1)).LT.0.D0) THEN
+*                QUAT1(3)=-1.D0*X2
+*         ELSE
+*                QUAT1(3)=X2
+*         ENDIF
+          quat1(3) = x2 * dsign(1.d0,rot1(1,3)-rot1(3,1))
           QUAT1(1) = (ROT1(1,3)-ROT1(3,1))/(4.D0*QUAT1(3))
-          
           QUAT1(4) = (ROT1(3,2) + ROT1(2,3))/(4.D0*QUAT1(3))
           QUAT1(2) = (ROT1(1,2) + ROT1(2,1))/(4.D0*QUAT1(3))
         ELSEIF (IMAX.EQ.3) THEN
-          X3 = SQRT(ABS(ROT1(3,3)/2.D0 + (1 - TRACE)/4.D0))
-          IF ((ROT1(2,1)-ROT1(1,2)).LT.0.D0) THEN
-                 QUAT1(4)=-1.D0*X3
-          ELSE
-                 QUAT1(4)=X3
-          ENDIF
+          X3 = DSQRT(ABS(ROT1(3,3)/2.D0 + (1.d0 - TRACE)/4.D0))
+*         IF ((ROT1(2,1)-ROT1(1,2)).LT.0.D0) THEN
+*                QUAT1(4)=-1.D0*X3
+*         ELSE
+*                QUAT1(4)=X3
+*         ENDIF
+          quat1(4) = x3 * dsign(1.d0,rot1(2,1)-rot1(1,2))
           QUAT1(1) = (ROT1(2,1)-ROT1(1,2))/(4.D0*QUAT1(4))
-          
           QUAT1(3) = (ROT1(2,3) + ROT1(3,2))/(4.D0*QUAT1(4))
           QUAT1(2) = (ROT1(1,3) + ROT1(3,1))/(4.D0*QUAT1(4))
         ENDIF
@@ -106,12 +105,12 @@
 * Calcul de la trace de la matrice de rotation:
       TRACE = ROT1(1,1) + ROT1(2,2) + ROT1(3,3) ;
 * Valeur de Q0: (on la choisit > 0):
-      X0 = SQRT(ABS((1+TRACE)/4.D0))
+      X0 = DSQRT(ABS((1.d0+TRACE)/4.D0))
       QUAT1(1) = X0
 * Valeurs absolues des composantes du quaternion:
-      X1 = SQRT( ABS( ROT1(1,1)/2.D0 + (1 - TRACE)/4.D0 ) )
-      X2 = SQRT( ABS( ROT1(2,2)/2.D0 + (1 - TRACE)/4.D0 ) )
-      X3 = SQRT( ABS( ROT1(3,3)/2.D0 + (1 - TRACE)/4.D0 ) )
+      X1 = SQRT( ABS( ROT1(1,1)/2.D0 + (1.d0 - TRACE)/4.D0 ) )
+      X2 = SQRT( ABS( ROT1(2,2)/2.D0 + (1.d0 - TRACE)/4.D0 ) )
+      X3 = SQRT( ABS( ROT1(3,3)/2.D0 + (1.d0 - TRACE)/4.D0 ) )
 * Rq: ABS protege contre les valeurs negatives dues a une eventuelle
 *     erreur numerique tres proche de 0.
 * On trouve la composantes de valeurs absolue maximale:
@@ -123,53 +122,65 @@
       
 * On attribut les signes:
       IF (IMAX.EQ.1) THEN
-        IF ((ROT1(3,2)-ROT1(2,3)).LT.0.D0) THEN
-          QUAT1(2)=-1.D0*X1
-        ELSE
-          QUAT1(2) = X1
-        ENDIF
-        IF ((QUAT1(2)*(ROT1(2,1)+ROT1(1,2))).LT.0.D0) THEN
-                 QUAT1(3)=-1.D0*X2
-        ELSE
-                 QUAT1(3) = X2
-        ENDIF
-        IF ((QUAT1(2)*(ROT1(3,1)+ROT1(1,3))).LT.0.D0) THEN
-                 QUAT1(4)=-1.D0*X3
-        ELSE
-                 QUAT1(4)=X3
-        ENDIF
+*       IF ((ROT1(3,2)-ROT1(2,3)).LT.0.D0) THEN
+*         QUAT1(2)=-1.D0*X1
+*       ELSE
+*         QUAT1(2) = X1
+*       ENDIF
+        quat1(2) = x1 * dsign(1.d0,ROT1(3,2)-ROT1(2,3))
+*       IF ((QUAT1(2)*(ROT1(2,1)+ROT1(1,2))).LT.0.D0) THEN
+*                QUAT1(3)=-1.D0*X2
+*       ELSE
+*                QUAT1(3) = X2
+*       ENDIF
+        quat1(3) = x2 * dsign(1.d0,quat1(2)*(ROT1(2,1)+ROT1(1,2)))
+*       IF ((QUAT1(2)*(ROT1(3,1)+ROT1(1,3))).LT.0.D0) THEN
+*                QUAT1(4)=-1.D0*X3
+*       ELSE
+*                QUAT1(4)=X3
+*       ENDIF
+        quat1(4) = x3 * dsign(1.d0,quat1(2)*(ROT1(3,1)+ROT1(1,3)))
       ELSEIF (IMAX.EQ.2) THEN
-        IF ((ROT1(1,3)-ROT1(3,1)).LT.0.D0) THEN
-                 QUAT1(3)=-1.D0*X2
-        ELSE
-                 QUAT1(3)=X2
-        ENDIF
-        IF ((QUAT1(3)*(ROT1(3,2)+ROT1(2,3))).LT.0.D0) THEN
-                 QUAT1(4)=-1.D0*X3
-        ELSE 
-                 QUAT1(4)=X3
-        ENDIF
-        IF ((QUAT1(3)*(ROT1(1,2)+ROT1(2,1))).LT.0.D0) THEN
-                 QUAT1(2)=-1.D0*X1
-        ELSE
-                 QUAT1(2)=-1.D0*X1
-        ENDIF
+*        IF ((ROT1(1,3)-ROT1(3,1)).LT.0.D0) THEN
+*                 QUAT1(3)=-1.D0*X2
+*        ELSE
+*                 QUAT1(3)=X2
+*        ENDIF
+        quat1(3) = x2 * dsign(1.d0,(ROT1(1,3)-ROT1(3,1)))
+*       IF ((QUAT1(3)*(ROT1(3,2)+ROT1(2,3))).LT.0.D0) THEN
+*                QUAT1(4)=-1.D0*X3
+*       ELSE 
+*                QUAT1(4)=X3
+*       ENDIF
+        quat1(4) = x3 * dsign(1.d0,quat1(3)*(ROT1(3,2)+ROT1(2,3)))
+*       IF ((QUAT1(3)*(ROT1(1,2)+ROT1(2,1))).LT.0.D0) THEN
+*                QUAT1(2)=-1.D0*X1
+*       ELSE
+*                QUAT1(2)=X1
+*       ENDIF
+        quat1(2) = x1 * dsign(1.d0,quat1(3)*(ROT1(1,2)+ROT1(2,1)))
+
       ELSEIF (IMAX.EQ.3) THEN
-        IF ((ROT1(2,1)-ROT1(1,2)).LT.0.D0) THEN
-                 QUAT1(4)=-1.D0*X3
-        ELSE
-                 QUAT1(4)=X3
-        ENDIF
-        IF ((QUAT1(4)*(ROT1(1,3)+ROT1(3,1))).LT.0.D0) THEN
-                 QUAT1(2)=-1.D0*X1
-        ELSE
-                 QUAT1(2)=X1
-        ENDIF
-        IF ((QUAT1(4)*(ROT1(2,3)+ROT1(3,2))).LT.0.D0) THEN
-                 QUAT1(3)=-1.D0*X2
-        ELSE
-                 QUAT1(3)=X2
-        ENDIF
+*        IF ((ROT1(2,1)-ROT1(1,2)).LT.0.D0) THEN
+*                 QUAT1(4)=-1.D0*X3
+*        ELSE
+*                 QUAT1(4)=X3
+*        ENDIF
+        quat1(4) = x3 * dsign(1.d0,(ROT1(2,1)-ROT1(1,2)))
+
+*        IF ((QUAT1(4)*(ROT1(1,3)+ROT1(3,1))).LT.0.D0) THEN
+*                 QUAT1(2)=-1.D0*X1
+*        ELSE
+*                 QUAT1(2)=X1
+*        ENDIF
+        quat1(2) = x1 * dsign(1.d0,quat1(4)*(ROT1(1,3)+ROT1(3,1)))
+
+*        IF ((QUAT1(4)*(ROT1(2,3)+ROT1(3,2))).LT.0.D0) THEN
+*                 QUAT1(3)=-1.D0*X2
+*        ELSE
+*                 QUAT1(3)=X2
+*        ENDIF
+        quat1(3) = x2 * dsign(1.d0,quat1(4)*(ROT1(2,3)+ROT1(3,2)))
       ENDIF
 *
 * NORMALISATION

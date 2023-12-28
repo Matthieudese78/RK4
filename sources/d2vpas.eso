@@ -122,7 +122,6 @@ c
       REAL*8 FTEXB(NPLB,NPC1,2,*),XCHPFB(2,NLIAB,4,NPLB)
 cbp,2020-09      REAL*8 XOPM1(NB1,NB1,*),Q2DEMI(NA1),FAMOR(NA1)
       REAL*8 XOPM1(NB1,NB1,*),FAMOR(NA1)
-      
 *     TODO : KTOTXA et KTOTVA a allouer dans le segment LOCLFA ?
       REAL*8 KTOTXA(NA1,NA1), KTOTVA(NA1,NA1) 
 *     TODO : KTOTXB et KTOTVB a allouer dans le segment LOCLFB ?
@@ -144,7 +143,7 @@ cms : pour le couple resistant "hard code" :
 *     resistance au spin ?
       lrspin = .false.
 *     book toss ?
-      lbt = .false.
+      lbt = .true.
 
 *     coulombic soft wall ?
       lcb = .false.
@@ -379,12 +378,14 @@ cms    si on veut une resistance au spin, on rajoute
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + tspin(3)
        endif
        if (lbt) then 
+         nd = floor(2.d0/pdt)
          if (t.le.(2.-pdt)) then 
          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 20.
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + 0.
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
          endif
-         if ((t.ge.(2.-(pdt/1.99))).and.(t.le.(2.+(pdt/1.99)))) then 
+*         if ((t.ge.(2.-(pdt/1.99))).and.(t.le.(2.+(pdt/1.99)))) then 
+         if ((npas.eq.nd).or.(npas.eq.(nd+1))) then 
          fmomtot(1,1,ibad) = fmomtot(1,1,ibad) + 0.
          fmomtot(2,1,ibad) = fmomtot(2,1,ibad) + (2.d-1/pdt)
          fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 0.
