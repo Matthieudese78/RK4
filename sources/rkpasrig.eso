@@ -112,11 +112,11 @@
 *          write(*,*)'           omeg3 = '
 *          write(*,'(3(1X,F8.5))') , (omeg3(j,ind,ib),j=1,3)
           do id=1,3
-            thbis(id) = 0.d0
+*           thbis(id) = 0.d0
             wbis(id) = 0.d0
             abis(id) = 0.d0
             do j=1,3
-              thbis(id) = thbis(id) + dexpinv(id,j) * th(j)
+*             thbis(id) = thbis(id) + dexpinv(id,j) * th(j)
               wbis(id) = wbis(id) + dexpinv(id,j) * omeg2(j,ind,ib)
               abis(id) = abis(id) + dexpinv(id,j) * omeg3(j,ind,ib)
             enddo
@@ -129,7 +129,7 @@
 *          write(*,*)'           abis = '
 *          write(*,'(3(1X,F8.5))') , (abis(j),j=1,3)
           do id=1,3  
-           th(id) = thbis(id)
+*          th(id) = thbis(id)
            omeg2(id,ind,ib) = wbis(id)
            omeg3(id,ind,ib) = abis(id)
           enddo
