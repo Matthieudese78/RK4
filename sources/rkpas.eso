@@ -491,9 +491,9 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
      &               xasm,xopm1,finert,1,1,pdt)
 
 *       MAJ vitesse generalisee :
-        do in=1,na1
-          q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,1)+q3(in,5))
-        enddo
+*       do in=1,na1
+*         q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,1)+q3(in,5))
+*       enddo
 ************************************************************************
 * rotas rigides :
 ************************************************************************
@@ -537,10 +537,10 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
         call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
      &    dtheta(1,iib),fmomtot,xcoolb,fexb,nplb,1,1,.false.,.false.)
 *         MAJ vitesse angulaire :
-        do id = 1,3
-          omeg2(id,1,iib) = omeg2(id,5,iib) + 
-     &                    (dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
-        enddo
+*       do id = 1,3
+*         omeg2(id,1,iib) = omeg2(id,5,iib) + 
+*    &                    (dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
+*       enddo
  22     continue
         
       endif
