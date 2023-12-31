@@ -7,6 +7,10 @@
 *     dexp^{-1}
 *-----------------------------------------------------------------------*
       REAL*8 vect(3),mat(3,3),uchap(3,3),uchap2(3,3),u2(3)
+      logical linv
+
+      linv = .true.
+
       mat(1,1) = 1.d0
       mat(1,2) = 0.d0
       mat(1,3) = 0.d0
@@ -23,7 +27,8 @@
       enddo
       xang = dsqrt(xang)
 *      if (xang.le.dsqrt(xzprec)) then 
-      if (xang.le.1.d-6) then 
+*      if (xang.le.1.d-6) then 
+      if (xang.le.1.d-10) then 
         write(*,*)'xpinv : angle trop petit' 
         goto 1
       endif
@@ -45,24 +50,34 @@
         enddo
       enddo
 *       mat :
-      do id=1,3
-        do j=1,3
-          mat(id,j) = -(uchap(id,j)/2.d0)
-        enddo
-      enddo
-      write(*,*)'dxpinv : dcotan(xang) : ',dcotan(xang) 
-      if (dabs(xang).ge.dsqrt(xzprec)) then
+*     do id=1,3
+*       do j=1,3
+*         mat(id,j) = -(uchap(id,j)/2.d0)
+*       enddo
+*     enddo
+*      write(*,*)'dxpinv : xang = ',xang 
+*      write(*,*)'         dcotan(xang) : ',dcotan(xang) 
+*      if (dabs(xang).ge.dsqrt(xzprec)) then
+      if (linv) then
         do id=1,3
           do j=1,3
-            mat(id,j) = -(uchap(id,j)/2.d0) + 
+            mat(id,j) = -(uchap(id,j)/2.d0) - 
      &  ((xang*dcotan(xang/2.d0) - 2.d0)/(2.d0*(xang**2)))*uchap2(id,j)
+*     &  (1.d0 - ((xang/2.d0)*dcotan(xang/2.d0))/(xang**2))*uchap2(id,j)
           enddo
+          mat(id,id) = mat(id,id) + 1.d0
+        enddo
+*      endif
+      endif
+      if (.not.linv) then
+        do id=1,3
+        do j=1,3
+        mat(id,j)=((dsin(xang**2/2.d0)/((xang**2)/2.d0))*uchap(id,j)) +
+     &            (((xang - dsin(xang))/(xang**3)) * uchap2(id,j))
+        enddo
+        mat(id,id) = mat(id,id) + 1.d0
         enddo
       endif
-*       + l'identite :
-      do id=1,3
-        mat(id,id) = mat(id,id) + 1.d0
-      enddo
 
  1    continue
       

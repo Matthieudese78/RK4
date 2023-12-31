@@ -140,15 +140,15 @@ cms : pour le couple resistant "hard code" :
       real*8 jwchap(3,3),jachap(3,3),tw(3,3)
       real*8 res(3),dres(3,3),dresinv(3,3)
 *
-*      QUATERNION = .FALSE.
-       QUATERNION = .true.
-*      MATRICE    = .TRUE.
-       MATRICE    = .false.
+*     QUATERNION = .FALSE.
+      QUATERNION = .true.
+*     MATRICE    = .TRUE.
+      MATRICE    = .false.
 *     resistance au spin ?
       lrspin = .false.
 
 *     book toss ?
-      lbt = .true.
+      lbt = .false.
 
 *     coulombic soft wall ?
       lcb = .false.
