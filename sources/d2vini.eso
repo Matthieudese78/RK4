@@ -623,6 +623,15 @@ c------- Cas K,C et M diagonal -----------------------------------
 *         Calcul de l'énergie cinétique en translation :
           NA3  = INMSB(IB)
           INA2 = IORSB(IB) - 1
+*         energie de deformation :  
+          edef(ib) = 0.d0
+          do in=1,na3
+            i2 = in + ina2
+            if (.not.itrig(ib,in)) then
+             edef(ib) = edef(ib) + (xk(i2,2) * (q1(i2,2)**2)/2.d0)
+            endif
+          enddo
+*         energie cinetique :
           XTC = 0.D0
           DO IN = 1,NA3
             IN2 = INA2 + IN
@@ -670,7 +679,8 @@ c------- Cas K,C et M diagonal -----------------------------------
 *              WRITE(*,*)'D2VINI : PICIN(',IB,I,') = ',PICIN(IB,I)
             ENDDO
           ENDDO                
-*         
+*         si rkmk4 on evite le 1er eq dyn :         
+*          if (.not.(ialgo.eq.5)) then
 *         ROT ^T * FMOMTOT:
           DO I=1,3
             RTGEX(I)=0.D0
@@ -692,7 +702,7 @@ c------- Cas K,C et M diagonal -----------------------------------
             ENDDO
             WRITE(*,*)'D2VINI: OMEG3(',ID,',2,IB) = ',OMEG3(ID,2,IB)
           ENDDO
-      
+*          endif
 *       fin boucle sur les ss bases
 *        WRITE(*,*)'D2VINI : tenseur J'
 *        write(*,'(20F15.5)')((INERTIE(k,j,IB),j= 1,3),k= 1,3)
