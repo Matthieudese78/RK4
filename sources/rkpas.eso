@@ -134,7 +134,7 @@ cms : pour le couple resistant "hard code" :
       logical lrspin,lbt,lcb 
 *     vecteurs de rotations incrementaux :
       real*8 th1(3), th2(3), th3(3), th4(3) 
-      real*8 dexpinv(3,3)
+*      real*8 mdexp(3,3)
 *     accelerations translations rigides + couple inertiel base A (body frame): 
       real*8 atrans(3),ginea(3)
       real*8 rtgex(3)
@@ -143,7 +143,7 @@ cms : pour le couple resistant "hard code" :
 *     resistance au spin ?
       lrspin = .false.
 *     correction dexpinv ?
-      lxpinv = .false.
+      lxpinv = .true.
 *     couplage inertiel ?
       linert = .false.
 *     method de calcul de la MAJ du tenseur d'inertie J ?
@@ -274,8 +274,6 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
             th2(id) = omeg2(id,5,iib) * dt2
             omeg2(id,4,iib)  = omeg2(id,5,iib) + omeg3(id,5,iib) * dt2
           enddo
-*         write(*,*)'rkpas : th2 = '
-*         write(*,'(3(1X,F8.5))') , (th2(id),id=1,3)
 ************************************************************************
 *          calcul de EXPTH pour eq. dynamique:
           CALL VECT2QUAT(TH2(1),DQUAT)
