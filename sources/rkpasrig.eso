@@ -101,38 +101,28 @@
 *          "rappatriment sur l'espace tangent en t_n :
           call xpinv(th(1),dexpinv(1,1),xang)
 *         application : 
-*           - au vecteur de rotation
 *           - a la vitesse angulaire de rotation
 *           - a l' acceleration angulaire de rotation
-*          write(*,*)'rkpasrig : avant dexpinv :'
-*          write(*,*)'           th = '
-*          write(*,'(3(1X,F8.5))') , (th(j),j=1,3)
 *          write(*,*)'           omeg2 = '
 *          write(*,'(3(1X,F8.5))') , (omeg2(j,ind,ib),j=1,3)
 *          write(*,*)'           omeg3 = '
 *          write(*,'(3(1X,F8.5))') , (omeg3(j,ind,ib),j=1,3)
           do id=1,3
-*           thbis(id) = 0.d0
             wbis(id) = 0.d0
             abis(id) = 0.d0
             do j=1,3
-*             thbis(id) = thbis(id) + dexpinv(id,j) * th(j)
               wbis(id) = wbis(id) + dexpinv(id,j) * omeg2(j,ind,ib)
               abis(id) = abis(id) + dexpinv(id,j) * omeg3(j,ind,ib)
             enddo
           enddo
-*          write(*,*)'rkpasrig : apres dexpinv :'
-*          write(*,*)'           thbis = '
-*          write(*,'(3(1X,F8.5))') , (thbis(j),j=1,3)
-*          write(*,*)'           wbis = '
-*          write(*,'(3(1X,F8.5))') , (wbis(j),j=1,3)
-*          write(*,*)'           abis = '
-*          write(*,'(3(1X,F8.5))') , (abis(j),j=1,3)
           do id=1,3  
-*          th(id) = thbis(id)
            omeg2(id,ind,ib) = wbis(id)
            omeg3(id,ind,ib) = abis(id)
           enddo
+*          write(*,*)'rkpasrig : apres dexpinv :'
+*          write(*,'(3(1X,F8.5))') , (wbis(j),j=1,3)
+*          write(*,*)'           abis = '
+*          write(*,'(3(1X,F8.5))') , (abis(j),j=1,3)
         endif
 
       END
