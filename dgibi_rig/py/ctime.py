@@ -58,21 +58,37 @@ defkwargs = {
 }
 # %% Scripts :
 icas1 = 5
-#
+lialgo = [1,2,3]
+#%%
 if (icas1==1):
   script1 = f"fast_top"
-
+  x1 = 19 
+  x2 = 15 
+  x3 = 15 
 if (icas1==2):
   script1 = f"slow_top"
-
+  x1 = 17 
+  x2 = 16 
+  x3 = 8 
 if (icas1==3):
   script1 = f"fsb"
-
+  x1 = 6 
+  x2 = 4 
+  x3 = 5
 if (icas1==4):
   script1 = f"bt"
+  x1 = 14 
+  x2 = 11 
+  x3 = 10
 
 if (icas1==5):
   script1 = f"cb"
+  x1 = 14 
+  x2 = 10 
+  x3 = 12
+  h1 = df[]
+
+lindalgo1 = [ df[(df['ialgo']==ialgi) & (df['icas']==icas1)].index for i,ialgi in enumerate(lialgo) ] 
 
 repload = f"./pickle/{script1}/"
 # %%
@@ -87,8 +103,7 @@ else:
 df = pd.read_pickle(f"{repload}result.pickle")
 
 #%% poutr un algo : 
-lindalgo1 = [ df[(df['ialgo']==1) & (df['icas']==icas1)].index , df[(df['ialgo']==2)  & (df['icas']==icas1)].index, df[(df['ialgo']==3) & (df['icas']==icas1)].index ]
-
+lindalgo1 = [ df[(df['ialgo']==ialgi) & (df['icas']==icas1)].index for i,ialgi in enumerate(lialgo) ] 
 lind1 = [ df.iloc[indi]['n'].drop_duplicates().index for i,indi in enumerate(lindalgo1)]
 
 ln1  = [ df.iloc[indi]['n'] for i,indi in enumerate(lind1) ]
@@ -142,6 +157,10 @@ axes.set_title(title1)
 if type(ind) == list:
     x_data = [df.iloc[indi][colx] for indi in ind]
     y_data = [df.iloc[indi][coly] for indi in ind]
+    h1 = [df.iloc[indi][df.iloc[indi][colx]==x1][coly] for indi in ind]
+    h2 = [df.iloc[indi][df.iloc[indi][colx]==x2][coly] for indi in ind]
+    h3 = [df.iloc[indi][df.iloc[indi][colx]==x3][coly] for indi in ind]
+    
 else:
     x_data = df[ind][colx]
     y_data = df[ind][coly]
@@ -166,10 +185,14 @@ else:
         )
         for i, xi in enumerate(x_data)
     ]
+    plt.axhline(y=h1, color=color1[0], linestyle='--',label='h converged')
+    plt.axhline(y=h2, color=color1[1], linestyle='--',label='h converged')
+    plt.axhline(y=h3, color=color1[2], linestyle='--',label='h converged')
 axes.set_facecolor("white")
 axes.grid(True)
 
-plt.legend(loc=loc_leg)
+plt.legend(loc=loc_leg,facecolor='white')
+
 axes.set_xlabel(labelx)
 axes.set_ylabel(labely)
 f.savefig(rep_save + title_save + ".png", bbox_inches="tight", format="png")

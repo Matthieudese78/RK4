@@ -10,8 +10,11 @@ EVOLRECO = VRAI ;
 *# flvtk :
 FLVTK = FAUX ;
 
+*# xpinv :
+lxpinv = vrai ;
+
 *# icas : 
-icas = 4 ;
+icas = 5 ;
 
 *# ialgo : 
 ialgo = 3 ;
@@ -27,7 +30,7 @@ algo = 'rk4' ;
 finsi ; 
 
 *# n : 
-n = 14 ;
+n = 12 ;
 
 *# h : 
 DTE = 2**((-1.)*(flott n)) ;
@@ -526,6 +529,7 @@ TSORT . 'uzp2' = uzp2 ;
 ncolexce = ncolexce + 12 ;
 FINSI ; 
 * On rétalbit la sortie par défaut:
+si (non lxpinv) ;
 si (icas ega 1) ;
 OPTI 'SORT' (CHAI '../../data_fast_top/'script) ;
 finsi ;
@@ -540,6 +544,25 @@ OPTI 'SORT' (CHAI '../../data_bt/'script) ;
 finsi ;
 si (icas ega 5) ;
 OPTI 'SORT' (CHAI '../../data_cb/'script) ;
+finsi ;
+finsi ;
+
+si ((ialgo ega 3) et (lxpinv)) ;
+si (icas ega 1) ;
+OPTI 'SORT' (CHAI '../../data_fast_top_xpinv/'script) ;
+finsi ;
+si (icas ega 2) ;
+OPTI 'SORT' (CHAI '../../data_slow_top_xpinv/'script) ;
+finsi ;
+si (icas ega 3) ;
+OPTI 'SORT' (CHAI '../../data_fsb_xpinv/'script) ;
+finsi ;
+si (icas ega 4) ;
+OPTI 'SORT' (CHAI '../../data_bt_xpinv/'script) ;
+finsi ;
+si (icas ega 5) ;
+OPTI 'SORT' (CHAI '../../data_cb_xpinv/'script) ;
+finsi ;
 finsi ;
 ********************************************************************
 SORT 'EXCE' (TSORT) 'NCOL' ncolexce 'SEPA' 'VIRG' 'DIGI' 10 ;

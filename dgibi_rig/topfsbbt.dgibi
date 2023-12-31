@@ -12,7 +12,7 @@ EVOLRECO = VRAI ;
 FLVTK = FAUX ;
 
 *# icas : 
-icas = 4 ;
+icas = 2 ;
 
 *# ialgo : 
 ialgo = 3 ;
@@ -348,6 +348,7 @@ tprog = TRESU . TEMPS_DE_SORTIE;
 *
 Nt = dime tprog;
 *
+* opti donn 5 ; 
 ************************************************************************
 *     					POST TRAITEMENT
 ************************************************************************

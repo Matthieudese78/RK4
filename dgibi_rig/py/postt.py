@@ -17,53 +17,62 @@ view = [30, -45]
 lindiv = False
 #%% Cas test ? :
 # quel cas ?
-icas1 = 3
+icas1 = 4
 # quel algo ?
 lialgo = [1,2,3]
 # lialgo = [1]
 ln = []
 if (icas1==0):
+    # ln = [[12,13,14]]
     # SW
-    ln = [[8,10,12]] 
+    ln = [[12,16,20]] 
     # NMB 
-    ln.append([6,8,10])
+    ln.append([7,11,15])
     # RKMK4
-    ln.append([4,5,6])
+    ln.append([7,11,15])
+    # converged
+    lnconv = [19,15,15]
 
 if (icas1==1):
+    # ln = [[12,13,14]]
     # SW
-    ln = [[8,10,12]] 
+    ln = [[13,15,17]] 
     # NMB 
-    ln.append([6,8,10])
+    ln.append([12,14,16])
     # RKMK4
-    ln.append([4,5,6])
+    ln.append([4,6,8])
+    # # converged
+    lnconv = [17,16,8]
 
 if (icas1==2):
     # SW
-    ln = [[8,10,12]] 
+    ln = [[2,4,6]] 
     # NMB 
-    ln.append([6,8,10])
+    ln.append([1,2,4])
     # RKMK4
-    ln.append([4,5,6])
-    # n1 = 3
-    # n2 = 4
-    # n3 = 5
+    ln.append([1,3,5])
+    # converged
+    lnconv = [6,4,5]
 
 if (icas1==3):
     # SW
-    ln.append([12,13,14])
+    ln.append([10,12,14])
     # NMB 
-    ln.append([9,10,11]) 
+    ln.append([7,9,11]) 
     # RKMK4
-    ln.append([9,10,11])
+    ln.append([6,8,10])
+    # converged
+    lnconv = [14,11,10]
 
 if (icas1==4):
     # SW
-    ln = [[8,10,12]] 
+    ln = [[10,12,14]] 
     # NMB 
-    ln.append([6,8,10])
+    ln.append([3,6,10])
     # RKMK4
-    ln.append([6,8,10])
+    ln.append([8,10,12])
+    # converged
+    lnconv = [14,10,12]
 
 # ln = [n1]
 labelh = [ [ r"$h = 2^{-%d}$" % ni for ni in ln[j] ] for j,ialgj in enumerate(lialgo) ] 
@@ -111,9 +120,9 @@ dfcolpus = traj.color_from_value(df,**kcol)
 
 lindcas1 = [ [ df[ (df['ialgo']==ialgj) & (df['icas']==(icas1+1)) & (df['n']==ni) ].index for i,ni in enumerate(ln[j]) ] for j,ialgj in enumerate(lialgo) ]
 
-# on passe ialgo en indice et on maj la liste de noms :
-lialgo = list(map(lambda x: x - 1, lialgo))
-lalgo = [ lalgo[ialgi] for ialgi in lialgo ]
+# # on passe ialgo en indice et on maj la liste de noms :
+# lialgo = list(map(lambda x: x - 1, lialgo))
+# lalgo = [ lalgo[ialgi] for ialgi in lialgo ]
 
 # on verifie :
 for i,algi in enumerate(lindcas1):
@@ -125,6 +134,14 @@ for i,algi in enumerate(lindcas1):
         print(f"lindcas1 [{i},{j}] : ")
         print(f"ialgo = {ialij}, n = {nij}")
 
+#%% comparaison des resultats converges :
+lindconv = [ df[ (df['ialgo']==ialgj) & (df['icas']==(icas1+1)) & (df['n']==lnconv[j]) ].index for j,ialgj in enumerate(lialgo) ]
+
+# on passe ialgo en indice et on maj la liste de noms :
+lialgo = list(map(lambda x: x - 1, lialgo))
+lalgo = [ lalgo[ialgi] for ialgi in lialgo ]
+
+labelconv = [ f"{lalgo[j]}, "+r"$h = 2^{-%d}$" % lnconv[j] for j,ialgj in enumerate(lialgo) ] 
 #%%############################################
 #           PLOTS : grandeures temporelles :
 ###############################################
@@ -232,6 +249,109 @@ for ialg,alg in enumerate(lialgo):
         "view": view,
     }
     traj.pltraj3d_ind(df, **kwargs1)
+
+#%%############################################
+#   comparaison des resultats converges :
+###############################################
+repsect1 = f"{rep_save}comp_converged/"
+if not os.path.exists(repsect1):
+    os.makedirs(repsect1)
+    print(f"FOLDER : {repsect1} created.")
+else:
+    print(f"FOLDER : {repsect1} already exists.")
+
+repsect2 = f"{repsect1}variables_ft/"
+if not os.path.exists(repsect2):
+    os.makedirs(repsect2)
+    print(f"FOLDER : {repsect2} created.")
+else:
+    print(f"FOLDER : {repsect2} already exists.")
+
+kwargs1 = {
+    "tile1": f"converged results, Ws = f(t) cas {lscript[icas1]}" + "\n",
+    "tile_save": f"converged_Ws_pdts_{lscript[icas1]}",
+    "colx": "t",
+    "coly": ["wx","wy","wz"],
+    "ind" : lindconv,
+    "rep_save": repsect2,
+    "label1": labelconv,
+    "labelx": [r"$t \quad (s)$"] * 3,
+    "labely": [r"$W_X \quad (rad/s)$", r"$W_Y \quad (rad/s)$",r"$W_Z \quad (rad/s)$"],
+    "color1": color1,
+    "loc_leg": (1.01,0.),
+}
+traj.pltsub2d_ind(df,**kwargs1)
+
+kwargs1 = {
+    "tile1": f"converged results, Es = f(t) cas {lscript[icas1]}" + "\n",
+    "tile_save": f"converged_Es_pdts_{lscript[icas1]}",
+    "colx": "t",
+    "coly": ["ec","edef","et"],
+    "ind" : lindconv,
+    "rep_save": repsect2,
+    "label1": labelconv,
+    "labelx": [r"$t \quad (s)$"] * 3,
+    "labely": [r"$E_{kin} \quad (J)$", r"$E_{pot} \quad (J)$",r"$E_{tot} \quad (J)$"],
+    "color1": color1,
+    "loc_leg": (1.01,0.),
+}
+traj.pltsub2d_ind(df,**kwargs1)
+
+kwargs1 = {
+    "tile1": f"converged results, Pis = f(t) cas {lscript[icas1]}" + "\n",
+    "tile_save": f"converged_Pis_pdts_{lscript[icas1]}",
+    "colx": "t",
+    "coly": ["pix","piy","piz"],
+    "ind" : lindconv,
+    "rep_save": repsect2,
+    "label1": labelconv,
+    "labelx": [r"$t \quad (s)$"] * 3,
+    "labely": [r"$\Pi_{x} \quad (m^2.s^{-1})$", r"$\Pi_{y} \quad (m^2.s^{-1})$", r"$\Pi_{z} \quad (m^2.s^{-1})$"],
+    "color1": color1,
+    "loc_leg": (1.01,0.),
+}
+traj.pltsub2d_ind(df,**kwargs1)
+
+repsect2 = f"{repsect1}traj_3d_pdts/"
+if not os.path.exists(repsect2):
+    os.makedirs(repsect2)
+    print(f"FOLDER : {repsect2} created.")
+else:
+    print(f"FOLDER : {repsect2} already exists.")
+
+kwargs1 = {
+    "tile1": f"converged results, CDM traj. 3d cas {lscript[icas1]}" + "\n",
+    "tile_save": f"converged_cdm_traj3d_pdts_{lscript[icas1]}",
+    "ind": lindconv,
+    "colx": "uxg",
+    "coly": "uyg",
+    "colz": "uzg",
+    "rep_save": repsect2,
+    "label1": labelconv,
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "labelz": r"$Z \quad (m)$",
+    "color1": color1,
+    "view": view,
+}
+traj.pltraj3d_ind(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": f"converged results, Pobs traj. 3d cas {lscript[icas1]}" + "\n",
+    "tile_save": f"converged_pobs_traj3d_pdts_{lscript[icas1]}",
+    "ind": lindconv,
+    "colx": "uxpobs",
+    "coly": "uypobs",
+    "colz": "uzpobs",
+    "rep_save": repsect2,
+    "label1": labelconv,
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "labelz": r"$Z \quad (m)$",
+    "color1": color1,
+    "view": view,
+}
+traj.pltraj3d_ind(df, **kwargs1)
 #%%############################################
 #           PLOTS : trajectoires relatives 3d :
 ###############################################
