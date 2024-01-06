@@ -12,12 +12,13 @@ import os
 #%% usefull parameters :
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 view = [30, -45]
-
+#%% dexpinv ? 
+lxpinv = False 
 #%% 1 ou plsrs calculs ? 
 lindiv = False
 #%% Cas test ? :
 # quel cas ?
-icas1 = 4
+icas1 = 3
 # quel algo ?
 lialgo = [1,2,3]
 # lialgo = [1]
@@ -25,64 +26,87 @@ ln = []
 if (icas1==0):
     # ln = [[12,13,14]]
     # SW
-    ln = [[12,16,20]] 
+    ln = [[7,11,20]] 
     # NMB 
     ln.append([7,11,15])
-    # RKMK4
+    # RK4
     ln.append([7,11,15])
     # converged
-    lnconv = [19,15,15]
+    lnconv = [20,15,15]
+    # ln = [[7,11,15]]
 
 if (icas1==1):
     # ln = [[12,13,14]]
     # SW
-    ln = [[13,15,17]] 
+    ln = [[12,14,17]] 
     # NMB 
     ln.append([12,14,16])
-    # RKMK4
+    # RK4
     ln.append([4,6,8])
     # # converged
     lnconv = [17,16,8]
+    # ln = [[4,6,8]]
 
 if (icas1==2):
     # SW
     ln = [[2,4,6]] 
     # NMB 
     ln.append([1,2,4])
-    # RKMK4
+    # RK4
     ln.append([1,3,5])
     # converged
     lnconv = [6,4,5]
 
 if (icas1==3):
     # SW
-    ln.append([10,12,14])
+    ln.append([7,9,16])
     # NMB 
     ln.append([7,9,11]) 
-    # RKMK4
-    ln.append([6,8,10])
+    # RK4
+    ln.append([7,9,10])
     # converged
-    lnconv = [14,11,10]
+    lnconv = [16,11,10]
 
 if (icas1==4):
     # SW
-    ln = [[10,12,14]] 
+    ln = [[4,6,14]] 
     # NMB 
-    ln.append([3,6,10])
-    # RKMK4
-    ln.append([8,10,12])
+    ln.append([4,6,7])
+    # RK4
+    ln.append([4,6,7])
     # converged
-    lnconv = [14,10,12]
+    lnconv = [14,7,7]
+    # ln = [[6,7,8]]
 
-# ln = [n1]
+if (lxpinv):
+  if (icas1==0):
+      # rkmk4
+      ln = [[13,14,15]] 
+  if (icas1==1):
+      # rkmk4
+      ln = [[4,6,8]]
+      # ln = [[10,12,14]]
+  if (icas1==2):
+      # rkmk4
+      ln = [[1,3,5]]
+  if (icas1==3):
+      # rkmk4
+      ln = [[6,8,10]]
+  if (icas1==4):
+      # rkmk4
+      ln = [[14,16,18]]
+
 labelh = [ [ r"$h = 2^{-%d}$" % ni for ni in ln[j] ] for j,ialgj in enumerate(lialgo) ] 
 #%% point d'observation
 # pobs = np.array([0.2,0.2,0.2])
 pobs = np.array([1.,1.,1.])
 # %% Scripts :
 lscript = [f"fast_top",f"slow_top",f"fsb",f"bt",f"cb"]
-lalgo = ['sw','nmb','rkmk4']
+lalgo = ['sw','nmb','rk4']
 script1 = lscript[icas1]
+if (lxpinv):
+    script1 = f"{script1}_xpinv"
+
 repload = f"./pickle/{script1}/"
 # %% 
 rep_save = f"./fig/{script1}/"
@@ -119,6 +143,20 @@ dfcolpus = traj.color_from_value(df,**kcol)
 # lindcas1 = [ [ df[(df['ialgo']==ialgi) & (df['icas']==(icas1+1)) & (df['n']==nj) ].index for i,ialgi in enumerate(lialgo) ] for j,nj in enumerate(ln) ]
 
 lindcas1 = [ [ df[ (df['ialgo']==ialgj) & (df['icas']==(icas1+1)) & (df['n']==ni) ].index for i,ni in enumerate(ln[j]) ] for j,ialgj in enumerate(lialgo) ]
+
+ltest = False
+if (ltest):
+    lindindiv = df[ (df['ialgo']==3) & (df['icas']==(5)) & (df['n']==15) ].index   
+    x = df['uxpobs']
+    y = df['uypobs']
+    z = df['uzpobs']
+    plt.plot(x,y)
+    plt.show()
+    plt.plot(x,z)
+    plt.show()
+    plt.plot(y,z)
+    plt.show()
+#%%
 
 # # on passe ialgo en indice et on maj la liste de noms :
 # lialgo = list(map(lambda x: x - 1, lialgo))
@@ -306,12 +344,13 @@ kwargs1 = {
     "rep_save": repsect2,
     "label1": labelconv,
     "labelx": [r"$t \quad (s)$"] * 3,
-    "labely": [r"$\Pi_{x} \quad (m^2.s^{-1})$", r"$\Pi_{y} \quad (m^2.s^{-1})$", r"$\Pi_{z} \quad (m^2.s^{-1})$"],
+    "labely": [r"$\pi_{x} \quad (m^2.s^{-1})$", r"$\pi_{y} \quad (m^2.s^{-1})$", r"$\pi_{z} \quad (m^2.s^{-1})$"],
     "color1": color1,
     "loc_leg": (1.01,0.),
 }
 traj.pltsub2d_ind(df,**kwargs1)
 
+#%%
 repsect2 = f"{repsect1}traj_3d_pdts/"
 if not os.path.exists(repsect2):
     os.makedirs(repsect2)
@@ -335,7 +374,7 @@ kwargs1 = {
     "view": view,
 }
 traj.pltraj3d_ind(df, **kwargs1)
-
+#%%
 kwargs1 = {
     "tile1": f"converged results, Pobs traj. 3d cas {lscript[icas1]}" + "\n",
     "tile_save": f"converged_pobs_traj3d_pdts_{lscript[icas1]}",

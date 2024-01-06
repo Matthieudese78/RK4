@@ -57,7 +57,7 @@ defkwargs = {
     "spinz" : 0. 
 }
 # %% Scripts :
-icas1 = 5
+icas1 = 3
 lialgo = [1,2,3]
 #%%
 if (icas1==1):
@@ -65,30 +65,35 @@ if (icas1==1):
   x1 = 19 
   x2 = 15 
   x3 = 15 
+  lnconv = [20,15,15]
 if (icas1==2):
   script1 = f"slow_top"
   x1 = 17 
   x2 = 16 
   x3 = 8 
+  lnconv = [17,16,8]
 if (icas1==3):
   script1 = f"fsb"
   x1 = 6 
   x2 = 4 
   x3 = 5
+  lnconv = [6,4,5]
 if (icas1==4):
   script1 = f"bt"
   x1 = 14 
   x2 = 11 
   x3 = 10
+  lnconv = [14,11,10]
 
 if (icas1==5):
   script1 = f"cb"
   x1 = 14 
   x2 = 10 
   x3 = 12
-  h1 = df[]
-
-lindalgo1 = [ df[(df['ialgo']==ialgi) & (df['icas']==icas1)].index for i,ialgi in enumerate(lialgo) ] 
+  lnconv = [14,7,7]
+#   h1 = df[]
+lnconvtot = [[20,15,15],[17,16,8],[6,4,5],[14,11,10],[14,7,7]]
+# lindalgo1 = [ df[(df['ialgo']==ialgi) & (df['icas']==icas1)].index for i,ialgi in enumerate(lialgo) ] 
 
 repload = f"./pickle/{script1}/"
 # %%
@@ -109,6 +114,12 @@ lind1 = [ df.iloc[indi]['n'].drop_duplicates().index for i,indi in enumerate(lin
 ln1  = [ df.iloc[indi]['n'] for i,indi in enumerate(lind1) ]
 lct1 = [ df.iloc[indi]['ctime'] for i,indi in enumerate(lind1) ]
 
+# #%%
+# lcas = [1,2,3,4,5]
+# lindconv = [[ df[(df['ialgo']==ialgi) & (df['icas']==icasj) & (df['n']==lnconvtot[j][i])].index for i,ialgi in enumerate(lialgo) ] for j,icasj in enumerate(lcas) ]  
+# #%%
+# lctconv = [ [ df.iloc[indi]['ctime'].drop_duplicates() for i,indi in enumerate(lindconv[i]) ] for i,icasi in enumerate(lcas) ] 
+lctconv = [ df[(df['icas']==icas1) & (df['ialgo']==ialgi) & (df['n']==lnconv[i])]['ctime'].drop_duplicates() for i,ialgi in enumerate(lialgo) ]
 #%%############################################
 #           PLOTS : temps de calcul en fonction d :
 ###############################################
@@ -126,12 +137,12 @@ kwargs1 = {
     "colx": "n",
     "coly": "ctime",
     "rep_save": repsect1,
-    "label1": ["SW","NMB","RKMK4"],
+    "label1": ["SW","NMB","RK4"],
     "labelx": r"$\log_2(h)$",
     "labely": "Computation time (ms)",
     "color1": color1,
     "msize": 8,
-    "loc_leg": "upper left",
+    "loc_leg": "lower right",
 }
 
 kwargs1 = defkwargs | kwargs1
@@ -157,9 +168,9 @@ axes.set_title(title1)
 if type(ind) == list:
     x_data = [df.iloc[indi][colx] for indi in ind]
     y_data = [df.iloc[indi][coly] for indi in ind]
-    h1 = [df.iloc[indi][df.iloc[indi][colx]==x1][coly] for indi in ind]
-    h2 = [df.iloc[indi][df.iloc[indi][colx]==x2][coly] for indi in ind]
-    h3 = [df.iloc[indi][df.iloc[indi][colx]==x3][coly] for indi in ind]
+    # h1 = [df.iloc[indi][df.iloc[indi][colx]==x1][coly] for indi in ind]
+    # h2 = [df.iloc[indi][df.iloc[indi][colx]==x2][coly] for indi in ind]
+    # h3 = [df.iloc[indi][df.iloc[indi][colx]==x3][coly] for indi in ind]
     
 else:
     x_data = df[ind][colx]
@@ -185,9 +196,8 @@ else:
         )
         for i, xi in enumerate(x_data)
     ]
-    plt.axhline(y=h1, color=color1[0], linestyle='--',label='h converged')
-    plt.axhline(y=h2, color=color1[1], linestyle='--',label='h converged')
-    plt.axhline(y=h3, color=color1[2], linestyle='--',label='h converged')
+    [ plt.axhline(y=lctconv[i].iloc[0], color=color1[i], linestyle='--',label=f'{label1[i]} converged') for i,ialgi in enumerate(lialgo)]
+
 axes.set_facecolor("white")
 axes.grid(True)
 
