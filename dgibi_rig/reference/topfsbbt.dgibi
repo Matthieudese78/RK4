@@ -11,10 +11,10 @@ EVOLRECO = VRAI ;
 FLVTK = FAUX ;
 
 *# xpinv :
-lxpinv = vrai ;
+lxpinv = faux ;
 
 *# icas : 
-icas = 5 ;
+icas = 4 ;
 
 *# ialgo : 
 ialgo = 3 ;
@@ -30,7 +30,7 @@ algo = 'rk4' ;
 finsi ; 
 
 *# n : 
-n = 12 ;
+n = 20 ;
 
 *# h : 
 DTE = 2**((-1.)*(flott n)) ;
