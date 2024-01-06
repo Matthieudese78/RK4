@@ -666,7 +666,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *             MFR :
               ftota(i2,ind1) = ftota(i2,ind1)-(mfr(in,j,iib)*atrans(j))
 *             MTHF :
-              ginea(j) = ginea(j) - (mfth(in,j,iib) * q3(i2,iib))
+              ginea(j) = ginea(j) - (mfth(in,j,iib) * q3(i2,ind1))
 *             MFTH :
               ftota(i2,ind1) = ftota(i2,ind1) -
      &                         (mfth(in,j,iib) * omeg3(j,ind1,iib))  
