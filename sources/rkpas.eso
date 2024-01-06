@@ -149,10 +149,8 @@ cms : pour le couple resistant "hard code" :
 *     method de calcul de la MAJ du tenseur d'inertie J ?
       methJ1 = .false.
       methJ2 = .true.
-
 *     book toss ?
       lbt = .false.
-
 *     coulombic soft wall ?
       lcb = .true.
 
@@ -503,8 +501,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
       if (.not.linert) then
         call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
      &               xasm,xopm1,finert,1,1,pdt)
-
-*       MAJ vitesse generalisee :
+*       MAJ vitesse generalisee : pour newmark only
 *       do in=1,na1
 *         q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,1)+q3(in,5))
 *       enddo
