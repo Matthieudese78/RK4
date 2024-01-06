@@ -146,12 +146,10 @@ cms : pour le couple resistant "hard code" :
       MATRICE    = .false.
 *     resistance au spin ?
       lrspin = .false.
-
 *     book toss ?
       lbt = .false.
-
 *     coulombic soft wall ?
-      lcb = .false.
+      lcb = .true.
 
 *     le cas echeant, base modale de l'adaptateur : 
       ibad = 1
