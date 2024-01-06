@@ -299,7 +299,8 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 
 *          equilibre dynamique : 1/2 pdt --> ifex = 3
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
-     &                  th2,fmomtot,xcoolb,fexb,nplb,4,3,lxpinv,.true.)
+     &                  th2,fmomtot,xcoolb,fexb,nplb,4,3,lxpinv,.true.,
+     &                  lcb)
 
 ************************************************************************
 *         "rappatriement" sur le plan tangent en t_n de :
@@ -325,7 +326,8 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL QUAT2MAT(OMEG1(1,3,IIB),ROT(1,1,3,IIB)) 
 *          equilibre dynamique : 1/2 pdt --> ifex = 3
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
-     &                  th3,fmomtot,xcoolb,fexb,nplb,3,3,lxpinv,.true.)
+     &                  th3,fmomtot,xcoolb,fexb,nplb,3,3,lxpinv,.true.,
+     &                  lcb)
 ************************************************************************
 *         k3 = (w3,a3)^T avec :
 *           - w3 = omeg2(id,3,iib)
@@ -346,7 +348,8 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
           CALL QUAT2MAT(OMEG1(1,2,IIB),ROT(1,1,2,IIB)) 
 *          equilibre dynamique : t_n+1 --> ifex = 1
           call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
-     &                  th4,fmomtot,xcoolb,fexb,nplb,2,1,lxpinv,.true.)
+     &                  th4,fmomtot,xcoolb,fexb,nplb,2,1,lxpinv,.true.,
+     &                  lcb)
 ************************************************************************
 *         k4 = (w4,a4)^T avec :
 *           - w4 = omeg2(id,2,iib)
@@ -533,8 +536,9 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
         do 22 iib=1,nsb
         if (iarota(iib).eq.0) goto 22
         call rkpasrig(omeg1,omeg2,omeg3,rot,inertie,invinert,nsb,iib,
-     &    dtheta(1,iib),fmomtot,xcoolb,fexb,nplb,1,1,.false.,.false.)
-*         MAJ vitesse angulaire :
+     &    dtheta(1,iib),fmomtot,xcoolb,fexb,nplb,1,1,.false.,.false.,
+     &    .false.)
+*         MAJ vitesse angulaire : pour newmark only
 *       do id = 1,3
 *         omeg2(id,1,iib) = omeg2(id,5,iib) + 
 *    &                    (dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
