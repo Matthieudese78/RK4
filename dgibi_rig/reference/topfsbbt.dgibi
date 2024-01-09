@@ -30,7 +30,7 @@ algo = 'rk4' ;
 finsi ; 
 
 *# n : 
-n = 20 ;
+n = 14 ;
 
 *# h : 
 DTE = 2**((-1.)*(flott n)) ;

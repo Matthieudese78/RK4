@@ -7,44 +7,48 @@ sw = faux ;
 xpinv = vrai ;
 linert = faux ;
 nmb = faux ; 
+
 *********************************************************************
 *                       Valeurs numeriques 
 *********************************************************************
-opti impi 555 ;
+* opti impi 555 ;
 ***** General :
 * nbr de modes elastiques : 
 * qui marche :
 * nmode_ela = 2 ;
 * nnoeuds = 5 ;
 
+*# nmode :
 nmode_ela = 10 ;
 
+*# ltronq :
 ltronq = vrai ; 
 * meme si on mets les modes 3d : on enleve que les 2 modes rigides en x et en y :
+
+*# ntronq : 
 ntronq = 2 ;
 
+*# nnoeuds :
 nnoeuds = 200 ;
-* On prend une toupie conique en acier:
-* Masse:
-* M = 2.;
+
 * Gravite:
- g = 10. ;
-* Module d'Young: 20 MPa
- eac = 210.e9; 
+ g = 9.81 ;
+
 * Coefficient de Poisson:
- nuac = 0.3;
+ nuac = 0.3 ;
 * Masse volumique: en kg/m^3
-* Stoianovici & Hurmuzlu :
- rho_ac = 7876.74 ;
-*
 ****** Geometrie:
 stoia = vrai ;
 manchette = faux ;
 * stoianovici & hurmuzlu : plus longue barre : 
 si (stoia) ;
-* Rayon:
+* Module d'Young :
+ eac = 210.e9 ; 
+* masse volumique :
+ rho_ac = 7876.74 ;
+*# Rayon:
 R = ((12.7e-3)/2.) ;
-* longueur de la poutre: 
+*# longueur de la poutre: 
 h = 0.6 ;
 * Section de la poutre :
 sectpou = (Pi*(R**2)) ;
@@ -62,13 +66,79 @@ IGy = (Pi*((2.*R)**4))/64. ;
 IG = (Pi*((2.*R)**4))/32. ;
 finsi ;
 *
-* si (manchette) ;
+si (manchette) ;
+*# longueur de la poutre: 
+L_tot = 1563.4*1.e-3 ;
+L_tete = 28.5*1.e-3 ;
+L_corps = L_tot - L_tete ; 
+h = l_corps ;
+* Module d'Young :
+ eac = 200.e9 ; 
+* masse volumique :
+ rho_ac = 7900. ;
+*
+D_ext = 63.5*1.e-3 ;
+R_ext = D_ext/2. ; 
+D_int = 55.3*1.e-3 ;
+R_int = D_int/2. ;
+epai = R_ext - R_int ;
+* par rapport au centre de gravite :
+JX_G = 2.583844235854036 ;
+JY_G = 2.583844235854036 ;
+JZ_G = 0.010527338424895177 ;
+* Section de la poutre :
+sectpou = (Pi*(R_ext**2)) - (Pi*(R_ext**2)) ;
+* Moments quadratiques de la poutre :
+IGx = ( Pi*((D_ext**4) - (D_int**4) )/64. ) ;
+IGy = IGx ;
+IG = ( Pi*((D_ext**4) -  (D_int**4) )/32. ) ;
+finsi ; 
 
-* finsi; 
+si (stoia) ;
+* nmode = 35 : 20 modes de flexions, 6 modes de traction.
+ntrac1 = 8 ;
+ntrac2 = 15 ;
+ntrac3 = 21 ;
+ntrac4 = 25 ;
+ntrac5 = 31 ;
+ntrac6 = 35 ;
+ntrac7 = 0 ;
+nban1 = 9 ;
+nban2 = 13 ; 
+nban3 = 0 ; 
+nban4 = 0 ; 
+nban5 = 17 ; 
+nban6 = 20 ; 
+nban7 = 23 ; 
+nban8 = 28 ; 
+nban9 = 29 ; 
+nban10 = 33 ; 
+nban11 = 0 ; 
+fin ; 
+si (manchette) ;
+* nmode = 35 : 15 modes de flexions, 7 modes de traction
+ntrac1 = 6 ;
+ntrac2 = 11 ;
+ntrac3 = 17 ;
+ntrac4 = 20 ;
+ntrac5 = 25 ;
+ntrac6 = 29 ;
+ntrac7 = 33 ;
+nban1 = 7 ;
+nban2 = 10 ;
+nban3 = 13 ;
+nban4 = 16 ;
+nban5 = 19 ;
+nban6 = 22 ;
+nban7 = 24 ;
+nban8 = 27 ;
+nban9 = 30 ;
+nban10 = 32 ;
+nban11 = 35 ;
+finsi ;
 
-*Position du centre de gravite: manchette ou stoianovici : 
+* Position du centre de gravite : manchette ou stoianovici : 
  LG = (h/2.) ;
-
 *
 * Centre de rotation = P1 ci-dessous = origine (0. 0. 0.).
 *
@@ -132,7 +202,7 @@ finsi ;
 opti 'FTRA ' (chai 'fig/'script'_T_'T'_h_'Dte'_NSORT_'NSORT'.ps' );
 opti 'EPTR' 5;
 ***** OPIONS SORTIE EXCEL: 
-OPTI 'SORT' (CHAI 'data_dgibi/'script'_AC2_data_dgibi_T_' T '_h_' DTe'_NSORT_'NSORT) ;
+OPTI 'SORT' (CHAI 'data/'script'_AC2_data_dgibi_T_' T '_h_' DTe'_NSORT_'NSORT) ;
 * opti trac 'X';
 ***** dime et typel:
 Opti dime 3; 
@@ -195,9 +265,9 @@ CLRZ = BLOQ 'RX' 'RY' meshpou;
 * CLela = BLOQ 'ROTA' p1 ;
 CLelaX = BLOQ 'UX' meshpou ;
 CLelaY = BLOQ 'UY' meshpou ;
-KRX = K et CLRX;
-KRY = K et CLRY;
-KRZ = K et CLRZ;
+KRX = K et CLRX ;
+KRY = K et CLRY ;
+KRZ = K et CLRZ ;
 KelaX = K et clelaX ;
 KelaY = K et clelaY ;
 * Kela = K ;
@@ -428,7 +498,8 @@ TCHAR = TABL 'CHARGEMENT';
 	 TL2 . 'RAIDEUR'       =  Kchoc ;
    TL2 . 'COEFFICIENT_GLISSEMENT' = muk ; 
    TL2 . 'COEFFICIENT_ADHERENCE' = (0.1*muk) ; 
-   TL2 . 'RAIDEUR_TANGENTIELLE' = (0.001*Kchoc) ; 
+* 0 si friction uniquement
+   TL2 . 'RAIDEUR_TANGENTIELLE' = (0.*Kchoc) ; 
    TL2 . 'AMORTISSEMENT_TANGENTIEL' = 0. ; 
 	 TL2 . 'AMORTISSEMENT' =  Bamo ;
 	 TL2 . 'NORMALE'       =  NORMALE_PPLAN ;
@@ -472,7 +543,7 @@ tprog = TRESU . TEMPS_DE_SORTIE;
 *
 Nt = dime tprog;
 *
-* opti donn 5 ; 
+opti donn 5 ; 
 ************************************************************************
 *     					POST TRAITEMENT
 ************************************************************************
@@ -862,7 +933,7 @@ tsort . 'q1' = tresu . deplacement . ptrep_ela_1  ;
 ncolexce = ncolexce + 1 ;
 finsi ; 
 * On rétalbit la sortie par défaut:
-OPTI 'SORT' (CHAI 'data_dgibi/'script'_AC2_data_dgibi_T_' T '_h_' DTe'_NSORT_'NSORT) ;
+OPTI 'SORT' (CHAI 'data/'script'_AC2_data_dgibi_T_' T '_h_' DTe'_NSORT_'NSORT) ;
 
 ********************************************************************
 SORT 'EXCE' (TSORT) 'NCOL' ncolexce 'SEPA' 'VIRG' 'DIGI' 10 ;

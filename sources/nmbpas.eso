@@ -149,7 +149,7 @@ cms : pour le couple resistant "hard code" :
 *     book toss ?
       lbt = .false.
 *     coulombic soft wall ?
-      lcb = .true.
+      lcb = .false.
 
 *     le cas echeant, base modale de l'adaptateur : 
       ibad = 1

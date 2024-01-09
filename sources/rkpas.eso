@@ -143,16 +143,16 @@ cms : pour le couple resistant "hard code" :
 *     resistance au spin ?
       lrspin = .false.
 *     correction dexpinv ?
-      lxpinv = .true.
+      lxpinv = .false.
 *     couplage inertiel ?
-      linert = .false.
+      linert = .true.
 *     method de calcul de la MAJ du tenseur d'inertie J ?
       methJ1 = .false.
       methJ2 = .true.
 *     book toss ?
       lbt = .false.
 *     coulombic soft wall ?
-      lcb = .true.
+      lcb = .false.
 
 *     le cas echeant, base modale de l'adaptateur : 
       ibad = 1

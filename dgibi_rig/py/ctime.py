@@ -57,7 +57,7 @@ defkwargs = {
     "spinz" : 0. 
 }
 # %% Scripts :
-icas1 = 3
+icas1 = 4
 lialgo = [1,2,3]
 #%%
 if (icas1==1):
