@@ -4,11 +4,7 @@ Opti dime 3;
 opti elem CUB8; 
 
 * opti 'FTRA ' (chai 'fig/'script'_T_'T'_h_'Dte'_NSORT_'NSORT'.ps' );
-opti trac 'PSC' ;
-opti 'EPTR' 5 ;
-
-*# reprise :
-reprise = faux ;
+* opti 'EPTR' 5 ;
 
 *# algo :
 rk4 = vrai ;
@@ -39,7 +35,7 @@ limpact = vrai ;
 * nnoeuds = 5 ;
 
 *# nmode_ela :
-nmode_ela = 5 ;
+nmode_ela = 4 ;
 
 *# ltronq :
 ltronq = vrai ; 
@@ -50,7 +46,7 @@ ltronq = vrai ;
 ntronq = 0 ;
 
 *# nnoeuds :
-nnoeuds = 100 ;
+nnoeuds = 200 ;
 
 * Gravite :
  g = 9.81 ;
@@ -67,9 +63,22 @@ stoia = vrai ;
 *# manchette :
 manchette = faux ;
 
-*# theta_ini_x :
-theta_ini_x = 45. ;
+*# parametres de contact :
+   Normale_PPLAN = 0. 0. -1. ; 
+*  Stoianovici : 
+   Jeu1 = 2.*h*(sin theta_ini) ;
+*  Stoianovici : 
+   muk = 0.075 ;
+   Kchoc = 5.5E+07 ;
 
+*# bamo :
+   Bamo = 2.0E+07 ;
+
+   K_T= 0.01*Kchoc ;
+*  static friction coeff : 
+*  mu = 0.1 ;
+*  adh = mu ;
+* stoianovici & hurmuzlu : plus longue barre : 
 si (stoia) ;
 * Module d'Young :
  eac = 210.e9 ; 
@@ -77,10 +86,8 @@ si (stoia) ;
  rho_ac = 7876.74 ;
 *# Rayon:
 R = ((12.7e-3)/2.) ;
-
-*# lbar : 
+*# longueur de la poutre: 
 h = 0.6 ;
-
 * Section de la poutre :
 sectpou = (Pi*(R**2)) ;
 * Volume:
@@ -125,63 +132,42 @@ IGy = IGx ;
 IG = ( Pi*((D_ext**4) -  (D_int**4) )/32. ) ;
 finsi ; 
 
-*# parametres de contact :
-Normale_PPLAN = 0. 0. -1. ; 
-* Stoianovici : 
-Jeu1 = 2.*h*(sin theta_ini_x) ;
-* Stoianovici : 
-muk = 0.075 ;
-Kchoc = 5.5E+07 ;
-
-*# bamo :
-Bamo = 2.0E+07 ;
-
-K_T= 0.01*Kchoc ;
-* static friction coeff : 
-* mu = 0.1 ;
-* adh = mu ;
-* stoianovici & hurmuzlu : plus longue barre : 
 * Frequences des modes :
-
 si (stoia) ;
 lfind = prog 111. 361. 751. 1281. 1946. 2151. 2744. 3671. 4722. 5892. 6454. 7177. 8571. 10069. 10757. 11666. ; 
 ltrac = lect 6 11 15 ; 
 lnoe = lect 80 90 100 125 150 175 200 225 250 275 300 325 350 400 450 500 550 600 700 800 ;
-* repsave = './data/stoia/' ;
-opti 'FTRA' (chai './fig/stoia/modes.ps' );
+* repsave = '../data/stoia/' ;
+* opti 'FTRA' (chai 'fig/stoia/modes.ps' );
 finsi ; 
 si (manchette) ;
 lfind = prog 109. 351. 721. 819. 1207. 1795. 2458. 2472. 3224. 4039. 4098. 4907. 5738. 5820. 6769. 7750. 8755. 9021. 9782. 10665. 10828. 11888. 12311. 12961. ;
 ltrac = lect 4 7 11 13 18 20 23 ; 
 lnoe = lect 100 150 200 225 250 275 300 325 350 375 400 425 450 475 500 550 600 650 700 800 900 1000 ;
 * repsave = './data/manchette/' ;
-opti 'FTRA' (chai './fig/manchette/modes.ps' );
+* opti 'FTRA' (chai 'fig/manchette/modes.ps' );
 finsi ;
 lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
 lindmode = lect (dime lfind)*1 ; 
-
+* opti donn 5 ;
 * Position du centre de gravite : manchette ou stoianovici : 
  LG = (h/2.) ;
 *
 * Centre de rotation = P1 ci-dessous = origine (0. 0. 0.).
 *
 ***** Temporel:
-*# t :
-T = 10.e-6 ;
+T = 5. ;
 
 *# n :
-n = 6 ;
+n = 7 ;
 
 *# dte :
-dte = 1.e-6 ;
-
-* DTE = 10.**((-1.)*(flott n)) ;
-
+DTE = 10.**((-1.)*(flott n)) ;
 
 * on sort 200 pdt / s :
 NSORT = maxi (lect 1 (enti (1.e-3/dte))) ;
 
-NSORT =  1 ;
+* NSORT =  1 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -211,67 +197,17 @@ finsi;
 *
 ***** Conditions initiales:
 * nutation initiale de la toupie (Castem: angles en degres!):
-
-
+theta_ini = 45. ;
 * Vitesses angulaires de rotation inititales ds le repere du solide:
-
-*# wxini :
 WXini = 0. ;
-*# wyini :
 WYini = 0. ;
-*# wzini :
 WZini = 0. ;
-
-*# quat1 :
-quat1 = 1. ;
-*# quat2 :
-quat2 = 0. ;
-*# quat3 :
-quat3 = 0. ;
-*# quat4 :
-quat4 = 0. ;
-
-* si reprise on ecrase theta_ini avec la fonction vect2quat :
-si (reprise) ;
-  nquat = (sqrt ((quat1**2) + (quat2**2) + (quat3**2) + (quat4**2))) ;
-  quat1 = ( quat1 / nquat ) ;
-  quat2 = ( quat2 / nquat ) ;
-  quat3 = ( quat3 / nquat ) ;
-  quat4 = ( quat4 / nquat ) ;
-  nv = (sqrt ( (quat2**2) + (quat3**2) + (quat4**2))) ;
-  theta_ini_x = 2.*(asin nv)*(quat2/nv) ;
-  theta_ini_y = 2.*(asin nv)*(quat3/nv) ;
-  theta_ini_z = 2.*(asin nv)*(quat4/nv) ;
-  v = th*
-finsi ;
-
-*# q1 :
-
-*# q1v :
-
-*# q2 :
-
-*# q2v :
-
-*# q3 :
-
-*# q3v :
-
-*# q4 :
-
-*# q4v :
-
-*# q5 :
-
-*# q5v :
-
-lqini = prog q1 q2 q3 q4 q5 ;
-lqvini = prog q1v q2v q3v q4v q5v ;
+*
 *********************************************************************
 *                            OPTIONS 
 *********************************************************************
 ***** Figure:
-opti 'TRAC' PSC ; 
+* opti 'TRAC' PSC ; 
 script = 'pendule_timo';
 script = (chai script'_nmodes_'nmode_ela) ;
 si stoia ;
@@ -306,26 +242,17 @@ si linert ;
 script = (chai script'_inert') ;
 algo = (chai algo'_inert') ;
 finsi ;
-
-si limpact ;
-script = ( chai script'_bamo_'(enti (log ((bamo/2.))/(log 10.))) ) ;
-finsi ;
-
-opti donn 5 ; 
 * on rajoute le pas de temps :
-* script = (chai script'_dt_'dte) ;
+script = (chai script'_dt_'dte) ;
 *
 * opti trac 'X';
-***** dime et typel:
-Opti dime 3; 
-opti elem CUB8; 
 * Pour afficher les "IF (IIMPI.EQ.333) THEN WRITE(IOIMP,*)":
 * opti impi 333;
-oeil1 = (5.*R) (5.*R) (0.5*h) ;
+* oeil1 = (5.*R) (5.*R) (0.5*h) ;
 ***** RECO totale voulue ?
 RECOTOT = FAUX ;
 EVOLRECO = VRAI ;
-FLVTK = VRAI ;
+FLVTK = FAUX ;
 * SI (RECOTOT EGA FAUX);
 *   FLVTK = FAUX ;
 * FINSI ;
@@ -419,20 +346,7 @@ repe bmode (nmode_ela - ntronq) ;
 * incrementation de numode : 
   numode = numode + 1 ;
 fin bmode ;
-
 finsi ;
-
-* postvibr Tmode_elaX ;
-* postvibr Tmode_elaY ;
-
-postvibr Tmodela ;
-* calcul des xmno : 
-* nmno = (enti (2. * (nmode_ela - ntronq))) ;
-* repe bmno nmno ;
-
-* fin bmno ;
-* opti donn 5 ; 
-
 *
 ptrep_RX =    Tmode_RX . 'MODES' . 1 . 'POINT_REPERE';
 ptrep_RY =    Tmode_RY . 'MODES' . 1 . 'POINT_REPERE';
@@ -511,9 +425,9 @@ TSORT . 'VARIABLE' . 'TRAVAIL_INTERIEUR' = VRAI ;
 TSORT . 'VARIABLE' . 'TRAVAIL_EXTERIEUR' = VRAI ;
 *** TINI:
 * Deplacements:
- U0_RX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' (theta_ini_x*pi/180.) ;
- U0_RY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' (theta_ini_y*pi/180.) ;
- U0_RZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' (theta_ini_z*pi/180.) ;
+ U0_RX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' (theta_ini*pi/180.) ;
+ U0_RY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' 0. ;
+ U0_RZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' 0. ;
  U0_ela_1 = MANU 'CHPO' ptrep_ela_1 'NATUR' 'DIFFUS' 'ALFA' 0. ;
 * U0_ela_2 = MANU 'CHPO' ptrep_ela_2 'NATUR' 'DIFFUS' 'ALFA' 0.;
 * assemblage en 1 chpoint:
@@ -530,17 +444,6 @@ finsi;
  V0_PY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' WYini ;
  V0_PZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' WZini ;
  V0_P = (V0_PX et V0_PY et V0_PZ);
-
-* init coord modales si reprise :
- si ((typmode ega 1) et (reprise)) ;
-  repe bqini nmode_ela ;
-    ptrpi = tmodela . modes . &bqini . point_repere ; 
-    ui =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqini &bqini) ;
-    vi =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqvini &bqini) ;
-    u0_p = u0_p et ui ;
-    v0_p = v0_p et vi ;
-  fin bqini ;
- finsi ;
 * Table:
   TINI = tabl 'INITIAL';
   TINI . 'DEPLACEMENT' = U0_P;
@@ -553,7 +456,7 @@ TCHAR = TABL 'CHARGEMENT';
 
 		Fprog = prog (dime tprog)*1. ; 
 		evolF = evol 'ROSE' 'MANU' 't' tprog 'F' Fprog;
-   DESS evolF 'TITRE' 'chargmt = f(t)' LEGE;
+*  DESS evolF 'TITRE' 'chargmt = f(t)' LEGE;
 		CHA_PES = CHAR 'FORC' FPES evolF ;
 		CHA_PESA = CHAR 'FORC' FPESA evolF ;
 
@@ -578,7 +481,6 @@ TCHAR = TABL 'CHARGEMENT';
 *    On prend volontairement un jeu demesure (liaison fictive):
 	 TL1.'JEU'           =  10.              ;
 *
-
 *  Cchoc = 0.1*((M*Kchoc)**0.5) ;
 	 TL2  =  TABLE  'LIAISON_ELEMENTAIRE'    ;
 	 TL2 . 'TYPE_LIAISON'  =  MOT 'POINT_PLAN_FROTTEMENT' ;
@@ -734,17 +636,17 @@ FIN BRECO;
 UX_ev = EVOL 'JAUN' MANU 't' tprog 'UX' UX1;
 UY_ev = EVOL 'ORAN' MANU 't' tprog 'UY' UY1;
 UZ_ev = EVOL 'ROUG' MANU 't' tprog 'UZ' UZ1;
-TAB1 = TABL; TAB1 . 'TITRE' = TABL;
-	TAB1 . 'TITRE' . 1 = 'UX';
-Dess(UX_ev) 'TITRE' 'Depl = f(t)' TAB1 LEGE;
-    TAB1 . 'TITRE' . 1 = 'UY';
-Dess(UY_ev) 'TITRE' 'Depl = f(t)' TAB1 LEGE;
-    TAB1 . 'TITRE' . 1 = 'UZ';
-Dess(UZ_ev) 'TITRE' 'Depl = f(t)' TAB1 LEGE;
-	TAB1 . 'TITRE' . 1 = 'UX';
-	TAB1 . 'TITRE' . 2 = 'UY';	
-	TAB1 . 'TITRE' . 3 = 'UZ';
-Dess(UX_ev et UY_ev et UZ_ev) 'TITRE' 'recotot: Depl = f(t)' TAB1 LEGE;
+* TAB1 = TABL; TAB1 . 'TITRE' = TABL;
+*	TAB1 . 'TITRE' . 1 = 'UX';
+*Dess(UX_ev) 'TITRE' 'Depl = f(t)' TAB1 LEGE;
+*    TAB1 . 'TITRE' . 1 = 'UY';
+*Dess(UY_ev) 'TITRE' 'Depl = f(t)' TAB1 LEGE;
+*    TAB1 . 'TITRE' . 1 = 'UZ';
+*Dess(UZ_ev) 'TITRE' 'Depl = f(t)' TAB1 LEGE;
+*	TAB1 . 'TITRE' . 1 = 'UX';
+*	TAB1 . 'TITRE' . 2 = 'UY';	
+*	TAB1 . 'TITRE' . 3 = 'UZ';
+*Dess(UX_ev et UY_ev et UZ_ev) 'TITRE' 'recotot: Depl = f(t)' TAB1 LEGE;
 * Vitesse:
 REPE BRECOVITE Nt;
       VITE1 =  RECO  TRESU  Tmode (extr tprog &BRECOVITE) 'VITE' ;
@@ -759,17 +661,17 @@ FIN BRECOVITE;
  VX_ev = EVOL 'JAUN' MANU 't' tprog 'VX' VX1;
  VY_ev = EVOL 'ORAN' MANU 't' tprog 'VY' VY1;
  VZ_ev = EVOL 'ROUG' MANU 't' tprog 'VZ' VZ1;
- 	TAB1 . 'TITRE' . 1 = 'VX';
-Dess(VX_ev) 'TITRE' 'recotot: VX = f(t)' TAB1 LEGE;
-    TAB1 . 'TITRE' . 1 = 'VY';
-Dess(VY_ev) 'TITRE' 'recotot: VY = f(t)' TAB1 LEGE;
-    TAB1 . 'TITRE' . 1 = 'VZ';
-Dess(VZ_ev) 'TITRE' 'recotot: VZ = f(t)' TAB1 LEGE;
-*
-    TAB1 . 'TITRE' . 1 = 'VX';
-	TAB1 . 'TITRE' . 2 = 'VY';	
-	TAB1 . 'TITRE' . 3 = 'VZ';
-Dess(VX_ev et VY_ev et VZ_ev) 'TITRE' 'Vitesse = f(t)' TAB1 LEGE;
+* 	TAB1 . 'TITRE' . 1 = 'VX';
+*Dess(VX_ev) 'TITRE' 'recotot: VX = f(t)' TAB1 LEGE;
+*    TAB1 . 'TITRE' . 1 = 'VY';
+*Dess(VY_ev) 'TITRE' 'recotot: VY = f(t)' TAB1 LEGE;
+*    TAB1 . 'TITRE' . 1 = 'VZ';
+*Dess(VZ_ev) 'TITRE' 'recotot: VZ = f(t)' TAB1 LEGE;
+**
+*    TAB1 . 'TITRE' . 1 = 'VX';
+*	TAB1 . 'TITRE' . 2 = 'VY';	
+*	TAB1 . 'TITRE' . 3 = 'VZ';
+*Dess(VX_ev et VY_ev et VZ_ev) 'TITRE' 'Vitesse = f(t)' TAB1 LEGE;
 
 * Acceleration:
 REPE BRECOACC Nt;
@@ -786,15 +688,15 @@ FIN BRECOACC;
  AY_ev = EVOL 'ORAN' MANU 't' tprog 'AY' AY1;
  AZ_ev = EVOL 'ROUG' MANU 't' tprog 'AZ' AZ1;
  	TAB1 . 'TITRE' . 1 = 'AX';
-Dess(AX_ev) 'TITRE' 'recotot: AX = f(t)' TAB1 LEGE;
-    TAB1 . 'TITRE' . 1 = 'AY';
-Dess(AY_ev) 'TITRE' 'recotot: AY = f(t)' TAB1 LEGE;
-    TAB1 . 'TITRE' . 1 = 'AZ';
-Dess(AZ_ev) 'TITRE' 'recotot: AZ = f(t)' TAB1 LEGE;
-    TAB1 . 'TITRE' . 1 = 'AX';
-	TAB1 . 'TITRE' . 2 = 'AY';	
-	TAB1 . 'TITRE' . 3 = 'AZ';
-Dess(AX_ev et AY_ev et AZ_ev) 'TITRE' 'recotot: Acceleration = f(t)' TAB1 LEGE;
+*Dess(AX_ev) 'TITRE' 'recotot: AX = f(t)' TAB1 LEGE;
+*    TAB1 . 'TITRE' . 1 = 'AY';
+*Dess(AY_ev) 'TITRE' 'recotot: AY = f(t)' TAB1 LEGE;
+*    TAB1 . 'TITRE' . 1 = 'AZ';
+*Dess(AZ_ev) 'TITRE' 'recotot: AZ = f(t)' TAB1 LEGE;
+*    TAB1 . 'TITRE' . 1 = 'AX';
+*	TAB1 . 'TITRE' . 2 = 'AY';	
+*	TAB1 . 'TITRE' . 3 = 'AZ';
+*Dess(AX_ev et AY_ev et AZ_ev) 'TITRE' 'recotot: Acceleration = f(t)' TAB1 LEGE;
 * formatT = chai '(D1.' (ABS NdecT) ')';
 * list formatT;
 * List T;
@@ -823,8 +725,7 @@ FINSI;
 *     def2 = def1 et def0 ;
 *     TRAC def2 VOL1 ;
 ****
-* OPTI 'SORT'  (chai 'depl_vtk/'script);
-    OPTI 'SORT'  (chai 'depl_vtk/pendule_timo');
+    OPTI 'SORT'  (chai 'depl_vtk/'script);
     SORT 'VTK' meshpou 'MAIL' DEP2 'DEPL' 'TEMP' T_I;
     FIN BVTK;
 * FIN FLVTK:
@@ -854,30 +755,30 @@ AXG2 = EXTR AXG_EV 'ORDO' 1 ;
 AYG2 = EXTR AYG_EV 'ORDO' 1 ;
 AZG2 = EXTR AZG_EV 'ORDO' 1 ;
 *
-    TAB1 = TABL ; TAB1 . 'TITRE' = TABL ;
-	TAB1 . 'TITRE' . 1 = 'UX_G';	
-	TAB1 . 'TITRE' . 2 = 'UY_G';
-	TAB1 . 'TITRE' . 3 = 'UZ_G';
-Dess (UXG_ev et UYG_ev et UZG_ev) 'TITRE' 'EVOL RECO DEPL' TAB1 LEGE ;
-*
-	TAB1 . 'TITRE' . 1 = 'VX_G';	
-	TAB1 . 'TITRE' . 2 = 'VY_G';
-	TAB1 . 'TITRE' . 3 = 'VZ_G';
-Dess (VXG_ev et VYG_ev et VZG_ev) 'TITRE' 'EVOL RECO VITE' TAB1 LEGE ;
-*
-    TAB1 . 'TITRE' . 1 = 'AX_G';
-Dess (AXG_ev) 'TITRE' 'EVOL RECO AX' TAB1 LEGE ;
-*
-    TAB1 . 'TITRE' . 1 = 'AY_G';
-Dess (AYG_ev) 'TITRE' 'EVOL RECO AY' TAB1 LEGE ;    
-*
-    TAB1 . 'TITRE' . 1 = 'AZ_G';
-Dess (AZG_ev) 'TITRE' 'EVOL RECO AZ' TAB1 LEGE ;
-*
-	TAB1 . 'TITRE' . 1 = 'AX_G';	
-	TAB1 . 'TITRE' . 2 = 'AY_G';
-	TAB1 . 'TITRE' . 3 = 'AZ_G';
-Dess (AXG_ev et AYG_ev et AZG_ev) 'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
+*     TAB1 = TABL ; TAB1 . 'TITRE' = TABL ;
+* 	TAB1 . 'TITRE' . 1 = 'UX_G';	
+* 	TAB1 . 'TITRE' . 2 = 'UY_G';
+* 	TAB1 . 'TITRE' . 3 = 'UZ_G';
+* Dess (UXG_ev et UYG_ev et UZG_ev) 'TITRE' 'EVOL RECO DEPL' TAB1 LEGE ;
+* *
+* 	TAB1 . 'TITRE' . 1 = 'VX_G';	
+* 	TAB1 . 'TITRE' . 2 = 'VY_G';
+* 	TAB1 . 'TITRE' . 3 = 'VZ_G';
+* Dess (VXG_ev et VYG_ev et VZG_ev) 'TITRE' 'EVOL RECO VITE' TAB1 LEGE ;
+* *
+*     TAB1 . 'TITRE' . 1 = 'AX_G';
+* Dess (AXG_ev) 'TITRE' 'EVOL RECO AX' TAB1 LEGE ;
+* *
+*     TAB1 . 'TITRE' . 1 = 'AY_G';
+* Dess (AYG_ev) 'TITRE' 'EVOL RECO AY' TAB1 LEGE ;    
+* *
+*     TAB1 . 'TITRE' . 1 = 'AZ_G';
+* Dess (AZG_ev) 'TITRE' 'EVOL RECO AZ' TAB1 LEGE ;
+* *
+* 	TAB1 . 'TITRE' . 1 = 'AX_G';	
+* 	TAB1 . 'TITRE' . 2 = 'AY_G';
+* 	TAB1 . 'TITRE' . 3 = 'AZ_G';
+* Dess (AXG_ev et AYG_ev et AZG_ev) 'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
 * fin si evolreco :
 FINSI ;
 *
@@ -890,10 +791,10 @@ q1_ev = EVOL 'ROUG' MANU 't' tprog 'q1' q1 ;
 q2_ev = EVOL 'ROUG' MANU 't' tprog 'q1' q2 ;
 * q3_ev = EVOL 'ROUG' MANU 't' tprog 'q1' q3 ;
 * q4_ev = EVOL 'ROUG' MANU 't' tprog 'q1' q4 ;
-TAB1 . 'TITRE' . 1 = 'q1';	
-Dess q1_ev  'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
-TAB1 . 'TITRE' . 1 = 'q2';	
-Dess q2_ev  'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
+* TAB1 . 'TITRE' . 1 = 'q1';	
+* Dess q1_ev  'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
+* TAB1 . 'TITRE' . 1 = 'q2';	
+* Dess q2_ev  'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
 * TAB1 . 'TITRE' . 1 = 'q3';	
 * Dess q3_ev  'TITRE' 'EVOL RECO ACCE' TAB1 LEGE ;
 * TAB1 . 'TITRE' . 1 = 'q4';	
@@ -906,7 +807,7 @@ UZp1_ev = EVOL 'BLEU' 'RECO' TRESU tmode 'DEPL' p1 'UZ' ;
 UXp1 = EXTR uxp1_ev 'ORDO' 1 ;
 UYp1 = EXTR uyp1_ev 'ORDO' 1 ;
 UZp1 = EXTR uzp1_ev 'ORDO' 1 ;
-dess (uxp1_ev et uYp1_ev et uzp1_ev) 'TITRE' 'P1' ;
+* dess (uxp1_ev et uYp1_ev et uzp1_ev) 'TITRE' 'P1' ;
 
 UXp2_ev = EVOL 'ROUG' 'RECO' TRESU tmode 'DEPL' p2 'UX' ;
 UYp2_ev = EVOL 'VERT' 'RECO' TRESU tmode 'DEPL' p2 'UY' ;
@@ -914,7 +815,7 @@ UZp2_ev = EVOL 'BLEU' 'RECO' TRESU tmode 'DEPL' p2 'UZ' ;
 UXp2 = EXTR uxp2_ev 'ORDO' 1 ;
 UYp2 = EXTR uyp2_ev 'ORDO' 1 ;
 UZp2 = EXTR uzp2_ev 'ORDO' 1 ;
-dess (uxp2_ev et uYp2_ev et uzp2_ev) 'TITRE' 'P2' ;
+* dess (uxp2_ev et uYp2_ev et uzp2_ev) 'TITRE' 'P2' ;
 ***************************************************************************
 *                  SORTIE
 
@@ -936,7 +837,7 @@ TSORT . 'wy' = table ;
 TSORT . 'wz' = table ;
 TSORT . 'dt' = prog (dime tprog)*dte ;
 TSORT . 'amor' = prog (dime tprog)*bamo ;
-TSORT . 'algo' = (mots (dime tprog)*algo) ;
+TSORT . 'algo' = mots (dime tprog)*algo ;
 TSORT . 'rigi' = lect (dime tprog)*irigi ;
 TSORT . 'inert' = lect (dime tprog)*inert ;
 TSORT . 'thini' = prog (dime tprog)*theta_ini ;
@@ -944,7 +845,7 @@ TSORT . 'nnoe' = lect (dime tprog)*nnoeuds ;
 TSORT . 'nmode' = lect (dime tprog)*nmode_ela ;
 TSORT . 'lbar' = prog (dime tprog)*h ;
 TSORT . 't' = tprog ;
-TSORT . 'ctime' = (prog (dime tprog)*ctime) ;
+TSORT . 'ctime' = (prog ctime) ;
 TSORT . 'wx' = w1 ;
 TSORT . 'wy' = w2 ;
 TSORT . 'wz' = w3 ;
@@ -978,24 +879,7 @@ TSORT . 'uzp2' = table ;
 TSORT . 'uxp2' = uxp2 ;
 TSORT . 'uyp2' = uyp2 ;
 TSORT . 'uzp2' = uzp2 ;
-
-TSORT . 'quat1' = table ;
-TSORT . 'quat2' = table ;
-TSORT . 'quat3' = table ;
-TSORT . 'quat4' = table ;
-TSORT . 'quat1' = tresu . deplacement . ptrep_rig1 ;
-TSORT . 'quat2' = tresu . deplacement . ptrep_rig2 ;
-TSORT . 'quat3' = tresu . deplacement . ptrep_rig3 ;
-TSORT . 'quat4' = tresu . deplacement . ptrep_rig4 ;
-
-ncolexce = 33 ;
-
-repe bsauvq nmode_ela ;
-  ptrpi = tmodela . modes . &bsauvq . point_repere ;  
-  tsort . (chai 'q'&bsauvq) = tresu . deplacement . ptrpi ; 
-  tsort . (chai 'q'&bsauvq'v') = tresu . vitesse . ptrpi ; 
-  ncolexce = ncolexce + 2 ;
-fin bsauvq ;
+ncolexce = 29 ;
 
 si (limpact) ;
 * Pusure durant les impacts : 
@@ -1063,22 +947,24 @@ finsi ;
 
 si (manchette) ;
   si (limpact) ;
-    OPTI 'SORT' (CHAI './data/impact/manchette/'script) ;
+    OPTI 'SORT' (CHAI '../../data/impact/manchette/'script) ;
   finsi ;
   si (non limpact) ;
-    OPTI 'SORT' (CHAI './data/no_impact/manchette/'script) ;
+    OPTI 'SORT' (CHAI '../../data/no_impact/manchette/'script) ;
   finsi ;
 finsi ;
 
 si (stoia) ;
   si (limpact) ;
-    OPTI 'SORT' (CHAI './data/impact/stoia/'script) ;
+    OPTI 'SORT' (CHAI '../../data/impact/stoia/'script) ;
   finsi ;
   si (non limpact) ;
-    OPTI 'SORT' (CHAI './data/no_impact/stoia/'script) ;
+    OPTI 'SORT' (CHAI '../../data/no_impact/stoia/'script) ;
   finsi ;
 finsi ;
 
 SORT 'EXCE' (TSORT) 'NCOL' ncolexce 'SEPA' 'VIRG' 'DIGI' 10 ;
 
-fin ;
+* opti donn 5;
+
+fin ; 
