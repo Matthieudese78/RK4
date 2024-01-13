@@ -1,6 +1,8 @@
 ***** dime et typel:
 Opti dime 3 ; 
 opti elem CUB8 ; 
+opti 'TRAC' PSC ; 
+opti 'EPTR' 5 ;
 *** convergence des modes en fonction du nombre de noeuds :
 * nmode_ela = 16 ;
 nmode_ela = 45 ;
@@ -20,20 +22,25 @@ manchette = faux ;
 si (stoia) ;
 lfind = prog 111. 361. 751. 1281. 1946. 2151. 2744. 3671. 4722. 5892. 6454. 7177. 8571. 10069. 10757. 11666. ; 
 ltrac = lect 6 11 15 ; 
-lnoe = lect 100 125 150 175 200 225 250  ;
+lnoe = lect 80 90 100 125 150 175 200 225 250 275 300 325 350 400 450 500 550 600 700 800 ;
+repsave = './data/stoia/' ;
+opti 'FTRA' (chai 'fig/stoia/modes.ps' );
 finsi ; 
 si (manchette) ;
 lfind = prog 109. 351. 721. 819. 1207. 1795. 2458. 2472. 3224. 4039. 4098. 4907. 5738. 5820. 6769. 7750. 8755. 9021. 9782. 10665. 10828. 11888. 12311. 12961. ;
 ltrac = lect 4 7 11 13 18 20 23 ; 
-lnoe = lect 200 225 250 275 300 325 350 ;
+lnoe = lect 100 150 200 225 250 275 300 325 350 375 400 425 450 475 500 550 600 650 700 800 900 1000 ;
+repsave = './data/manchette/' ;
+opti 'FTRA' (chai 'fig/manchette/modes.ps' );
 finsi ;
+lnoe = lect 200 ;
 * stoianovici & hurmuzlu : plus longue barre : 
 si (stoia) ;
 * Masse volumique: en kg/m^3
 * Stoianovici & Hurmuzlu :
  rho_ac = 7876.74 ;
 * Module d'Young: 20 MPa
- eac = 210.e9; 
+ eac = 210.e9 ; 
 * Rayon:
 R = ((12.7e-3)/2.) ;
 * longueur de la poutre: 
@@ -80,20 +87,20 @@ JY_G = 2.583844235854036 ;
 JZ_G = 0.010527338424895177 ;
 * Section de la poutre :
 sectpou = (Pi*(R_ext**2)) - (Pi*(R_int**2)) ;
+V = sectpou * h ;
+M = rho_ac * V ;
 * Moments quadratiques de la poutre :
 IGx = ( Pi*((D_ext**4) - (D_int**4) )/64. ) ;
 IGy = IGx ;
 IG = ( Pi*((D_ext**4) -  (D_int**4) )/32. ) ;
 finsi ; 
-
 *********************************************************************
 *                            OPTIONS 
 *********************************************************************
 ***** Figure:
-opti 'TRAC' PSC ; 
-script = 'convergence_modes';
-opti 'FTRA ' (chai 'fig/'script'_nnoeuds_'NNOEUDS'.ps' );
-opti 'EPTR' 5;
+* opti 'TRAC' PSC ; 
+* script = 'convergence_modes';
+* opti 'FTRA ' (chai 'fig/'script'_nnoeuds_'NNOEUDS'.ps' );
 
 * boucle sur le nbr de noeuds : 
 P1 = 0. 0. 0. ;
@@ -171,7 +178,8 @@ repe cbm (dime lfind) ;
 * marche le mieux mais crash :
 * modei = vibr 'SIMULTANE' fri 1 kelax m1 ; 
   modei . modes . &cbm . 'NUMERO_MODE' = numode ; 
-  Tmodela = Tmodela et modei  ;
+  Tmodela . modes . numode = modei . modes . &cbm ;
+*
   lfreq = lfreq et (modei . modes . &cbm . frequence) ; 
   def = modei . modes . &cbm . deformee_modale ; 
   si (non tracomp) ;
@@ -187,7 +195,6 @@ repe cbm (dime lfind) ;
 
   numode = numode + 1 ;
 fin cbm ;
-* postvibr tmodela ; 
 
 tabm = table ;
 tabm . 'nnoe' = table ;
@@ -200,159 +207,173 @@ tabm . 'freq' = lfreq ;
 tabm . 'masse' = lmasse ;
 ****** fin boucle sur les noeuds :
 si (stoia) ;
-  OPTI 'SORT' (CHAI './data/stoia_nnoe_'nnoe) ;
+  OPTI 'SORT' (CHAI repsave'stoia_nnoe_'nnoe) ;
 finsi ;
 si (manchette) ;
-  OPTI 'SORT' (CHAI './data/manchette_nnoe_'nnoe) ;
+  OPTI 'SORT' (CHAI repsave'manchette_nnoe_'nnoe) ;
 finsi ;
 ncolexce = 4 ;
 SORT 'EXCE' (tabm) 'NCOL' ncolexce 'SEPA' 'VIRG' 'DIGI' 10 ;
 * fin boucle sur le nbr de noeuds :
 fin bnoe ;
-
-* postvibr TMODE_ELAX ;
+* pour figure :
+opti trac x ;
+postvibr tmodela ; 
 
 fin ; 
 
-  si (non ((&bfm ega nban1) ou
-           (&bfm ega nban2) ou
-           (&bfm ega nban3) ou
-           (&bfm ega nban4) ou
-           (&bfm ega nban5) ou
-           (&bfm ega nban6) ou
-           (&bfm ega nban7) ou
-           (&bfm ega nban8) ou
-           (&bfm ega nban9) ou
-           (&bfm ega nban10) ou
-           (&bfm ega nban11) ou
-           (&bfm ega nban12) ou
-           (&bfm ega nban13))) ;
 
-si (non ((&bfm ega ntrac1) OU
-             (&bfm ega ntrac2) OU
-             (&bfm ega ntrac3) OU
-             (&bfm ega ntrac4) OU
-             (&bfm ega ntrac5) OU
-             (&bfm ega ntrac6) OU
-             (&bfm ega ntrac7))) ;
 
-linter = faux ;
-si (linter) ;
-postvibr tmode_elax ; 
-Tmode_elaX = vibr 'INTERVALLE' 100. 400. KelaX M1 ;
-postvibr tmode_elax ; 
 
-Tmode_elaX = vibr 'INTERVALLE' 700. 1300. KelaX M1 ;
-postvibr tmode_elax ; 
 
-Tmode_elaX = vibr 'INTERVALLE' 1900. 2800. KelaX M1 ;
-postvibr tmode_elax ; 
 
-Tmode_elaX = vibr 'INTERVALLE' 3600. 4800. KelaX M1 ;
-postvibr tmode_elax ; 
 
-Tmode_elaX = vibr 'INTERVALLE' 5300. 6500. KelaX M1 ;
-postvibr tmode_elax ; 
 
-Tmode_elaX = vibr 'INTERVALLE' 7200. 7300. KelaX M1 ;
-postvibr tmode_elax ; 
 
-Tmode_elaX = vibr 'INTERVALLE' 8000. 8050 KelaX M1 ;
-postvibr tmode_elax ; 
 
-Tmode_elaX = vibr 'INTERVALLE' 8700. 8750. KelaX M1 ;
-postvibr tmode_elax ; 
-finsi ;
 
-si (stoia) ;
-* nmode = 35 : 20 modes de flexions, 6 modes de traction.
-ntrac1 = 8  ;
-ntrac2 = 15 ;
-ntrac3 = 21 ;
-ntrac4 = 25 ;
-ntrac5 = 30 ;
-ntrac6 = 34 ;
-ntrac7 = 0  ;
-nban1 = 9   ;
-nban2 = 13  ; 
-nban3 = 0   ; 
-nban4 = 0   ; 
-nban5 = 17  ; 
-nban6 = 20  ; 
-nban7 = 23  ; 
-nban8 = 27  ; 
-nban9 = 29  ; 
-nban10 = 32 ; 
-nban11 = 35  ; 
-* plus on saute les 2 premiers rigides :
-nban12 = 1  ; 
-nban13 = 2  ; 
-finsi ; 
-si (manchette) ;
-* nmode = 35 : 15 modes de flexions, 7 modes de traction
-ntrac1 = 6  ;
-ntrac2 = 11 ;
-ntrac3 = 17 ;
-ntrac4 = 20 ;
-ntrac5 = 25 ;
-ntrac6 = 29 ;
-ntrac7 = 33 ;
-nban1 = 7   ;
-nban2 = 10  ;
-nban3 = 13  ;
-nban4 = 16  ;
-nban5 = 19  ;
-nban6 = 22  ;
-nban7 = 24  ;
-nban8 = 27  ;
-nban9 = 30  ;
-nban10 = 32 ;
-nban11 = 35 ;
-* plus on saute les 2 premiers rigides :
-nban12 = 1  ; 
-nban13 = 2  ; 
-finsi ;
 
-tmodela = table 'BASE_MODALE' ;
-tmodela . 'MODES' = table 'BASE_DE_MODES' ;
-tmodela . 'MODES' . 'MAILLAGE' = meshpou ;
-numode = 1 ;
-critjump = 5.e-1 ;
-repe bfm (nmode_ela - ntronq) ; 
-    ljump = faux ;
-    lfreq = lfreq et (tmode_elax . modes . (&bfm + ntronq) . frequence) ; 
-    def = TMODE_ELAX . modes . &bfm . deformee_modale ; 
-    ly = extr def 'VALE' 'UY' ;
-    lz = extr def 'VALE' 'UZ' ;
-* * lcomp = (MOTS 'UX' 'UY' 'UZ') ;
-*     normdef = NNORM 'EUCL' def ;
-*     normdef = maxi 
-* list normdef ;
-    ymax = (maxi (ABS ly)) ;
-    zmax = (maxi (ABS lz)) ;
-* si (normdef < critjump) ;
-*   ljump = vrai ;
+
+
+*   si (non ((&bfm ega nban1) ou
+*            (&bfm ega nban2) ou
+*            (&bfm ega nban3) ou
+*            (&bfm ega nban4) ou
+*            (&bfm ega nban5) ou
+*            (&bfm ega nban6) ou
+*            (&bfm ega nban7) ou
+*            (&bfm ega nban8) ou
+*            (&bfm ega nban9) ou
+*            (&bfm ega nban10) ou
+*            (&bfm ega nban11) ou
+*            (&bfm ega nban12) ou
+*            (&bfm ega nban13))) ;
+
+* si (non ((&bfm ega ntrac1) OU
+*              (&bfm ega ntrac2) OU
+*              (&bfm ega ntrac3) OU
+*              (&bfm ega ntrac4) OU
+*              (&bfm ega ntrac5) OU
+*              (&bfm ega ntrac6) OU
+*              (&bfm ega ntrac7))) ;
+
+* linter = faux ;
+* si (linter) ;
+* postvibr tmode_elax ; 
+* Tmode_elaX = vibr 'INTERVALLE' 100. 400. KelaX M1 ;
+* postvibr tmode_elax ; 
+
+* Tmode_elaX = vibr 'INTERVALLE' 700. 1300. KelaX M1 ;
+* postvibr tmode_elax ; 
+
+* Tmode_elaX = vibr 'INTERVALLE' 1900. 2800. KelaX M1 ;
+* postvibr tmode_elax ; 
+
+* Tmode_elaX = vibr 'INTERVALLE' 3600. 4800. KelaX M1 ;
+* postvibr tmode_elax ; 
+
+* Tmode_elaX = vibr 'INTERVALLE' 5300. 6500. KelaX M1 ;
+* postvibr tmode_elax ; 
+
+* Tmode_elaX = vibr 'INTERVALLE' 7200. 7300. KelaX M1 ;
+* postvibr tmode_elax ; 
+
+* Tmode_elaX = vibr 'INTERVALLE' 8000. 8050 KelaX M1 ;
+* postvibr tmode_elax ; 
+
+* Tmode_elaX = vibr 'INTERVALLE' 8700. 8750. KelaX M1 ;
+* postvibr tmode_elax ; 
 * finsi ;
-    si (ymax < critjump) ;
-      si (zmax < critjump) ;
-        ljump = vrai ;
-      finsi ;
-    finsi ;
-    si (non ljump) ;
-    mno = TMODE_ELAX . modes . (&bfm + ntronq) . masse_generalisee ; 
-    lmasse  = lmasse et (mno / (ymax**2)) ;
-    lmode = lmode et numode ;
-*   construction new base modal :
-    tmodela . modes . numode                                = table 'MODE' ;
-    tmodela . modes . numode . 'NUMERO_MODE'                = numode ;
-    tmodela . modes . numode . 'POINT_REPERE'               = tmode_elaX . modes . (&bfm + ntronq) . point_repere ;
-    tmodela . modes . numode . 'FREQUENCE'                  = tmode_elaX . modes . (&bfm + ntronq) . frequence ;
-    tmodela . modes . numode . 'MASSE_GENERALISEE'          = tmode_elaX . modes . (&bfm + ntronq) . masse_generalisee ;
-    tmodela . modes . numode . 'DEPLACEMENTS_GENERALISES'   = tmode_elaX . modes . (&bfm + ntronq) . deplacements_generalises ;
-    tmodela . modes . numode . 'DEFORMEE_MODALE'            = tmode_elaX . modes . (&bfm + ntronq) . deformee_modale ;
-    finsi ;
-    numode = numode + 1 ;
-fin bfm ; 
-mess (chai 'nnoe = 'nnoe) ;
-opti trac x ;
-postvibr tmodela ;
+
+* si (stoia) ;
+* * nmode = 35 : 20 modes de flexions, 6 modes de traction.
+* ntrac1 = 8  ;
+* ntrac2 = 15 ;
+* ntrac3 = 21 ;
+* ntrac4 = 25 ;
+* ntrac5 = 30 ;
+* ntrac6 = 34 ;
+* ntrac7 = 0  ;
+* nban1 = 9   ;
+* nban2 = 13  ; 
+* nban3 = 0   ; 
+* nban4 = 0   ; 
+* nban5 = 17  ; 
+* nban6 = 20  ; 
+* nban7 = 23  ; 
+* nban8 = 27  ; 
+* nban9 = 29  ; 
+* nban10 = 32 ; 
+* nban11 = 35  ; 
+* * plus on saute les 2 premiers rigides :
+* nban12 = 1  ; 
+* nban13 = 2  ; 
+* finsi ; 
+* si (manchette) ;
+* * nmode = 35 : 15 modes de flexions, 7 modes de traction
+* ntrac1 = 6  ;
+* ntrac2 = 11 ;
+* ntrac3 = 17 ;
+* ntrac4 = 20 ;
+* ntrac5 = 25 ;
+* ntrac6 = 29 ;
+* ntrac7 = 33 ;
+* nban1 = 7   ;
+* nban2 = 10  ;
+* nban3 = 13  ;
+* nban4 = 16  ;
+* nban5 = 19  ;
+* nban6 = 22  ;
+* nban7 = 24  ;
+* nban8 = 27  ;
+* nban9 = 30  ;
+* nban10 = 32 ;
+* nban11 = 35 ;
+* * plus on saute les 2 premiers rigides :
+* nban12 = 1  ; 
+* nban13 = 2  ; 
+* finsi ;
+
+* tmodela = table 'BASE_MODALE' ;
+* tmodela . 'MODES' = table 'BASE_DE_MODES' ;
+* tmodela . 'MODES' . 'MAILLAGE' = meshpou ;
+* numode = 1 ;
+* critjump = 5.e-1 ;
+* repe bfm (nmode_ela - ntronq) ; 
+*     ljump = faux ;
+*     lfreq = lfreq et (tmode_elax . modes . (&bfm + ntronq) . frequence) ; 
+*     def = TMODE_ELAX . modes . &bfm . deformee_modale ; 
+*     ly = extr def 'VALE' 'UY' ;
+*     lz = extr def 'VALE' 'UZ' ;
+* * * lcomp = (MOTS 'UX' 'UY' 'UZ') ;
+* *     normdef = NNORM 'EUCL' def ;
+* *     normdef = maxi 
+* * list normdef ;
+*     ymax = (maxi (ABS ly)) ;
+*     zmax = (maxi (ABS lz)) ;
+* * si (normdef < critjump) ;
+* *   ljump = vrai ;
+* * finsi ;
+*     si (ymax < critjump) ;
+*       si (zmax < critjump) ;
+*         ljump = vrai ;
+*       finsi ;
+*     finsi ;
+*     si (non ljump) ;
+*     mno = TMODE_ELAX . modes . (&bfm + ntronq) . masse_generalisee ; 
+*     lmasse  = lmasse et (mno / (ymax**2)) ;
+*     lmode = lmode et numode ;
+* *   construction new base modal :
+*     tmodela . modes . numode                                = table 'MODE' ;
+*     tmodela . modes . numode . 'NUMERO_MODE'                = numode ;
+*     tmodela . modes . numode . 'POINT_REPERE'               = tmode_elaX . modes . (&bfm + ntronq) . point_repere ;
+*     tmodela . modes . numode . 'FREQUENCE'                  = tmode_elaX . modes . (&bfm + ntronq) . frequence ;
+*     tmodela . modes . numode . 'MASSE_GENERALISEE'          = tmode_elaX . modes . (&bfm + ntronq) . masse_generalisee ;
+*     tmodela . modes . numode . 'DEPLACEMENTS_GENERALISES'   = tmode_elaX . modes . (&bfm + ntronq) . deplacements_generalises ;
+*     tmodela . modes . numode . 'DEFORMEE_MODALE'            = tmode_elaX . modes . (&bfm + ntronq) . deformee_modale ;
+*     finsi ;
+*     numode = numode + 1 ;
+* fin bfm ; 
+* mess (chai 'nnoe = 'nnoe) ;
+* opti trac x ;
+* postvibr tmodela ;
