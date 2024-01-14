@@ -4,8 +4,6 @@ opti elem CUB8 ;
 opti 'TRAC' PSC ; 
 opti 'EPTR' 5 ;
 *** convergence des modes en fonction du nombre de noeuds :
-* nmode_ela = 16 ;
-nmode_ela = 45 ;
 
 ltronq = vrai ; 
 ntronq = 2 ;
@@ -18,6 +16,12 @@ ntronq = 2 ;
 ****** Geometrie :
 stoia = vrai ;
 manchette = faux ;
+si (stoia) ;
+nmode_ela = 16 ;
+finsi ;
+si (manchette) ;
+nmode_ela = 45 ;
+finsi ;
 * modes banis ou modes de traction :
 si (stoia) ;
 lfind = prog 111. 361. 751. 1281. 1946. 2151. 2744. 3671. 4722. 5892. 6454. 7177. 8571. 10069. 10757. 11666. ; 
@@ -33,7 +37,7 @@ lnoe = lect 100 150 200 225 250 275 300 325 350 375 400 425 450 475 500 550 600 
 repsave = './data/manchette/' ;
 opti 'FTRA' (chai 'fig/manchette/modes.ps' );
 finsi ;
-lnoe = lect 200 ;
+lnoe = lect 150 ;
 * stoianovici & hurmuzlu : plus longue barre : 
 si (stoia) ;
 * Masse volumique: en kg/m^3
