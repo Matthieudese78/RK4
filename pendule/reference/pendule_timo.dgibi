@@ -3,8 +3,11 @@
 Opti dime 3; 
 opti elem CUB8; 
 
-* opti 'FTRA ' (chai 'fig/'script'_T_'T'_h_'Dte'_NSORT_'NSORT'.ps' );
+* opti 'TRAC' 'PSC' ;
 * opti 'EPTR' 5 ;
+
+*# reprise :
+reprise = faux ;
 
 *# algo :
 rk4 = vrai ;
@@ -35,7 +38,7 @@ limpact = vrai ;
 * nnoeuds = 5 ;
 
 *# nmode_ela :
-nmode_ela = 4 ;
+nmode_ela = 8 ;
 
 *# ltronq :
 ltronq = vrai ; 
@@ -46,7 +49,7 @@ ltronq = vrai ;
 ntronq = 0 ;
 
 *# nnoeuds :
-nnoeuds = 200 ;
+nnoeuds = 150 ;
 
 * Gravite :
  g = 9.81 ;
@@ -63,22 +66,10 @@ stoia = vrai ;
 *# manchette :
 manchette = faux ;
 
-*# parametres de contact :
-   Normale_PPLAN = 0. 0. -1. ; 
-*  Stoianovici : 
-   Jeu1 = 2.*h*(sin theta_ini) ;
-*  Stoianovici : 
-   muk = 0.075 ;
-   Kchoc = 5.5E+07 ;
-
-*# bamo :
-   Bamo = 2.0E+07 ;
-
-   K_T= 0.01*Kchoc ;
-*  static friction coeff : 
-*  mu = 0.1 ;
-*  adh = mu ;
-* stoianovici & hurmuzlu : plus longue barre : 
+*# theta_ini_x :
+theta_ini_x = 45. ;
+theta_ini_y = 0. ;
+theta_ini_z = 0. ;
 si (stoia) ;
 * Module d'Young :
  eac = 210.e9 ; 
@@ -86,8 +77,10 @@ si (stoia) ;
  rho_ac = 7876.74 ;
 *# Rayon:
 R = ((12.7e-3)/2.) ;
-*# longueur de la poutre: 
+
+*# lbar : 
 h = 0.6 ;
+
 * Section de la poutre :
 sectpou = (Pi*(R**2)) ;
 * Volume:
@@ -132,6 +125,23 @@ IGy = IGx ;
 IG = ( Pi*((D_ext**4) -  (D_int**4) )/32. ) ;
 finsi ; 
 
+*# parametres de contact :
+Normale_PPLAN = 0. 0. -1. ; 
+* Stoianovici : 
+Jeu1 = 2.*h*(sin theta_ini_x) ;
+* Stoianovici : 
+muk = 0.075 ;
+Kchoc = 5.5E+07 ;
+
+*# bamo :
+Bamo = 2.e2 ;
+
+K_T= 0.01*Kchoc ;
+
+* static friction coeff : 
+* mu = 0.1 ;
+* adh = mu ;
+* stoianovici & hurmuzlu : plus longue barre : 
 * Frequences des modes :
 si (stoia) ;
 lfind = prog 111. 361. 751. 1281. 1946. 2151. 2744. 3671. 4722. 5892. 6454. 7177. 8571. 10069. 10757. 11666. ; 
@@ -156,13 +166,17 @@ lindmode = lect (dime lfind)*1 ;
 * Centre de rotation = P1 ci-dessous = origine (0. 0. 0.).
 *
 ***** Temporel:
-T = 5. ;
+*# t :
+T = 3. ;
 
 *# n :
 n = 7 ;
 
 *# dte :
-DTE = 10.**((-1.)*(flott n)) ;
+dte = 1.e-6 ;
+
+* DTE = 10.**((-1.)*(flott n)) ;
+
 
 * on sort 200 pdt / s :
 NSORT = maxi (lect 1 (enti (1.e-3/dte))) ;
@@ -197,12 +211,66 @@ finsi;
 *
 ***** Conditions initiales:
 * nutation initiale de la toupie (Castem: angles en degres!):
-theta_ini = 45. ;
+
+
 * Vitesses angulaires de rotation inititales ds le repere du solide:
+
+*# wxini :
 WXini = 0. ;
+*# wyini :
 WYini = 0. ;
+*# wzini :
 WZini = 0. ;
-*
+
+*# quat1 :
+quat1 = 1. ;
+*# quat2 :
+quat2 = 0. ;
+*# quat3 :
+quat3 = 0. ;
+*# quat4 :
+quat4 = 0. ;
+
+* opti donn 5 ;
+* si reprise on ecrase theta_ini avec la fonction vect2quat :
+si (reprise) ;
+  nquat = (sqrt ((quat1**2) + (quat2**2) + (quat3**2) + (quat4**2))) ;
+  quat1 = ( quat1 / nquat ) ;
+  quat2 = ( quat2 / nquat ) ;
+  quat3 = ( quat3 / nquat ) ;
+  quat4 = ( quat4 / nquat ) ;
+  nv = (sqrt ( (quat2**2) + (quat3**2) + (quat4**2))) ;
+  theta = 2.*(asin nv) ;
+  theta_ini_x = theta*(quat2/nv) ;
+  theta_ini_y = theta*(quat3/nv) ;
+  theta_ini_z = theta*(quat4/nv) ;
+finsi ;
+
+*# q1 :
+ q1 = 0. ;
+*# q1v :
+ q1v = 0. ;
+*# q2 :
+ q2 = 0. ;
+*# q2v :
+ q2v = 0. ;
+*# q3 :
+ q3 = 0. ;
+*# q3v :
+ q3v = 0. ;
+*# q4 :
+ q4 = 0. ;
+*# q4v :
+ q4v = 0. ;
+*# q5 :
+ q5 = 0. ;
+*# q5v :
+ q5v = 0. ;
+
+lqini = prog q1 q2 q3 q4 q5 ;
+lqvini = prog q1v q2v q3v q4v q5v ;
+
+* opti donn 5 ; 
 *********************************************************************
 *                            OPTIONS 
 *********************************************************************
@@ -242,6 +310,24 @@ si linert ;
 script = (chai script'_inert') ;
 algo = (chai algo'_inert') ;
 finsi ;
+
+si limpact ;
+si (non (bamo <EG 1.e-10)) ;
+samo = (enti (log ((bamo/2.))/(log 10.))) ;
+script = ( chai script'_bamo_'samo) ;
+sinon ;
+script = ( chai script'_bamo_'0) ;
+finsi ;
+finsi ;
+
+* si (stoia) ;
+* opti 'FTRA' (chai './fig/stoia/'script'.ps' );
+* finsi ;
+* si (manchette) ;
+* opti 'FTRA' (chai './fig/manchette/'script'.ps' );
+* finsi ;
+
+* opti donn 5 ; 
 * on rajoute le pas de temps :
 script = (chai script'_dt_'dte) ;
 *
@@ -346,6 +432,7 @@ repe bmode (nmode_ela - ntronq) ;
 * incrementation de numode : 
   numode = numode + 1 ;
 fin bmode ;
+
 finsi ;
 *
 ptrep_RX =    Tmode_RX . 'MODES' . 1 . 'POINT_REPERE';
@@ -425,9 +512,9 @@ TSORT . 'VARIABLE' . 'TRAVAIL_INTERIEUR' = VRAI ;
 TSORT . 'VARIABLE' . 'TRAVAIL_EXTERIEUR' = VRAI ;
 *** TINI:
 * Deplacements:
- U0_RX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' (theta_ini*pi/180.) ;
- U0_RY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' 0. ;
- U0_RZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' 0. ;
+ U0_RX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' (theta_ini_x*pi/180.) ;
+ U0_RY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' (theta_ini_y*pi/180.) ;
+ U0_RZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' (theta_ini_z*pi/180.) ;
  U0_ela_1 = MANU 'CHPO' ptrep_ela_1 'NATUR' 'DIFFUS' 'ALFA' 0. ;
 * U0_ela_2 = MANU 'CHPO' ptrep_ela_2 'NATUR' 'DIFFUS' 'ALFA' 0.;
 * assemblage en 1 chpoint:
@@ -444,6 +531,17 @@ finsi;
  V0_PY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' WYini ;
  V0_PZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' WZini ;
  V0_P = (V0_PX et V0_PY et V0_PZ);
+
+* init coord modales si reprise :
+ si ((typmode ega 1) et (reprise)) ;
+  repe bqini nmode_ela ;
+    ptrpi = tmodela . modes . &bqini . point_repere ; 
+    ui =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqini &bqini) ;
+    vi =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqvini &bqini) ;
+    u0_p = u0_p et ui ;
+    v0_p = v0_p et vi ;
+  fin bqini ;
+ finsi ;
 * Table:
   TINI = tabl 'INITIAL';
   TINI . 'DEPLACEMENT' = U0_P;
@@ -725,7 +823,8 @@ FINSI;
 *     def2 = def1 et def0 ;
 *     TRAC def2 VOL1 ;
 ****
-    OPTI 'SORT'  (chai 'depl_vtk/'script);
+* OPTI 'SORT'  (chai 'depl_vtk/'script);
+    OPTI 'SORT'  (chai 'depl_vtk/pendule_timo');
     SORT 'VTK' meshpou 'MAIL' DEP2 'DEPL' 'TEMP' T_I;
     FIN BVTK;
 * FIN FLVTK:
@@ -837,15 +936,17 @@ TSORT . 'wy' = table ;
 TSORT . 'wz' = table ;
 TSORT . 'dt' = prog (dime tprog)*dte ;
 TSORT . 'amor' = prog (dime tprog)*bamo ;
-TSORT . 'algo' = mots (dime tprog)*algo ;
+TSORT . 'algo' = (mots (dime tprog)*algo) ;
 TSORT . 'rigi' = lect (dime tprog)*irigi ;
 TSORT . 'inert' = lect (dime tprog)*inert ;
-TSORT . 'thini' = prog (dime tprog)*theta_ini ;
+TSORT . 'thini' = prog (dime tprog)*theta_ini_x ;
+* TSORT . 'thini_y' = prog (dime tprog)*theta_ini_x ;
+* TSORT . 'thini_z' = prog (dime tprog)*theta_ini_x ;
 TSORT . 'nnoe' = lect (dime tprog)*nnoeuds ;
 TSORT . 'nmode' = lect (dime tprog)*nmode_ela ;
 TSORT . 'lbar' = prog (dime tprog)*h ;
 TSORT . 't' = tprog ;
-TSORT . 'ctime' = (prog ctime) ;
+TSORT . 'ctime' = (prog (dime tprog)*ctime) ;
 TSORT . 'wx' = w1 ;
 TSORT . 'wy' = w2 ;
 TSORT . 'wz' = w3 ;
@@ -879,7 +980,24 @@ TSORT . 'uzp2' = table ;
 TSORT . 'uxp2' = uxp2 ;
 TSORT . 'uyp2' = uyp2 ;
 TSORT . 'uzp2' = uzp2 ;
-ncolexce = 29 ;
+
+TSORT . 'quat1' = table ;
+TSORT . 'quat2' = table ;
+TSORT . 'quat3' = table ;
+TSORT . 'quat4' = table ;
+TSORT . 'quat1' = tresu . deplacement . ptrep_rig1 ;
+TSORT . 'quat2' = tresu . deplacement . ptrep_rig2 ;
+TSORT . 'quat3' = tresu . deplacement . ptrep_rig3 ;
+TSORT . 'quat4' = tresu . deplacement . ptrep_rig4 ;
+
+ncolexce = 33 ;
+
+repe bsauvq nmode_ela ;
+  ptrpi = tmodela . modes . &bsauvq . point_repere ;  
+  tsort . (chai 'q'&bsauvq) = tresu . deplacement . ptrpi ; 
+  tsort . (chai 'q'&bsauvq'v') = tresu . vitesse . ptrpi ; 
+  ncolexce = ncolexce + 2 ;
+fin bsauvq ;
 
 si (limpact) ;
 * Pusure durant les impacts : 
