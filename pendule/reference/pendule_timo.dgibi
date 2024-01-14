@@ -17,7 +17,7 @@ nmb = faux ;
 xpinv = faux ;
 
 *# linert :
-linert = vrai ;
+linert = faux ;
 
 inert = 0 ;
 si linert ;
@@ -134,7 +134,7 @@ muk = 0.075 ;
 Kchoc = 5.5E+07 ;
 
 *# bamo :
-Bamo = 2.e2 ;
+Bamo = 2.e3 ;
 
 K_T= 0.01*Kchoc ;
 
