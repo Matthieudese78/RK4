@@ -84,6 +84,7 @@ cms : pour detecter les Nan
       REAL*8  CRIT
       LOGICAL GETJAC,LFLAT,LFLAT1,LCENT,laxe,L0,L90,L180,L270,LPENE
       LOGICAL LNORSEUL,LTEST,LSUP,lmom,linter
+      integer deginter
 *
 
 *
@@ -105,6 +106,8 @@ cms : pour detecter les Nan
 *     WRITE(*,*)' xzprec = ',xzprec
 *     veut on interpoler le passage manchette a plat --> quasi a plat 
       linter = .true.
+*     degre d'interpolation ?
+      deginter = 1
 *     FTOTB : implementer ftotb(4-6) ne sert a rien : le moment est recalcule dans devmom
 *			- si il le faut : il s'agit des moments par rapport a 
 *				la fibre neutre. devmom ne fait que completer par relation de Chasles.
@@ -1241,9 +1244,9 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 *   Fres = ((thlim - xnut)/thlim)*Fres_flat + (xnut/thlim)*Fres_incl
          if (linter) then
 *        angle qui fonctionne :
-         thlim = 1.745*1.d-5
+*         thlim = 1.745*1.d-5
 *        angle test :
-*         thlim = 1.745*1.d-6
+         thlim = 1.745*1.d-6
          if ((.not.lflat).and.
      &       (.not.lflat1).and.
      &       ((rc/xrayp).le.1.d0).and.
@@ -1269,7 +1272,8 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 *         write(*,*)'gresf(1) = ',gresf(1)
 *         write(*,*)'gresf(2) = ',gresf(2)
 *         write(*,*)'gresf(3) = ',gresf(3)
-
+* si interpolation d'ordre 1 :
+        if (deginter.eq.1) then 
           ftotb(npoi,1) = ftotb(npoi,1) + 
      &                    ((thlim-xnut)/thlim)*(fnbresf(1)+ftbresf(1))+
      &                    (xnut/thlim)*(fnbres(1)+ftbres(1))
@@ -1279,7 +1283,24 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
           ftotb(npoi,3) = ftotb(npoi,3) + 
      &                    ((thlim-xnut)/thlim)*(fnbresf(3)+ftbresf(3))+
      &                    (xnut/thlim)*(fnbres(3)+ftbres(3))
-
+        endif
+* si interpolation d'ordre 2 :
+        if (deginter.eq.2) then      
+*          xinter vaut 0 en 0 et 1 en thlim
+*          (1 - xinter) vaut 1 en 0 et 0 en thlim
+           xinter = (1.d0/2.d0)*(1.d0 + 
+     &              ((2.d0 - (dabs(xnut-(thlim/2.d0))/(thlim/2.d0))) *
+     &              ((xnut-(thlim/2.d0))/(thlim/2.d0))))
+          ftotb(npoi,1) = ftotb(npoi,1) + 
+     &                    (1.d0 - xinter)*(fnbresf(1)+ftbresf(1))+
+     &                    (xinter)*(fnbres(1)+ftbres(1))
+          ftotb(npoi,2) = ftotb(npoi,2) + 
+     &                    (1.d0 - xinter)*(fnbresf(2)+ftbresf(2))+
+     &                    (xinter)*(fnbres(2)+ftbres(2))
+          ftotb(npoi,3) = ftotb(npoi,3) + 
+     &                    (1.d0 - xinter)*(fnbresf(3)+ftbresf(3))+
+     &                    (xinter)*(fnbres(3)+ftbres(3))
+        endif
 *          write(*,*)' cercle : ftotb(npoi,id) :'
 *          write(*,'(1X,F8.5)') , (ftotb(npoi,id),id=1,3)
           if (isbc.gt.0) then
