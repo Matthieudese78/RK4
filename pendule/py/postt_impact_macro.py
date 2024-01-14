@@ -59,14 +59,20 @@ else:
 df = pd.read_pickle(f"{repload}result.pickle")
 
 # %% detection des chocs :
-dt = 1.e-6
 df['tag'] = df['fn'] < 0
 fst = df.index[df['tag'] & ~ df['tag'].shift(1).fillna(False)]
 lst = df.index[df['tag'] & ~ df['tag'].shift(-1).fillna(False)]
 prb1 = [(i,j) for i,j in zip(fst,lst)]
+dt = df.iloc[fst[0]+1]['t'] - df.iloc[fst[0]]['t']
+# on vire le dernier choc :
+fst = fst[:-1]
+lst = lst[:-1]
 tchoc = [ dt*(j-i+1) for i,j in zip(fst,lst) ]
 meantchoc = np.mean(tchoc)
 instants_chocs = df.iloc[fst]['t']
+print(f"nbr de micro-impacts : {len(instants_chocs)}")
+tlast = df.iloc[lst[-1]]['t']
+print(f"instant du dernier choc = {tlast}s")
 
 #%%
 filename = 'pendule_timo.dgibi'
@@ -91,7 +97,8 @@ for i,fsti in enumerate(fst[:4]):
     # Sample DataFrame
     nmode = df.iloc[fst[i]]['nmode']
     dt = [df.iloc[fst[i]]['dt']], 
-    dictini = {"wxini" : [df.iloc[fst[i]-1]['wx']],
+    dictini = {"reprise" : "vrai",
+               "wxini" : [df.iloc[fst[i]-1]['wx']],
                "wyini" : [df.iloc[fst[i]-1]['wy']], 
                "wzini" : [df.iloc[fst[i]-1]['wz']], 
                "quat1" : [df.iloc[fst[i]-1]['quat1']], 
