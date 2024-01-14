@@ -1,10 +1,9 @@
 *** Stoianovici and Hurmuzlu :
 ***** dime et typel :
-Opti dime 3; 
-opti elem CUB8; 
+Opti dime 3 ; 
+opti elem CUB8 ; 
 
-* opti 'FTRA ' (chai 'fig/'script'_T_'T'_h_'Dte'_NSORT_'NSORT'.ps' );
-opti trac 'PSC' ;
+opti 'TRAC' 'PSC' ;
 opti 'EPTR' 5 ;
 
 *# reprise :
@@ -39,7 +38,7 @@ limpact = vrai ;
 * nnoeuds = 5 ;
 
 *# nmode_ela :
-nmode_ela = 5 ;
+nmode_ela = 4 ;
 
 *# ltronq :
 ltronq = vrai ; 
@@ -50,7 +49,7 @@ ltronq = vrai ;
 ntronq = 0 ;
 
 *# nnoeuds :
-nnoeuds = 100 ;
+nnoeuds = 150 ;
 
 * Gravite :
  g = 9.81 ;
@@ -69,7 +68,8 @@ manchette = faux ;
 
 *# theta_ini_x :
 theta_ini_x = 45. ;
-
+theta_ini_y = 0. ;
+theta_ini_z = 0. ;
 si (stoia) ;
 * Module d'Young :
  eac = 210.e9 ; 
@@ -134,28 +134,28 @@ muk = 0.075 ;
 Kchoc = 5.5E+07 ;
 
 *# bamo :
-Bamo = 2.0E+07 ;
+Bamo = 2.0E+04 ;
 
 K_T= 0.01*Kchoc ;
+
 * static friction coeff : 
 * mu = 0.1 ;
 * adh = mu ;
 * stoianovici & hurmuzlu : plus longue barre : 
 * Frequences des modes :
-
 si (stoia) ;
 lfind = prog 111. 361. 751. 1281. 1946. 2151. 2744. 3671. 4722. 5892. 6454. 7177. 8571. 10069. 10757. 11666. ; 
 ltrac = lect 6 11 15 ; 
 lnoe = lect 80 90 100 125 150 175 200 225 250 275 300 325 350 400 450 500 550 600 700 800 ;
 * repsave = './data/stoia/' ;
-opti 'FTRA' (chai './fig/stoia/modes.ps' );
+* opti 'FTRA' './fig/stoia/modes.ps';
 finsi ; 
 si (manchette) ;
 lfind = prog 109. 351. 721. 819. 1207. 1795. 2458. 2472. 3224. 4039. 4098. 4907. 5738. 5820. 6769. 7750. 8755. 9021. 9782. 10665. 10828. 11888. 12311. 12961. ;
 ltrac = lect 4 7 11 13 18 20 23 ; 
 lnoe = lect 100 150 200 225 250 275 300 325 350 375 400 425 450 475 500 550 600 650 700 800 900 1000 ;
 * repsave = './data/manchette/' ;
-opti 'FTRA' (chai './fig/manchette/modes.ps' );
+* opti 'FTRA' (chai './fig/manchette/modes.ps' );
 finsi ;
 lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
 lindmode = lect (dime lfind)*1 ; 
@@ -167,7 +167,7 @@ lindmode = lect (dime lfind)*1 ;
 *
 ***** Temporel:
 *# t :
-T = 10.e-6 ;
+T = 5. ;
 
 *# n :
 n = 6 ;
@@ -181,7 +181,7 @@ dte = 1.e-6 ;
 * on sort 200 pdt / s :
 NSORT = maxi (lect 1 (enti (1.e-3/dte))) ;
 
-NSORT =  1 ;
+* NSORT =  1 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -202,7 +202,6 @@ finsi ;
 si (typmode ega 2) ;
   irigi = 1 ;
 finsi ;
-
 si (typmode ega 3);
   rigide = faux ;
   irigi = 0 ;
@@ -231,6 +230,7 @@ quat3 = 0. ;
 *# quat4 :
 quat4 = 0. ;
 
+* opti donn 5 ;
 * si reprise on ecrase theta_ini avec la fonction vect2quat :
 si (reprise) ;
   nquat = (sqrt ((quat1**2) + (quat2**2) + (quat3**2) + (quat4**2))) ;
@@ -239,39 +239,42 @@ si (reprise) ;
   quat3 = ( quat3 / nquat ) ;
   quat4 = ( quat4 / nquat ) ;
   nv = (sqrt ( (quat2**2) + (quat3**2) + (quat4**2))) ;
-  theta_ini_x = 2.*(asin nv)*(quat2/nv) ;
-  theta_ini_y = 2.*(asin nv)*(quat3/nv) ;
-  theta_ini_z = 2.*(asin nv)*(quat4/nv) ;
-  v = th*
+  theta = 2.*(asin nv) ;
+  theta_ini_x = theta*(quat2/nv) ;
+  theta_ini_y = theta*(quat3/nv) ;
+  theta_ini_z = theta*(quat4/nv) ;
 finsi ;
 
 *# q1 :
-
+ q1 = 0. ;
 *# q1v :
-
+ q1v = 0. ;
 *# q2 :
-
+ q2 = 0. ;
 *# q2v :
-
+ q2v = 0. ;
 *# q3 :
-
+ q3 = 0. ;
 *# q3v :
-
+ q3v = 0. ;
 *# q4 :
-
+ q4 = 0. ;
 *# q4v :
-
+ q4v = 0. ;
 *# q5 :
-
+ q5 = 0. ;
 *# q5v :
+ q5v = 0. ;
 
 lqini = prog q1 q2 q3 q4 q5 ;
 lqvini = prog q1v q2v q3v q4v q5v ;
+
+* opti donn 5 ; 
 *********************************************************************
 *                            OPTIONS 
 *********************************************************************
 ***** Figure:
-opti 'TRAC' PSC ; 
+* opti 'TRAC' PSC ; 
 script = 'pendule_timo';
 script = (chai script'_nmodes_'nmode_ela) ;
 si stoia ;
@@ -308,17 +311,21 @@ algo = (chai algo'_inert') ;
 finsi ;
 
 si limpact ;
-script = ( chai script'_bamo_'(enti (log ((bamo/2.))/(log 10.))) ) ;
+samo = (enti (log ((bamo/2.))/(log 10.))) ;
+script = ( chai script'_bamo_'samo) ;
 finsi ;
 
-opti donn 5 ; 
+si (stoia) ;
+opti 'FTRA' (chai './fig/stoia/'script'.ps' );
+finsi ;
+si (manchette) ;
+opti 'FTRA' (chai './fig/manchette/'script'.ps' );
+finsi ;
+
+* opti donn 5 ; 
 * on rajoute le pas de temps :
-* script = (chai script'_dt_'dte) ;
+script = (chai script'_dt_'dte) ;
 *
-* opti trac 'X';
-***** dime et typel:
-Opti dime 3; 
-opti elem CUB8; 
 * Pour afficher les "IF (IIMPI.EQ.333) THEN WRITE(IOIMP,*)":
 * opti impi 333;
 oeil1 = (5.*R) (5.*R) (0.5*h) ;
@@ -939,7 +946,9 @@ TSORT . 'amor' = prog (dime tprog)*bamo ;
 TSORT . 'algo' = (mots (dime tprog)*algo) ;
 TSORT . 'rigi' = lect (dime tprog)*irigi ;
 TSORT . 'inert' = lect (dime tprog)*inert ;
-TSORT . 'thini' = prog (dime tprog)*theta_ini ;
+TSORT . 'thini' = prog (dime tprog)*theta_ini_x ;
+* TSORT . 'thini_y' = prog (dime tprog)*theta_ini_x ;
+* TSORT . 'thini_z' = prog (dime tprog)*theta_ini_x ;
 TSORT . 'nnoe' = lect (dime tprog)*nnoeuds ;
 TSORT . 'nmode' = lect (dime tprog)*nmode_ela ;
 TSORT . 'lbar' = prog (dime tprog)*h ;
