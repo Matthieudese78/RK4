@@ -107,7 +107,7 @@ cms : pour detecter les Nan
 *     veut on interpoler le passage manchette a plat --> quasi a plat 
       linter = .true.
 *     degre d'interpolation ?
-      deginter = 1
+      deginter = 2
 *     FTOTB : implementer ftotb(4-6) ne sert a rien : le moment est recalcule dans devmom
 *			- si il le faut : il s'agit des moments par rapport a 
 *				la fibre neutre. devmom ne fait que completer par relation de Chasles.
@@ -1244,7 +1244,7 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 *   Fres = ((thlim - xnut)/thlim)*Fres_flat + (xnut/thlim)*Fres_incl
          if (linter) then
 *        angle qui fonctionne :
-*         thlim = 1.745*1.d-5
+*        thlim = 1.745*1.d-5
 *        angle test :
          thlim = 1.745*1.d-6
          if ((.not.lflat).and.
