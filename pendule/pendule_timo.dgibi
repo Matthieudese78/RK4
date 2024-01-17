@@ -1001,6 +1001,8 @@ ncolexce = 33 ;
 
 repe bsauvq nmode_ela ;
   ptrpi = tmodela . modes . &bsauvq . point_repere ;  
+  tsort . (chai 'q'&bsauvq)    = table ; 
+  tsort . (chai 'q'&bsauvq'v') = table ;
   tsort . (chai 'q'&bsauvq) = tresu . deplacement . ptrpi ; 
   tsort . (chai 'q'&bsauvq'v') = tresu . vitesse . ptrpi ; 
   ncolexce = ncolexce + 2 ;
