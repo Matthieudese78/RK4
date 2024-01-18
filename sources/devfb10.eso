@@ -99,7 +99,7 @@ cms : pour detecter les Nan
       IF (IIMPI.EQ.555) WRITE(IOIMP,*)'DEVFB10 START'
 *     Longueur indicative du profile de réaction : 1
 *        --> deja fait avnt call devfb10 dans d2vlb1 :
-*      NECH = 1
+*     NECH = 1
 *     WRITE(*,*)' xspeti = ',xspeti
 *     WRITE(*,*)' xszpre = ',xszpre
 *     WRITE(*,*)' xpetit = ',xpetit
@@ -863,7 +863,7 @@ cmsw     WRITE(*,*)'     NPEY = ',YSIG/dsqrt(PSXNPE)
          ENDDO
 *     Saut dans le cas ou l'incidence se fait le long d'un axe de l'ellipse :
  30   CONTINUE
-      write(*,*)'30 continue'
+*     write(*,*)'30 continue'
 *      write(*,*)'        npe = '
 *      write(*,'(1X,F8.5)') , (npe(id),id=1,3)
 *      write(*,*)'        tpe = '
@@ -1215,7 +1215,7 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 *                           EN BASE B
 *                   --> FTB(3,NECH) XPUS(NECH)
 ************************************************************************  
-         write(*,*)'call calcftb'
+*        write(*,*)'call calcftb'
          CALL CALCFTB(FNB,VTB,NECH,XGLIS,VLIM,FTB,XPUS,XPUSTOT,
      &                xglisadh)
 *        write(*,*)'devfb10 : post-calcftb xglisadh = ',xglisadh
@@ -1225,7 +1225,7 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 *                           EN BASE B
 *                   --> FTOTB(NPOI,1-3),FTOTB(NPOI,4-6)
 ************************************************************************  
-         write(*,*)'call calcrgb'
+*        write(*,*)'call calcrgb'
          CALL CALCRGB(FNB,FTB,XPRB,NECH,XNCB,NPOI,
      &                FNBRES,FTBRES,GRES)
 ************************************************************************  
