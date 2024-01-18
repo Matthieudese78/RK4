@@ -631,6 +631,7 @@ c         --fin du cas lecture table de la IB ieme base modale non ok
           call accdef(itbas2,npdef)
           write(*,*)'devalo : nbr de pts deformee npdef = ',npdef
         else
+* todo : eviter les ss bases ou il y a pas de rotas rigides, ca peut faire beaucoup de noeuds pour rien.
           do ib=1,nsb
             npdef2 = 0
             TYPRET = ' '
