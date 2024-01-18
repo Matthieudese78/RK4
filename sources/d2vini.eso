@@ -700,6 +700,8 @@ c------- Cas K,C et M diagonal -----------------------------------
               OMEG3(ID,2,IB) = OMEG3(ID,2,IB) + 
      &        INVINERT(ID,J,IB)*(RTGEX(J) - WJW(J))
             ENDDO
+*           pour le rk4 :
+            omeg3(id,i3,ib) = omeg3(id,2,ib)
             WRITE(*,*)'D2VINI: OMEG3(',ID,',2,IB) = ',OMEG3(ID,2,IB)
           ENDDO
 *          endif
