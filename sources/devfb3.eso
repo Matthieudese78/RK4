@@ -61,6 +61,8 @@ C DEVFB3    SOURCE    BP208322  20/09/18    21:15:28     10718
          CHARACTER*4 ITCOMP(NSB2)
          LOGICAL ITRIG(NSB,NA2)
       ENDSEGMENT
+*
+      if (ktrot.gt.0) mtrot = ktrot
 *--------------------------------------------------------------------*
 * --- choc elementaire point_cercle
 *                      avec ou sans amortissement
