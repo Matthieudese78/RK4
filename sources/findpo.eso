@@ -24,8 +24,8 @@
       DATA MOTLAG/'LX'/
 
 
-      write(*,*)'findpo : ichp = ',ichp
-      write(*,*)'findpo : npoi = ',npoi
+*     write(*,*)'findpo : ichp = ',ichp
+*     write(*,*)'findpo : npoi = ',npoi
 *     compteur de noeuds :      
       inoe = 0
 *
@@ -35,7 +35,7 @@
       SEGACT MCHPOI
 * --- BOUCLE SUR LES ZONES DU CHPOINT
       NBSOUS = IPCHP(/1)
-      write(*,*)'findpo : nbsous = ',nbsous
+*     write(*,*)'findpo : nbsous = ',nbsous
       DO 11 I = 1,NBSOUS
          MSOUPO = IPCHP(I)
          SEGACT MSOUPO
@@ -50,7 +50,7 @@
 *             on ne fait la detection que sur 'UX' pour ne pas remplir avec 2 fois le mm point!
               if (nocomp(ic).eq.'UX') then
                  icc=ic
-                 write(*,*)' comp ux trouvee'
+*                write(*,*)' comp ux trouvee'
                  goto 13
               endif
  22         continue  
@@ -78,9 +78,9 @@
       write(*,*)'findpo : noeuds trouves'
       write(*,*)'         npoi = ',npoi
       write(*,*)'         nbr noeuds trouves = ',inoe
-      do ip=1,npoi
-        write(*,*)'noeud',list(ip)
-      enddo
+*     do ip=1,npoi
+*       write(*,*)'noeud',list(ip)
+*     enddo
 
       END
 

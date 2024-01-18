@@ -263,7 +263,7 @@ cms : si on rajoute l'energie des ssbases de deformation et les forces d'inertie
          TYPRET=' '
          CALL ACCTAB(ITSORT,'MOT',I0,X0,'VARIABLE',L0,IP0,
      &                      TYPRET,I1,X1,CHARRE,L1,ITABV)
-         write(*,*)'dyne15 : acctab TSORT . VARIABLE = ITBAV',ITBAV
+         write(*,*)'dyne15 : acctab TSORT . VARIABLE = ITABV',ITABV
        ENDIF
        
 *        Remplissage de ICHRE2 en fonction de la table fournie ITABV

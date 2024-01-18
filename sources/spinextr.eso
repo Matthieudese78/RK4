@@ -48,9 +48,9 @@ c  la 1ere subroutine en lower case de l'histoire !!!!
       rp(3,2) = ezu(2)
       rp(3,3) = ezu(3)
 *      write(*,*)'mat. passage rp :'
-      do id=1,3
+*      do id=1,3
 *        write(*,'(3(1X,F8.5))') , (rp(id,j),j=1,3)
-      enddo
+*      enddo
 *     on passe la matrice de rotation dans la base observateur : 
 *       etape 1 : rot1 = rot*rp^T
       do id=1,3

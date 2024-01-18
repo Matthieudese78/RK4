@@ -61,10 +61,10 @@
       nsb = itrig(/1)
       npdef = xtphi(/2)
 *
-      write(*,*)'filldef : START'
-      write(*,*)'filldef : npdef = ',npdef
-      write(*,*)'          nsb = ',nsb
-      write(*,*)'          na1 = ',na1
+*     write(*,*)'filldef : START'
+*     write(*,*)'filldef : npdef = ',npdef
+*     write(*,*)'          nsb = ',nsb
+*     write(*,*)'          na1 = ',na1
 *
       lcoo = .false.
 *     initialisation list :
@@ -88,7 +88,7 @@
 *      enddo
 *     enddo
 *
-      write(*,*)'     itbas = ',itbas
+*     write(*,*)'     itbas = ',itbas
 *     pour utiliser itrig, on est oblige de compter 
 *     les modes elastiques de la base / ss base ib quand on la parse :
       inel = 0
@@ -100,12 +100,12 @@
         xcmax = 0.d0
 *       acquisition du mode :
         typret = ' '
-        write(*,*)'1er acctab :'
+*       write(*,*)'1er acctab :'
         call acctab(itbas,'ENTIER',in,x0,' ',l0,ip0,
      &              typret,i1,x1,charre,l1,imod)
         write(*,*)'imod = ',imod
         if (ierr.ne.0) return
-        write(*,*)'acquisition mode reussie'
+*       write(*,*)'acquisition mode reussie'
         if ((imod.ne.0).and.(typret.eq.'TABLE   ')) then
           write(*,*)'typret = table'
 *         on saute les rotations rigides :
@@ -120,27 +120,27 @@
             endif
           endif
           inel = inel + 1
-          write(*,*)'mode elastique : ',inel
+*         write(*,*)'mode elastique : ',inel
 *         on prend la deformee modale :
           call acctab(imod,'MOT',i0,x0,'DEFORMEE_MODALE',l0,ip0,
      &                        'CHPOINT',i1,x1,' ',l1,icdm)
           if (ierr.ne.0) return
-          write(*,*)'acquisistion def modale : ',icdm
+*         write(*,*)'acquisistion def modale : ',icdm
           if (.not.lcoo) then
             lcoo = .true.
-            write(*,*)'call findpo'
+*           write(*,*)'call findpo'
             call findpo(icdm,lpoi,npdef)
-            write(*,*)'end findpo'
-            write(*,*)'liste de pts : '
-            write(*,*)'idim = ',idim
+*           write(*,*)'end findpo'
+*           write(*,*)'liste de pts : '
+*           write(*,*)'idim = ',idim
 *           donne lpoi : liste des noeuds de la def modale comportant une composante 'UX'
             do ip=1,npdef
-              write(*,*)'point : ',lpoi(ip)
+*             write(*,*)'point : ',lpoi(ip)
               ipoin = lpoi(ip)
               if (.not.(ipoin.eq.0)) then
                 do id=1,idim
                   xcoophi(id,ip,ib)=xcoor((ipoin-1)*(idim+1)+id)
-                  write(*,*)'coor = ',xcoophi(id,ip,ib)
+*                 write(*,*)'coor = ',xcoophi(id,ip,ib)
                 enddo
               endif
             enddo
@@ -151,26 +151,26 @@
             goto 1
           endif
 *         sinon on rempli xtphi :
-          write(*,*)'boucle sur xtphi'
+*         write(*,*)'boucle sur xtphi'
           do ip=1,npdef
             ipoin = lpoi(ip)
-            write(*,*)'ipoin = ',ipoin
+*           write(*,*)'ipoin = ',ipoin
             if (.not.(ipoin.eq.0)) then
               call extra9(icdm,ipoin,'UX',0,.false.,xval,iret)
               xtphi(1,ip,inel,ib) = xval
 *             MAJ max des composantes :
               xcmax = max(xcmax,dabs(xval))
-              write(*,*)'ux = ',xval
+*             write(*,*)'ux = ',xval
               call extra9(icdm,ipoin,'UY',0,.false.,xval,iret)
               xtphi(2,ip,inel,ib) = xval
 *             MAJ max des composantes :
               xcmax = max(xcmax,dabs(xval))
-              write(*,*)'uy = ',xval
+*             write(*,*)'uy = ',xval
               call extra9(icdm,ipoin,'UZ',0,.false.,xval,iret)
               xtphi(3,ip,inel,ib) = xval
 *             MAJ max des composantes :
               xcmax = max(xcmax,dabs(xval))
-              write(*,*)'uz = ',xval
+*             write(*,*)'uz = ',xval
             endif
           enddo
 *         on rempli xtphin avec la base modale normee / comp max : 
@@ -185,13 +185,13 @@
      &                             (xtphi(3,ip,inel,ib)**2))
             enddo
             xnortot = dsqrt(xnortot)
-            write(*,*)'xnortot inel = ',xnortot
+*           write(*,*)'xnortot inel = ',xnortot
 *           on remplit xmno avec la masse modale normee / comp max : 
             ina1 = iorsb(ib) - 1
             i2 = ina1 + inel
             xmno(inel,ib) = xm(i2,1) / (xcmax**2)
-            write(*,*)'  xmno mode inel ',inel
-            write(*,*)'                 ',xmno(inel,ib)
+*           write(*,*)'  xmno mode inel ',inel
+*           write(*,*)'                 ',xmno(inel,ib)
 *           warning : 
             if (xmno(inel,ib).gt.mtsb(ib)) then
               write(*,*)'filldef : '
@@ -204,8 +204,8 @@
      &                     (xtphi(2,ip,inel,ib)**2) +
      &                     (xtphi(3,ip,inel,ib)**2))
               xmpoi(ip,inel,ib) = xmno(inel,ib) * (xnor/xnortot)
-              write(*,*)'xmpoi = '
-              write(*,'((1X,F9.6))') , (xmpoi(ip,inel,ib))
+*             write(*,*)'xmpoi = '
+*             write(*,'((1X,F9.6))') , (xmpoi(ip,inel,ib))
             enddo
           else 
             xmno(inel,ib) = 0.d0

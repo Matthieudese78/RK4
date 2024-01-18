@@ -145,7 +145,7 @@ cms : pour le couple resistant "hard code" :
 *     correction dexpinv ?
       lxpinv = .false.
 *     couplage inertiel ?
-      linert = .false.
+      linert = .true.
 *     method de calcul de la MAJ du tenseur d'inertie J ?
       methJ1 = .false.
       methJ2 = .true.

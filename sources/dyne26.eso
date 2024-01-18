@@ -535,16 +535,16 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
 *
         call filldef(ibas,ib,ktphi,ktrot,ktkam,npdef)
 *
-        write(*,*)'dyne26 : xcoophi'
-        do ip = 1,npdef
-         write(*,'(3(1X,F8.5))') , (xcoophi(id,ip,ib),id=1,3)
-        enddo
-        write(*,*)'dyne26 : xtphi'
-        do ip = 1,npdef
-         do in=1,na2
-         write(*,'(3(1X,F8.5))') , (xtphi(id,ip,in,ib),id=1,3)
-         enddo
-        enddo
+*        write(*,*)'dyne26 : xcoophi'
+*        do ip = 1,npdef
+*         write(*,'(3(1X,F8.5))') , (xcoophi(id,ip,ib),id=1,3)
+*        enddo
+*        write(*,*)'dyne26 : xtphi'
+*        do ip = 1,npdef
+*         do in=1,na2
+*         write(*,'(3(1X,F8.5))') , (xtphi(id,ip,in,ib),id=1,3)
+*         enddo
+*        enddo
       endif
 ************************************************************************
 ************************************************************************
