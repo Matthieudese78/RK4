@@ -1,17 +1,6 @@
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
-
-# %% interpolation
-thlim = 5.e-3
-theta = np.linspace(0.,thlim,400)
-thlim = np.array([thlim]*len(theta))
-y = (2. - np.abs(theta)/thlim) * (theta/thlim)
-# thlim = thlim/2.
-y3 = 0.5*(1. + (2. - np.abs(theta-(thlim/2.))/(thlim/2.)) * ((theta-(thlim/2.))/(thlim/2.)))
-# plt.scatter(theta,y,s=4)
-plt.scatter(theta,(y3),s=4)
-plt.scatter(theta,(1.-y3),s=4)
 #%%
 # relation amor pour un contact ccone total (a plat) a 1 m . s^-1 :
 # 2.*np.pi*R_tete*1.*eta = x %
@@ -141,3 +130,4 @@ plt.ylabel('Amplitude')
 plt.grid(True)
 plt.show()
 
+# %%
