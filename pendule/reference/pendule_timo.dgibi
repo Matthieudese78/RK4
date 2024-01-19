@@ -49,7 +49,7 @@ ltronq = vrai ;
 ntronq = 0 ;
 
 *# nnoeuds :
-nnoeuds = 150 ;
+nnoeuds = 200 ;
 
 * Gravite :
  g = 9.81 ;
@@ -134,7 +134,7 @@ muk = 0.075 ;
 Kchoc = 5.5E+07 ;
 
 *# bamo :
-Bamo = 2.e5 ;
+Bamo = 2.e7 ;
 
 K_T= 0.01*Kchoc ;
 
@@ -173,7 +173,7 @@ T = 3. ;
 n = 7 ;
 
 *# dte :
-dte = 1.e-6 ;
+dte = 1.e-7 ;
 
 * DTE = 10.**((-1.)*(flott n)) ;
 
@@ -416,15 +416,20 @@ si (ltronq) ;
 tmodela = table 'BASE_MODALE' ;
 tmodela . 'MODES' = table 'BASE_DE_MODES' ;
 tmodela . 'MODES' . 'MAILLAGE' = meshpou ;
+Tmodela . 'MAILLAGE_REPERE' = VIDE 'MAILLAGE' ;
 numode = 1 ;
 repe bmode (nmode_ela - ntronq) ;
 * mode traction-compression ? a ne prendre qu'une fois en compte.
   lect1 = lect &bmode ;
   tracomp = dans lect1 ltrac ;
+* on complete le maillage repere :
+  Tmodela . 'MAILLAGE_REPERE' = (Tmodela . 'MAILLAGE_REPERE') et (Tmode_elax . 'MODES' . &bmode . 'POINT_REPERE') ;
 * on renumerote :
   tmode_elax . modes . &bmode . 'NUMERO_MODE' = numode ; 
   tmodela . modes . numode = tmode_elax . modes . &bmode ;
   si (non tracomp) ;
+* on complete le maillage repere :
+  Tmodela . 'MAILLAGE_REPERE' = (Tmodela . 'MAILLAGE_REPERE') et (Tmode_elay . 'MODES' . &bmode . 'POINT_REPERE') ;
   tmode_elay . modes . &bmode . 'NUMERO_MODE' = (numode + 1) ; 
   tmodela . modes . (numode + 1) = tmode_elay . modes . &bmode ;
   numode = numode + 1 ;
@@ -483,7 +488,7 @@ Tmode_RZ . 'MODES' . 1 . 'COMPOSANTE' = 'RZ' ;
 * Rotas rigides et modes elastiques:
 SI (typmode EGA 1);
 * Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ et Tmode_ela) ;
-Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ et Tmodela) ;
+Tmode = (Tmodela et Tmode_RX et Tmode_RY et Tmode_RZ) ;
 FINSI;
 * Que rotas rigides:
 SI (typmode EGA 2);
@@ -994,6 +999,8 @@ ncolexce = 33 ;
 
 repe bsauvq nmode_ela ;
   ptrpi = tmodela . modes . &bsauvq . point_repere ;  
+  tsort . (chai 'q'&bsauvq)    = table ; 
+  tsort . (chai 'q'&bsauvq'v') = table ;
   tsort . (chai 'q'&bsauvq) = tresu . deplacement . ptrpi ; 
   tsort . (chai 'q'&bsauvq'v') = tresu . vitesse . ptrpi ; 
   ncolexce = ncolexce + 2 ;

@@ -311,8 +311,11 @@ algo = (chai algo'_inert') ;
 finsi ;
 
 si limpact ;
+si (non (bamo <EG 1.e-10)) ;
 samo = (enti (log ((bamo/2.))/(log 10.))) ;
 script = ( chai script'_bamo_'samo) ;
+sinon ;
+script = ( chai script'_bamo_'0) ;
 finsi ;
 
 si (stoia) ;
@@ -410,15 +413,20 @@ si (ltronq) ;
 tmodela = table 'BASE_MODALE' ;
 tmodela . 'MODES' = table 'BASE_DE_MODES' ;
 tmodela . 'MODES' . 'MAILLAGE' = meshpou ;
+Tmodela . 'MAILLAGE_REPERE' = VIDE 'MAILLAGE' ;
 numode = 1 ;
 repe bmode (nmode_ela - ntronq) ;
 * mode traction-compression ? a ne prendre qu'une fois en compte.
   lect1 = lect &bmode ;
   tracomp = dans lect1 ltrac ;
+* on complete le maillage repere :
+  Tmodela . 'MAILLAGE_REPERE' = (Tmodela . 'MAILLAGE_REPERE') et (Tmode_elax . 'MODES' . &bmode . 'POINT_REPERE') ;
 * on renumerote :
   tmode_elax . modes . &bmode . 'NUMERO_MODE' = numode ; 
   tmodela . modes . numode = tmode_elax . modes . &bmode ;
   si (non tracomp) ;
+* on complete le maillage repere :
+  Tmodela . 'MAILLAGE_REPERE' = (Tmodela . 'MAILLAGE_REPERE') et (Tmode_elay . 'MODES' . &bmode . 'POINT_REPERE') ;
   tmode_elay . modes . &bmode . 'NUMERO_MODE' = (numode + 1) ; 
   tmodela . modes . (numode + 1) = tmode_elay . modes . &bmode ;
   numode = numode + 1 ;
@@ -483,13 +491,13 @@ Tmode_RZ . 'MODES' . 1 . 'MASSE'= M ;
 Tmode_RZ . 'MODES' . 1 . 'COMPOSANTE' = 'RZ' ;
 *
 *********************************************************************
-*                     Assemblage des bases modales: 
+*                     Assemblage des bases modales : 
 *********************************************************************
 *
 * Rotas rigides et modes elastiques:
 SI (typmode EGA 1);
 * Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ et Tmode_ela) ;
-Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ et Tmodela) ;
+Tmode = (Tmodela et Tmode_RX et Tmode_RY et Tmode_RZ) ;
 FINSI;
 * Que rotas rigides:
 SI (typmode EGA 2);
