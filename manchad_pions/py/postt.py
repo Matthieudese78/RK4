@@ -20,13 +20,22 @@ lplow = False
     # which slice ?
 slice = 1
 # cas la lache de la manchette avec juste le poids :
-# script1 = "manchadela_weight"
-# script1 = "manchadela_RSG"
-script1 = f"manchadela_pions_{slice}"
-# script1 = "manchadela_RSG_conefixe"
-repload = f"./pickle/{script1}/"
+# namerep = "manchadela_weight"
+# namerep = "manchadela_RSG"
+# namerep = "manchadela_RSG_conefixe"
+
+
+Fext = 250.
+vlimoden = 1.e-4
+spinini = 0.
+vlostr = int(-np.log10(vlimoden))
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}'
+repload = f'./pickle/{namerep}/'
+# namerep = f"manchadela_pions_{slice}"
+# repload = f"./pickle/{namerep}/"
+
 # %%
-rep_save = f"./fig/{script1}/"
+rep_save = f"./fig/{namerep}/"
 
 if not os.path.exists(rep_save):
     os.makedirs(rep_save)
@@ -340,6 +349,18 @@ kwargs1 = {
 }
 traj.pltraj2d(df, **kwargs1)
 
+kwargs1 = {
+    "tile1": "uy(G) adapter = f(t)" + "\n",
+    "tile_save": "uygad_t",
+    "colx": "t",
+    "coly": "uyg_tot_ad",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": r"$t \quad (s)$",
+    "labely": r"$u_y(G_ad)$"+" (m)",
+    "color1": color1[0],
+}
+traj.pltraj2d(df, **kwargs1)
 #%%############################################
 #           PLOTS : trajectoires relatives :
 ###############################################
@@ -839,8 +860,9 @@ kwargs1 = {
     "labelz": r"$Z \quad (m)$",
     "color1": color1[1],
     "view": view,
+    "msize" : 1,
 }
-traj.scat3d(df.loc[indchoc], **kwargs1)
+traj.scat3d_pchoc(df.loc[indchoc], **kwargs1)
 
 # %%
 kwargs1 = {
@@ -856,8 +878,9 @@ kwargs1 = {
     "labelz": r"$Z \quad (m)$",
     "color1": color1[1],
     "view": view,
+    "msize" : 1,
 }
-traj.scat3d(df.loc[indchoc], **kwargs1)
+traj.scat3d_pchoc(df.loc[indchoc], **kwargs1)
 # %%
 kwargs1 = {
     "tile1": "point d'impact" + "\n",

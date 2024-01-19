@@ -36,7 +36,8 @@ dte = 1.e-6 ;
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 
 *# nsort :
-nsort = 100 ;
+* nsort = 1 ;
+nsort = 1000 ;
 
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
 
@@ -60,7 +61,12 @@ lpion = vrai ;
 * veut on sortir la force transmise ?
 ltrans = faux ;
 * amortissement modal ?
+*# lamode :
 lamode = faux ;
+*# lexp :
+lexp = vrai ;
+
+*# amode :
 amode = 0.01 ;
 
 * on sort les depl de plam_h et plam_b ?
@@ -122,8 +128,16 @@ opti 'FTRA' (chai 'fig/'script'.ps');
 ****************************************************************************
 * amplitude de la force :
 
+
 *# Fext :
-Fext = 50. ;
+Fext = 250. ;
+
+* valeur de la force a la fin du calcul (si lexp)
+
+*# fefin :
+fefin = 50. ;
+
+* opti donn 5 ;
 
 si (lsin) ;
 * Freq = 8.6574 ; 
@@ -168,6 +182,15 @@ si (lsinb) ;
   finsi ;
 finsi  ;
 
+si (lexp) ;
+* on rajoute une decroissance exponentielle :
+  Bf = (log (fefin/Fext))/ttot ; 
+  Fprogxp = (exp (Bf*tprog)) ;
+  si (reprise) ;
+    Fprogxp = (exp (Bf*tprog_rep)) ;
+  finsi ;
+  Fprog2 = (Fprog2 * Fprogxp) ;
+finsi ;
 **************************************************************
 *                   Système unité
 **************************************************************
@@ -506,17 +529,19 @@ Tmode_tronq . 'MAILLAGE_REPERE' = VIDE 'MAILLAGE' ;
 numode = 1 ;
 REPE BTRONQ (nmode - n_tronq) ;
 *   implementation maillage repere :
-    Tmode_tronq . 'MAILLAGE_REPERE' = (Tmode_tronq . 'MAILLAGE_REPERE') et (Tmode . 'MODES' . (N_tronq+&BTRONQ) . 'POINT_REPERE') ;
+    Tmode_tronq . 'MAILLAGE_REPERE' = (Tmode_tronq . 'MAILLAGE_REPERE') et (Tmode . 'MODES' . (N_tronq + &BTRONQ) . 'POINT_REPERE') ;
 *   renumerotation :
-    tmode . modes . &btronq . 'NUMERO_MODE' = numode ; 
+    tmode . modes . (&btronq + n_tronq) . 'NUMERO_MODE' = numode ; 
 *   implementation mode :
-    tmode_tronq . modes . numode = tmode . modes . &btronq ;
+    tmode_tronq . modes . numode = tmode . modes . (&btronq + n_tronq) ;
 *   increment numode :
     numode = numode + 1 ;
 FIN BTRONQ ; 
 
 tmode = Tmode_tronq ; 
+* opti trac x ;
 postvibr Tmode ; 
+* opti donn 5 ;
 
 ptrepm1 = tmode_tronq . modes . 1 . point_repere ;
 ptrepm2 = tmode_tronq . modes . 2 . point_repere ;
@@ -617,19 +642,22 @@ TMODE_M_RZ . 'MODES' . 1 . MASSE_GENERALISEE = JZ_MANCH ;
 * ON MET tous les CDM à P1 pour éviter la correction des moments d'inertie:
 TMODE_M_RX . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
 TMODE_M_RX . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= GTOT_MANCH ;
-TMODE_M_RX . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P2 ;
+* TMODE_M_RX . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P2 ;
+TMODE_M_RX . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= gtot_manch ;
 TMODE_M_RX . 'MODES' . 1 . 'MASSE'= MTOT_MANCH ;
 TMODE_M_RX . 'MODES' . 1 . 'COMPOSANTE' = 'RX' ;
 
 TMODE_M_RY . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
 TMODE_M_RY . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= GTOT_MANCH ;
-TMODE_M_RY . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P2 ;
+* TMODE_M_RY . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P2 ;
+TMODE_M_RY . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= gtot_manch ;
 TMODE_M_RY . 'MODES' . 1 . 'MASSE'= MTOT_MANCH ;
 TMODE_M_RY . 'MODES' . 1 . 'COMPOSANTE' = 'RY' ;
 
 TMODE_M_RZ . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
 TMODE_M_RZ . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= GTOT_MANCH ;
-TMODE_M_RZ . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P2 ;
+* TMODE_M_RZ . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P2 ;
+TMODE_M_RZ . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= Gtot_manch ;
 TMODE_M_RZ . 'MODES' . 1 . 'MASSE'= MTOT_MANCH ;
 TMODE_M_RZ . 'MODES' . 1 . 'COMPOSANTE' = 'RZ' ;
 
@@ -1357,7 +1385,9 @@ U0_RZ = MANU 'CHPO' PTREP_M_RZ 'NATUR' 'DIFFUS' 'ALFA' (theta_RZ*Pi/180.) ;
 
 * reprise : les angles ont ete calcules avec quat2vect
 * on veut garder la precision donc on laisse en radians.
-si ((reprise) et (slice >EG 2)) ;
+* slice 0 : calcul avec fort amortissement dont les resultats sont repris des slice 1.
+* si ((reprise) et (slice >EG 2)) ;
+si ((reprise) et (slice >EG 1)) ;
 U0_RX = MANU 'CHPO' PTREP_M_RX 'NATUR' 'DIFFUS' 'ALFA' (theta_RX) ;
 U0_RY = MANU 'CHPO' PTREP_M_RY 'NATUR' 'DIFFUS' 'ALFA' (theta_RY) ;
 U0_RZ = MANU 'CHPO' PTREP_M_RZ 'NATUR' 'DIFFUS' 'ALFA' (theta_RZ) ;
@@ -1753,9 +1783,9 @@ tamor . 'AMORTISSEMENT' = amor tmode_ad l_amor ;
 
 'TEMP' 'ZERO' ;
 si (lamode) ;
-TRESU = DYNE 'DIFFERENCES_CENTREES' TMODE_TOT TCHAR TLIAI Tamor TINI TSORT NPASe DTe NSORT;
+TRESU = DYNE 'RKMK4' TMODE_TOT TCHAR TLIAI Tamor TINI TSORT NPASe DTe NSORT;
 sinon ;
-TRESU = DYNE 'DIFFERENCES_CENTREES' TMODE_TOT TCHAR TLIAI TINI TSORT NPASe DTe NSORT;
+TRESU = DYNE 'RKMK4' TMODE_TOT TCHAR TLIAI TINI TSORT NPASe DTe NSORT;
 finsi ;
 ctime = ('TEMP' 'ENTI' 'HORL') ;
 
@@ -1928,19 +1958,6 @@ finsi ;
 ****************************************************************************
 *           TSORT
 ****************************************************************************
-* on re-echantillonne les listes de forces exterieures pour les exporter :
-si (lsin) ;
-  Fprog2 = (SIN (OMEGA*tprog)) ;
-finsi ;
-
-
-si (lsinb) ;
-  f2 = f1 + ((T/120.)*(f2 - f1)) ; 
-  df = (f2 - f1) / ((dime tprog) - 1 ) ;
-  freq = prog f1 'PAS' df 'NPAS' ((dime tprog) - 1) ;
-  omega = 360. * freq ; 
-  Fprog2 =(sin ( omega * tprog ) ) ;
-finsi ;
 
 ****************************************************************************
 *           fin si non LSMALLEXIT :
@@ -1949,10 +1966,34 @@ finsi ;
 ****************************************************************************
 * on met les bons temps si reprise :
 si (reprise) ;
-  tfin = extr tprog (dime tprog) ;
-  dt = (tfin - trep) / ((dime tprog) - 1 ) ;
+* tfin = extr tprog (dime tprog) ;
+* dt = (tfin - trep) / ((dime tprog) - 1 ) ;
+  dt = ((extr tprog 2) - (extr tprog 1)) ;
   tprog_rep = prog trep 'PAS' dt 'NPAS' ((dime tprog) - 1) ;
+*  opti donn 5 ;
   tprog = tprog_rep ; 
+finsi ;
+* on re-echantillonne les listes de forces exterieures pour les exporter :
+si (lsin) ;
+  Fprog2 = (SIN (OMEGA*tprog)) ;
+finsi ;
+si (lsinb) ;
+  f2 = f1 + ((T/ttot)*(f2 - f1)) ; 
+  df = (f2 - f1) / ((dime tprog) - 1 ) ;
+  freq = prog f1 'PAS' df 'NPAS' ((dime tprog) - 1) ;
+  omega = 360. * freq ; 
+  Fprog2 =(sin ( omega * tprog ) ) ;
+  si reprise ;
+    df = (fend - fstart) / ((dime tprog) - 1 ) ;
+    freq = prog fstart 'PAS' df 'NPAS' ((dime tprog) - 1) ;
+    omega = 360. * freq ; 
+    Fprog2 = (sin ( omega * tprog ) ) ;
+  finsi ;
+finsi ;
+si (lexp) ;
+* on rajoute une decroissance exponentielle :
+  Fprogxp = (exp (Bf*tprog)) ;
+  Fprog2 = Fprog2 * Fprogxp ;
 finsi ;
 *
 TSORT = 'TABL' ;
