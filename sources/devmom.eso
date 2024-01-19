@@ -196,8 +196,8 @@ cmsw            WRITE(*,*)'   ss base ISB  = ',ISB
 *                 contient les conditions inis pas le depl. entre 2 pdts.
 *                 ca arrive si aucunes conditions initiales n'est donnee 
 *                 et que par consequent, dtheta n'est pas remis a zero en 
-*                 debut de dyne18.
-                  XCOO12(I) = XCOO12(I) + ROT(I,J,ind,isb)*
+*                 debut de dyne18. non on rechange :
+                  XCOO12(I) = XCOO12(I) + ROT12(I,J)*
      &             ( XCOOLB(J,ISB,IP) - XCENT(J,ISB) +
      &                         UFLEX(IP,ISB,J,2) ) 
                   ENDIF
