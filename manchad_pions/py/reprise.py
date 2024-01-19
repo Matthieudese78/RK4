@@ -18,7 +18,7 @@ source = f'../{filename}'
 lstdout = True
 #%% nombre de slices :
 nslice = 10
-#%% calcul initial :
+#%% parametres du calcul 
 ttot = 120.
 f1 = 2.
 f2 = 20.
@@ -30,6 +30,7 @@ n_tronq = 6
 nmode_ad = 7
 Fext = 100.
 vlimoden = 1.e-4
+amo_ccone = 3.4
 # on donne les 1ers angles en degres !
 theta_rx = 0.
 theta_ry = 0.
@@ -43,7 +44,11 @@ uzini = 0.
 vxini = 0.
 vyini = 0.
 vzini = 0.
-
+#%%########################### CALCUL 1
+# calcul initial : 
+#   - avec fort amortissement
+#   - sans pot vibrant (poids seuls)
+##############################
 dictini = {
   #          reprise : 
              'reprise' : "vrai",
@@ -52,11 +57,13 @@ dictini = {
   #          slice : 
              'slice' : 1,
   #          ttot : 
-             'ttot' : 120.,
+             'ttot' : ttot,
+  #          amo_ccone : 
+             'amo_ccone' : amo_ccone,
   #          f1 : 
-             'f1' : 2.,
+             'f1' : f1,
   #          f2 : 
-             'f2' : 20.,
+             'f2' : f2,
   #          t : 
              't' : t,
   #          dte : 
@@ -112,7 +119,6 @@ for i in np.arange(nmode_ad):
 vlostr = int(-np.log10(vlimoden))
 repglob = f'../calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}/'
 
-#%%
 # creation du repo :
 repslice1 = f'{repglob}calc_{1}/data/'
 
@@ -128,7 +134,7 @@ if not os.path.exists(repfig):
     print(f"FOLDER : {repfig} created.")
 else:
     print(f"FOLDER : {repfig} already exists.")
-#%%
+
 # on copie le script :
 destination = f'{repglob}calc_{1}/'
 shutil.copy(source,f"{destination}{filename}")
@@ -158,7 +164,7 @@ for colname, colvalue in dfini.iteritems():
 with open(f"{destination}{filename}", 'w') as file:
     file.writelines(lines)
 
-#%% 1ER CALCUL
+# 1ER CALCUL
 os.chdir(destination)
 #
 print(f"calcul 1 / {nslice}")
@@ -181,7 +187,7 @@ os.chdir(original_directory)
 
 # sys.exit()
 
-#%% sauvegarde du pickle :
+# sauvegarde du pickle :
 print("sauvegarde du 1er calcul...")
 kwpi = {'rep_load' : f"{repglob}calc_{1}/data/", 
         'rep_save' : f"{repglob}pickle/",
@@ -189,7 +195,10 @@ kwpi = {'rep_load' : f"{repglob}calc_{1}/data/",
 csv2pickle(**kwpi)
 
 # sys.exit()
-#%% lecture du dataframe  :
+
+#%%########################## LOOP
+# LOOP  :
+############################# 
   # slice num ? 
 for slice in range(2,nslice+1):
   print(f"slice : {slice}") 
@@ -317,7 +326,7 @@ for slice in range(2,nslice+1):
   # on rentre :
   os.chdir(original_directory)
 
-  #%% sauvegarde du pickle :
+  # sauvegarde du pickle :
   print(f"saving {slice}th calc...")
   kwpi = {'rep_load' : f"{repglob}calc_{slice}/data/", 
           'rep_save' : f"{repglob}pickle/",
@@ -326,7 +335,9 @@ for slice in range(2,nslice+1):
 
 
 
-# %% sauvegarde du script de batch :
+#%%########################## SAVE SCRIPTS
+# sauvegarde du script de batch :
+#############################
 # Get the absolute path of the running script
 script_path = os.path.abspath(__file__)
 # Get the file name
@@ -335,7 +346,10 @@ shutil.copy(script_path,repglob)
 print(f"batch script {script_name} saved into {repglob}")
 shutil.copy(f'{repglob}calc_1/{filename}',repglob)
 print(f"1st .dgibi saved into {repglob}")
-#%% menage :
+
+#%%######################################### CLEAN
+# menage :
+############################################
 print(f"cleaning...")
 pattern = "calc"
 import os
@@ -355,26 +369,4 @@ for current_directory, subdirectories, files in os.walk(repglob, topdown=False):
             print(f"Error deleting {subdirectory_path}: {e}")
 
 print(f"END")
-# %%  MENAGE
-# print(f"cleaning...")
-# # Define the pattern for CSV files
-# csv_pattern = os.path.join(repglob, '**', '*.csv')
-# ps_pattern = os.path.join(repglob, '**', '*.ps')
-# trace_pattern = os.path.join(repglob, '**', '*.trace')
 
-# # Get a list of all CSV files using glob
-# csv_files = glob.glob(csv_pattern, recursive=True)
-# ps_files = glob.glob(ps_pattern, recursive=True)
-# trace_files = glob.glob(trace_pattern, recursive=True)
-
-# # Delete each CSV file
-# for csv_file,ps_file,trace_file in zip(csv_files,ps_files,trace_files):
-#     try:
-#         os.remove(csv_file)
-#         os.remove(ps_file)
-#         os.remove(trace_file)
-#         print(f"Deleted: {csv_file}")
-#         print(f"Deleted: {ps_file}")
-#         print(f"Deleted: {trace_file}")
-#     except Exception as e:
-#         print(f"Error deleting {csv_file}: {e}")
