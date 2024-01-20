@@ -19,20 +19,21 @@ source = f'../{filename}'
 repcast = f'../../build/'
 lstdout = False
 #%% nombre de slices :
-nslice = 10
+nslice = 120
 #%% parametres du calcul 
 ttot = 120.
 f1 = 2.
 f2 = 20.
 t = 1.
-lexp  = "vrai" 
+lexp  = "faux" 
+raidiss  = "vrai" 
 dte = 1.e-6
 nsort = 2000
 nmode = 10
 n_tronq = 6
 nmode_ad = 7
-Fext = 250.
-fefin = 10.
+Fext = 137.*np.sqrt(2.)
+fefin = 5.
 vlimoden = 1.e-4
 amo_ccone = 3.4
 # on donne les 1ers angles en degres !
@@ -49,6 +50,11 @@ vxini = 0.
 vyini = 0.
 vzini = 0.
 
+#%% retrait du 2eme mode de l'adaptateur ?
+lmad2 = "faux"
+nmad = nmode_ad
+if (lmad2=="vrai"):
+    nmad = nmad - 1
 #%% repertoire de sauvegarde : 
 vlostr = int(-np.log10(vlimoden))
 repglob = f'../calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}/'
@@ -64,8 +70,12 @@ slice = 0
 dictini = {
   #          reprise : 
              'reprise' : "vrai",
-  #          lexp : 
+  #          lexp : decroissance exponentielle du chargement
              'lexp' : "faux",
+  #          lmad2 : on retire le 2eme mode de l'adapter ?
+             'lmad2' : lmad2,
+  #          lraidiss : on met les raidisseurs ? 
+             'raidiss' : raidiss,
   #          trep : 
              'trep' : 0.,
   #          slice : 
@@ -126,7 +136,7 @@ for i in np.arange(nmode - n_tronq):
     for col,val in zip(new_cols,new_vals):
       dfini[col] = val
 
-for i in np.arange(nmode_ad):
+for i in np.arange(nmad):
     nameuad = f"q{i+1}ad"
     namevad = f"q{i+1}vad"
     new_cols = [nameuad, namevad]
@@ -263,6 +273,10 @@ dict_rep = {
              'lexp' : lexp,
   #          fefin : valeur de la force a la fin du calcul si lexp :
              'fefin' : fefin,
+  #          lmad2 : on retire le 2eme mode de l'adapter 
+             'lmad2' : lmad2,
+  #          lraidiss : on met les raidisseurs ? 
+             'raidiss' : raidiss,
   #          lamode : 
              'lamode' : "faux",
   #          slice : 
@@ -304,7 +318,8 @@ for i in np.arange(nmode - n_tronq):
     new_vals = [ df[nameu].iloc[-1] , df[namev].iloc[-1] ]
     for col,val in zip(new_cols,new_vals):
       dfini[col] = val
-for i in np.arange(nmode_ad):
+
+for i in np.arange(nmad):
     nameuad = f"q{i+1}ad"
     namevad = f"q{i+1}vad"
     new_cols = [nameuad, namevad]
@@ -408,6 +423,10 @@ for slice in range(2,nslice+1):
                'lexp' : lexp,
     #          fefin : 
                'fefin' : fefin,
+    #          lmad2 : on retire le 2eme mode de l'adapter 
+               'lmad2' : lmad2,
+    #          lraidiss : on met les raidisseurs ? 
+               'raidiss' : raidiss,
     #          slice : 
                'slice' : df['slice'].drop_duplicates().values[0]+1,
     #          nmode : 
@@ -445,7 +464,7 @@ for slice in range(2,nslice+1):
       new_vals = [ df[nameu].iloc[-1] , df[namev].iloc[-1] ]
       for col,val in zip(new_cols,new_vals):
         dfini[col] = val
-  for i in np.arange(nmode_ad):
+  for i in np.arange(nmad):
       nameuad = f"q{i+1}ad"
       namevad = f"q{i+1}vad"
       new_cols = [nameuad, namevad]

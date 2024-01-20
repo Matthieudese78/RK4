@@ -6,7 +6,7 @@ import pandas as pd
 import glob
 import shutil
 #%% repertoire data
-Fext = 250.
+Fext = 100.
 vlimoden = 1.e-4
 spinini = 0.
 vlostr = int(-np.log10(vlimoden))

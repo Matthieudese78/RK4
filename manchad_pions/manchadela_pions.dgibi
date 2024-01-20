@@ -63,12 +63,16 @@ ltrans = faux ;
 * amortissement modal ?
 *# lamode :
 lamode = faux ;
-*# lexp :
-lexp = vrai ;
-
 *# amode :
 amode = 0.01 ;
-
+*# lexp :
+lexp = vrai ;
+* est-ce qu'on retire le 2eme mode de l'adaptateur ?
+*# lmad2 :
+lmad2 = faux ;
+* raidisseurs entre les ressorts a lames ?
+*# raidiss :
+raidiss = vrai ;
 * on sort les depl de plam_h et plam_b ?
 lplam = faux ;
 
@@ -893,21 +897,56 @@ mat1_ad = MATE mod1_ad 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S2_ad 'INRZ' IGx2_ad '
 ****************************************************************************
 *                       suspensions tout elastique 
 ****************************************************************************
-pbath1 = plam_h plus (40.e-2*ex) ;
-pbath2 = plam_h plus (((-1.)*40.e-2)*ex) ;
-pbatb1 = plam_b plus (40.e-2*ex) ;
-pbatb2 = plam_b plus (((-1.)*40.e-2)*ex) ;
+* vrai valeur : 40 cm
+* lspring = 40.e-2 ; 
+* on raccourcit les ressorts de la largeur des raidisseurs :
+lspring = 35.e-2 ; 
+
+pbath1 = plam_h plus (lspring*ex) ;
+pbath2 = plam_h plus (((-1.)*lspring)*ex) ;
+pbatb1 = plam_b plus (lspring*ex) ;
+pbatb2 = plam_b plus (((-1.)*lspring)*ex) ;
 * 
 nbelbat = 20 ;
 
-nbelbat = ENTI (NB_CORPS*(40.e-2)/L_CORPS) ;
+nbelbat = ENTI (NB_CORPS*(lspring)/L_CORPS) ;
 
 lbath1 = d nbelbat PLAM_H pbath1 ;
 lbath2 = d nbelbat PLAM_H pbath2 ;
 lbatb1 = d nbelbat PLAM_B pbatb1 ;
 lbatb2 = d nbelbat PLAM_B pbatb2 ;
+
+si (raidiss) ;
+pmidh1 = plam_h plus (0.5*(lspring*ex)) ;
+pmidh2 = plam_h plus (0.5*(((-1.)*lspring)*ex)) ;
+pmidb1 = plam_b plus (0.5*(lspring*ex)) ;
+pmidb2 = plam_b plus (0.5*(((-1.)*lspring)*ex)) ;
 *
+nbelbat12 = ENTI ((flott nbelbat)/2.) ;
+lbath11 = d nbelbat12 PLAM_H pmidh1 ;
+lbath21 = d nbelbat12 PLAM_H pmidh2 ;
+lbatb11 = d nbelbat12 PLAM_B pmidb1 ;
+lbatb21 = d nbelbat12 PLAM_B pmidb2 ;
+lbath12 = d nbelbat12 pmidh1 pbath1 ;
+lbath22 = d nbelbat12 pmidh2 pbath2 ;
+lbatb12 = d nbelbat12 pmidb1 pbatb1 ;
+lbatb22 = d nbelbat12 pmidb2 pbatb2 ;
+* 
+lbath1 = lbath11 et lbath12 ;
+lbath2 = lbath21 et lbath22 ;
+lbatb1 = lbatb11 et lbatb12 ;
+lbatb2 = lbatb21 et lbatb22 ;
+* raidisseurs :
+lraid1 = d nbelbat12 pmidh1 pmidb1 ;
+lraid2 = d nbelbat12 pmidh2 pmidb2 ;
+*
+finsi ;
+*
+si (raidiss) ;
+adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 et lraid1 et lraid2 ;
+sinon ;
 adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 ;
+finsi ;
 *
 modlh1 = mode lbath1 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
 matlh1 = MATE modlh1 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
@@ -921,8 +960,22 @@ matlb1 = MATE modlb1 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'IN
 modlb2 = mode lbatb2 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
 matlb2 = MATE modlb2 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
 *
+si (raidiss) ;
+igxraid = 10.*igx_lam ;
+igyraid = 10.*igy_lam ;
+igraid = 10.*ig_lam ;
+modraid1 = mode lraid1 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
+matraid1 = MATE modraid1 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
+modraid2 = mode lraid2 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
+matraid2 = MATE modraid2 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
+*
+mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 et modraid1 et modraid2 ;
+mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 et matraid1 et matraid2 ;
+sinon ;
 mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 ;
 mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 ;
+finsi ;
+*
 * matrice de raideur :
 K_ad = rigi mod1_ad mat1_ad ;
 * matrice de masse :
@@ -962,6 +1015,33 @@ M_AD = M_AD ET MPBR_C ET MPBR_L_B ET MPBR_L_H ;
  ptrepad2 = Tmode_ad . modes . 2 . point_repere ;
  ptrepad3 = Tmode_ad . modes . 3 . point_repere ;
  ptrepad4 = Tmode_ad . modes . 4 . point_repere ;
+
+si (lmad2) ;
+* si on veut que l'adaptateur rest horizontal on retire le mode 2 :
+Tmodead2 = TABL 'BASE_MODALE' ;
+Tmodead2 . 'MODES' = TABL 'BASE_DE_MODES' ;
+Tmodead2 . 'MODES' . 'MAILLAGE' = adaptateur ;
+Tmodead2 . 'MAILLAGE_REPERE' = VIDE 'MAILLAGE' ;
+numode = 1 ; 
+repe bm2 nmode_ad ;
+  si (non (&bm2 ega 2)) ;
+*   implementation maillage repere :
+    tmodead2 . 'MAILLAGE_REPERE' = (tmodead2 . 'MAILLAGE_REPERE') et (Tmode_ad . 'MODES' . &bm2 . 'POINT_REPERE') ;
+*   renumerotation :
+    tmode_ad . modes . &bm2 . 'NUMERO_MODE' = numode ; 
+*   implementation mode :
+    tmodead2 . modes . numode = tmode_ad . modes . &bm2 ;
+*   increment numode :
+    numode = numode + 1 ;
+  finsi ;
+fin bm2 ;
+tmode_ad = tmodead2 ;
+* nmode_ad = nmode_ad - 1 ;
+* fin si lmad2 :
+finsi ;
+* opti trac x ;
+* postvibr  tmode_ad ;
+* opti donn 5 ; 
 
 pextr_ad = adaptateur poin 'PROC' p2 ; 
 
@@ -1453,7 +1533,12 @@ si (reprise) ;
     v0_p = v0_p et vi ;
   fin bqini ;
 * ddls elastiques adaptateur :
-  repe bqiniad (nmode_ad) ;
+* petit check si on a retire le 2eme mode de l'adapter :
+  nmad = nmode_ad ;
+  si (lmad2) ;
+    nmad = nmode_ad - 1 ;
+  finsi ;
+  repe bqiniad (nmad) ;
     ptrpi = tmode_ad . modes . &bqiniad . point_repere ; 
     ui =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqini_ad &bqiniad) ;
     vi =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqvini_ad &bqiniad) ;
@@ -1776,6 +1861,10 @@ finsi ;
 ****************************************************************************
 tamor = table 'AMORTISSEMENT' ;
 L_amor = prog NMODE_AD*amode ;
+si (lmad2) ;
+L_amor = prog (NMODE_AD - 1)*amode ;
+finsi ;
+
 tamor . 'AMORTISSEMENT' = amor tmode_ad l_amor ;
 ****************************************************************************
 *           DYNE
@@ -2262,7 +2351,11 @@ si (lraidtimo) ;
   ncolexce = ncolexce + 10 ;
 sinon ;
 * sauvegarde des coord modales :
-  repe bsauvqad (nmode_ad) ;
+  nmad = nmode_ad ;
+  si (lmad2) ;
+    nmad = nmode_ad - 1 ;
+  finsi ;
+  repe bsauvqad (nmad) ;
     ptrpi = tmode_ad . modes . &bsauvqad . point_repere ;  
     tsort . (chai 'q'&bsauvqad'ad')  = table ; 
     tsort . (chai 'q'&bsauvqad'vad') = table ;

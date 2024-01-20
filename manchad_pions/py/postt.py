@@ -25,7 +25,7 @@ slice = 1
 # namerep = "manchadela_RSG_conefixe"
 
 
-Fext = 250.
+Fext = 100.
 vlimoden = 1.e-4
 spinini = 0.
 vlostr = int(-np.log10(vlimoden))
