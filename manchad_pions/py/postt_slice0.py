@@ -23,12 +23,16 @@ slice = 1
 # namerep = "manchadela_weight"
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
-
-Fext = 100.
+dte = 1.e-6
+Fext = 193
+mu = 0.3
+xi = 0.
 vlimoden = 1.e-4
 spinini = 0.
 vlostr = int(-np.log10(vlimoden))
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}'
+dtstr = int(-np.log10(dte))
+xistr = int(100.*xi)
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_inert'
 repload = f'./pickle/{namerep}/'
 # namerep = f"manchadela_pions_{slice}"
 # repload = f"./pickle/{namerep}/"
@@ -46,10 +50,10 @@ else:
 df = pd.read_pickle(f"{repload}result_0.pickle")
 
 #%% contact time interval :
-df['tag'] = df['FN_pb1'] < 0
-fst = df.index[df['tag'] & ~ df['tag'].shift(1).fillna(False)]
-lst = df.index[df['tag'] & ~ df['tag'].shift(-1).fillna(False)]
-prb1 = [(i,j) for i,j in zip(fst,lst)]
+# df['tag'] = df['FN_pb1'] < 0
+# fst = df.index[df['tag'] & ~ df['tag'].shift(1).fillna(False)]
+# lst = df.index[df['tag'] & ~ df['tag'].shift(-1).fillna(False)]
+# prb1 = [(i,j) for i,j in zip(fst,lst)]
 # %% On change de repere pour le tracer des trajectoires :
 exb = np.array([0.0, -1.0, 0.0])
 eyb = np.array([0.0, 0.0, 1.0])
