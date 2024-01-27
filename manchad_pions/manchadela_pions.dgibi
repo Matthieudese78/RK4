@@ -15,7 +15,7 @@ ex = 0. -1. 0.   ;
 ey = 0. 0. 1.    ;
 ez = (-1.) 0. 0. ;
 *
-
+* opti donn 5 ; 
 **************************************************************
 *                   REPSAUV
 **************************************************************
@@ -28,7 +28,7 @@ ez = (-1.) 0. 0. ;
 ttot = 120. ;
 
 *# t :
-T = 1. ;
+T = 5.e-6 ;
 
 *# dte :
 dte = 1.e-6 ;
@@ -36,8 +36,7 @@ dte = 1.e-6 ;
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 
 *# nsort :
-* nsort = 1 ;
-nsort = 1000 ;
+nsort = 1 ;
 
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
 
@@ -57,7 +56,7 @@ lraidtimo = faux ;
 * liaison cercle-cone ?
 ccone = vrai ;
 * on met les pions ?
-lpion = vrai ;
+lpion = faux ;
 * veut on sortir la force transmise ?
 ltrans = faux ;
 * amortissement modal ?
@@ -75,6 +74,11 @@ lmad2 = faux ;
 raidiss = vrai ;
 * on sort les depl de plam_h et plam_b ?
 lplam = faux ;
+* seulement 1 point cercle pour les pions haut et bas ?
+*# lpcirc :
+lpcirc = vrai ;
+*# blqry :
+blqry = vrai ;
 
 * Oden : vitesse limite d'adhrence ?
 * vlimoden = 1.e-1 ;
@@ -184,7 +188,7 @@ si (lsinb) ;
 *   dess evfprogtr 'LEGE' ;
 *   opti donn 5 ; 
   finsi ;
-finsi  ;
+finsi ;
 
 si (lexp) ;
 * on rajoute une decroissance exponentielle :
@@ -227,17 +231,17 @@ RHO = 7900. ;
 *            Modes elastiques ?
 **************************************************************
 lela = vrai ;
-
 **************************************************************
 *                Paramètres généraux
 **************************************************************
-
 *# nmode :
-nmode = 10 ;
+nmode = 3 ;
 
 *# nmode_ad :
 nmode_ad = 7 ; 
 
+* au cas ou lmad2 = faux :
+nmad = nmode_ad ;
 * Trace des defomees modales des 3 parties separement :
 * NOMU = VRAI ; 
 
@@ -302,6 +306,7 @@ PB = L_PB 0. 0. ;
 D_pion = 68.83*1.e-3 ;
 h_pion = ((D_pion-D_ext)/2.) ;
 
+* opti donn 5 ; 
 **************************************************************
 *        POINT BAS : dernier vis-a-vis manchette-adaptateur
 **************************************************************
@@ -370,12 +375,15 @@ Lf = prog 1. a ;
 nb_T_cyl = ENTI (MAXI Lf) ; 
 nb_T_cyl = 2 ;
 * Nbr d'éléments en longueur du corps : 
-nb_corps = 40 ;
 a = (FLOT (ENTI (L_corps/L_cone)*nb_T_cone)) ;
 Lf = prog 1. a ; 
 nb_corps = ENTI (MAXI Lf) ;
 * test :
-nb_corps = 248 ;
+*# nb_corps ;
+nb_corps = 80 ;
+
+* qui donne la bonne masse une fois integre :
+* nb_corps = 248 ;
 **************************************************************
 *                   MAILLAGE POUTRE TIMO
 **************************************************************
@@ -399,6 +407,12 @@ nbel_23 = ENTI (NB_CORPS*(NORM (PLOW PLUS ((-1.)*PB))) / L_CORPS) ;
 nbel_24 = ENTI (NB_CORPS*(NORM (GTOT_MANCH PLUS ((-1.)*PLOW))) / L_CORPS) ;
 nbel_25 = NB_CORPS - NBEL_21 - NBEL_22 - NBEL_23 - NBEL_24 ;
 * nbel_25 = (NORM (P3 PLUS ((-1.)*GTOT_MANCH))) / L_CORPS ;
+
+nbel_21 = maxi (lect nbel_21 1) ;
+nbel_22 = maxi (lect nbel_22 1) ;
+nbel_23 = maxi (lect nbel_23 1) ;
+nbel_24 = maxi (lect nbel_24 1) ;
+nbel_25 = maxi (lect nbel_25 1) ;
 
 L21 = D nbel_21 P2 PH ;
 L22 = D nbel_22 PH PB ;
@@ -509,7 +523,45 @@ M1 = M1 et M2 ;
 *********************************************************************
 *                            BASE MODALE 
 *********************************************************************
-Tmode = VIBR 'IRAM' 1. nmode K1 M1 ;
+* Tmode = VIBR 'IRAM' 1. nmode K1 M1 ;
+
+* 6 modes : tries sur iram : 
+lfind = prog 136.97 381.97 747.14 1220.547 1482.64 1788.90 ; 
+ltrac = lect 5 ;
+lindmode = lect nmode*1 ;
+* on fabrique une base modale orthogonale pour le couplage inertiel :
+bly = bloq manchette 'UY' ;
+k1x = k1 et bly ;
+Tmode_elax = VIBR 'PROCHE' lfind lindmode k1x m1 ;
+blx = bloq manchette 'UZ' ;
+k1y = k1 et blx ;
+Tmode_elay = VIBR 'PROCHE' lfind lindmode k1y m1 ;
+* creation de la nouvelle base modale de nmode :
+tmode = table 'BASE_MODALE' ;
+tmode . 'MODES' = table 'BASE_DE_MODES' ;
+tmode . 'MODES' . 'MAILLAGE' = manchette ;
+Tmode . 'MAILLAGE_REPERE' = VIDE 'MAILLAGE' ;
+numode = 1 ;
+repe bmode (nmode) ;
+* mode traction-compression ? a ne prendre qu'une fois en compte.
+  lect1 = lect &bmode ;
+  tracomp = dans lect1 ltrac ;
+* on complete le maillage repere :
+  tmode . 'MAILLAGE_REPERE' = (tmode . 'MAILLAGE_REPERE') et (Tmode_elax . 'MODES' . &bmode . 'POINT_REPERE') ;
+* on renumerote :
+  tmode_elax . modes . &bmode . 'NUMERO_MODE' = numode ; 
+  tmode . modes . numode = tmode_elax . modes . &bmode ;
+  si (non tracomp) ;
+* on complete le maillage repere :
+  tmode . 'MAILLAGE_REPERE' = (tmode . 'MAILLAGE_REPERE') et (Tmode_elay . 'MODES' . &bmode . 'POINT_REPERE') ;
+  tmode_elay . modes . &bmode . 'NUMERO_MODE' = (numode + 1) ; 
+  tmode . modes . (numode + 1) = tmode_elay . modes . &bmode ;
+  numode = numode + 1 ;
+  finsi ;
+* incrementation de numode : 
+  numode = numode + 1 ;
+fin bmode ;
+
 * opti trac x ;
 postvibr Tmode ; 
 * opti donn 5 ;
@@ -524,35 +576,28 @@ postvibr Tmode ;
 *********************************************************************
 * on vire les corps rigides :
 *# n_tronq :
-n_tronq = 6 ;
-
-Tmode_tronq = TABL 'BASE_MODALE' ;
-Tmode_tronq . 'MODES' = TABL 'BASE_DE_MODES' ;
-Tmode_tronq . 'MODES' . 'MAILLAGE' = manchette ;
-Tmode_tronq . 'MAILLAGE_REPERE' = VIDE 'MAILLAGE' ;
-numode = 1 ;
-REPE BTRONQ (nmode - n_tronq) ;
-*   implementation maillage repere :
-    Tmode_tronq . 'MAILLAGE_REPERE' = (Tmode_tronq . 'MAILLAGE_REPERE') et (Tmode . 'MODES' . (N_tronq + &BTRONQ) . 'POINT_REPERE') ;
-*   renumerotation :
-    tmode . modes . (&btronq + n_tronq) . 'NUMERO_MODE' = numode ; 
-*   implementation mode :
-    tmode_tronq . modes . numode = tmode . modes . (&btronq + n_tronq) ;
-*   increment numode :
-    numode = numode + 1 ;
-FIN BTRONQ ; 
-
-tmode = Tmode_tronq ; 
-* opti trac x ;
-postvibr Tmode ; 
-* opti donn 5 ;
-
-ptrepm1 = tmode_tronq . modes . 1 . point_repere ;
-ptrepm2 = tmode_tronq . modes . 2 . point_repere ;
-ptrepm3 = tmode_tronq . modes . 3 . point_repere ;
-ptrepm4 = tmode_tronq . modes . 4 . point_repere ;
-
-
+*n_tronq = 6 ;
+*
+*Tmode_tronq = TABL 'BASE_MODALE' ;
+*Tmode_tronq . 'MODES' = TABL 'BASE_DE_MODES' ;
+*Tmode_tronq . 'MODES' . 'MAILLAGE' = manchette ;
+*Tmode_tronq . 'MAILLAGE_REPERE' = VIDE 'MAILLAGE' ;
+*numode = 1 ;
+*REPE BTRONQ (nmode - n_tronq) ;
+**   implementation maillage repere :
+*    Tmode_tronq . 'MAILLAGE_REPERE' = (Tmode_tronq . 'MAILLAGE_REPERE') et (Tmode . 'MODES' . (N_tronq + &BTRONQ) . 'POINT_REPERE') ;
+**   renumerotation :
+*    tmode . modes . (&btronq + n_tronq) . 'NUMERO_MODE' = numode ; 
+**   implementation mode :
+*    tmode_tronq . modes . numode = tmode . modes . (&btronq + n_tronq) ;
+**   increment numode :
+*    numode = numode + 1 ;
+*FIN BTRONQ ; 
+*
+*tmode = Tmode_tronq ; 
+** opti trac x ;
+*postvibr Tmode ; 
+** opti donn 5 ;
 *********************************************************************
 *                  TMODE : translations et rotations 
 *********************************************************************
@@ -831,7 +876,6 @@ PB_AD = L_PB 0. 0. ;
 * vis a vis adaptateur du centre du cercle : 
 pce_ad = L_TETE 0. 0. ; 
 *
-nb_corps  = 248 ; 
 nbelad_1  = 1 ; 
 nbelad_2  = ENTI (NB_CORPS*(NORM (pce_ad PLUS ((-1.)*p2_ad))) / L_CORPS) ; 
 * nbelad_1 = ENTI (NB_CORPS*(NORM (P1_AD PLUS ((-1.)*P2_AD))) / L_CORPS) ;
@@ -941,7 +985,9 @@ lraid1 = d nbelbat12 pmidh1 pmidb1 ;
 lraid2 = d nbelbat12 pmidh2 pmidb2 ;
 *
 finsi ;
-*
+* test adaptateur horiz :
+cladry = bloq adaptateur 'RY' ;
+
 si (raidiss) ;
 adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 et lraid1 et lraid2 ;
 sinon ;
@@ -987,7 +1033,10 @@ clbatb1 = bloq 'DEPL' 'ROTA' pbatb1 ;
 clbatb2 = bloq 'DEPL' 'ROTA' pbatb2 ;
 *
 k_ad = k_ad et clbath1 et clbath2 et clbatb1 et clbatb2 ;
-
+* test horiz :
+si (blqry) ;
+  k_ad = k_ad et cladry ;
+finsi ;
 **** BRIDES : MAJ matrice de masse : 
 MPBR_C   = MASSE 'UX' 'UY' 'UZ'  MBR_C  GTOT_AD ; 
 MPBR_L_H = MASSE 'UX' 'UY' 'UZ'  MBR_L  PLAM_H ;
@@ -1024,7 +1073,8 @@ Tmodead2 . 'MODES' . 'MAILLAGE' = adaptateur ;
 Tmodead2 . 'MAILLAGE_REPERE' = VIDE 'MAILLAGE' ;
 numode = 1 ; 
 repe bm2 nmode_ad ;
-  si (non (&bm2 ega 2)) ;
+*  si (non (&bm2 ega 2)) ;
+  si (&bm2 <EG 6) ;
 *   implementation maillage repere :
     tmodead2 . 'MAILLAGE_REPERE' = (tmodead2 . 'MAILLAGE_REPERE') et (Tmode_ad . 'MODES' . &bm2 . 'POINT_REPERE') ;
 *   renumerotation :
@@ -1036,83 +1086,57 @@ repe bm2 nmode_ad ;
   finsi ;
 fin bm2 ;
 tmode_ad = tmodead2 ;
-* nmode_ad = nmode_ad - 1 ;
-* fin si lmad2 :
+* on change le nbr de mode pour sauver et initialiser .
+nmad = 6 ;
 finsi ;
 * opti trac x ;
-* postvibr  tmode_ad ;
+postvibr  tmode_ad ;
 * opti donn 5 ; 
-
-pextr_ad = adaptateur poin 'PROC' p2 ; 
-
-* mode1 :
-uzp1m1 = (extr (tmode_ad . modes . 1 . deformee_modale) 'VALE' 'UZ' p1_ad) ;
-uzp2m1 = (extr (tmode_ad . modes . 1 . deformee_modale) 'VALE' 'UZ' p2_ad) ;
-uzscm1 = (extr (tmode_ad . modes . 1 . deformee_modale) 'VALE' 'UZ' scone_ad) ;
-
-* mode2 :
-
-rymode2 = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'RY' p1_ad) ;
-uzp1ad = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'UZ' p1_ad) ;
-uzp2ad = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'UZ' p2_ad) ;
-uzp3ad = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'UZ' p3_ad) ;
-uzscad = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'UZ' scone_ad) ;
-
-*   determination du centre de rotation du mode2 :
-l1thales = l_tot_ad / (1. + (abs (uzp1ad/uzp3ad))) ;
-l2thales = l_tot_ad - l1thales ;
-cdrmode2 = (p1_ad coor 1) + l1thales ; 
-
-*   test de la composante rotation / flexion du mode 2 :
-*       p1_ad :
-uztest = rymode2*(abs ((p1_ad coor 1) - cdrmode2)) ;
-valtest1 = (uzp1ad-uztest) ; 
-*       p2_ad :
-rym2 = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'RY' p2_ad) ;
-uztest = rym2*(abs ((p2_ad coor 1) - cdrmode2)) ;
-valtest2 = (uzp2ad-uztest) ; 
-*       p3_ad :
-rym2 = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'RY' p3_ad) ;
-uztest = rym2*(abs ((p2_ad coor 1) - cdrmode2)) ;
-valtest3 = (uzp2ad-uztest) ; 
-*       scone_ad :
-rym2 = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'RY' scone_ad) ;
-uztest = rym2*(abs ((scone_ad coor 1) - cdrmode2)) ;
-valtest4 = (uzscad-uztest) ; 
-*       mm offset ?
-list valtest1 ;
-list valtest2 ;
-list valtest3 ;
-list valtest4 ;
-
-* mode4 : 
-uxp1ad = (extr (tmode_ad . modes . 4 . deformee_modale) 'VALE' 'UX' p1_ad) ;
-uxp2ad = (extr (tmode_ad . modes . 4 . deformee_modale) 'VALE' 'UX' p2_ad) ;
-uxscad = (extr (tmode_ad . modes . 4 . deformee_modale) 'VALE' 'UX' scone_ad) ;
-
-* on obtient le mode de translation en bloquant 'RY' sur l'adaptateur :
-*  cltr = bloq 'RY' (L1_AD ET L2_AD ET L3_AD 
-*                 ET L4_AD ET L5_AD ET L6_AD ET L7_AD ET L8_AD ET L9_AD) ;
- cltr = bloq 'RY' (gtot_ad_br) ;
- K_ad_bloq = k_ad et cltr ;  
- Tmode_ad_bloq = VIBR 'IRAM' 0.1 1 K_ad_bloq M_ad ;
-
-*  postvibr Tmode_ad_bloq ;
-
-*  postvibr Tmode_ad ;
-
-* on rajoute le mode de "translation" a tmode_ad :
-*  tmode_ad . modes . (nmode_ad + 1) = tmode_ad_bloq . modes . 1 ; 
-*  tmode_ad . modes . (nmode_ad + 1) . numero_mode = (nmode_ad + 1) ;
- postvibr Tmode_ad ;
-*  opti donn 5 ; 
 *
-defad1 =  tmode_ad . modes . 1 . deformee_modale ;
-defad2 =  tmode_ad . modes . 2 . deformee_modale ;
-defad3 =  tmode_ad . modes . 3 . deformee_modale ;
-defad4 =  tmode_ad . modes . 4 . deformee_modale ;
-*
-
+*pextr_ad = adaptateur poin 'PROC' p2 ; 
+** mode1 :
+*uzp1m1 = (extr (tmode_ad . modes . 1 . deformee_modale) 'VALE' 'UZ' p1_ad) ;
+*uzp2m1 = (extr (tmode_ad . modes . 1 . deformee_modale) 'VALE' 'UZ' p2_ad) ;
+*uzscm1 = (extr (tmode_ad . modes . 1 . deformee_modale) 'VALE' 'UZ' scone_ad) ;
+** mode2 :
+*rymode2 = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'RY' p1_ad) ;
+*uzp1ad = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'UZ' p1_ad) ;
+*uzp2ad = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'UZ' p2_ad) ;
+*uzp3ad = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'UZ' p3_ad) ;
+*uzscad = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'UZ' scone_ad) ;
+**   determination du centre de rotation du mode2 :
+*l1thales = l_tot_ad / (1. + (abs (uzp1ad/uzp3ad))) ;
+*l2thales = l_tot_ad - l1thales ;
+*cdrmode2 = (p1_ad coor 1) + l1thales ; 
+**   test de la composante rotation / flexion du mode 2 :
+**       p1_ad :
+*uztest = rymode2*(abs ((p1_ad coor 1) - cdrmode2)) ;
+*valtest1 = (uzp1ad-uztest) ; 
+**       p2_ad :
+*rym2 = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'RY' p2_ad) ;
+*uztest = rym2*(abs ((p2_ad coor 1) - cdrmode2)) ;
+*valtest2 = (uzp2ad-uztest) ; 
+**       p3_ad :
+*rym2 = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'RY' p3_ad) ;
+*uztest = rym2*(abs ((p2_ad coor 1) - cdrmode2)) ;
+*valtest3 = (uzp2ad-uztest) ; 
+**       scone_ad :
+*rym2 = (extr (tmode_ad . modes . 2 . deformee_modale) 'VALE' 'RY' scone_ad) ;
+*uztest = rym2*(abs ((scone_ad coor 1) - cdrmode2)) ;
+*valtest4 = (uzscad-uztest) ; 
+**       mm offset ?
+*list valtest1 ;
+*list valtest2 ;
+*list valtest3 ;
+*list valtest4 ;
+** mode4 : 
+*uxp1ad = (extr (tmode_ad . modes . 4 . deformee_modale) 'VALE' 'UX' p1_ad) ;
+*uxp2ad = (extr (tmode_ad . modes . 4 . deformee_modale) 'VALE' 'UX' p2_ad) ;
+*uxscad = (extr (tmode_ad . modes . 4 . deformee_modale) 'VALE' 'UX' scone_ad) ;
+** on obtient le mode de translation en bloquant 'RY' sur l'adaptateur :
+* cltr = bloq 'RY' (gtot_ad_br) ;
+* K_ad_bloq = k_ad et cltr ;  
+* Tmode_ad_bloq = VIBR 'IRAM' 0.1 1 K_ad_bloq M_ad ;
 
 ****************************************************************************
 *                       Assemblage des bases modales 
@@ -1192,6 +1216,12 @@ vxini = 0. ;
 vyini = 0. ;
 *# vzini :
 vzini = 0. ;
+*# axini :
+axini = 0. ;
+*# ayini :
+ayini = 0. ;
+*# azini :
+azini = 0. ;
 **
 *# wxini :
 WXini = 0. ;
@@ -1199,6 +1229,12 @@ WXini = 0. ;
 WYini = 0. ;
 *# wzini :
 WZini = 0. ;
+*# arxini :
+arXini = 0. ;
+*# aryini :
+arYini = 0. ;
+*# arzini :
+arZini = 0. ;
 **** ddls elastiques : (manchette --> 4 modes)
 *# q1 :
  q1 = 0. ;
@@ -1232,9 +1268,26 @@ WZini = 0. ;
  q8 = 0. ;
 *# q8v :
  q8v = 0. ;
+*# q1a :
+q1a = 0. ;
+*# q2a :
+q2a = 0. ;
+*# q3a :
+q3a = 0. ;
+*# q4a :
+q4a = 0. ;
+*# q5a :
+q5a = 0. ;
+*# q6a :
+q6a = 0. ;
+*# q7a :
+q7a = 0. ;
+*# q8a :
+q8a = 0. ;
 *
 lqini = prog q1 q2 q3 q4 q5 q6 q7 q8 ;
 lqvini = prog q1v q2v q3v q4v q5v q6v q7v q8v;
+lqaini = prog q1a q2a q3a q4a q5a q6a q7a q8a;
 *
 *** adaptateur :
 **** ddls elastiques : (7 modes)
@@ -1266,9 +1319,25 @@ lqvini = prog q1v q2v q3v q4v q5v q6v q7v q8v;
  q7ad = 0. ;
 *# q7vad :
  q7vad = 0. ;
+
+*# q1aad :
+ q1aad = 0. ;
+*# q2aad :
+ q2aad = 0. ;
+*# q3aad :
+ q3aad = 0. ;
+*# q4aad :
+ q4aad = 0. ;
+*# q5aad :
+ q5aad = 0. ;
+*# q6aad :
+ q6aad = 0. ;
+*# q7aad :
+ q7aad = 0. ;
 *
 lqini_ad = prog q1ad q2ad q3ad q4ad q5ad q6ad q7ad ;
 lqvini_ad = prog q1vad q2vad q3vad q4vad q5vad q6vad q7vad ;
+lqaini_ad = prog q1aad q2aad q3aad q4aad q5aad q6aad q7aad ;
 * fin si reprise.
 finsi ;
 **************************************************************
@@ -1422,6 +1491,8 @@ Rayon_supp = R_tete ;
 * Kchoc = 2.E+06;
 * On prend la raideur d'ovalisation analytique :
 Kchoc = 3.8*E*(epai**2)*((epai/D_ext)**0.5)/D_ext ; 
+*test :
+* kchoc = 1.e8 ;
 * opti donn 5  ;
 * Freq_max = ((Kchoc/MTOT_MANCH)**0.5)/(2.*Pi) ;
 
@@ -1431,17 +1502,25 @@ K_T= 0.*Kchoc ;
 * old :
 * K_T= 0.01*Kchoc ;
 
+*# xi :
+xi = 0.01 ;
 *# mu
-mu = 0.3 ;
+mu = 0.6 ;
+
 *# adh
 adh = 0.03 ;
+
 *# Cchoc
-Cchoc = 0.*((MTOT_MANCH*Kchoc)**0.5) ;
+* Cchoc = 0.*((MTOT_MANCH*Kchoc)**0.5) ;
+
+omegachoc = (Kchoc/MTOT_MANCH)**0.5 ;
+Cchoc = 2.*Mtot_manch*omegachoc*xi ;
 
 * pour les pions :
+alphap = 120. ;
 excpb1 = ((-1.)*(h_pion)) * ey ;
-excpb2 = (((cos 60.)*(h_pion)) * ey) plus (((sin 60.)*(h_pion)) * ex);
-excpb3 = (((cos 60.)*(h_pion)) * ey) plus (((-1.)*((sin 60.)*(h_pion))) * ex);
+excpb2 = (((cos alphap)*(h_pion)) * ey) plus (((sin alphap)*(h_pion)) * ex);
+excpb3 = (((cos alphap)*(h_pion)) * ey) plus (((-1.)*((sin alphap)*(h_pion))) * ex);
 ****************************************************************************
 *                       SORTIE 
 ****************************************************************************
@@ -1525,31 +1604,50 @@ si (reprise) ;
 * la boucle bqini ne fonctionne que si on garde cette ordre.
 * ne pas faire : tmode = tmode_m_rig et tmode.
 * ddls elastiques manchette :
+*acceleration angulaire de rotation :
+A0_RX = MANU 'CHPO' PTREP_M_RX 'NATUR' 'DIFFUS' 'ALFA' ARXini ;
+A0_RY = MANU 'CHPO' PTREP_M_RY 'NATUR' 'DIFFUS' 'ALFA' ARYini ;
+A0_RZ = MANU 'CHPO' PTREP_M_RZ 'NATUR' 'DIFFUS' 'ALFA' ARZini ; 
+*Acceleration en translation : 
+A0_P_TX = MANU 'CHPO' PTREP_M_TX 'NATURE' 'DIFFUS' 'ALFA' AXini ;
+A0_P_TY = MANU 'CHPO' PTREP_M_TY 'NATURE' 'DIFFUS' 'ALFA' AYini ;
+A0_P_TZ = MANU 'CHPO' PTREP_M_TZ 'NATURE' 'DIFFUS' 'ALFA' AZini ;
+
+A0_P_TRANS = ( A0_P_TX et A0_P_TX et A0_P_TZ ) ;
+A0_P = (A0_RX et A0_RY et A0_RZ et A0_P_TRANS) ;
+
   repe bqini (nmode - n_tronq) ;
     ptrpi = tmode . modes . &bqini . point_repere ; 
     ui =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqini &bqini) ;
     vi =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqvini &bqini) ;
+    ai =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqaini &bqini) ;
     u0_p = u0_p et ui ;
     v0_p = v0_p et vi ;
+    a0_p = a0_p et ai ;
   fin bqini ;
 * ddls elastiques adaptateur :
 * petit check si on a retire le 2eme mode de l'adapter :
-  nmad = nmode_ad ;
-  si (lmad2) ;
-    nmad = nmode_ad - 1 ;
-  finsi ;
   repe bqiniad (nmad) ;
     ptrpi = tmode_ad . modes . &bqiniad . point_repere ; 
     ui =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqini_ad &bqiniad) ;
     vi =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqvini_ad &bqiniad) ;
+    ai =  MANU 'CHPO' ptrpi 'NATUR' 'DIFFUS' 'ALFA' (extr lqaini_ad &bqiniad) ;
     u0_p = u0_p et ui ;
     v0_p = v0_p et vi ;
+    a0_p = a0_p et ai ;
   fin bqiniad ;
 finsi ;
 *
 TINI = TABLE 'INITIAL';
 TINI . 'DEPLACEMENT' = U0_P ;
 TINI . 'VITESSE'     = V0_P ;
+
+si (reprise) ;
+TINI = TABLE 'INITIAL';
+TINI . 'DEPLACEMENT' = U0_P ;
+TINI . 'VITESSE'     = V0_P ;
+TINI . 'ACCELERATION'     = A0_P ;
+finsi ; 
 
 ****************************************************************************   
 *              CHARGEMENT 
@@ -1657,29 +1755,127 @@ TLP_A.'COEFFICIENT_ADHERENCE'   =  adh      ;
 TLP_A.'RAIDEUR_TANGENTIELLE' = K_T          ;
 *
 
-si (lpion) ;
+si (lpcirc) ;
+
+excpcircb1 = ((-1.)*h_pion)*EY ;
+excpcircb2 = (h_pion*((sin 30.)*EY)) plus (h_pion*((cos 30.)*EX)) ;
+excpcircb3 = (h_pion*((sin 30.)*EY)) plus (h_pion*(((-1.)*(cos 30.))*EX)) ;
+
 jeup = ((DINT_A/2.) - (D_ext/2.)) ;
+
+jeuph = ((DINT_A/2.) - (D_ext/2.) - h_pion) ;
+
+  TLpcirch1 = TABLE 'LIAISON_ELEMENTAIRE' ;
+  TLpcirch1.'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
+  TLpcirch1.'POINT'                     =  ph           ;
+  TLpcirch1.'CERCLE'                    =  ph_ad        ;
+  TLpcirch1.'CONTACT_INTERIEUR'         =  'VRAI'        ;
+  TLpcirch1.'COEFFICIENT_GLISSEMENT'    = mu          ;
+  TLpcirch1.'COEFFICIENT_ADHERENCE'     = adh          ;
+  TLpcirch1.'RAIDEUR_TANGENTIELLE'      = K_T ;
+  TLpcirch1.'RAIDEUR'                   = Kchoc    ;
+  TLpcirch1.'AMORTISSEMENT_TANGENTIEL'  = Cchoc  ;
+  TLpcirch1.'EXCENTRATION' =     excpcircb1         ;
+  TLpcirch1.'NORMALE'                   = normale_cone ;
+  TLpcirch1.'RAYON'                     = jeup          ;
+
+  TLpcirch2 = TABLE 'LIAISON_ELEMENTAIRE' ;
+  TLpcirch2.'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
+  TLpcirch2.'POINT'                     =  ph           ;
+  TLpcirch2.'CERCLE'                    =  ph_ad        ;
+  TLpcirch2.'CONTACT_INTERIEUR'         =  'VRAI'        ;
+  TLpcirch2.'COEFFICIENT_GLISSEMENT'    = mu          ;
+  TLpcirch2.'COEFFICIENT_ADHERENCE'     = adh          ;
+  TLpcirch2.'RAIDEUR_TANGENTIELLE'      = K_T ;
+  TLpcirch2.'RAIDEUR'                   = Kchoc    ;
+  TLpcirch2.'AMORTISSEMENT_TANGENTIEL'  = Cchoc  ;
+  TLpcirch2.'EXCENTRATION' =     excpcircb2         ;
+  TLpcirch2.'NORMALE'                   = normale_cone ;
+  TLpcirch2.'RAYON'                     = jeup          ;
+
+  TLpcirch3 = TABLE 'LIAISON_ELEMENTAIRE' ;
+  TLpcirch3.'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
+  TLpcirch3.'POINT'                     =  ph           ;
+  TLpcirch3.'CERCLE'                    =  ph_ad        ;
+  TLpcirch3.'CONTACT_INTERIEUR'         =  'VRAI'        ;
+  TLpcirch3.'COEFFICIENT_GLISSEMENT'    = mu          ;
+  TLpcirch3.'COEFFICIENT_ADHERENCE'     = adh          ;
+  TLpcirch3.'RAIDEUR_TANGENTIELLE'      = K_T ;
+  TLpcirch3.'RAIDEUR'                   = Kchoc    ;
+  TLpcirch3.'AMORTISSEMENT_TANGENTIEL'  = Cchoc  ;
+  TLpcirch3.'EXCENTRATION' =     excpcircb3         ;
+  TLpcirch3.'NORMALE'                   = normale_cone ;
+  TLpcirch3.'RAYON'                     = jeup          ;
+*
+  TLpcircb1  = TABLE 'LIAISON_ELEMENTAIRE' ;
+  TLpcircb1 .'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
+  TLpcircb1 .'POINT'                     =  pb           ;
+  TLpcircb1 .'CERCLE'                    =  pb_ad        ;
+  TLpcircb1 .'CONTACT_INTERIEUR'         =  'VRAI'        ;
+  TLpcircb1 .'COEFFICIENT_GLISSEMENT'    = mu          ;
+  TLpcircb1 .'COEFFICIENT_ADHERENCE'     = adh          ;
+  TLpcircb1 .'RAIDEUR_TANGENTIELLE'      = K_T ;
+  TLpcircb1 .'RAIDEUR'                   = Kchoc    ;
+  TLpcircb1 .'AMORTISSEMENT_TANGENTIEL'  = Cchoc  ;
+  TLpcircb1 .'EXCENTRATION' =     excpcircb1         ;
+  TLpcircb1 .'NORMALE'                   = normale_cone ;
+  TLpcircb1 .'RAYON'                     = jeup          ;
+
+  TLpcircb2  = TABLE 'LIAISON_ELEMENTAIRE' ;
+  TLpcircb2 .'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
+  TLpcircb2 .'POINT'                     =  pb           ;
+  TLpcircb2 .'CERCLE'                    =  pb_ad        ;
+  TLpcircb2 .'CONTACT_INTERIEUR'         =  'VRAI'        ;
+  TLpcircb2 .'COEFFICIENT_GLISSEMENT'    = mu          ;
+  TLpcircb2 .'COEFFICIENT_ADHERENCE'     = adh          ;
+  TLpcircb2 .'RAIDEUR_TANGENTIELLE'      = K_T ;
+  TLpcircb2 .'RAIDEUR'                   = Kchoc    ;
+  TLpcircb2 .'AMORTISSEMENT_TANGENTIEL'  = Cchoc  ;
+  TLpcircb2 .'EXCENTRATION' =     excpcircb2         ;
+  TLpcircb2 .'NORMALE'                   = normale_cone ;
+  TLpcircb2 .'RAYON'                     = jeup          ;
+
+  TLpcircb3  = TABLE 'LIAISON_ELEMENTAIRE' ;
+  TLpcircb3 .'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
+  TLpcircb3 .'POINT'                     = pb           ;
+  TLpcircb3 .'CERCLE'                    = pb_ad        ;
+  TLpcircb3 .'CONTACT_INTERIEUR'         = 'VRAI'        ;
+  TLpcircb3 .'COEFFICIENT_GLISSEMENT'    = mu          ;
+  TLpcircb3 .'COEFFICIENT_ADHERENCE'     = adh          ;
+  TLpcircb3 .'RAIDEUR_TANGENTIELLE'      = K_T ;
+  TLpcircb3 .'RAIDEUR'                   = Kchoc    ;
+  TLpcircb3 .'AMORTISSEMENT_TANGENTIEL'  = Cchoc  ;
+  TLpcircb3 .'EXCENTRATION' =     excpcircb3         ;
+  TLpcircb3 .'NORMALE'                   = normale_cone ;
+  TLpcircb3 .'RAYON'                     = jeup          ;
+finsi ;
+*
+* opti donn 5 ;
+si (lpion) ;
+* conseil de benoit :
+jeup = ((DINT_A/2.) - (D_ext/2.)) ;
+* jeup = (DINT_A/2.) ;
 * opti donn 5 ; 
 * pions haut : 
   TLph1 = TABLE 'LIAISON_ELEMENTAIRE' ;
   TLph1.'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
   TLph1.'POINT'                     =  ph           ;
   TLph1.'CERCLE'                    =  ph_ad        ;
-  TLph1.'CONTACT_INTERIEUR'         =  vrai        ;
+  TLph1.'CONTACT_INTERIEUR'         =  'VRAI'        ;
   TLph1.'COEFFICIENT_GLISSEMENT'    = mu          ;
   TLph1.'COEFFICIENT_ADHERENCE'     = adh          ;
   TLph1.'RAIDEUR_TANGENTIELLE'      = K_T ;
   TLph1.'RAIDEUR'                   = Kchoc    ;
   TLph1.'AMORTISSEMENT_TANGENTIEL'  = 0.01  ;
   TLph1.'EXCENTRATION' =     excpb1         ;
-  TLph1.'NORMALE'                   = normale_pcerc ;
+  TLph1.'NORMALE'                   = normale_cone ;
   TLph1.'RAYON'                     = jeup          ;
 
   TLph2 = TABLE 'LIAISON_ELEMENTAIRE' ;
   TLph2.'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
   TLph2.'POINT'                     =  ph           ;
   TLph2.'CERCLE'                    =  ph_ad        ;
-  TLph2.'CONTACT_INTERIEUR'         =  vrai        ;
+  TLph2.'CONTACT_INTERIEUR'         =  'VRAI'        ;
   TLph2.'COEFFICIENT_GLISSEMENT'    = mu          ;
   TLph2.'COEFFICIENT_ADHERENCE'     = adh          ;
   TLph2.'RAIDEUR_TANGENTIELLE'      = K_T ;
@@ -1693,7 +1889,7 @@ jeup = ((DINT_A/2.) - (D_ext/2.)) ;
   TLph3.'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
   TLph3.'POINT'                     =  ph           ;
   TLph3.'CERCLE'                    =  ph_ad        ;
-  TLph3.'CONTACT_INTERIEUR'         =  vrai        ;
+  TLph3.'CONTACT_INTERIEUR'         =  'VRAI'        ;
   TLph3.'COEFFICIENT_GLISSEMENT'    = mu          ;
   TLph3.'COEFFICIENT_ADHERENCE'     = adh          ;
   TLph3.'RAIDEUR_TANGENTIELLE'      = K_T ;
@@ -1707,7 +1903,7 @@ jeup = ((DINT_A/2.) - (D_ext/2.)) ;
   TLpb1.'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
   TLpb1.'POINT'                     =  pb           ;
   TLpb1.'CERCLE'                    =  pb_ad        ;
-  TLpb1.'CONTACT_INTERIEUR'         =  vrai        ;
+  TLpb1.'CONTACT_INTERIEUR'         =  'VRAI'        ;
   TLpb1.'COEFFICIENT_GLISSEMENT'    = mu          ;
   TLpb1.'COEFFICIENT_ADHERENCE'     = adh          ;
   TLpb1.'RAIDEUR_TANGENTIELLE'      = K_T ;
@@ -1721,7 +1917,7 @@ jeup = ((DINT_A/2.) - (D_ext/2.)) ;
   TLpb2.'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
   TLpb2.'POINT'                     =  pb           ;
   TLpb2.'CERCLE'                    =  pb_ad        ;
-  TLpb2.'CONTACT_INTERIEUR'         =  vrai        ;
+  TLpb2.'CONTACT_INTERIEUR'         =  'VRAI'        ;
   TLpb2.'COEFFICIENT_GLISSEMENT'    = mu          ;
   TLpb2.'COEFFICIENT_ADHERENCE'     = adh          ;
   TLpb2.'RAIDEUR_TANGENTIELLE'      = K_T ;
@@ -1735,7 +1931,7 @@ jeup = ((DINT_A/2.) - (D_ext/2.)) ;
   TLpb3.'TYPE_LIAISON'= MOT 'POINT_CERCLE_MOBILE';
   TLpb3.'POINT'                     =  pb           ;
   TLpb3.'CERCLE'                    =  pb_ad        ;
-  TLpb3.'CONTACT_INTERIEUR'         =  vrai        ;
+  TLpb3.'CONTACT_INTERIEUR'         =  'VRAI'        ;
   TLpb3.'COEFFICIENT_GLISSEMENT'    = mu          ;
   TLpb3.'COEFFICIENT_ADHERENCE'     = adh          ;
   TLpb3.'RAIDEUR_TANGENTIELLE'      = K_T ;
@@ -1761,6 +1957,15 @@ si (lpion) ;
  TTLB . 7 = TLph1 ;
  TTLB . 8 = TLph2 ;
  TTLB . 9 = TLph3 ;
+finsi ;
+
+si (lpcirc) ;
+ TTLB . 4 = TLpcircb1 ;
+ TTLB . 5 = TLpcircb2 ;
+ TTLB . 6 = TLpcircb3 ;
+ TTLB . 7 = TLpcirch1 ;
+ TTLB . 8 = TLpcirch2 ;
+ TTLB . 9 = TLpcirch3 ;
 finsi ;
 
 ****************************************************************************
@@ -1834,6 +2039,23 @@ finsi ;
 * fin si non LSMALLEXIT :
 finsi ;
 
+si (lpcirc) ;
+tstlpb1 = table ; 
+tstlpb1 . 'FORCE_DE_CHOC_NORMALE' = VRAI ;
+tstlpb1 . 'FORCE_DE_CHOC_TANGENTIELLE' = VRAI ;
+tstlpb1 . 'PUISSANCE_USURE_INSTANTANEE' = VRAI ;
+* bas : 
+TSORL . tlpcirch1 = tstlpb1 ; 
+TSORL . tlpcirch2 = tstlpb1 ; 
+TSORL . tlpcirch3 = tstlpb1 ; 
+* haut : 
+TSORL . tlpcircb1 = tstlpb1 ; 
+TSORL . tlpcircb2 = tstlpb1 ; 
+TSORL . tlpcircb3 = tstlpb1 ; 
+finsi ; 
+* fin si non LSMALLEXIT :
+finsi ;
+
 si (LSMALLEXIT) ;
 * liaison cercle-cone :
 TSTL1 = table ;
@@ -1862,7 +2084,7 @@ finsi ;
 tamor = table 'AMORTISSEMENT' ;
 L_amor = prog NMODE_AD*amode ;
 si (lmad2) ;
-L_amor = prog (NMODE_AD - 1)*amode ;
+  L_amor = prog nmad*amode ;
 finsi ;
 
 tamor . 'AMORTISSEMENT' = amor tmode_ad l_amor ;
@@ -1881,7 +2103,7 @@ ctime = ('TEMP' 'ENTI' 'HORL') ;
 **** temps de sortie :
 tprog = TRESU . TEMPS_DE_SORTIE ;
 Nt = dime tprog ;
-
+* opti donn 5 ; 
 **** 'Nouveaux' ptreps rotas rigides :
 * MANCHETTE :
 PTREP_RIG1 = TMODE_TOT . IND_M . ROTAS . 1 . POINT_REPERE;
@@ -1915,6 +2137,7 @@ PI2 = TRESU . TRAVAIL_INTERIEUR . PTREP_RIG2;
 PI3 = TRESU . TRAVAIL_INTERIEUR . PTREP_RIG3;
 *
 EC1 = TRESU . TRAVAIL_EXTERIEUR . PTREP_RIG1 ;
+*
 *
 si (lraidtimo) ;
 W1_AD = TRESU . VITESSE . PTREP_RIG21;
@@ -2127,6 +2350,7 @@ TSORT . 'PIX' = table ;
 TSORT . 'PIY' = table ;
 TSORT . 'PIZ' = table ;
 TSORT . 'EC'  = table ;
+TSORT . 'edef'  = table ;
 
 TSORT . 'WX'  = W1 ;
 TSORT . 'WY'  = W2 ;
@@ -2138,6 +2362,16 @@ TSORT . 'EC'  = EC1 ;
 TSORT . 'PIX' = PI1 ;
 TSORT . 'PIY' = PI2 ;
 TSORT . 'PIZ' = PI3 ;
+TSORT . 'edef'  = tresu . travail_exterieur . ptrep_rig2 ;
+* pour les ss bases ss rotas tigides :
+*   l'energie cinetique est stockee dans le premier mode dans travail_exterieur.
+*   l'energie de deformation est stockee dans le premier mode dans travail_interieur.
+*       (cf. rkpas)
+ptrepad1 = tmode_ad . modes . 1 . point_repere ;
+tsort . 'ecad' = table ;
+tsort . 'edefad' = table ;
+tsort . 'ecad' = TRESU . TRAVAIL_EXTERIEUR . ptrepad1 ;
+tsort . 'edefad' = TRESU . TRAVAIL_INTERIEUR . ptrepad1 ;
 
 * sauvegarde du quaternion :
 tsort . 'quat1' = table ; 
@@ -2149,16 +2383,18 @@ TSORT . 'quat2' = tresu . 'DEPLACEMENT' . ptrep_rig2 ;
 TSORT . 'quat3' = tresu . 'DEPLACEMENT' . ptrep_rig3 ; 
 TSORT . 'quat4' = tresu . 'DEPLACEMENT' . ptrep_rig4 ; 
 
-ncolexce = 24 ;
+ncolexce = 27 ;
 
 * sauvegarde des coord modales :
 repe bsauvq (nmode - n_tronq) ;
   ptrpi = tmode . modes . &bsauvq . point_repere ;  
   tsort . (chai 'q'&bsauvq)    = table ; 
   tsort . (chai 'q'&bsauvq'v') = table ;
+  tsort . (chai 'q'&bsauvq'a') = table ;
   tsort . (chai 'q'&bsauvq) = tresu . deplacement . ptrpi ; 
   tsort . (chai 'q'&bsauvq'v') = tresu . vitesse . ptrpi ; 
-  ncolexce = ncolexce + 2 ;
+  tsort . (chai 'q'&bsauvq'a') = tresu . acceleration . ptrpi ; 
+  ncolexce = ncolexce + 3 ;
 fin bsauvq ;
 * sauvegarde des coord modales --> translation :
 tsort . 'qtx' = table ;
@@ -2173,7 +2409,13 @@ tsort . 'qvty' = table ;
 tsort . 'qvty' = tresu . vitesse . ptrep_m_ty ;
 tsort . 'qvtz' = table ;
 tsort . 'qvtz' = tresu . vitesse . ptrep_m_tz ;
-ncolexce = ncolexce + 6 ;
+tsort . 'qatx' = table ;
+tsort . 'qatx' = tresu . acceleration . ptrep_m_tx ;
+tsort . 'qaty' = table ;
+tsort . 'qaty' = tresu . acceleration . ptrep_m_ty ;
+tsort . 'qatz' = table ;
+tsort . 'qatz' = tresu . acceleration . ptrep_m_tz ;
+ncolexce = ncolexce + 9 ;
 
 * centre du cercle manchette :
 TSORT . 'uxp2'  = TABLE ; 
@@ -2272,7 +2514,7 @@ TSORT . 'uzce_ad' = UZce_AD ;
 
 ncolexce = ncolexce + 3 ;
 
-si (lpion) ;
+* si (lpion) ;
 TSORT . 'uxph' = TABLE ;
 TSORT . 'uyph' = TABLE ;
 TSORT . 'uzph' = TABLE ;
@@ -2299,7 +2541,7 @@ TSORT . 'uyph_ad' = UYPH_AD ;
 TSORT . 'uzph_ad' = UZPH_AD ;
 
 ncolexce = ncolexce + 12 ;
-finsi ;
+* finsi ;
 
 * force tansmise au systeme ie. mesuree par le cellule de force :
 si (ltrans) ;
@@ -2351,17 +2593,15 @@ si (lraidtimo) ;
   ncolexce = ncolexce + 10 ;
 sinon ;
 * sauvegarde des coord modales :
-  nmad = nmode_ad ;
-  si (lmad2) ;
-    nmad = nmode_ad - 1 ;
-  finsi ;
   repe bsauvqad (nmad) ;
     ptrpi = tmode_ad . modes . &bsauvqad . point_repere ;  
     tsort . (chai 'q'&bsauvqad'ad')  = table ; 
     tsort . (chai 'q'&bsauvqad'vad') = table ;
+    tsort . (chai 'q'&bsauvqad'aad') = table ;
     tsort . (chai 'q'&bsauvqad'ad')  = tresu . deplacement . ptrpi ; 
     tsort . (chai 'q'&bsauvqad'vad') = tresu . vitesse . ptrpi ; 
-    ncolexce = ncolexce + 2 ;
+    tsort . (chai 'q'&bsauvqad'aad') = tresu . acceleration . ptrpi ; 
+    ncolexce = ncolexce + 3 ;
   fin bsauvqad ;
 finsi ; 
 
@@ -2454,6 +2694,52 @@ SI (lpion) ;
   TSORT . 'FN_ph3' = TRESU . TLph3 . 'FORCE_DE_CHOC_NORMALE' ;
   TSORT . 'FT_ph3' = TRESU . TLph3 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
   TSORT . 'pusure_ph3' = TRESU . TLph3 . 'PUISSANCE_USURE_INSTANTANEE' ;
+*
+  ncolexce = ncolexce + 18 ;
+FINSI ; 
+
+SI (lpcirc) ;
+  TSORT . 'FN_pcirch1' = table ;
+  TSORT . 'FT_pcirch1' = table ;
+  TSORT . 'pusure_pcirch1' = table ;
+  TSORT . 'FN_pcirch1' = TRESU . TLpcirch1 . 'FORCE_DE_CHOC_NORMALE' ;
+  TSORT . 'FT_pcirch1' = TRESU . TLpcirch1 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
+  TSORT . 'pusure_pcirch1' = TRESU . TLpcirch1 . 'PUISSANCE_USURE_INSTANTANEE' ;
+
+  TSORT . 'FN_pcirch2' = table ;
+  TSORT . 'FT_pcirch2' = table ;
+  TSORT . 'pusure_pcirch2' = table ;
+  TSORT . 'FN_pcirch2' = TRESU . TLpcirch2 . 'FORCE_DE_CHOC_NORMALE' ;
+  TSORT . 'FT_pcirch2' = TRESU . TLpcirch2 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
+  TSORT . 'pusure_pcirch2' = TRESU . TLpcirch2 . 'PUISSANCE_USURE_INSTANTANEE' ;
+
+  TSORT . 'FN_pcirch3' = table ;
+  TSORT . 'FT_pcirch3' = table ;
+  TSORT . 'pusure_pcirch3' = table ;
+  TSORT . 'FN_pcirch3' = TRESU . TLpcirch3 . 'FORCE_DE_CHOC_NORMALE' ;
+  TSORT . 'FT_pcirch3' = TRESU . TLpcirch3 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
+  TSORT . 'pusure_pcirch3' = TRESU . TLpcirch3 . 'PUISSANCE_USURE_INSTANTANEE' ;
+
+  TSORT . 'FN_pcircb1' = table ;
+  TSORT . 'FT_pcircb1' = table ;
+  TSORT . 'pusure_pcircb1' = table ;
+  TSORT . 'FN_pcircb1' = TRESU . TLpcircb1 . 'FORCE_DE_CHOC_NORMALE' ;
+  TSORT . 'FT_pcircb1' = TRESU . TLpcircb1 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
+  TSORT . 'pusure_pcircb1' = TRESU . TLpcircb1 . 'PUISSANCE_USURE_INSTANTANEE' ;
+
+  TSORT . 'FN_pcircb2' = table ;
+  TSORT . 'FT_pcircb2' = table ;
+  TSORT . 'pusure_pcircb2' = table ;
+  TSORT . 'FN_pcircb2' = TRESU . TLpcircb2 . 'FORCE_DE_CHOC_NORMALE' ;
+  TSORT . 'FT_pcircb2' = TRESU . TLpcircb2 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
+  TSORT . 'pusure_pcircb2' = TRESU . TLpcircb2 . 'PUISSANCE_USURE_INSTANTANEE' ;
+
+  TSORT . 'FN_pcircb3' = table ;
+  TSORT . 'FT_pcircb3' = table ;
+  TSORT . 'pusure_pcircb3' = table ;
+  TSORT . 'FN_pcircb3' = TRESU . TLpcircb3 . 'FORCE_DE_CHOC_NORMALE' ;
+  TSORT . 'FT_pcircb3' = TRESU . TLpcircb3 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
+  TSORT . 'pusure_pcircb3' = TRESU . TLpcircb3 . 'PUISSANCE_USURE_INSTANTANEE' ;
 *
   ncolexce = ncolexce + 18 ;
 FINSI ; 

@@ -145,7 +145,7 @@ cms : pour le couple resistant "hard code" :
 *     correction dexpinv ?
       lxpinv = .false.
 *     couplage inertiel ?
-      linert = .false.
+      linert = .true.
 *     method de calcul de la MAJ du tenseur d'inertie J ?
       methJ1 = .false.
       methJ2 = .true.
@@ -868,6 +868,18 @@ CMS :     pour l'energie de deformation, on a calule pour ttes les ss bases, rot
              edef(iib) = edef(iib) + (xk(i2,1) * (q1(i2,1)**2)/2.d0)
             endif
           enddo
+*         les slots wext et wint sont libres car on appelle pas d2vene.
+*         --> on les utilise pour edef et ecin qu'ons stock dans les premiers modes.
+          if (iarota(iib).eq.0) then
+            wint(1,1) = edef(iib)
+*           energie cinetique :
+            xec = 0.d0
+            do in=1,na3
+              i2 = in + ina2
+              xec = xec + (5.d-1 * xm(i2,1) * (q2(i2,1)**2))
+            enddo
+            wext(1,1) = xec
+          endif
           if (lcb) then 
 *           energie potentielle magnetique :
             edef(iib) = edef(iib) - (- ((1.1+rot(3,3,1,ibad))**(-1.d0))
