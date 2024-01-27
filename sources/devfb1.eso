@@ -214,6 +214,7 @@ cbp,2020 vitesse relative = absolue - entrainement
 c        Vitesse normale
 cbp,2020-09         XVITN = XVITN / PDTS2
          XVALB(I,IND,3) = XVITN
+*        ityp = 3 : point_plan frottements :
          IF (ITYP.EQ.3) THEN
 cbp,2020    CALL DYCHA4(XDEP,XVITN,IDIM,IGP,XPALB,NLIAB,I,XFN,XFT,XPUS,
             CALL DYCHA1(XDEP,XVITN,IDIM,IGP,XPALB,NLIAB,I,XFN,XFT,XPUS,
