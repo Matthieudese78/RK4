@@ -411,166 +411,122 @@ cbp         INTER  = IPALB(I,4)
 * pas besoin de iarota : rot initialisee a l'identite dans ttes les sous bases (d2vini)
          if (ktrot.gt.0) then 
 *          write(*,*)'devfb3 : ibasb(iplib(i,1)) = ',ibasb(iplib(i,1))
+           ibpa = ibasb(npoa)
            do id=1,3 
               exc2(id) = 0.d0
               do j=1,3
                exc2(id) = exc2(id) +
-     &         (rot(id,j,ind,ibasb(iplib(i,1))) * xpalb(i,id2+j))
+     &         (rot(id,j,1,ibpa) * xpalb(i,id2+j))
               enddo
            enddo
          endif
-*              - la normale du cercle : NON elle ne varie pas sinon faut tout changer.  
-*        if ((ktrot.gt.0).and.(iarota(ibasb(iplib(i,2))).gt.0)) then 
-*          do id=1,3 
-*             n2(id) = 0.d0
-*             do j=1,3
-*              n2(id) = n2(id) +
-*    &         (rot(id,j,ind,ibasb(iplib(i,2))) * xpalb(i,id1+j))
-*             enddo
-*          enddo
-*        endif
-*  si pas d'adherence (c.a.d. glissement ou pas de contact) au pas precedent,
-*  reactualisation de la position ecart origine d'adherence
-         IF (IGP.EQ.1 .OR. IGP.EQ.-1) THEN
-            DO 330 ID=1,IDIM
-               XPALB(I,ID7+ID) = (XPTB(NPOA,1,ID) +
-     &                           FEXPSM(NPOA,NPA,IND1,ID) )
-     &                       - ( XPTB(NPOB,1,ID) +
-     &                           FEXPSM(NPOB,NPA,IND1,ID))
- 330        CONTINUE
-         ENDIF
 *  calcul du deplacement courant relatif (PS) sur la normale au cercle
          PS = 0.D0
 *        matthieu : psexc : pour projection de l'excentration sur la normale :
          psexc = 0.D0
-         DO 332 ID = 1,IDIM
+         DO ID = 1,IDIM
             IDD2 = 3 + ID
-c           x_n = xA_n - xB_n
-            XDE2 = XPTB(NPOA,1,ID) - XPTB(NPOB,1,ID)
-            XDE2 = XDE2 + FEXPSM(NPOa,NPA,IND1,ID)
-     &                  - FEXPSM(NPOb,NPA,IND1,ID)
+            XDE2 = XPTB(NPOA,1,ID) - XPTB(NPOB,1,ID) 
+*           XDE2 = XPTB(NPOA,1,ID) - XPTB(NPOB,1,ID) + exc2(id)
             XVALB(I,IND,IDD2) = XDE2
-cbp,2020-09c           x_n-1/2 = xA_n-1/2 - xB_n-1/2
-cbp,2020-09            XDM2 = XPTB(NPOA,IND2,ID) - xptb (npob,ind2,id)
-cbp,2020-09            XDM2 = XDM2 + FEXPSM(NPOA,NPAM1,INDM1,ID)
-cbp,2020-09     &                  - FEXPSM(NPOb,NPAM1,INDM1,ID)
-cbp,2020-09c           dx = x_n - x_n-1/2
-cbp,2020-09            XPALB(I,ID4+ID) = XDE2 - XDM2
 c           v_n = vA_n - vB_n
             XPALB(I,ID4+ID) = XPTB(NPOA,2,ID) - XPTB(NPOB,2,ID)
 c           dx_adhe = x_n - x_adherence0
-            XPALB(I,ID5+ID) = XDE2 - XPALB(I,ID7+ID)
+            XPALB(I,ID5+ID) = 0.d0
 c           PS = x_n * nCercle 
             PS = PS + XDE2 * XPALB(I,ID1+ID)
-*           projection de l'excentration ini sur la mormale aucercle :
-*           psexc = psexc + (XPALB(I,ID2+ID) * XPALB(I,ID1+ID))
-            psexc = psexc + (exc2(id) * XPALB(I,ID1+ID))
- 332     CONTINUE
+            psexc = psexc + exc2(id)*xpalb(i,id1+id)
+         enddo
 
 *  calcul de la valeur du deplacement relatif suivant la normale
 *  au plan tangent du contact (on tient compte de l'excentrement)
          XPME = 0.D0
          PSXPME = 0.D0
-         DO 334 ID = 1,IDIM
-c           x_n = xA_n - xB_n
-            XDE2 = XPTB(NPOA,1,ID) - XPTB(NPOB,1,ID)
-            XDE2 = XDE2 + FEXPSM(NPOa,NPA,IND1,ID)
-     &                  - FEXPSM(NPOb,NPA,IND1,ID)
-c           x' = x_n - (x_n * nCercle) * nCercle
-            XPRIM = XDE2 - PS * XPALB(I,ID1+ID)
-*            write(*,*)'devfb3 : "in plane" displ comp ',id
-*            write(*,*),xprim
-*            write(*,*)'         "in plane" exc '
-*            write(*,*),(XPALB(I,ID2+ID) - psexc*XPALB(I,ID1+ID))
-c           x" = x'-e  et  XDEP = sqrt(x"*x")
-c           rem bp : excentration hors plan fausse l'enfoncement, non ?
-*           XPME = XPRIM - (XPALB(I,ID2+ID) -
-*    &                     XPALB(I,ID2+ID)*XPALB(I,ID1+ID))
-*  matthieu : correction xprim - partie "in plane" de l'excentration :
-*           XPME = XPRIM - (XPALB(I,ID2+ID) -
-*    &                     psexc*XPALB(I,ID1+ID))
-            XPME = XPRIM - (exc2(id) -
-     &                     psexc*XPALB(I,ID1+ID))
-            XPALB(I,ID3+ID) = XPME
-            PSXPME = PSXPME + XPME**2
- 334     CONTINUE
-         XDEP = SQRT(PSXPME)
-*         write(*,*)'devfb3 : pcercle mobile : "in plane" displ - exc :'
-*         write(*,'(3(1X,F8.5))') , (xpalb(i,id3+id),id=1,3)
-*         write(*,*)'devfb3 : jeu = ',xpalb(i,2)
-
+         do id = 1,idim
+c           x_n = xa_n - xb_n
+            xde2 = xptb(npoa,1,id) - xptb(npob,1,id) 
+*           xde2 = xptb(npoa,1,id) - xptb(npob,1,id) + exc2(id)
+c           x' = x_n - (x_n * ncercle) * ncercle
+            xprim = xde2 - ps * xpalb(i,id1+id)
+            xpme = xprim - (exc2(id) - psexc*xpalb(i,id1+id))
+*           xpme = xprim
+            xpalb(i,id3+id) = xpme
+            psxpme = psxpme + xpme**2
+         enddo
+         xdep = sqrt(psxpme)
 * normale au plan tangent = direction normale du choc = n
-*         IF(XDEP.GT.1.D-20) THEN
-         IF(XDEP.GT.xpetit) THEN
-            DO 336 ID = 1,IDIM
-               XPALB(I,ID3+ID) = XPALB(I,ID3+ID) / XDEP
- 336        CONTINUE
-         ENDIF
-*  calcul de la vitesse relative tangentielle : vt = v - (v*n)*n
-*  et de l'allongement d'adherence
-         XVITN = 0.D0
-         PSN0  = 0.D0
-         DO 338 ID = 1,IDIM
-            XVITN= XVITN+ XPALB(I,ID4+ID) * XPALB(I,ID3+ID)
-            PSN0 = PSN0 + XPALB(I,ID5+ID) * XPALB(I,ID3+ID)
- 338     CONTINUE
-         DO 340 ID = 1,IDIM
-            XPALB(I,ID4+ID) = (XPALB(I,ID4+ID) - XVITN* XPALB(I,ID3+ID))
-cbp,2020-09     &                         /PDTS2
-            XPALB(I,ID5+ID) =  XPALB(I,ID5+ID) - PSN0 * XPALB(I,ID3+ID)
- 340     CONTINUE
-*  calcul de la force de choc
-         IF (ITYP.EQ.33 .or. ITYP.EQ.133) THEN
-*            write(*,*)'devfb3 : pt_cercle_mobile call dyche3 :'
-            CALL DYCHE3(XDEP,IDIM,IGP,XPALB,NLIAB,I,INTER
-     &                 ,XFN,XFT,XPUS,iannul)
-         ELSE
-cbp,2020-09            XVITN = PSN / PDTS2
-*            write(*,*)'devfb3 : pt_cercle_mobile call dycha3 :'
-            XVALB(I,IND,3) = XVITN
-            CALL DYCHA3(XDEP,XVITN,IDIM,IGP,XPALB,NLIAB,I,INTER
-     &                 ,XFN,XFT,XPUS,iannul)
-         ENDIF
+         if(xdep.gt.1.d-20) then
+            do id = 1,idim
+               xpalb(i,id3+id) = xpalb(i,id3+id) / xdep
+            enddo
+         endif
+***** matthieu : choc purement frictionnel
+         IGP = -1
+         XVITT = 0.D0
+         XFN = 0.D0
+         XFT = 0.D0
+         XPUS = 0.D0
+         XJEU  = XPALB(I,2)
+*         XAD = ABS(XDEP)
+*         XAJ = ABS(XJEU)
+         XRAIN = XPALB(I,1)
+         XGLIS = XPALB(I,3)
+*         XADHE = XPALB(I,4)
+*         XRAIT = XPALB(I,5)
+* cms : on utilise l'amortissement tangentiel comme amortissement normal :
+         XAMOT = XPALB(I,6)
+         XVAL = XDEP - XJEU
+*        on initialise la force tangentielle a 0 :
+         do id=1,3
+            xpalb(i,id6+id) = 0.d0
+         enddo
+*****    si penetration :
+         if (xval.gt.0.d0) then
+*        glissement
+         igp = 1
+*        loi de coulomb
+         XFN = -XRAIN * XVAL
+         XFT = -XGLIS * ABS(XFN)
+*        comp normale de la vitesse
+         xvitn = 0.d0
+         do id = 1,idim
+            xvitn= xvitn + xpalb(i,id4+id) * xpalb(i,id3+id)
+         enddo
+*        si le vitesse et selon la normale rentrante, alors on applique l'amortissent
+         if (xvitn.gt.0.d0) then
+            xfn = xfn - (xamot * xvitn)
+         endif
+*        comp tangentielle de la vitesse :
+         psvitt = 0.d0
+         do id=1,3
+           xpalb(i,id4+id) = xpalb(i,id4+id) - xvitn*xpalb(i,id3+id) 
+           psvitt = psvitt + (xpalb(i,id4+id)**2)
+         enddo
+         xvitt = dsqrt(psvitt)
+*        puissance d'usure :
+         xpus = dabs(xfn * xvitt)
+*        calcul de la force tangentielle :
+         if (xvitt.gt.1.d-20) then
+            do id = 1,idim
+               xpalb(i,id6+id) = xft * xpalb(i,id4+id) / xvitt
+            enddo
+         endif
+*        fin si penetration :
+         endif
+*        on sauvegarde :
          XVALB(I,IND,1) = XFN
          XVALB(I,IND,10) = ABS(XFT)
          XVALB(I,IND,12) = XPUS
          IPALB(I,2) = IGP
-
-         IF (IGP .EQ. 1)  THEN
-            PS = 0.D0
-              DO 30 ID = 1,IDIM
-                PS = PS + (XPALB(I,ID4+ID)*XPALB(I,ID4+ID))
- 30           CONTINUE
-            XVITT = SQRT(PS)
-         ELSE
-            XVITT = 0.D0
-         ENDIF
          XVALB(I,IND,11) = XVITT
-*  si pas d'adherence (c.a.d. glissement ou pas de contact)
-*  memorisation de la vitesse tangentielle et de la force tangentielle
-         IF (IGP.EQ.1 .OR. IGP.EQ.-1) THEN
-            DO 342 ID = 1,IDIM
-               XPALB(I,ID8+ID) = XPALB(I,ID4+ID)
-               XPALB(I,ID9+ID) = XPALB(I,ID6+ID)
- 342        CONTINUE
-         ENDIF
-*        fA = fA + |fn|*n + ft
-*        fB = fB - |fn|*n + ft
-*         if (dabs(xdep).gt.abs(xpalb(i,2))) then 
-*            write(*,*)'force normale exercee sur le point : '
-*            write(*,'(3(1X,F8.5))') , (xfn*xpalb(i,id3+id),id=1,3)
-*            write(*,*)'force tangentielle exercee sur le point : '
-*            write(*,'(3(1X,F8.5))') , (xpalb(i,id6+id),id=1,3)
-**           call exit(1)
-*         endif
-         DO 344 ID = 1,IDIM
-            FTOTB(NPOA,ID) = FTOTB(NPOA,ID) + XFN*XPALB(I,ID3+ID)
-     &                                      + XPALB(I,ID6+ID)
-            FTOTB(NPOB,ID) = FTOTB(NPOB,ID) - XFN*XPALB(I,ID3+ID)
-     &                                      - XPALB(I,ID6+ID)
- 344     CONTINUE
-
-
+*        on immplente les forces de reaction :
+         do id = 1,idim
+            ftotb(npoa,id) = ftotb(npoa,id) + xfn*xpalb(i,id3+id)
+     &                                      + xpalb(i,id6+id)
+            ftotb(npob,id) = ftotb(npob,id) - xfn*xpalb(i,id3+id)
+     &                                      - xpalb(i,id6+id)
+         enddo
+*        ftotb(npoa,4) = xptb(npoa,1,id) - xptb(npob,1,id) + exc2(id)
 *--------------------------------------------------------------------*
 * --- choc elementaire cercle_cercle_frottement
 *                      avec ou sans amortissement
