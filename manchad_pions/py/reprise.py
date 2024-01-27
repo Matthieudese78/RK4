@@ -19,22 +19,30 @@ source = f'../{filename}'
 repcast = f'../../build/'
 lstdout = False
 #%% nombre de slices :
-nslice = 120
+nslice = 240
+# nslice = 3
 #%% parametres du calcul 
+
+linert = True
+mu = 0.6
+xi = 0.05
 ttot = 120.
 f1 = 2.
 f2 = 20.
-t = 1.
+t = 0.5
 lexp  = "faux" 
 raidiss  = "vrai" 
+# on bloc la rotation en ry de l'adaptateur ?
+blqry = "vrai"
 dte = 1.e-6
-nsort = 2000
-nmode = 10
-n_tronq = 6
+nsort = 30
+# 3 modes de flexion :
+nmode = 3
+n_tronq = 0
 nmode_ad = 7
 Fext = 137.*np.sqrt(2.)
 fefin = 5.
-vlimoden = 1.e-4
+vlimoden = 1.e-5
 amo_ccone = 3.4
 # on donne les 1ers angles en degres !
 theta_rx = 0.
@@ -54,10 +62,17 @@ vzini = 0.
 lmad2 = "faux"
 nmad = nmode_ad
 if (lmad2=="vrai"):
-    nmad = nmad - 1
+    # nmad = nmad - 1
+    nmad = 1
 #%% repertoire de sauvegarde : 
 vlostr = int(-np.log10(vlimoden))
-repglob = f'../calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}/'
+dtstr = int(-np.log10(dte))
+xistr = int(100.*xi)
+nameglob = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
+repglob = f'../{nameglob}/'
+# si couplage inertiel, on le met :
+if (linert):
+  repglob = f'../{nameglob}_inert/'
 
 #%%########################### CALCUL 0
 # calcul initial : 
@@ -72,6 +87,8 @@ dictini = {
              'reprise' : "vrai",
   #          lexp : decroissance exponentielle du chargement
              'lexp' : "faux",
+  #          blqry : bloq rotq ry adaptateur
+             'blqry' : blqry,
   #          lmad2 : on retire le 2eme mode de l'adapter ?
              'lmad2' : lmad2,
   #          lraidiss : on met les raidisseurs ? 
@@ -257,9 +274,10 @@ shutil.copy(f'{repcast}cast_64_21',f"{destination}cast_64_21")
 print(f"    files copied") 
 #  lecture du dataframe :
 df = pd.read_pickle(f"{repload}{scriptload}")
+df.sort_values(by='t',inplace=True)
 #  trnasfo quaternion to vecteur de rotation : 
 q = np.array([df['quat1'].iloc[-1],df['quat2'].iloc[-1],df['quat3'].iloc[-1],df['quat4'].iloc[-1]])
-vect = rotation.quat2vect(q)
+vect = rotation.quat2vect2(q)
 # vect : en radians !! le .dgibi est adapte pour (reprise et (slice >EG 2))
 
 #  
@@ -271,6 +289,8 @@ dict_rep = {
              'reprise' : "vrai",
   #          lexp : 
              'lexp' : lexp,
+  #          blqry : bloq rotq ry adaptateur
+             'blqry' : blqry,
   #          fefin : valeur de la force a la fin du calcul si lexp :
              'fefin' : fefin,
   #          lmad2 : on retire le 2eme mode de l'adapter 
@@ -301,6 +321,9 @@ dict_rep = {
              'wxini' : df['WX'].iloc[-1],
              'wyini' : df['WY'].iloc[-1],
              'wzini' : df['WZ'].iloc[-1],
+             'arxini' : df['AX'].iloc[-1],
+             'aryini' : df['AY'].iloc[-1],
+             'arzini' : df['AZ'].iloc[-1],
   #          ddls rig : translations 
              'uxini' : df['qtx'].iloc[-1],
              'uyini' : df['qty'].iloc[-1],
@@ -308,22 +331,27 @@ dict_rep = {
              'vxini' : df['qvtx'].iloc[-1],
              'vyini' : df['qvty'].iloc[-1],
              'vzini' : df['qvtz'].iloc[-1],
+             'axini' : df['qatx'].iloc[-1],
+             'ayini' : df['qaty'].iloc[-1],
+             'azini' : df['qatz'].iloc[-1],
             }
 dfini = pd.DataFrame(dict_rep, index=[0])
 
 for i in np.arange(nmode - n_tronq):
     nameu = f"q{i+1}"
     namev = f"q{i+1}v"
-    new_cols = [nameu, namev]
-    new_vals = [ df[nameu].iloc[-1] , df[namev].iloc[-1] ]
+    namea = f"q{i+1}a"
+    new_cols = [nameu, namev, namea]
+    new_vals = [ df[nameu].iloc[-1] , df[namev].iloc[-1], df[namea].iloc[-1]]
     for col,val in zip(new_cols,new_vals):
       dfini[col] = val
 
 for i in np.arange(nmad):
     nameuad = f"q{i+1}ad"
     namevad = f"q{i+1}vad"
-    new_cols = [nameuad, namevad]
-    new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1] ]
+    nameaad = f"q{i+1}aad"
+    new_cols = [nameuad, namevad, nameaad]
+    new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1], df[nameaad].iloc[-1] ]
     for col,val in zip(new_cols,new_vals):
       dfini[col] = val
 
@@ -409,9 +437,10 @@ for slice in range(2,nslice+1):
   print(f"    files copied") 
   #  lecture du dataframe :
   df = pd.read_pickle(f"{repload}{scriptload}")
+  df.sort_values(by='t',inplace=True)
   #  trnasfo quaternion to vecteur de rotation : 
   q = np.array([df['quat1'].iloc[-1],df['quat2'].iloc[-1],df['quat3'].iloc[-1],df['quat4'].iloc[-1]])
-  vect = rotation.quat2vect(q)
+  vect = rotation.quat2vect2(q)
   # vect : en radians !! le .dgibi est adapte pour (reprise et (slice >EG 2))
 
   #  
@@ -447,6 +476,9 @@ for slice in range(2,nslice+1):
                'wxini' : df['WX'].iloc[-1],
                'wyini' : df['WY'].iloc[-1],
                'wzini' : df['WZ'].iloc[-1],
+               'arxini' : df['AX'].iloc[-1],
+               'aryini' : df['AY'].iloc[-1],
+               'arzini' : df['AZ'].iloc[-1],
     #          ddls rig : translations 
                'uxini' : df['qtx'].iloc[-1],
                'uyini' : df['qty'].iloc[-1],
@@ -454,21 +486,27 @@ for slice in range(2,nslice+1):
                'vxini' : df['qvtx'].iloc[-1],
                'vyini' : df['qvty'].iloc[-1],
                'vzini' : df['qvtz'].iloc[-1],
+               'axini' : df['qatx'].iloc[-1],
+               'ayini' : df['qaty'].iloc[-1],
+               'azini' : df['qatz'].iloc[-1],
               }
   dfini = pd.DataFrame(dict_rep, index=[0])
 
   for i in np.arange(nmode - n_tronq):
       nameu = f"q{i+1}"
       namev = f"q{i+1}v"
-      new_cols = [nameu, namev]
-      new_vals = [ df[nameu].iloc[-1] , df[namev].iloc[-1] ]
+      namea = f"q{i+1}a"
+      new_cols = [nameu, namev, namea]
+      new_vals = [ df[nameu].iloc[-1] , df[namev].iloc[-1], df[namea].iloc[-1]]
       for col,val in zip(new_cols,new_vals):
         dfini[col] = val
+
   for i in np.arange(nmad):
       nameuad = f"q{i+1}ad"
       namevad = f"q{i+1}vad"
-      new_cols = [nameuad, namevad]
-      new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1] ]
+      nameaad = f"q{i+1}aad"
+      new_cols = [nameuad, namevad, nameaad]
+      new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1], df[nameaad].iloc[-1] ]
       for col,val in zip(new_cols,new_vals):
         dfini[col] = val
 
