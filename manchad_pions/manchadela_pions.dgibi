@@ -25,7 +25,7 @@ ez = (-1.) 0. 0. ;
 *                   Temps :
 **************************************************************
 *# ttot :
-ttot = 120. ;
+ttot = 128. ;
 
 *# t :
 T = 5.e-6 ;
@@ -62,8 +62,10 @@ ltrans = faux ;
 * amortissement modal ?
 *# lamode :
 lamode = faux ;
-*# amode :
-amode = 0.01 ;
+*# amode_ad :
+amode_ad = 0.01 ;
+*# amode_m :
+amode_m = 0.01 ;
 *# lexp :
 lexp = vrai ;
 * est-ce qu'on retire le 2eme mode de l'adaptateur ?
@@ -542,6 +544,7 @@ tmode . 'MODES' = table 'BASE_DE_MODES' ;
 tmode . 'MODES' . 'MAILLAGE' = manchette ;
 Tmode . 'MAILLAGE_REPERE' = VIDE 'MAILLAGE' ;
 numode = 1 ;
+l_amor_m = prog ; 
 repe bmode (nmode) ;
 * mode traction-compression ? a ne prendre qu'une fois en compte.
   lect1 = lect &bmode ;
@@ -551,21 +554,28 @@ repe bmode (nmode) ;
 * on renumerote :
   tmode_elax . modes . &bmode . 'NUMERO_MODE' = numode ; 
   tmode . modes . numode = tmode_elax . modes . &bmode ;
+* pour l'amortissement : 2 m omega xi = ci :
+  mui = tmode_elax . modes . &bmode . 'MASSE_GENERALISEE' ;
+  fi  = tmode_elax . modes . &bmode . 'FREQUENCE' ;
+  ci = (2.*mui*(2.*pi*fi)*amode_m) ;
+  l_amor_m = l_amor_m et ci ;
   si (non tracomp) ;
 * on complete le maillage repere :
   tmode . 'MAILLAGE_REPERE' = (tmode . 'MAILLAGE_REPERE') et (Tmode_elay . 'MODES' . &bmode . 'POINT_REPERE') ;
   tmode_elay . modes . &bmode . 'NUMERO_MODE' = (numode + 1) ; 
   tmode . modes . (numode + 1) = tmode_elay . modes . &bmode ;
+* le mode est identique ne 'UY' donc l'amortiessement est le mm :
+  l_amor_m = l_amor_m et (2.*mui*(2.*pi*fi)*amode_m) ;
   numode = numode + 1 ;
   finsi ;
 * incrementation de numode : 
   numode = numode + 1 ;
 fin bmode ;
-
+* on met l'amortissement maintenant avant de rajouter les modes de corps rigides :
+tamor = table 'AMORTISSEMENT' ;
+tamor . 'AMORTISSEMENT' = (amor tmode l_amor_m) ;
 * opti trac x ;
 postvibr Tmode ; 
-* opti donn 5 ;
-
 * Tmode_middle = VIBR 'IRAM' 5.  nmode K1 M1 ;
 * postvibr Tmode_middle ; 
 * Tmode_high   = VIBR 'IRAM' 10. nmode K1 M1 ;
@@ -2081,13 +2091,17 @@ finsi ;
 ****************************************************************************
 *           Tamor
 ****************************************************************************
-tamor = table 'AMORTISSEMENT' ;
-L_amor = prog NMODE_AD*amode ;
-si (lmad2) ;
-  L_amor = prog nmad*amode ;
-finsi ;
-
-tamor . 'AMORTISSEMENT' = amor tmode_ad l_amor ;
+L_amor_ad = prog ;
+repe bamoad (nmode_ad) ;
+  mui = tmode_ad . modes . &bamoad . 'MASSE_GENERALISEE' ;
+  fi  = tmode_ad . modes . &bamoad . 'FREQUENCE' ;
+  ci = (2.*mui*(2.*pi*fi)*amode_ad) ;
+  l_amor_ad = l_amor_ad et ci ;
+  mess (chai 'mui = 'mui) ;
+  mess (chai 'fi = 'fi) ;
+fin bamoad ;
+*
+tamor . 'AMORTISSEMENT' = (tamor . 'AMORTISSEMENT') et (AMOR tmode_ad l_amor_ad) ;
 ****************************************************************************
 *           DYNE
 ****************************************************************************

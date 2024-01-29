@@ -19,7 +19,8 @@ source = f'../{filename}'
 repcast = f'../../build/'
 lstdout = False
 #%% nombre de slices :
-nslice = 240
+nslice = 256
+ttot = 128.
 # nslice = 3
 #%% parametres du calcul 
 
@@ -44,6 +45,10 @@ Fext = 137.*np.sqrt(2.)
 fefin = 5.
 vlimoden = 1.e-5
 amo_ccone = 3.4
+# amortissement modal :
+lamode = "vrai"
+amode_m = 0.01
+amode_ad = 0.01
 # on donne les 1ers angles en degres !
 theta_rx = 0.
 theta_ry = 0.
@@ -69,11 +74,15 @@ vlostr = int(-np.log10(vlimoden))
 dtstr = int(-np.log10(dte))
 xistr = int(100.*xi)
 nameglob = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
-repglob = f'../{nameglob}/'
+if (lamode=="vrai"):
+  amodemstr = int(amode_m*100.)
+  amodeadstr = int(amode_ad*100.)
+  nameglob = f'{nameglob}_amodem_{amodemstr}_amodead_{amodeadstr}'
 # si couplage inertiel, on le met :
 if (linert):
-  repglob = f'../{nameglob}_inert/'
+  nameglob = f'{nameglob}_inert'
 
+repglob = f'../{nameglob}/'
 #%%########################### CALCUL 0
 # calcul initial : 
 #   - avec fort amortissement
@@ -85,6 +94,8 @@ slice = 0
 dictini = {
   #          reprise : 
              'reprise' : "vrai",
+  #          ttot : 
+             'ttot' : ttot,
   #          lexp : decroissance exponentielle du chargement
              'lexp' : "faux",
   #          blqry : bloq rotq ry adaptateur
@@ -104,7 +115,8 @@ dictini = {
   #          lamode : 
              'lamode' : "vrai",
   #          amode : 
-             'amode' : 30.,
+             'amode_ad' : 30.,
+             'amode_m' : 0.,
   #          f1 : 
              'f1' : f1,
   #          f2 : 
@@ -287,6 +299,8 @@ dict_rep = {
              't' : t,
   #          reprise : 
              'reprise' : "vrai",
+  #          ttot : 
+             'ttot' : ttot,
   #          lexp : 
              'lexp' : lexp,
   #          blqry : bloq rotq ry adaptateur
@@ -298,7 +312,10 @@ dict_rep = {
   #          lraidiss : on met les raidisseurs ? 
              'raidiss' : raidiss,
   #          lamode : 
-             'lamode' : "faux",
+             'lamode' : lamode,
+  #          amode : 
+             'amode_ad' : amode_ad,
+             'amode_m' : amode_m,
   #          slice : 
              'slice' : df['slice'].drop_duplicates().values[0]+1,
   #          amo_ccone : 
@@ -448,10 +465,17 @@ for slice in range(2,nslice+1):
   dict_rep = {
     #          reprise : 
                'reprise' : "vrai",
+    #          ttot : 
+               'ttot' : ttot,
     #          lexp : 
                'lexp' : lexp,
     #          fefin : 
                'fefin' : fefin,
+    #          lamode : 
+               'lamode' : lamode,
+    #          amode : 
+               'amode_ad' : amode_ad,
+               'amode_m' : amode_m,
     #          lmad2 : on retire le 2eme mode de l'adapter 
                'lmad2' : lmad2,
     #          lraidiss : on met les raidisseurs ? 

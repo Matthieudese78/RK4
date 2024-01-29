@@ -12,6 +12,8 @@ linert = True
 Fext = 193.
 mu = 0.6
 xi = 0.05
+amode_m = 0.01
+amode_ad = 0.01
 vlimoden = 1.e-5
 spinini = 0.
 dte = 1.e-6
@@ -19,6 +21,11 @@ vlostr = int(-np.log10(vlimoden))
 dtstr = int(-np.log10(dte))
 xistr = int(100.*xi)
 namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
+
+amodemstr = str(int(amode_m*100.))
+amodeadstr = str(int(amode_ad*100.))
+namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
+
 if (linert):
   namerep = f'{namerep}_inert'
 

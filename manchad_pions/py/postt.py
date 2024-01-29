@@ -53,6 +53,8 @@ lpcirc = True
 Fext = 193.
 mu = 0.6
 xi = 0.05
+amode_m = 0.01
+amode_ad = 0.01
 vlimoden = 1.e-5
 spinini = 0.
 dte = 1.e-6
@@ -60,6 +62,9 @@ vlostr = int(-np.log10(vlimoden))
 dtstr = int(-np.log10(dte))
 xistr = int(100.*xi)
 namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
+amodemstr = str(int(amode_m*100.))
+amodeadstr = str(int(amode_ad*100.))
+namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
 repload = f'./pickle/{namerep}/'
 rep_save = f"./fig/{namerep}/"
 if (linert):
@@ -86,9 +91,10 @@ df.reset_index(drop=True,inplace=True)
 t1 = 0.
 if (not linert):
     t1 = 0.1 
-t2 = 120.
+t2 = 128.
 df = df[(df['t']>t1) & (df['t']<=t2)]
 df.reset_index(drop=True,inplace=True)
+
 # %% 100 points par seconde 
     # nsort = 10 et x4 dans dopickle_slices :
 if (not linert):

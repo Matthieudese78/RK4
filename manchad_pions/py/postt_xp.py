@@ -9,8 +9,17 @@ import rotation as rota
 import repchange as rc
 import os
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.colors as pltcolors
 import mplcursors
-
+#%%
+def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+    new_cmap = pltcolors.LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
+        cmap(np.linspace(minval, maxval, n)))
+    return new_cmap
+cmap3 = truncate_colormap(mpl.cm.inferno, 0., 0.9, n=100)
 #%% usefull parameters :
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 view = [20, -50]
@@ -166,6 +175,9 @@ df['spin'] = df['spin'][0] - (df['spin'] - df['spin'][0])
 
 df['spindeg'] = df['spin'] * 180. / np.pi
 
+# O2 : decale de 30 degres :
+# essai = '20201127_1406'
+
 # def chspindir(df,**kwargs):
 #     # return "done"    
 #     xval = df[kwargs['col1']]
@@ -315,6 +327,16 @@ df['posPHxm'] =  1.e-3 * df['posPHx']
 df['posPHym'] =  1.e-3 * df['posPHy']
 df['posPBxm'] =  1.e-3 * df['posPBx']
 df['posPBym'] =  1.e-3 * df['posPBy']
+df['posHxm'] =  1.e-3 * df['posHx']
+df['posHym'] =  1.e-3 * df['posHy']
+df['posHrm'] =  1.e-3 * df['posHr']
+
+# %% maximum penetration :
+penePB = cmax - df['posPBxm'].abs().max()
+penePH = cmax - df['posPHxm'].abs().max()
+maxdeplPB = df['posPBxm'].abs().max()
+maxdeplPH = df['posPHxm'].abs().max()
+maxdeplHr = df['posHrm'].abs().max()
 # %% lecture du dataframe :
 repsect1 = f"{rep_save}variables_ft/"
 if not os.path.exists(repsect1):
@@ -332,7 +354,7 @@ kwargs1 = {
     "label1": None,
     "labelx": r"$t \quad (s)$",
     "labely": r"$u_y(G_ad)$"+" (m)",
-    "color1": color1[2],
+    "color1": color1[0],
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -345,7 +367,7 @@ kwargs1 = {
     "label1": None,
     "labelx": r"$t \quad (s)$",
     "labely": r"$u_y(P_{pin}^u)$"+" (m)",
-    "color1": color1[2],
+    "color1": color1[1],
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -371,7 +393,20 @@ kwargs1 = {
     "label1": None,
     "labelx": r"$t \quad (s)$",
     "labely": r"$\Psi \quad (\degree)$",
-    "color1": color1[2],
+    "color1": color1[0],
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "spinS sleeve = f(t)" + "\n",
+    "tile_save": "spin_t_xp",
+    "colx": "tL",
+    "coly": "spindeg",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": r"$t \quad (s)$",
+    "labely": r"$\Psi \quad (\degree)$",
+    "color1": color1[0],
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -449,6 +484,7 @@ kwargs1 = {
     "arcwidth" : sect_pion_deg,
     "clmax" : cmax,
     "offsetangle" : 0.,
+    "xymax" : maxdeplPB,
 }
 traj.pltraj2d_pion(df, **kwargs1)
 #%% pion bas :
@@ -474,6 +510,32 @@ kwargs1 = {
     "arcwidth" : sect_pion_deg,
     "clmax" : cmax,
     "offsetangle" : 0.,
+    "xymax" : maxdeplPB,
 }
 traj.pltraj2d_pion(df, **kwargs1)
 # %%
+kwargs1 = {
+    "tile1": "traj. relative Ccirc / PB_ad" + "\n",
+    "tile_save": "traj2d_ccirc_circ",
+    "ind": [df.index],
+    # "ind": [indpPB],
+    "colx": "posHxm",
+    "coly": "posHym",
+    "rep_save": repsect1,
+    "label1": [None],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "color1": ['black'],
+    "rcirc" : ray_circ,
+    "excent" : excent,
+    "spinz" : spinz,     
+    "scatter" : True,
+    "msize" : 0.1,
+    "endpoint" : [False],
+    "markers" : ['s','s'],
+    "arcwidth" : sect_pion_deg,
+    "clmax" : cmax,
+    "offsetangle" : 0.,
+    "xymax" : maxdeplPB,
+}
+traj.pltraj2d_pion(df, **kwargs1)
