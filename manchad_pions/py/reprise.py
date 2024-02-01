@@ -25,6 +25,10 @@ ttot = 128.
 #%% parametres du calcul 
 
 linert = True
+# raideur de choc de l'experience basee sur le temps de choc :
+lkxp = "faux"
+tcxp = 5.e-3
+
 mu = 0.6
 xi = 0.05
 ttot = 120.
@@ -43,12 +47,15 @@ n_tronq = 0
 nmode_ad = 7
 Fext = 137.*np.sqrt(2.)
 fefin = 5.
-vlimoden = 1.e-5
-amo_ccone = 3.4
+vlimoden = 1.e-4
 # amortissement modal :
 lamode = "vrai"
-amode_m = 0.01
-amode_ad = 0.01
+amode_m = 0.02
+amode_ad = 0.02
+# amortissement ccone :
+amo_ccone = 17.
+# rappel : on a aussi remis thlim a 10^-5 dans devfb10.
+# amo_ccone = 3.4
 # on donne les 1ers angles en degres !
 theta_rx = 0.
 theta_ry = 0.
@@ -79,8 +86,11 @@ if (lamode=="vrai"):
   amodeadstr = int(amode_ad*100.)
   nameglob = f'{nameglob}_amodem_{amodemstr}_amodead_{amodeadstr}'
 # si couplage inertiel, on le met :
+if (lkxp=="vrai"):
+  nameglob = f'{nameglob}_kxp'
 if (linert):
   nameglob = f'{nameglob}_inert'
+
 
 repglob = f'../{nameglob}/'
 #%%########################### CALCUL 0
@@ -94,6 +104,10 @@ slice = 0
 dictini = {
   #          reprise : 
              'reprise' : "vrai",
+  #          raideur de choc xp : 
+             'lkxp' : lkxp,
+  #          temps de choc xp : 
+             'tcxp' : tcxp,
   #          ttot : 
              'ttot' : ttot,
   #          lexp : decroissance exponentielle du chargement
@@ -299,6 +313,10 @@ dict_rep = {
              't' : t,
   #          reprise : 
              'reprise' : "vrai",
+  #          raideur de choc xp : 
+             'lkxp' : lkxp,
+  #          temps de choc xp : 
+             'tcxp' : tcxp,
   #          ttot : 
              'ttot' : ttot,
   #          lexp : 
@@ -465,6 +483,10 @@ for slice in range(2,nslice+1):
   dict_rep = {
     #          reprise : 
                'reprise' : "vrai",
+    #          raideur de choc xp : 
+               'lkxp' : lkxp,
+    #          temps de choc xp : 
+               'tcxp' : tcxp,
     #          ttot : 
                'ttot' : ttot,
     #          lexp : 

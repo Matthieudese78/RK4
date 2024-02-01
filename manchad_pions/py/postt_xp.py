@@ -129,10 +129,16 @@ df = pd.DataFrame(df)
 df.sort_values(by='tL',inplace=True)
 df.reset_index(drop=True,inplace=True)
 # %% fenetrage en temps : 
-if (icas==0):
-    t1 = 11. 
-t2 = df['tL'].iloc[-1]
-df = df[(df['tL']>=t1) & (df['tL']<=t2)]
+# if (icas==0):
+#     t1 = 11. 
+# t2 = df['tL'].iloc[-1]
+# df = df[(df['tL']>=t1) & (df['tL']<=t2)]
+trigger_level = 2
+for i in range(len(df['TTL'])) :
+    if df['TTL'][i] > trigger_level :
+        imin = i
+        break
+df = df[df.index>=imin]
 df.sort_values(by='tL',inplace=True)
 df.reset_index(drop=True,inplace=True)
 #%% on remet l'origine du temps a 0 :
@@ -419,6 +425,7 @@ else:
     print(f"FOLDER : {repsect1} already exists.")
 
 #%% psd :
+    # uygad :
 power, freq = plt.psd(1.e6*df['yA'], NFFT=2**(nt-6), Fs=fs/10, scale_by_freq=0., color=color1[2])
 plt.close('all')
 # get the ordinate of plt.psd :
@@ -443,6 +450,42 @@ lanot = [(0.30,59.86),(1.90,40.99),(4.60,27.33),(5.50,20.28)]
 kwargs1 = {
     "tile1": " PSD uy(G) adapter = f(freq)" + "\n",
     "tile_save": "PSD_uygad_xp",
+    "x": freq,
+    "y": power_density,
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": color1[2],
+    "annotations": lanot,
+}
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+    #%% uypb :
+power, freq = plt.psd(1.e6*df['posPBym'], NFFT=2**(nt-6), Fs=fs/10, scale_by_freq=0., color=color1[2])
+plt.close('all')
+# get the ordinate of plt.psd :
+power_density = 10. * np.log10(power)
+
+linteractif = False
+if (linteractif):
+    fig, ax = plt.subplots()
+    ax.plot(freq, power_density, label='Data')
+    # Enable cursor and display values
+    mplcursors.cursor(hover=True).connect(
+        "add", lambda sel: sel.annotation.set_text(f"{sel.target[0]:.2f}, {sel.target[1]:.2f}"))
+
+    # Adding labels and title
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.title('Interactive Plot with mplcursors')
+    
+    # Show the plot
+    plt.show()
+lanot = [(1.95,43.43),(4.66,24.26),(8.85,13.38),(23.45,7.16),(38.50,8.47)]
+kwargs1 = {
+    "tile1": " PSD uy(PB) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uypb_xp",
     "x": freq,
     "y": power_density,
     "rep_save": repsect1,

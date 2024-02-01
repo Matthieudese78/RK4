@@ -9,12 +9,14 @@ import shutil
   # on discretise ?
 ndiscr = 1
 linert = True
+lamode = True
+lkxp = False
 Fext = 193.
 mu = 0.6
 xi = 0.05
-amode_m = 0.01
-amode_ad = 0.01
-vlimoden = 1.e-5
+amode_m = 0.02
+amode_ad = 0.02
+vlimoden = 1.e-4
 spinini = 0.
 dte = 1.e-6
 vlostr = int(-np.log10(vlimoden))
@@ -24,8 +26,11 @@ namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi
 
 amodemstr = str(int(amode_m*100.))
 amodeadstr = str(int(amode_ad*100.))
-namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
+if lamode:
+  namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
 
+if (lkxp):
+  namerep = f'{namerep}_kxp'
 if (linert):
   namerep = f'{namerep}_inert'
 

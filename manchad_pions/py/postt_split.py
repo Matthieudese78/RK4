@@ -9,7 +9,7 @@ import repchange as rc
 import os
 import matplotlib.pyplot as plt
 import mplcursors
-
+import sys 
 #%% usefull parameters :
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 view = [20, -50]
@@ -20,8 +20,8 @@ d_pion = 68.83*1.e-3
 h_pion = ((d_pion - d_ext)/2.) 
 ray_circ = ((dint_a/2.) - (d_ext/2.))
 spinz = 0.
-excent = (0., h_pion)
-# excent = (0. ,-h_pion)
+# excent = (0., h_pion)
+excent = (0. ,(h_pion))
 # secteur angulaire pris par un pion : 
 sect_pion_deg = (19. / (68.83 * 2.*np.pi ) ) * 360.
 sect_pion_rad = (19. / (68.83 * 2.*np.pi ) ) * 2.*np.pi
@@ -47,37 +47,32 @@ lchoc = False
 # namerep = "manchadela_RSG_conefixe"
 
 linert = True
-lamode = True
-lkxp = False
+lamode = False
+
 lpion = False
 lpcirc = True
-Fext = 193.
-mu = 0.6
-xi = 0.05
 
-amode_m = 0.02
-amode_ad = 0.02
-vlimoden = 1.e-5
+Fext = 193.
+mu = 0.3
+xi = 0.
+amode_m = 0.01
+amode_ad = 0.01
+vlimoden = 1.e-4
 spinini = 0.
 dte = 1.e-6
 vlostr = int(-np.log10(vlimoden))
 dtstr = int(-np.log10(dte))
 xistr = int(100.*xi)
-
 namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
-
 amodemstr = str(int(amode_m*100.))
 amodeadstr = str(int(amode_ad*100.))
-
 if lamode:
     namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
-if (lkxp):
-  namerep = f'{namerep}_kxp'
 if (linert):
     namerep = f'{namerep}_inert'
 
 repload = f'./pickle/{namerep}/'
-rep_save = f"./fig/{namerep}/"
+rep_save = f"./fig/split_{namerep}/"
 
 # %%
 
@@ -255,12 +250,8 @@ penePB = cmax - df['uypbrela'].abs().max()
 penePH = cmax - df['uyphrela'].abs().max()
 maxdeplPB = df['uypbrela'].abs().max()
 maxdeplPH = df['uyphrela'].abs().max()
-# maxdeplPB = np.sqrt(df['uxpbrela'].abs().max()**2 + df['uypbrela'].abs().max()**2)
-# maxdeplPH = np.sqrt(df['uxphrela'].abs().max()**2 + df['uyphrela'].abs().max()**2)
-print(f'maxdeplbPB = {maxdeplPB*1.e6} microns')
-print(f'maxpenePB = {penePB*1.e6} microns')
-    # one time cheat :
-# maxdeplPB = 0.0015812598679999998
+maxdeplCC = np.sqrt(df['uxcerela'].abs().max()**2 + df['uycerela'].abs().max()**2)
+
 # %% matrice de rotation de la manchette :
 kq = {"colname": "mrot", "q1": "quat1", "q2": "quat2", "q3": "quat3", "q4": "quat4"}
 rota.q2mdf(df, **kq)
@@ -373,7 +364,33 @@ if (lpcirc):
     indi_ph1 = df[(np.abs(df["FN_pcirch1"])>icrit)].index
     indi_ph2 = df[(np.abs(df["FN_pcirch2"])>icrit)].index
     indi_ph3 = df[(np.abs(df["FN_pcirch3"])>icrit)].index
-
+# split en temps :
+t1 = 20.
+t2 = 39.
+indreso = df[(df['t']>=t1) & (df['t']<=t2)].index
+indp1   = df[(df['t']<=t1)].index
+indp2   = df[(df['t']>=t2)].index
+    # ccone :
+indnicc1     = indni_ccone.intersection(indp1)
+indniccreso  = indni_ccone.intersection(indreso)
+indnicc2     = indni_ccone.intersection(indp2)
+indicc1      = indi_ccone.intersection(indp1)
+indiccreso   = indi_ccone.intersection(indreso)
+indicc2      = indi_ccone.intersection(indp2)
+    # pion haut :
+indnipb1    = indni_pb.intersection(indp1)
+indnipbreso = indni_pb.intersection(indreso)
+indnipb2    = indni_pb.intersection(indp2)
+indipb1     = indi_pb.intersection(indp1)
+indipbreso  = indi_pb.intersection(indreso)
+indipb2     = indi_pb.intersection(indp2)
+    # pion bas :
+indniph1    = indni_ph.intersection(indp1)
+indniphreso = indni_ph.intersection(indreso)
+indniph2    = indni_ph.intersection(indp2)
+indiph1     = indi_ph.intersection(indp1)
+indiphreso  = indi_ph.intersection(indreso)
+indiph2     = indi_ph.intersection(indp2)
 #%% fenetrage en temps :
 transition = False
 if transition:
@@ -408,136 +425,12 @@ else:
 lfext = np.ones_like(df['t'].values) * Fext
 lt = df['t'].values
 lfreq = np.linspace(2.,20.,len(df['t'].values))
-#%%
-kwargs1 = {
-    "tile1": "amplitude Fext = f(t)" + "\n",
-    "tile_save": "AFext_ft",
-    "x": lt,
-    "y": lfext,
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$F_{0} \quad (N)$",
-    "color1": color1[0],
-    "endpoint": False,
-}
-traj.pltraj2d_list(**kwargs1)
-kwargs1 = {
-    "tile1": "frequence chargmt = f(t)" + "\n",
-    "tile_save": "freq_ft",
-    "x": lt,
-    "y": lfreq,
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$Frequency \quad (Hz)$",
-    "color1": color1[0],
-    "endpoint": False,
-}
-traj.pltraj2d_list(**kwargs1)
 
-kwargs1 = {
-    "tile1": "Fext = f(t)" + "\n",
-    "tile_save": "Fext_ft",
-    "colx": "t",
-    "coly": "Fext",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$F_{ext} \quad (N)$",
-    "color1": color1[0],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-#%% stick / slip
-kwargs1 = {
-    "tile1": "stickslip = f(t)" + "\n",
-    "tile_save": "stickslip",
-    "colx": "t",
-    "coly": "pctg_glis_ad",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$stick \ slip \quad (\%)$",
-    "color1": color1[0],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-#%%
-# vitesses de rotations body frame :
-kwargs1 = {
-    "tile1": "Wx = f(t)" + "\n",
-    "tile_save": "Wx_t",
-    "colx": "t",
-    "coly": "WX",
-    "rep_save": repsect1,
-    "label1": r"$W_{X}$",
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$W_X \quad (rad/s)$",
-    "color1": color1[0],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
+#%%############################################
+#           PLOTS : trajectoires relatives :
+###############################################
 
-kwargs1 = {
-    "tile1": "Wy = f(t)" + "\n",
-    "tile_save": "Wy_t",
-    "colx": "t",
-    "coly": "WY",
-    "rep_save": repsect1,
-    "label1": r"$W_{Y}$",
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$W_Y \quad (rad/s)$",
-    "color1": color1[1],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "Wz = f(t)" + "\n",
-    "tile_save": "Wz_t",
-    "colx": "t",
-    "coly": "WZ",
-    "rep_save": repsect1,
-    "label1": r"$W_{Z}$",
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$W_Z \quad (rad/s)$",
-    "color1": color1[2],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-
-df['spindeg'] = df['spin'] * 180. / np.pi
-kwargs1 = {
-    "tile1": "Spin = f(t)" + "\n",
-    "tile_save": "psi_t",
-    "colx": "t",
-    "coly": "spindeg",
-    "rep_save": repsect1,
-    "label1": r"$\psi$",
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$\psi \quad (\degree)$",
-    "color1": color1[0],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "uy(G) adapter = f(t)" + "\n",
-    "tile_save": "uygad_t",
-    "colx": "t",
-    "coly": "uyg_tot_ad",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$u_y(G_ad)$"+" (m)",
-    "color1": color1[0],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-
-#%% energies :
-repsect1 = f"{rep_save}energies/"
+repsect1 = f"{rep_save}variables_ft/"
 if not os.path.exists(repsect1):
     os.makedirs(repsect1)
     print(f"FOLDER : {repsect1} created.")
@@ -545,120 +438,19 @@ else:
     print(f"FOLDER : {repsect1} already exists.")
 
 kwargs1 = {
-    "tile1": "kinetic energy sleeve = f(t)" + "\n",
-    "tile_save": "ekin_ft",
+    "tile1": "uz(G) adapter = f(t)" + "\n",
+    "tile_save": "uzccirc_t",
     "colx": "t",
-    "coly": "EC",
+    "coly": "uzcerela",
     "rep_save": repsect1,
     "label1": None,
     "labelx": r"$t \quad (s)$",
-    "labely": r"$E_{kin}$"+" (J)",
+    "labely": r"$u_z(C_{circ})$"+" (m)",
     "color1": color1[0],
     "endpoint": False,
 }
 traj.pltraj2d(df, **kwargs1)
 
-kwargs1 = {
-    "tile1": "deformation energy sleeve = f(t)" + "\n",
-    "tile_save": "edef_ft",
-    "colx": "t",
-    "coly": "edef",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$E_{def}$"+" (J)",
-    "color1": color1[1],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "weight potential energy sleeve = f(t)" + "\n",
-    "tile_save": "epotw_ft",
-    "colx": "t",
-    "coly": "epot",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$E_{w}$"+" (J)",
-    "color1": color1[2],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "energies sleeve = f(t)" + "\n",
-    "tile_save": "energies_ft",
-    "colx": ["t","t","t","t"],
-    "coly": ["EC","edef","epot","etot"],
-    "rep_save": repsect1,
-    "label1": [r"$E_{kin}$",r"$E_{def}$",r"$E_{w}$",r"$E_{tot}$"],
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$E_{kin},E_{def},E_{w},E_{tot}$"+" (J)",
-    "color1": color1,
-    "endpoint": [False,False,False,False],
-}
-traj.pltraj2d(df, **kwargs1)
-
-# adapter :
-kwargs1 = {
-    "tile1": "kinetic energy  adapter = f(t)" + "\n",
-    "tile_save": "ekin_ft_ad",
-    "colx": "t",
-    "coly": "ecad",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$E_{kin}$"+" (J)",
-    "color1": color1[0],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "deformation energy adapter = f(t)" + "\n",
-    "tile_save": "edef_ft_ad",
-    "colx": "t",
-    "coly": "edefad",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$E_{def}$"+" (J)",
-    "color1": color1[1],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "weight potential adapter = f(t)" + "\n",
-    "tile_save": "epotw_ft_ad",
-    "colx": "t",
-    "coly": "epotad",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$E_{w}$"+" (J)",
-    "color1": color1[2],
-    "endpoint": False,
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "energies sleeve adapter = f(t)" + "\n",
-    "tile_save": "energies_ft_ad",
-    "colx": ["t","t","t","t"],
-    "coly": ["ecad","edefad","epotad","etotad"],
-    "rep_save": repsect1,
-    "label1": [r"$E_{kin}$",r"$E_{def}$",r"$E_{w}$",r"$E_{tot}$"],
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$E_{kin},E_{def},E_{w},E_{tot}$"+" (J)",
-    "color1": color1,
-    "endpoint": [False,False,False,False],
-}
-traj.pltraj2d(df, **kwargs1)
-#%%############################################
-#           PLOTS : trajectoires relatives :
-###############################################
 repsect1 = f"{rep_save}traj_relatives_2d/"
 if not os.path.exists(repsect1):
     os.makedirs(repsect1)
@@ -666,6 +458,162 @@ if not os.path.exists(repsect1):
 else:
     print(f"FOLDER : {repsect1} already exists.")
 
+kwargs1 = {
+    "tile1": "Phase 1 : traj. relative Ccirc / PB_ad" + "\n",
+    "tile_save": "traj2d_ccirc_circ_phase1",
+    "ind": [indnicc1,indicc1],
+    # "ind": [indpPB],
+    "colx": "uxcerela",
+    "coly": "uycerela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "color1": ['black','orange'],
+    "rcirc" : ray_circ,
+    "excent" : excent,
+    "spinz" : spinz,     
+    "scatter" : True,
+    "msize" : 0.1,
+    "endpoint" : [False,False],
+    "markers" : ['s','s'],
+    "arcwidth" : sect_pion_deg,
+    "clmax" : cmax,
+    "offsetangle" : 0.,
+    "xymax" : maxdeplCC,
+}
+traj.pltraj2d_pion(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "Resonance : traj. relative Ccirc / PB_ad" + "\n",
+    "tile_save": "traj2d_ccirc_circ_reso",
+    "ind": [indniccreso,indiccreso],
+    # "ind": [indpPB],
+    "colx": "uxcerela",
+    "coly": "uycerela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "color1": ['black','orange'],
+    "rcirc" : ray_circ,
+    "excent" : excent,
+    "spinz" : spinz,     
+    "scatter" : True,
+    "msize" : 0.1,
+    "endpoint" : [False,False],
+    "markers" : ['s','s'],
+    "arcwidth" : sect_pion_deg,
+    "clmax" : cmax,
+    "offsetangle" : 0.,
+    "xymax" : maxdeplCC,
+}
+traj.pltraj2d_pion(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "Phase 2 : traj. relative Ccirc / PB_ad" + "\n",
+    "tile_save": "traj2d_ccirc_circ_phase2",
+    "ind": [indnicc2,indicc2],
+    # "ind": [indpPB],
+    "colx": "uxcerela",
+    "coly": "uycerela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "color1": ['black','orange'],
+    "rcirc" : ray_circ,
+    "excent" : excent,
+    "spinz" : spinz,     
+    "scatter" : True,
+    "msize" : 0.1,
+    "endpoint" : [False,False],
+    "markers" : ['s','s'],
+    "arcwidth" : sect_pion_deg,
+    "clmax" : cmax,
+    "offsetangle" : 0.,
+    "xymax" : maxdeplCC,
+}
+traj.pltraj2d_pion(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "Phase 1 : traj. relative PH / PH_ad" + "\n",
+    "tile_save": "traj2d_ph_circ_phase1",
+    "ind": [indniph1,indiph1],
+    # "ind": [indpPB],
+    "colx": "uxphrela",
+    "coly": "uyphrela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "color1": ['black','orange'],
+    "rcirc" : ray_circ,
+    "excent" : excent,
+    "spinz" : spinz,     
+    "scatter" : True,
+    "msize" : 0.1,
+    "endpoint" : [False,False],
+    "markers" : ['s','s'],
+    "arcwidth" : sect_pion_deg,
+    "clmax" : cmax,
+    "offsetangle" : 0.,
+    "xymax" : maxdeplCC,
+}
+traj.pltraj2d_pion(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "Resonance : traj. relative PH / PH_ad" + "\n",
+    "tile_save": "traj2d_ph_circ_reso",
+    "ind": [indniphreso,indiphreso],
+    # "ind": [indpPB],
+    "colx": "uxphrela",
+    "coly": "uyphrela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "color1": ['black','orange'],
+    "rcirc" : ray_circ,
+    "excent" : excent,
+    "spinz" : spinz,     
+    "scatter" : True,
+    "msize" : 0.1,
+    "endpoint" : [False,False],
+    "markers" : ['s','s'],
+    "arcwidth" : sect_pion_deg,
+    "clmax" : cmax,
+    "offsetangle" : 0.,
+    "xymax" : maxdeplCC,
+}
+traj.pltraj2d_pion(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "Phase 2 : traj. relative PH / PH_ad" + "\n",
+    "tile_save": "traj2d_ph_circ_phase2",
+    "ind": [indniph2,indiph2],
+    # "ind": [indpPB],
+    "colx": "uxphrela",
+    "coly": "uyphrela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "color1": ['black','orange'],
+    "rcirc" : ray_circ,
+    "excent" : excent,
+    "spinz" : spinz,     
+    "scatter" : True,
+    "msize" : 0.1,
+    "endpoint" : [False,False],
+    "markers" : ['s','s'],
+    "arcwidth" : sect_pion_deg,
+    "clmax" : cmax,
+    "offsetangle" : 0.,
+    "xymax" : maxdeplCC,
+}
+traj.pltraj2d_pion(df, **kwargs1)
+sys.exit()
 #%% centre du cercle - vis a vis adapter : 
 kwargs1 = {
     "tile1": "traj. relative PCcirc / PCad" + "\n",

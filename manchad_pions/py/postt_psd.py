@@ -27,25 +27,34 @@ slice = 1
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
 
-linert = False
-
+linert = True
+lamode = True
 lpion = False
 lpcirc = True
 Fext = 193.
-vlimoden = 1.e-4
+amode_m = 0.02
+amode_ad = 0.02
+vlimoden = 1.e-5
 mu = 0.6
-xi = 0.01
+xi = 0.05
 spinini = 0.
 dte = 1.e-6
 vlostr = int(-np.log10(vlimoden))
 dtstr = int(-np.log10(dte))
 xistr = int(100.*xi)
 namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
+
+amodemstr = str(int(amode_m*100.))
+amodeadstr = str(int(amode_ad*100.))
+
+if lamode:
+    namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
+
+if (linert):
+    namerep = f'{namerep}_inert'
+
 repload = f'./pickle/{namerep}/'
 rep_save = f"./fig/{namerep}/"
-if (linert):
-    repload = f'./pickle/{namerep}_inert/'
-    rep_save = f"./fig/{namerep}_inert/"
 
 # namerep = f"manchadela_pions_{slice}"
 # repload = f"./pickle/{namerep}/"
@@ -176,8 +185,43 @@ if (linteractif):
 
 #%%
 if (linert):
+    # pour : 
+        # linert = True
+        # lamode = False
+        # lpion = False
+        # lpcirc = True
+        # Fext = 193.
+        # vlimoden = 1.e-4
+        # mu = 0.6
+        # xi = 0.01
+        # spinini = 0.
+        # dte = 1.e-6 
     lanot = [(0.88,80.93),(2.70,33.30),(4.49,23.37),(8.11,8.61),(13.33,8.25)]
+    # pour : 
+        # linert = True
+        # lamode = True
+        # amode_m = 0.02
+        # amode_ad = 0.02
+        # lpion = False
+        # lpcirc = True
+        # Fext = 193.
+        # vlimoden = 1.e-5
+        # mu = 0.6
+        # xi = 0.05
+        # spinini = 0.
+        # dte = 1.e-6 
+    lanot = [(0.88,67.03),(1.95,36.95),(2.64,24.86),(3.03,19.12),(3.76,13.27),(5.57,6.63)]
 if (not linert):
+        # linert = False
+        # lamode = False
+        # lpion = False
+        # lpcirc = True
+        # Fext = 193.
+        # vlimoden = 1.e-4
+        # mu = 0.6
+        # xi = 0.01
+        # spinini = 0.
+        # dte = 1.e-6 
     lanot = [(1.07,77.61),(3.12,33.18),(5.27,19.85),(9.52,10.67),(15.58,9.41)]
     # lanot = [(1.07,77.61),(3.12,33.18),(5.27,19.85),(7.32,9.48),(9.52,10.67),(15.58,9.41)]
 kwargs1 = {

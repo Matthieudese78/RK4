@@ -236,6 +236,8 @@ lela = vrai ;
 **************************************************************
 *                Paramètres généraux
 **************************************************************
+*# lkxp :
+lkxp = vrai ; 
 *# nmode :
 nmode = 3 ;
 
@@ -1501,6 +1503,13 @@ Rayon_supp = R_tete ;
 * Kchoc = 2.E+06;
 * On prend la raideur d'ovalisation analytique :
 Kchoc = 3.8*E*(epai**2)*((epai/D_ext)**0.5)/D_ext ; 
+* opti donn 5 ; 
+si lkxp ;
+*# tcxp :
+tcxp = 13.e-3 ; 
+
+Kchoc = mtot_manch * (( pi / tcxp)**2) ;
+finsi ;
 *test :
 * kchoc = 1.e8 ;
 * opti donn 5  ;
@@ -2715,45 +2724,45 @@ FINSI ;
 SI (lpcirc) ;
   TSORT . 'FN_pcirch1' = table ;
   TSORT . 'FT_pcirch1' = table ;
-  TSORT . 'pusure_pcirch1' = table ;
+  TSORT . 'pusure_ph1' = table ;
   TSORT . 'FN_pcirch1' = TRESU . TLpcirch1 . 'FORCE_DE_CHOC_NORMALE' ;
   TSORT . 'FT_pcirch1' = TRESU . TLpcirch1 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
-  TSORT . 'pusure_pcirch1' = TRESU . TLpcirch1 . 'PUISSANCE_USURE_INSTANTANEE' ;
+  TSORT . 'pusure_ph1' = TRESU . TLpcirch1 . 'PUISSANCE_USURE_INSTANTANEE' ;
 
   TSORT . 'FN_pcirch2' = table ;
   TSORT . 'FT_pcirch2' = table ;
-  TSORT . 'pusure_pcirch2' = table ;
+  TSORT . 'pusure_ph2' = table ;
   TSORT . 'FN_pcirch2' = TRESU . TLpcirch2 . 'FORCE_DE_CHOC_NORMALE' ;
   TSORT . 'FT_pcirch2' = TRESU . TLpcirch2 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
-  TSORT . 'pusure_pcirch2' = TRESU . TLpcirch2 . 'PUISSANCE_USURE_INSTANTANEE' ;
+  TSORT . 'pusure_ph2' = TRESU . TLpcirch2 . 'PUISSANCE_USURE_INSTANTANEE' ;
 
   TSORT . 'FN_pcirch3' = table ;
   TSORT . 'FT_pcirch3' = table ;
-  TSORT . 'pusure_pcirch3' = table ;
+  TSORT . 'pusure_ph3' = table ;
   TSORT . 'FN_pcirch3' = TRESU . TLpcirch3 . 'FORCE_DE_CHOC_NORMALE' ;
   TSORT . 'FT_pcirch3' = TRESU . TLpcirch3 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
-  TSORT . 'pusure_pcirch3' = TRESU . TLpcirch3 . 'PUISSANCE_USURE_INSTANTANEE' ;
+  TSORT . 'pusure_ph3' = TRESU . TLpcirch3 . 'PUISSANCE_USURE_INSTANTANEE' ;
 
   TSORT . 'FN_pcircb1' = table ;
   TSORT . 'FT_pcircb1' = table ;
-  TSORT . 'pusure_pcircb1' = table ;
+  TSORT . 'pusure_pb1' = table ;
   TSORT . 'FN_pcircb1' = TRESU . TLpcircb1 . 'FORCE_DE_CHOC_NORMALE' ;
   TSORT . 'FT_pcircb1' = TRESU . TLpcircb1 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
-  TSORT . 'pusure_pcircb1' = TRESU . TLpcircb1 . 'PUISSANCE_USURE_INSTANTANEE' ;
+  TSORT . 'pusure_pb1' = TRESU . TLpcircb1 . 'PUISSANCE_USURE_INSTANTANEE' ;
 
   TSORT . 'FN_pcircb2' = table ;
   TSORT . 'FT_pcircb2' = table ;
-  TSORT . 'pusure_pcircb2' = table ;
+  TSORT . 'pusure_pb2' = table ;
   TSORT . 'FN_pcircb2' = TRESU . TLpcircb2 . 'FORCE_DE_CHOC_NORMALE' ;
   TSORT . 'FT_pcircb2' = TRESU . TLpcircb2 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
-  TSORT . 'pusure_pcircb2' = TRESU . TLpcircb2 . 'PUISSANCE_USURE_INSTANTANEE' ;
+  TSORT . 'pusure_pb2' = TRESU . TLpcircb2 . 'PUISSANCE_USURE_INSTANTANEE' ;
 
   TSORT . 'FN_pcircb3' = table ;
   TSORT . 'FT_pcircb3' = table ;
-  TSORT . 'pusure_pcircb3' = table ;
+  TSORT . 'pusure_pb3' = table ;
   TSORT . 'FN_pcircb3' = TRESU . TLpcircb3 . 'FORCE_DE_CHOC_NORMALE' ;
   TSORT . 'FT_pcircb3' = TRESU . TLpcircb3 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
-  TSORT . 'pusure_pcircb3' = TRESU . TLpcircb3 . 'PUISSANCE_USURE_INSTANTANEE' ;
+  TSORT . 'pusure_pb3' = TRESU . TLpcircb3 . 'PUISSANCE_USURE_INSTANTANEE' ;
 *
   ncolexce = ncolexce + 18 ;
 FINSI ; 

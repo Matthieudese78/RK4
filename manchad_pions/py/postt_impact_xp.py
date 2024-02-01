@@ -4,12 +4,13 @@ import numpy as np
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-import matplotlib.cm as cm
-import matplotlib.colors as pltcolors
+# import matplotlib as mpl
+# import matplotlib.cm as cm
+# import matplotlib.colors as pltcolors
 from matplotlib import ticker
 import scipy
-from matplotlib.patches import PathPatch
+# from matplotlib.patches import PathPatch
+import sys
 #%%
 
 def butter_bandstop(center,width, fs, order=5):
@@ -110,7 +111,7 @@ lwidth = []
 A0 = []
 force_split = np.array_split(df['Force'],nbseg)
 t_split = np.array_split(df['tL'],nbseg)
-hpeaks = [50.].append([80.]*(nbseg-1))
+# hpeaks = [50.].append([80.]*(nbseg-1))
 hpeaks = 100.
 seuil = 10.
 for i,ti in enumerate(t_split):
@@ -130,7 +131,7 @@ for i,ti in enumerate(t_split):
 
     peaks = np.union1d(peakspos,peaksneg)
 
-    A0.append(np.concatenate(fi[peakspos],-fi[peaksneg]))
+    A0.append(np.concatenate((fi.iloc[peakspos],-fi.iloc[peaksneg])))
 
     # widths, _, _, _ = scipy.signal.peak_widths(fi, peaks, rel_height=0.5)
 
@@ -162,9 +163,8 @@ lsigma = []
 
 lmoyA0 = []
 lsigmaA0 = []
-[ lnchoc.append(len(lwidth[i])) for i,pi in enumerate(indpeaks) ]
-[ lmoy.append(np.mean(lwidth[i])*1.e3) for i,pi in enumerate(indpeaks) ]
-[ lsigma.append(np.std(lwidth[i])*1.e3) for i,pi in enumerate(indpeaks) ]
+[ lmoyA0.append(np.mean(ai)) for i,ai in enumerate(A0) ]
+[ lsigmaA0.append(np.std(ai)) for i,ai in enumerate(A0) ]
 
 time_interval = df.iloc[-1]['tL']/(nbseg)
 x = np.linspace(0.,df.iloc[-1]['tL']-time_interval,nbseg)
@@ -227,7 +227,7 @@ fig.savefig(title+".png",bbox_inches='tight',facecolor='white')
 fig = plt.figure(figsize=(8,6), dpi=1000)
 ax=plt.axes()
 # ax.set_xlim(xmin=0.,xmax=df.iloc[-1]['tL'])
-bars = plt.bar(x,lnchoc,width=time_interval,align='edge',color='red',alpha=0.8)
+bars = plt.bar(x,lmoyA0,width=time_interval,align='edge',color='green',alpha=0.8)
 # Rounding the edges
 for bar in bars:
     bar.set_edgecolor('black')
@@ -235,18 +235,39 @@ for bar in bars:
     bar.set_capstyle('round')
     # bar.set_path_effects([PathPatch.PathPatchEffect(capstyle='round')])
 
-ax.set_ylabel("Impact Number",fontsize=12)
+ax.set_ylabel("Mean Impact Force Amplitude (N)",fontsize=12)
 ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
 plt.xticks(rotation=0, ha='right')
 plt.show()
-title=f"{rep_save}number_impact"
+title=f"{rep_save}mean_peak_amplitude"
 fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
+
+# standard deviation of peaks amplitude :
+fig = plt.figure(figsize=(8,6), dpi=1000)
+ax=plt.axes()
+# ax.set_xlim(xmin=0.,xmax=df.iloc[-1]['tL'])
+bars = plt.bar(x,lsigmaA0,width=time_interval,align='edge',color='blue',alpha=0.8)
+# Rounding the edges
+for bar in bars:
+    bar.set_edgecolor('black')
+    bar.set_linewidth(1.5)
+    bar.set_capstyle('round')
+    # bar.set_path_effects([PathPatch.PathPatchEffect(capstyle='round')])
+
+ax.set_ylabel("Impact Force Amplitude Standard Deviation (N)",fontsize=12)
+ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
+plt.xticks(rotation=0, ha='right')
+plt.show()
+title=f"{rep_save}std_peak_amplitude"
+fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
+
+sys.exit()
 #%%
 plt.bar(np.arange(len(indpeaks)),lmoy)
-plt.show()
+# plt.show()
 plt.close('all')
 plt.bar(np.arange(len(indpeaks)),lsigma)
-plt.show()
+# plt.show()
 plt.close('all')
 #%%
 repsect1 = rep_save

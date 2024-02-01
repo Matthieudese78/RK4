@@ -23,16 +23,25 @@ slice = 1
 # namerep = "manchadela_weight"
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
+linert = True
 dte = 1.e-6
 Fext = 193
-mu = 0.3
-xi = 0.
-vlimoden = 1.e-4
+mu = 0.6
+xi = 0.05
+amode_m = 0.01
+amode_ad = 0.01
+amodemstr = str(int(100.*amode_m))
+amodeadstr = str(int(100.*amode_ad))
+vlimoden = 1.e-5
 spinini = 0.
 vlostr = int(-np.log10(vlimoden))
 dtstr = int(-np.log10(dte))
 xistr = int(100.*xi)
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_inert'
+
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_amodem_{amodemstr}_amodead_{amodeadstr}'
+if (linert):
+    namerep = f'{namerep}_inert'
+
 repload = f'./pickle/{namerep}/'
 # namerep = f"manchadela_pions_{slice}"
 # repload = f"./pickle/{namerep}/"
