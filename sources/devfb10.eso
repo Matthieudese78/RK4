@@ -1244,9 +1244,9 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 *   Fres = ((thlim - xnut)/thlim)*Fres_flat + (xnut/thlim)*Fres_incl
          if (linter) then
 *        angle qui fonctionne :
-*        thlim = 1.745*1.d-5
+         thlim = 1.745*1.d-5
 *        angle test :
-         thlim = 1.745*1.d-6
+*         thlim = 1.745*1.d-6
          if ((.not.lflat).and.
      &       (.not.lflat1).and.
      &       ((rc/xrayp).le.1.d0).and.
