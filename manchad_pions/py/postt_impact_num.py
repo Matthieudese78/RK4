@@ -4,14 +4,67 @@ import numpy as np
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-import matplotlib.cm as cm
-import matplotlib.colors as pltcolors
+# import matplotlib as mpl
+# import matplotlib.cm as cm
+# import matplotlib.colors as pltcolors
 from matplotlib import ticker
 import scipy
-from matplotlib.patches import PathPatch
+# from matplotlib.patches import PathPatch
+import sys
+from rich.console import Console
+from matplotlib.font_manager import FontProperties
+figshow = False
+#%%
+class ColorMath:
+    reset = "\033[0m"
+    red = "\033[91m"
+    green = "\033[92m"
+    # darkgreen = "\033[32m"
+    darkgreen = "\033[38;2;0;128;0m"
+    blue = "\033[94m"
+
+    @staticmethod
+    def color_text(text, color_code):
+        return f"{color_code}{text}{ColorMath.reset}"
+
+
+# Example usage
+equation = "E = mc^2"
+
+red_equation = ColorMath.color_text(equation, ColorMath.red)
+green_equation = ColorMath.color_text(equation, ColorMath.green)
+darkgreen_equation = ColorMath.color_text(equation, ColorMath.darkgreen)
+blue_equation = ColorMath.color_text(equation, ColorMath.blue)
+
+print("Original equation:", equation)
+print("red equation:", red_equation)
+print("green equation:", darkgreen_equation)
+# print("Red equation:",
 
 #%%
+def statenergy(df,**kwargs):
+    col1 = kwargs['colname']
+    dt = kwargs['dt']
+    df['tag'] = df.loc[:,col1].abs() > 0.
+    fst = df.index[df['tag'] & ~ df['tag'].shift(1).fillna(False)]
+    lst = df.index[df['tag'] & ~ df['tag'].shift(-1).fillna(False)]
+    # prb1 = [(i,j) for i,j in zip(fst,lst)]
+    # dt = df.iloc[fst[0]+1]['t'] - df.iloc[fst[0]]['t']
+    # on vire le dernier choc :
+    fst = fst[:-1]
+    lst = lst[:-1]
+    # tchoc = [ dt*(j-i) for i,j in zip(fst,lst) ]
+    # meanpower = [ np.mean([ df.iloc[i][col1] for i in np.arange(fsti,lsti+1) ]) for fsti,lsti in zip(fst,lst) ]
+    intener = [ np.sum([ dt*(0.5*(df.iloc[i][col1]+df.iloc[i+1][col1])) for i in np.arange(fsti,lsti) ]) for fsti,lsti in zip(fst,lst) ]
+    # print(f"intener = {intener}")
+    meanener = np.mean(intener)
+    stdener = np.std(intener)
+
+    print(f"Colonne : {col1}")
+    print(f"energie moyenne durant un choc = {meanener} J")
+    print(f"                          std = {stdener} J")
+    return meanener,stdener
+
 def statchoc(df,**kwargs):
     col1 = kwargs['colname']
     dt = kwargs['dt']
@@ -32,6 +85,7 @@ def statchoc(df,**kwargs):
     sumtchoc = np.sum(tchoc)
     instants_chocs = df.iloc[fst]['t']
     tlast = df.iloc[lst[-1]]['t']
+    print(f"Colonne : {col1}")
     print(f"nbr de micro-impacts : {len(instants_chocs)}")
     print(f"instant du dernier choc = {tlast} s")
     print(f"temps de choc moyen = {meantchoc} s")
@@ -58,12 +112,13 @@ def statchoc2(df,**kwargs):
     sumtchoc = np.sum(tchoc)
     instants_chocs = df.iloc[fst]['t']
     tlast = df.iloc[lst[-1]]['t']
+    print(f"Colonne 1 : {col1}, Colonne 2 : {col2}")
     print(f"nbr de micro-impacts : {len(instants_chocs)}")
     print(f"instant du dernier choc = {tlast} s")
     print(f"temps de choc moyen = {meantchoc} s")
     print(f"ecart type tps de choc = {stdtchoc} s")
     print(f"temps de contact total = {sumtchoc} s")
-    return meantchoc,stdtchoc,sumtchoc
+    return meantchoc,stdtchoc,sumtchoc,len(tchoc)
 #%%
 globalstat = False
 #%% usefull parameters :
@@ -89,7 +144,7 @@ ycmax = np.sqrt((ray_circ**2) - (xcmax**2))
 cmax = ycmax - (h_pion*np.sin(np.pi/6.))
 #%% options and directories :
 linert = True
-lamode = False
+lamode = True
 lkxp = False
 lpion = False
 lpcirc = True
@@ -126,8 +181,17 @@ if not os.path.exists(rep_save):
     print(f"FOLDER : {rep_save} created.")
 else:
     print(f"FOLDER : {rep_save} already exists.")
+repsect1 = f"{rep_save}stats/"
+    # repsect1 :
+if not os.path.exists(repsect1):
+    os.makedirs(repsect1)
+    print(f"FOLDER : {repsect1} created.")
+else:
+    print(f"FOLDER : {repsect1} already exists.")
+#%% lectue du DF :
 
 df = pd.read_pickle(f"{repload}result.pickle")
+
 #%%
 # pattern = 'pusure'
 # filtered_columns = df.filter(like=pattern, axis=1).columns.tolist()
@@ -210,7 +274,8 @@ if globalstat:
     kw1 = {'colname' : 'FN_pcircb3', 'dt' : dt}
     stat_pb3 = statchoc(df,**kw1)
     #
-
+#%%
+if globalstat:
     #
     kw1 = {'colname1' : 'FN_pcircb1', 'colname2' : 'FN_pcircb3', 'dt' : dt}
     stat_pb13 = statchoc2(df,**kw1)
@@ -236,20 +301,87 @@ if globalstat:
 #%%
 if globalstat:
     kw1 = {'colname' : 'pusure_pcirc.3', 'dt' : dt}
-    stat_pb1_pus = statchoc(df,**kw1)
+    stat_pb1_pus = statenergy(df,**kw1)
     #
     kw1 = {'colname' : 'pusure_pcirc.4', 'dt' : dt}
-    stat_pb2_pus = statchoc(df,**kw1)
+    stat_pb2_pus = statenergy(df,**kw1)
     #
     kw1 = {'colname' : 'pusure_pcirc.5', 'dt' : dt}
-    stat_pb3_pus = statchoc(df,**kw1)
+    stat_pb3_pus = statenergy(df,**kw1)
 
-    Euspb1 = stat_pb1_pus[4] * dt
-    Euspb2 = stat_pb2_pus[4] * dt
-    Euspb3 = stat_pb3_pus[4] * dt
+    Euspb1 = stat_pb1_pus[0]
+    Euspb2 = stat_pb2_pus[0]
+    Euspb3 = stat_pb3_pus[0]
     print(f"Euspb1 = {Euspb1}")
     print(f"Euspb2 = {Euspb2}")
     print(f"Euspb3 = {Euspb3}")
+#%% on trace les tableaux : 
+pin1 = r"$\textcolor{red}{\mbox{pin}_1}$" 
+pin2 = r"$\textcolor{mydarkgreen}{\mbox{pin}_2}$" 
+pin3 = r"$\textcolor{blue}{\mbox{pin}_3}$" 
+row_names = [pin1,pin2,pin3]
+dict_tchoctot = {pin1 : [ str("$" + "%.2f" % stat_pb1[3] ) + "$ s","$" +  str("%.2f" % stat_pb12[2]) + "$ s","$" + str("%.2f" % stat_pb13[2]) + "$ s"] ,
+                 pin2 : [ str("$" + "%.2f" % stat_pb12[2]) + "$ s","$" +  str("%.2f" % stat_pb2[3] ) + "$ s", "$" + str("%.2f" % stat_pb23[2]) + "$ s"] ,
+                 pin3 : [ str("$" + "%.2f" % stat_pb13[2]) + "$ s","$" +  str("%.2f" % stat_pb23[2]) + "$ s","$" + str( "%.2f" % stat_pb3[3]) + "$ s"]} 
+df_tchoctot = pd.DataFrame(dict_tchoctot,index=row_names)
+latex_tchoctot = df_tchoctot.to_latex(escape=False)
+with open(f'{repsect1}tchoctot.tex', 'w') as f:
+    f.write(latex_tchoctot)
+#%% meantchoc
+dict_stat = {pin1 : [ "$" + str(int(np.round(stat_pb1[1] *1.e6,0))) + "$ $\mu$s", "$" +  str(int(np.round(stat_pb12[0]*1.e6,0))) + "$ $\mu$s", "$" + str(int(np.round(stat_pb13[0]*1.e6,0))) + "$ $\mu$s"] ,
+             pin2 : [ "$" + str(int(np.round(stat_pb12[0]*1.e6,0))) + "$ $\mu$s", "$" +  str(int(np.round(stat_pb2[1] *1.e6,0))) + "$ $\mu$s", "$" + str(int(np.round(stat_pb23[0]*1.e6,0))) + "$ $\mu$s"] ,
+             pin3 : [ "$" + str(int(np.round(stat_pb13[0]*1.e6,0))) + "$ $\mu$s", "$" +  str(int(np.round(stat_pb23[0]*1.e6,0))) + "$ $\mu$s", "$" + str(int(np.round(stat_pb3[1]*1.e6,0)))  + "$ $\mu$s"]} 
+df_latex = pd.DataFrame(dict_stat,index=row_names)
+latex_df = df_latex.to_latex(escape=False)
+with open(f'{repsect1}tchocmean.tex', 'w') as f:
+    f.write(latex_df)
+#%% impact number 
+dict_stat = {pin1 : [ "$" + str(int(stat_pb1[0] )) + "$", "$" +  str(int(stat_pb12[3])) + "$", "$" + str(int(stat_pb13[3])) + "$"] ,
+             pin2 : [ "$" + str(int(stat_pb12[3])) + "$", "$" +  str(int(stat_pb2[0] )) + "$", "$" + str(int(stat_pb23[3])) + "$"] ,
+             pin3 : [ "$" + str(int(stat_pb13[3])) + "$", "$" +  str(int(stat_pb23[3])) + "$", "$" + str(int(stat_pb3[0] )) + "$"] } 
+df_latex = pd.DataFrame(dict_stat,index=row_names)
+latex_df = df_latex.to_latex(escape=False)
+with open(f'{repsect1}impactnumber.tex', 'w') as f:
+    f.write(latex_df)
+#%% Fn, Ft, Eweat 
+dict_stat = {"$F_n$"      : [ str("$" + "%.2f" % stat_pb1[4] ) + "$ N","$" +  str("%.2f" % stat_pb2[4]) + "$ N","$" + str("%.2f" % stat_pb3[4]) + "$ N"] ,
+             "$F_t$"      : [ str("$" + "%.2f" % stat_pb1_tang[4]) + "$ N","$" +  str("%.2f" % stat_pb2_tang[4] ) + "$ N","$" + str("%.2f" % stat_pb3_tang[4]) + "$ N"] ,
+             "$E_{wear}$" : [ str("$" + "%.2f" % stat_pb1_pus[0]) + "$ J","$" +  str("%.2f" % stat_pb2_pus[0]) + "$ J","$" + str("%.2f" % stat_pb3_pus[0] ) + "$ J"]} 
+df_latex = pd.DataFrame(dict_stat,index=row_names)
+latex_df = df_latex.to_latex(escape=False)
+with open(f'{repsect1}F_Ewear.tex', 'w') as f:
+    f.write(latex_df)
+#%%
+fig, ax = plt.subplots(figsize=(1, 1), dpi=600)
+ax.axis('tight')
+ax.axis('off')
+table = ax.table(cellText=df_tchoctot.values,
+        #  colLabels=df_tchoctot.columns,
+         colLabels=df_tchoctot.keys(),
+         rowLabels=df_tchoctot.keys(),
+         cellLoc = 'center', 
+         loc='center',
+         )
+table.auto_set_font_size(False)
+table.set_fontsize(10)
+table[(0, 0)].set_text_props(color='red')
+table[(0, 1)].set_text_props(color='green')
+table[(0, 2)].set_text_props(color='blue')
+table[(1, -1)].set_text_props(color='red')
+table[(2, -1)].set_text_props(color='green')
+table[(3, -1)].set_text_props(color='blue')
+for (row, col), cell in table.get_celld().items():
+  if (row == 0) | (col == -1):
+    cell.set_text_props(fontproperties=FontProperties(weight='bold'))
+    # cell.PAD = 0.5
+  if (col == -1):
+    cell.PAD = (0.2)
+table.auto_set_column_width(col=list(np.arange(4)))
+
+fig.tight_layout()
+plt.savefig(f"{repsect1}tchoctot.png")
+# plt.show()
+
 #%% traitement statistique :
 lnchocpb = [[],[],[]]
 lmoytpb = [[],[],[]]
@@ -270,11 +402,11 @@ for i,indi in enumerate(indsplit):
     kw1 = {'colname' : 'FN_pcircb3', 'dt' : dt}
     stat_pb3 = statchoc(df1,**kw1)
     kw1 = {'colname' : 'pusure_pcirc.3', 'dt' : dt}
-    stat_pb1_pus = statchoc(df1,**kw1)
+    stat_pb1_pus = statenergy(df1,**kw1)
     kw1 = {'colname' : 'pusure_pcirc.4', 'dt' : dt}
-    stat_pb2_pus = statchoc(df1,**kw1)
+    stat_pb2_pus = statenergy(df1,**kw1)
     kw1 = {'colname' : 'pusure_pcirc.5', 'dt' : dt}
-    stat_pb3_pus = statchoc(df1,**kw1)
+    stat_pb3_pus = statenergy(df1,**kw1)
     # nb choc :
     lnchocpb[0].append(stat_pb1[0])
     lnchocpb[1].append(stat_pb2[0])
@@ -300,32 +432,26 @@ for i,indi in enumerate(indsplit):
     lsigmafpb[1].append(stat_pb2[5])
     lsigmafpb[2].append(stat_pb3[5])
     # mean normal force :
-    lmoyuspb[0].append(stat_pb1_pus[4]*dt)
-    lmoyuspb[1].append(stat_pb2_pus[4]*dt)
-    lmoyuspb[2].append(stat_pb3_pus[4]*dt)
+    lmoyuspb[0].append(stat_pb1_pus[0])
+    lmoyuspb[1].append(stat_pb2_pus[0])
+    lmoyuspb[2].append(stat_pb3_pus[0])
     # mean normal force :
-    lsigmauspb[0].append(stat_pb1_pus[5]*dt)
-    lsigmauspb[1].append(stat_pb2_pus[5]*dt)
-    lsigmauspb[2].append(stat_pb3_pus[5]*dt)
+    lsigmauspb[0].append(stat_pb1_pus[1])
+    lsigmauspb[1].append(stat_pb2_pus[1])
+    lsigmauspb[2].append(stat_pb3_pus[1])
 
 #%%
 time_interval = df.iloc[-1]['t']/(nbseg)
 x = np.linspace(0.,df.iloc[-1]['t']-time_interval,nbseg)
-#%% 
-repsect1 = f"{rep_save}stats/"
-if not os.path.exists(repsect1):
-    os.makedirs(repsect1)
-    print(f"FOLDER : {repsect1} created.")
-else:
-    print(f"FOLDER : {repsect1} already exists.")
 
 #%% mean normal force :
 colorpin = ['red','green','blue']
+ymaxf = np.max([ np.max(np.abs(fi)) for i,fi in  enumerate(lmoyfpb) ])
 for ipin in np.arange(3): 
     fig = plt.figure(figsize=(8,6), dpi=1000)
     ax=plt.axes()
-    ax.set_ylim(ymax=1.1*np.max(np.abs(lmoyfpb[ipin])))
-    # ax.set_xlim(xmin=0.,xmax=df.iloc[-1]['tL'])
+    ax.set_ylim(ymax=1.1*ymaxf)
+    # ax.set_ylim(ymax=1.1*np.max(np.abs(lmoyfpb[ipin])))
     bars = plt.bar(x,np.abs(lmoyfpb[ipin]),width=time_interval,align='edge',color=colorpin[ipin],alpha=0.8)
 
     # Rounding the edges
@@ -344,17 +470,19 @@ for ipin in np.arange(3):
     ax.set_ylabel("Mean Normal Force (N)",fontsize=12)
     ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
     plt.xticks(rotation=0, ha='right')
-    plt.show()
-    title=f"{rep_save}FN_pb{ipin+1}"
+    if figshow:
+        plt.show()
+    title=f"{repsect1}FN_pb{ipin+1}"
     fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
 
 #%% mean dissipated energy :
 colorpin = ['red','green','blue']
+ymaxe = np.max([ np.max(np.abs(fi)*1.e4) for i,fi in  enumerate(lmoyuspb) ])
 for ipin in np.arange(3): 
     fig = plt.figure(figsize=(8,6), dpi=1000)
     ax=plt.axes()
-    ax.set_ylim(ymax=1.1*np.max(np.abs(lmoyuspb[ipin])*1.e4))
-    # ax.set_xlim(xmin=0.,xmax=df.iloc[-1]['tL'])
+    ax.set_ylim(ymax=1.1*ymaxe)
+    # ax.set_ylim(ymax=1.1*np.max(np.abs(lmoyuspb[ipin])*1.e4))
     bars = plt.bar(x,np.abs(lmoyuspb[ipin])*1.e4,width=time_interval,align='edge',color=colorpin[ipin],alpha=0.8)
 
     # Rounding the edges
@@ -370,15 +498,46 @@ for ipin in np.arange(3):
         xytext=(1,4), textcoords='offset points',
         family='sans-serif', fontsize=9, color='black') 
 
-    ax.set_ylabel("Mean Dissipated Energy ("+r"$10^{-4}$"+"J)",fontsize=12)
+    ax.set_ylabel("Mean Wear Energy ("+r"$10^{-4}$"+" J)",fontsize=12)
     ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
     plt.xticks(rotation=0, ha='right')
-    plt.show()
-    title=f"{rep_save}Ewear_pb{ipin+1}"
+    if figshow:
+        plt.show()
+    title=f"{repsect1}Ewear_pb{ipin+1}"
+    fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
+#%% mean impact time :
+colorpin = ['red','green','blue']
+ymaxt = np.max([ np.max(np.abs(fi)*1.e3) for i,fi in  enumerate(lmoytpb) ])
+for ipin in np.arange(3): 
+    fig = plt.figure(figsize=(8,6), dpi=1000)
+    ax=plt.axes()
+    ax.set_ylim(ymax=1.1*ymaxt)
+    # ax.set_ylim(ymax=1.1*np.max(np.abs(lmoytpb[ipin])*1.e3))
+    bars = plt.bar(x,np.abs(lmoytpb[ipin])*1.e3,width=time_interval,align='edge',color=colorpin[ipin],alpha=0.8)
+
+    # Rounding the edges
+    for bar in bars:
+        bar.set_edgecolor('black')
+        bar.set_linewidth(1.5)
+        bar.set_capstyle('round')
+        # bar.set_path_effects([PathPatch.PathPatchEffect(capstyle='round')])
+
+    for i,xi in enumerate(x):
+        ax.annotate(r'$\sigma :$' + r"${:.2f}$".format(lsigmatpb[ipin][i]*1.e3), 
+        (xi, np.abs(lmoytpb[ipin][i])*1.e3),
+        xytext=(1,4), textcoords='offset points',
+        family='sans-serif', fontsize=9, color='black') 
+
+    ax.set_ylabel("Mean Impact Time (ms)",fontsize=12)
+    ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
+    plt.xticks(rotation=0, ha='right')
+    if figshow:
+        plt.show()
+    title=f"{repsect1}tchoc_pb{ipin+1}"
     fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
 #%%
 
-
+sys.exit()
 #%%
 lmoyA0 = []
 lsigmaA0 = []
