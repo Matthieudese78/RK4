@@ -26,8 +26,14 @@ slice = 1
 # namerep = "manchadela_weight"
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
-
+lxp = False
 linert = True
+# manchette bloquee ? 
+lbloq = False
+# si oui quelle epaisseur pour les ressorts a lame ?
+lbfin = False
+lbepai = False
+
 lamode = True
 lpion = False
 lpcirc = True
@@ -35,14 +41,20 @@ Fext = 193.
 amode_m = 0.02
 amode_ad = 0.02
 vlimoden = 1.e-5
-mu = 0.6
+mu = 0.3
 xi = 0.05
 spinini = 0.
-dte = 1.e-6
+dte = 5.e-6
+h_lam = 50.e-3
+lspring = 45.e-2
+
+hlstr = int(h_lam*1.e3)
+lspringstr = int(lspring*1.e2)
 vlostr = int(-np.log10(vlimoden))
-dtstr = int(-np.log10(dte))
+# dtstr = int(-np.log10(dte))
+dtstr = int(1.e6*dte)
 xistr = int(100.*xi)
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
 
 amodemstr = str(int(amode_m*100.))
 amodeadstr = str(int(amode_ad*100.))
@@ -56,6 +68,27 @@ if (linert):
 repload = f'./pickle/{namerep}/'
 rep_save = f"./fig/{namerep}/"
 
+if (lbloq):
+    # manchad bloquee bfin :
+    if lbfin:
+        namerep = '/home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/RK4/manchad_pions/py/pickle/bfin/manchadela_pions_1/'
+        rep_save = '/home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/RK4/manchad_pions/py/fig/manchadela_bloquee/bfin/'
+
+    # manchad bloquee bepai :
+    if lbepai:
+        namerep = '/home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/RK4/manchad_pions/py/pickle/manchadela_pions_1/'
+        rep_save = '/home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/RK4/manchad_pions/py/fig/manchadela_bloquee/'
+
+    repload = f'{namerep}'
+
+if lxp:
+    repload = '/home/matthieu/Documents/EDF/mesures/data/donneesLaser/'
+    rep_save = f'/home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/RK4/manchad_pions/py/fig/XP_fext_{int(Fext)}_spin_{int(spinini)}/'
+# manchad bloquee bepai :
+# namerep = '/home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/RK4/manchad_pions/py/pickle/manchadela_pions_1/'
+
+#%%
+
 # namerep = f"manchadela_pions_{slice}"
 # repload = f"./pickle/{namerep}/"
 
@@ -68,7 +101,12 @@ else:
     print(f"FOLDER : {rep_save} already exists.")
 
 # %% lecture du dataframe :
-df = pd.read_pickle(f"{repload}result.pickle")
+if lxp:
+    df = pd.read_pickle(f"{repload}20201127_1350_laser.pickle")
+else:
+    df = pd.read_pickle(f"{repload}result.pickle")
+
+df = df[['t','uzg_tot_ad','Fext']]
     # on trie et on reindexe :
 df.sort_values(by='t',inplace=True)
 df.reset_index(drop=True,inplace=True)
@@ -76,82 +114,257 @@ df.reset_index(drop=True,inplace=True)
 t1 = 0.
 if (not linert):
     t1 = 0.1 
-t2 = 120.
+# t2 = 80. --> donne de bon resultats
+t2 =128.
+# if lbloq & lbfin:
+#     t2 = 40.
 df = df[(df['t']>t1) & (df['t']<=t2)]
 df.reset_index(drop=True,inplace=True)
 # %% 100 points par seconde 
     # nsort = 10 et x4 dans dopickle_slices :
-if (not linert):
-    nsort = 40
-if (linert):
-    nsort = 30
+# if (not linert):
+#     nsort = 40
+# if (linert):
+#     dte = 1.e-6
+#     nsort = 30
+#     discr = 3.e-5
+# if (lbloq):
+#     nsort = 10
+#     dte = 1.e-5
+discr = 1.e-4
+dtsort = df.iloc[1]['t'] - df.iloc[0]['t']
     # on veut un point ttes les :
-discr = 1.e-3
-ndiscr = int(discr/(dte*nsort))
+ndiscr = int(discr/(dtsort))
 df = df.iloc[::ndiscr]
 # rows2keep = df.index % ndiscr == 0 
 # df = df[rows2keep]
 df.reset_index(drop=True,inplace=True)
 dt = df['t'].iloc[1] - df['t'].iloc[0] 
 fs = 1/dt
+print(f"dt = {dt}")
+print(f"fs = {fs}")
+# %% frequency = f(t) : 
+f1 = 2.
+f2 = 20.
+ttot = 128.
+print(f"tmin = {df.iloc[0]['t']}")
+print(f"ttot = {ttot}")
+df['freq'] = f1 + ((f2-f1)/ttot)*df['t'] 
+print(f"fmin = {df.iloc[0]['freq']}")
+print(f"fmax = {df.iloc[-1]['freq']}")
 #%%
 nt = int(np.floor(np.log(len(df['t']))/np.log(2.)))
-indexpsd = df[df.index < 2**nt].index
-#%% contact time interval :
-# alternative :
-icrit = 1.e-12
-# ccone :
-indi_ccone = df[np.abs(df["FN_CCONE"])>icrit].index
-indni_ccone = df.drop(indi_ccone).index
-if (lpion):
-    # pion haut :
-    indi_ph = df[(np.abs(df["FN_ph1"])>icrit) | 
-                 (np.abs(df["FN_ph2"])>icrit) |
-                 (np.abs(df["FN_ph3"])>icrit)].index
-    # indni_ph = df[(np.abs(df["FN_ph1"])<=icrit) | 
-    #              (np.abs(df["FN_ph2"])<=icrit) |
-    #              (np.abs(df["FN_ph3"])<=icrit)].index
-    indni_ph = df.drop(indi_ph).index
+indexpsd = df[df.index <= 2**nt].index
+print(f"nt = {nt}")
 
-    indi_pb = df[(np.abs(df["FN_pb1"])>icrit) | 
-                 (np.abs(df["FN_pb2"])>icrit) |
-                 (np.abs(df["FN_pb3"])>icrit)].index
-    indni_pb = df.drop(indi_pb).index
+#%%############################################
+#           PLOTS : zoom :
+###############################################
+repsect1 = f"{rep_save}variables_ft/zoom/"
+if not os.path.exists(repsect1):
+    os.makedirs(repsect1)
+    print(f"FOLDER : {repsect1} created.")
+else:
+    print(f"FOLDER : {repsect1} already exists.")
 
-if (lpcirc):
-    # pion haut :
-    indi_ph = df[(np.abs(df["FN_pcirch1"])>icrit) | 
-                 (np.abs(df["FN_pcirch2"])>icrit) |
-                 (np.abs(df["FN_pcirch3"])>icrit)].index
-    indni_ph = df.drop(indi_ph).index
+ind1 = df[(df['t']>=19.) & (df['t']<=20.)].index
+f = df['freq'].iloc[ind1[0]]
+print(f"f = {f}")
+kwargs1 = {
+    "tile1": f"uygad fload = {f}" + "\n",
+    "tile_save": f"zoom_traj2d_uygad_fload{int(f)}",
+    "ind": [ind1],
+    "colx": "t",
+    "coly": "uzg_tot_ad",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$u_y(G_{ad})$" + " (m)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
 
-    # pion bas :
-    indi_pb = df[(np.abs(df["FN_pcircb1"])>icrit) | 
-                 (np.abs(df["FN_pcircb2"])>icrit) |
-                 (np.abs(df["FN_pcircb3"])>icrit)].index
-    indni_pb = df.drop(indi_pb).index
+kwargs1 = {
+    "tile1": f"fext fload = {f}" + "\n",
+    "tile_save": f"zoom_fext_fload{int(f)}",
+    "ind": [ind1],
+    "colx": "t",
+    "coly": "Fext",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$F_{ext}$" + " (N)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
 
-    indi_pb1 = df[(np.abs(df["FN_pcircb1"])>icrit)].index
-    indi_pb2 = df[(np.abs(df["FN_pcircb2"])>icrit)].index
-    indi_pb3 = df[(np.abs(df["FN_pcircb3"])>icrit)].index
+#%%
+ind1 = df[(df['t']>=39.) & (df['t']<=40.)].index
+f = df['freq'].iloc[ind1[0]]
+print(f"f = {f}")
+kwargs1 = {
+    "tile1": f"uygad fload = {f}" + "\n",
+    "tile_save": f"zoom_traj2d_uygad_fload{int(f)}",
+    "ind": [ind1],
+    "colx": "t",
+    "coly": "uzg_tot_ad",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$u_y(G_{ad})$" + " (m)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
 
-    indi_ph1 = df[(np.abs(df["FN_pcirch1"])>icrit)].index
-    indi_ph2 = df[(np.abs(df["FN_pcirch2"])>icrit)].index
-    indi_ph3 = df[(np.abs(df["FN_pcirch3"])>icrit)].index
+kwargs1 = {
+    "tile1": f"fext fload = {f}" + "\n",
+    "tile_save": f"zoom_fext_fload{int(f)}",
+    "ind": [ind1],
+    "colx": "t",
+    "coly": "Fext",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$F_{ext}$" + " (N)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
 
-#%% transition :
-transition = False
-if transition:
-    tslice = 0.5
-    ntrans = 3
-    ltrans = []
-    # itrans = range(1,ntrans)
-    itrans = [55,57,60,62,74,86]
-    for i in itrans:
-        t1 = i*tslice - 1.e-2 
-        t2 = i*tslice + 1.e-2 
-        ltrans.append(df[(df['t']>t1) & (df['t']<t2)].index)
+#%%
+ind1 = df[(df['t']>=55.) & (df['t']<=56.)].index
+f = df['freq'].iloc[ind1[0]]
+print(f"f = {f}")
+kwargs1 = {
+    "tile1": f"uygad fload = {f}" + "\n",
+    "tile_save": f"zoom_traj2d_uygad_fload{int(f)}",
+    "ind": [ind1],
+    "colx": "t",
+    "coly": "uzg_tot_ad",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$u_y(G_{ad})$" + " (m)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
 
+kwargs1 = {
+    "tile1": f"fext fload = {f}" + "\n",
+    "tile_save": f"zoom_fext_fload{int(f)}",
+    "ind": [ind1],
+    "colx": "t",
+    "coly": "Fext",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$F_{ext}$" + " (N)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
+
+#%%
+ind1 = df[(df['t']>=99.) & (df['t']<=100.)].index
+f = df['freq'].iloc[ind1[0]]
+print(f"f = {f}")
+kwargs1 = {
+    "tile1": f"uygad fload = {f}" + "\n",
+    "tile_save": f"zoom_traj2d_uygad_fload{int(f)}",
+    "ind": [ind1],
+    "colx": "t",
+    "coly": "uzg_tot_ad",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$u_y(G_{ad})$" + " (m)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": f"fext fload = {f}" + "\n",
+    "tile_save": f"zoom_fext_fload{int(f)}",
+    "ind": [ind1],
+    "colx": "t",
+    "coly": "Fext",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$F_{ext}$" + " (N)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
 #%%############################################
 #           PLOTS : PSD :
 ###############################################
@@ -162,7 +375,37 @@ if not os.path.exists(repsect1):
 else:
     print(f"FOLDER : {repsect1} already exists.")
 #%%
-power, freq = plt.psd(-1.e6*df['uzg_tot_ad'].iloc[indexpsd], NFFT=2**(nt-5), Fs=100, scale_by_freq=0., color=color1[2])
+    # pas de nooverlap :
+if (lbloq): 
+    nfft = 2**(nt)
+    # nfft = 2**(nt-5)
+    nblocks = (len(df)) / (nfft)
+    print(f"nblocks = {nblocks}")
+    power, freq = plt.psd(-1.e6*df['uzg_tot_ad'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., color=color1[2])
+
+if (not lbloq):
+    # belle allure entre 0 et 30 hz : mais nfft fait la longueur du domaine
+    # nfft = 2**(nt-7)
+    nfft = 2**(nt)
+    # nvrlp = 0.75*nfft
+    nvrlp = 0.
+    nblocks = (len(df) - nvrlp) / (nfft - nvrlp)
+    print(f"nblocks = {nblocks}")
+    power, freq = plt.psd(-1.e6*df['uzg_tot_ad'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., detrend='linear',color=color1[0],noverlap=nvrlp)
+
+if (lxp):
+    # belle allure entre 0 et 30 hz : mais nfft fait la longueur du domaine
+    nfft = 2**(nt)
+    nvrlp = 0.
+    nblocks = (len(df) - nvrlp) / (nfft - nvrlp)
+    print(f"nblocks = {nblocks}")
+    power, freq = plt.psd(-1.e6*df['uzg_tot_ad'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0.,color=color1[0],noverlap=nvrlp)
+# nfft = 2**(nt-1)
+# nvrlp = 0.9*nfft
+# nblocks = (len(df) - nvrlp) / (nfft - nvrlp)
+# print(f"nblocks = {nblocks}")
+# power, freq = plt.psd(-1.e5*df['uzg_tot_ad'], NFFT=nfft, Fs=fs, scale_by_freq=True, detrend='linear',color=color1[2],noverlap=nvrlp)
+
 plt.close('all')
 # get the ordinate of plt.psd :
 power_density = 10. * np.log10(power)
@@ -174,7 +417,7 @@ if (linteractif):
     # Enable cursor and display values
     mplcursors.cursor(hover=True).connect(
         "add", lambda sel: sel.annotation.set_text(f"{sel.target[0]:.2f}, {sel.target[1]:.2f}"))
-
+    plt.xlim(0,30)
     # Adding labels and title
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
@@ -223,7 +466,16 @@ if (not linert):
         # spinini = 0.
         # dte = 1.e-6 
     lanot = [(1.07,77.61),(3.12,33.18),(5.27,19.85),(9.52,10.67),(15.58,9.41)]
-    # lanot = [(1.07,77.61),(3.12,33.18),(5.27,19.85),(7.32,9.48),(9.52,10.67),(15.58,9.41)]
+if (lbloq | lbepai): 
+    lanot = [(10.28,41.47),(13.24,30.70)]
+    xmax = 30.
+    ymax = 60.
+if (not lbloq):
+    lanot = [(12.54,44.54)]
+
+xmax = 30.
+ymax = 60.
+ymin = -50.
 kwargs1 = {
     "tile1": " PSD uy(G) adapter = f(freq)" + "\n",
     "tile_save": "PSD_uygad",
@@ -235,6 +487,10 @@ kwargs1 = {
     "labely": r"$Power \quad (dB)$",
     "color1": color1[2],
     "annotations": lanot,
+    "xmax": xmax,
+    "ymax": ymax,
+    "ymin": -50.,
+    "ypower": 3,
 }
 # traj.PSD(df, **kwargs1)
 traj.pltraj2d_list(**kwargs1)

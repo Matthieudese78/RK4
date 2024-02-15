@@ -9,7 +9,7 @@ import repchange as rc
 import os
 import matplotlib.pyplot as plt
 import mplcursors
-
+import sys
 #%% usefull parameters :
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 view = [20, -50]
@@ -47,50 +47,37 @@ lchoc = False
 # namerep = "manchadela_RSG_conefixe"
 
 linert = True
+lbfin = False
 lamode = True
 lkxp = False
 lpion = False
 lpcirc = True
-# Fext = 387.
 Fext = 193.
-mu = 0.3
+mu = 0.6
 xi = 0.05
 
 amode_m = 0.02
 amode_ad = 0.02
 vlimoden = 1.e-5
 spinini = 0.
-dte = 5.e-6
-h_lam = 50.e-3
-lspring = 45.e-2
-
+dte = 1.e-6
 vlostr = int(-np.log10(vlimoden))
-# dtstr = int(-np.log10(dte))
-dtstr = int(1.e6*dte)
+dtstr = int(-np.log10(dte))
 xistr = int(100.*xi)
-hlstr = int(h_lam*1.e3)
-lspringstr = int(lspring*1.e2)
 
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
+namerep = "/home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/RK4/manchad_pions/py/pickle/manchadela_pions_1"
 
-amodemstr = str(int(amode_m*100.))
-amodeadstr = str(int(amode_ad*100.))
 
-if lamode:
-    namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
-if (lkxp):
-  namerep = f'{namerep}_kxp'
-if (linert):
-    namerep = f'{namerep}_inert'
-repload = f'./pickle/{namerep}/'
-rep_save = f"./fig/{namerep}/"
+rep_save = f"./fig/manchadela_bloquee/"
 
-ltest = False
-if ltest:
-    repload = f'./pickle/manchadela_pions_1/'
-    rep_save = f"./fig/manchadela_pions_1/"
+repload = f'{namerep}/'
+
+if lbfin:
+    # namerep = f'{namerep}_bfin'
+    rep_save = f'{rep_save}bfin/'
+    repload = f'./pickle/bfin/manchadela_pions_1/'
+
 # %%
-
 if not os.path.exists(rep_save):
     os.makedirs(rep_save)
     print(f"FOLDER : {rep_save} created.")
@@ -111,308 +98,56 @@ t2 = 128.
 # df = df[(df['t']>=t1) & (df['t']<=t2)]
 # df.reset_index(drop=True,inplace=True)
 
-
 # %% 100 points par seconde 
-    # nsort = 10 et x4 dans dopickle_slices :
-# if (not linert):
-#     nsort = 40
-# if (linert):
-#     nsort = 30
-    # on veut un point ttes les :
 discr = 1.e-3
 dtsort = df.iloc[1]['t'] - df.iloc[0]['t']
+    # on veut un point ttes les :
 ndiscr = int(discr/(dtsort))
 df = df.iloc[::ndiscr]
 # rows2keep = df.index % ndiscr == 0 
 # df = df[rows2keep]
 df.reset_index(drop=True,inplace=True)
+dt = df['t'].iloc[1] - df['t'].iloc[0] 
+fs = 1/dt
+print(f"dt = {dt}")
+print(f"fs = {fs}")
 # %% frequency = f(t) : 
 f1 = 2.
 f2 = 20.
 ttot = df.iloc[-1]['t']
-print(f"tmin = {df.iloc[0]['t']}")
-print(f"ttot = {ttot}")
 df['freq'] = f1 + ((f2-f1)/ttot)*df['t'] 
-print(f"fmin = {df.iloc[0]['freq']}")
-print(f"fmax = {df.iloc[-1]['freq']}")
+
 #%%
 nt = int(np.floor(np.log(len(df['t']))/np.log(2.)))
 indexpsd = df[df.index < 2**nt].index
-#%% contact time interval :
-if (lpion):
-    df['tag'] = df['FN_pb1'] < 0
-    fst = df.index[df['tag'] & ~ df['tag'].shift(1).fillna(False)]
-    lst = df.index[df['tag'] & ~ df['tag'].shift(-1).fillna(False)]
-    prb1 = [(i,j) for i,j in zip(fst,lst)]
 # %% On change de repere pour le tracer des trajectoires :
 exb = np.array([0.0, -1.0, 0.0])
 eyb = np.array([0.0, 0.0, 1.0])
 ezb = np.array([-1.0, 0.0, 0.0])
 base2 = [exb, eyb, ezb]
-
-# centre du cercle et son vis a vis :
-name_cols = ["uxp2", "uyp2", "uzp2"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-name_cols = ["uxce_ad", "uyce_ad", "uzce_ad"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-if (lplam):
-    name_cols = ["uxplam_h", "uyplam_h", "uzplam_h"]
+lrepchg = True
+if lrepchg:
+    # centre du cercle et son vis a vis :
+    name_cols = ["uxp2", "uyp2", "uzp2"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
 
-    name_cols = ["uxplam_b", "uyplam_b", "uzplam_b"]
+    name_cols = ["uxg_tot_ad", "uyg_tot_ad", "uzg_tot_ad"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
 
-name_cols = ["uxg_tot_ad", "uyg_tot_ad", "uzg_tot_ad"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-# name_cols = ["uxscone_tot", "uyscone_tot", "uzscone_tot"]
-# kwargs1 = {"base2": base2, "name_cols": name_cols}
-# rc.repchgdf(df, **kwargs1)
-
-name_cols = ["uxph_ad", "uyph_ad", "uzph_ad"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-name_cols = ["uxpb_ad", "uypb_ad", "uzpb_ad"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-if lplow:
     name_cols = ["uxplow", "uyplow", "uzplow"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
-    name_cols = ["uxplow_ad", "uyplow_ad", "uzplow_ad"]
+
+    name_cols = ["uxph", "uyph", "uzph"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
 
-if lraidtimo:
-    name_cols = ["pix_ad", "piy_ad", "piz_ad"]
+    name_cols = ["uxpb", "uypb", "uzpb"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
 
-    name_cols = ["wx_ad", "wy_ad", "wz_ad"]
-    kwargs1 = {"base2": base2, "name_cols": name_cols}
-    rc.repchgdf(df, **kwargs1)
-
-    name_cols = ["ax_ad", "ay_ad", "az_ad"]
-    kwargs1 = {"base2": base2, "name_cols": name_cols}
-    rc.repchgdf(df, **kwargs1)
-
-# grandeur manchette :
-name_cols = ["WX", "WY", "WZ"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-name_cols = ["AX", "AY", "AZ"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-name_cols = ["PIX", "PIY", "PIZ"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-name_cols = ["VX_PINCID", "VY_PINCID", "VZ_PINCID"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-# on ne passe pas les depl. du point d'incidence dans le repere utilisateur
-# rapport au traitement qu'il va subir par le suite
-# name_cols = ["UXpincid", "UYpincid", "UZpincid"]
-# kwargs1 = {"base2": base2, "name_cols": name_cols}
-# rc.repchgdf(df, **kwargs1)
-
-name_cols = ["uxg_m", "uyg_m", "uzg_m"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-name_cols = ["uxph", "uyph", "uzph"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-name_cols = ["uxpb", "uypb", "uzpb"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-
-# grandeur ccone :
-name_cols = ["FX_CCONE", "FY_CCONE", "FZ_CCONE"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-name_cols = ["MX_CCONE", "MY_CCONE", "MZ_CCONE"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-# %% trajectoires relatives
-### calculs
-lk = []
-lk.append({"col1": "uxp2", "col2": "uxce_ad", "col3": "uxcerela"})
-lk.append({"col1": "uyp2", "col2": "uyce_ad", "col3": "uycerela"})
-lk.append({"col1": "uzp2", "col2": "uzce_ad", "col3": "uzcerela"})
-lk.append({"col1": "uxpb", "col2": "uxpb_ad", "col3": "uxpbrela"})
-lk.append({"col1": "uypb", "col2": "uypb_ad", "col3": "uypbrela"})
-lk.append({"col1": "uzpb", "col2": "uzpb_ad", "col3": "uzpbrela"})
-lk.append({"col1": "uxph", "col2": "uxph_ad", "col3": "uxphrela"})
-lk.append({"col1": "uyph", "col2": "uyph_ad", "col3": "uyphrela"})
-lk.append({"col1": "uzph", "col2": "uzph_ad", "col3": "uzphrela"})
-if lplow:
-    lk.append({"col1": "uxplow", "col2": "uxplow_ad", "col3": "uxplowrela"})
-    lk.append({"col1": "uyplow", "col2": "uyplow_ad", "col3": "uyplowrela"})
-    lk.append({"col1": "uzplow", "col2": "uzplow_ad", "col3": "uzplowrela"})
-[traj.rela(df, **ki) for i, ki in enumerate(lk)]
-
-# %% maximum penetration :
-penePB = cmax - df['uypbrela'].abs().max()
-penePH = cmax - df['uyphrela'].abs().max()
-maxdeplPB = df['uypbrela'].abs().max()
-maxdeplPH = df['uyphrela'].abs().max()
-# maxdeplPB = np.sqrt(df['uxpbrela'].abs().max()**2 + df['uypbrela'].abs().max()**2)
-# maxdeplPH = np.sqrt(df['uxphrela'].abs().max()**2 + df['uyphrela'].abs().max()**2)
-print(f'maxdeplbPB = {maxdeplPB*1.e6} microns')
-print(f'maxpenePB = {penePB*1.e6} microns')
-    # one time cheat :
-# maxdeplPB = 0.0015812598679999998
-# %% matrice de rotation de la manchette :
-kq = {"colname": "mrot", "q1": "quat1", "q2": "quat2", "q3": "quat3", "q4": "quat4"}
-rota.q2mdf(df, **kq)
-
-# %% extraction du spin :
-    #%% matrice de rotation de la manchette dans le repere utilisateur :
-name_cols = ["mrotu"]
-kwargs1 = {"base2": base2, "mat": "mrot", "name_cols": name_cols}
-rc.repchgdf_mat(df, **kwargs1)
-    #%% extraction du spin : 
-name_cols = ["spin"] 
-kwargs1 = {"mat": "mrotu", "colnames": name_cols}
-rota.spinextrdf(df,**kwargs1)
-    # on drop la column "mrotu" qui prend de la place : 
-df.drop(['mrotu'],inplace=True,axis=1)
-
-# %% on fait xb - xcdr :
-lk = []
-lk.append({"col1": "UXpincid", "col2": "UXcdr", "col3": "uxpicircB"})
-lk.append({"col1": "UYpincid", "col2": "UYcdr", "col3": "uypicircB"})
-lk.append({"col1": "UZpincid", "col2": "UZcdr", "col3": "uzpicircB"})
-[traj.rela(df, **ki) for i, ki in enumerate(lk)]
-# on a lieu le contact ?
-# indchoc = df[
-#     (
-#         (np.sqrt(df["UXpincid"] ** 2 + df["UYpincid"] ** 2 + df["UZpincid"] ** 2))
-#         > 1.0e-3
-#     )
-# ].index
-    # non c avc fn_ccone :
-indchoc = df[df['FN_CCONE'].abs()>0.].index
-# %% on fait R^T * (xb - xcdr) :
-ktr = {
-    "colnames": ["uxpicircA", "uypicircA", "uzpicircA"],
-    "mrot": "mrot",
-    "x": "uxpicircB",
-    "y": "uypicircB",
-    "z": "uzpicircB",
-}
-# ktr = {'colnames' : ['uxpicircA', 'uypicircA', 'uzpicircA'] , 'mrot' : 'mrot', 'x' : 'UXpincid', 'y' : 'UYpincid', 'z' : 'UZpincid'}
-rota.b2a(df, **ktr)
-# on passe dans le repere utilisateur :
-name_cols = ["uxpicircA", "uypicircA", "uzpicircA"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-
-# %% recombinaison des depl. du sommet du cone :
-lk = []
-lk.append({"col1": "UXpincid", "col2": "uxscone_tot", "col3": "uxpisc"})
-lk.append({"col1": "UYpincid", "col2": "uyscone_tot", "col3": "uypisc"})
-lk.append({"col1": "UZpincid", "col2": "uzscone_tot", "col3": "uzpisc"})
-[traj.rela(df, **ki) for i, ki in enumerate(lk)]
-
-# %% on peut passer le point d'incidence dans la base utilisateur :
-name_cols = ["UXpincid", "UYpincid", "UZpincid"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-name_cols = ["uxpisc", "uypisc", "uzpisc"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
-# %%          COLORATION : 
-    # en fonction de l'usure :
-kcol = {'colx' : 'pusure_ccone', 'ampl' : 200., 'logcol' : False}
-dfcolpus = traj.color_from_value(df.loc[indchoc],**kcol)
-
-# kcol = {'colx' : "PCTG_GLIS_ADH", 'ampl' : 200., 'logcol' : False}
-# dfcolglisad = traj.color_from_value(df.loc[indchoc],**kcol)
-
-kcol = {'colx' : "FN_CCONE", 'color_normal' : 'black', 'color_impact' : 'orange'}
-dfcolimpact = traj.color_impact(df,**kcol)
-# alternative :
-icrit = 1.e-12
-# ccone :
-indi_ccone = df[np.abs(df["FN_CCONE"])>icrit].index
-indni_ccone = df.drop(indi_ccone).index
-if (lpion):
-    # pion haut :
-    indi_ph = df[(np.abs(df["FN_ph1"])>icrit) | 
-                 (np.abs(df["FN_ph2"])>icrit) |
-                 (np.abs(df["FN_ph3"])>icrit)].index
-    # indni_ph = df[(np.abs(df["FN_ph1"])<=icrit) | 
-    #              (np.abs(df["FN_ph2"])<=icrit) |
-    #              (np.abs(df["FN_ph3"])<=icrit)].index
-    indni_ph = df.drop(indi_ph).index
-
-    indi_pb = df[(np.abs(df["FN_pb1"])>icrit) | 
-                 (np.abs(df["FN_pb2"])>icrit) |
-                 (np.abs(df["FN_pb3"])>icrit)].index
-    indni_pb = df.drop(indi_pb).index
-
-if (lpcirc):
-    # pion haut :
-    indi_ph = df[(np.abs(df["FN_pcirch1"])>icrit) | 
-                 (np.abs(df["FN_pcirch2"])>icrit) |
-                 (np.abs(df["FN_pcirch3"])>icrit)].index
-    indni_ph = df.drop(indi_ph).index
-
-    # pion bas :
-    indi_pb = df[(np.abs(df["FN_pcircb1"])>icrit) | 
-                 (np.abs(df["FN_pcircb2"])>icrit) |
-                 (np.abs(df["FN_pcircb3"])>icrit)].index
-    indni_pb = df.drop(indi_pb).index
-
-    indi_pb1 = df[(np.abs(df["FN_pcircb1"])>icrit)].index
-    indi_pb2 = df[(np.abs(df["FN_pcircb2"])>icrit)].index
-    indi_pb3 = df[(np.abs(df["FN_pcircb3"])>icrit)].index
-
-    indi_ph1 = df[(np.abs(df["FN_pcirch1"])>icrit)].index
-    indi_ph2 = df[(np.abs(df["FN_pcirch2"])>icrit)].index
-    indi_ph3 = df[(np.abs(df["FN_pcirch3"])>icrit)].index
-
-#%% fenetrage en temps :
-transition = False
-if transition:
-    tslice = 0.5
-    ntrans = 3
-    ltrans = []
-    # itrans = range(1,ntrans)
-    itrans = [55,57,60,62,74,86]
-    for i in itrans:
-        t1 = i*tslice - 1.e-2 
-        t2 = i*tslice + 1.e-2 
-        ltrans.append(df[(df['t']>t1) & (df['t']<t2)].index)
-
-#%% energies :
-M = 11.46
-Mad = 25.643267377499903 
-df['epot'] = M*df['uzg_m'] 
-df['epotad'] = Mad*df['uzg_tot_ad'] 
-df['etot'] = df['epot'] + df['edef'] + df['EC']
-df['etotad'] = df['epotad'] + df['edefad'] + df['ecad']
 #%%############################################
 #           PLOTS : grandeures temporelles :
 ###############################################
@@ -437,7 +172,7 @@ kwargs1 = {
     "label1": None,
     "labelx": r"$t \quad (s)$",
     "labely": r"$F_{0} \quad (N)$",
-    "color1": color1[0],
+    "color1": color1[2],
     "endpoint": False,
     "xpower": 5,
     "ypower": 5,
@@ -452,57 +187,25 @@ kwargs1 = {
     "label1": None,
     "labelx": r"$t \quad (s)$",
     "labely": r"$Frequency \quad (Hz)$",
-    "color1": color1[0],
+    "color1": color1[2],
     "endpoint": False,
     "xpower": 5,
     "ypower": 5,
 }
 traj.pltraj2d_list(**kwargs1)
 
-kwargs1 = {
-    "tile1": "Fext = f(t)" + "\n",
-    "tile_save": "Fext_ft",
-    "colx": "t",
-    "coly": "Fext",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$F_{ext} \quad (N)$",
-    "color1": color1[0],
-    "endpoint": False,
-    "xpower": 5,
-    "ypower": 5,
-}
-traj.pltraj2d(df, **kwargs1)
-#%% stick / slip
-kwargs1 = {
-    "tile1": "stickslip = f(f)" + "\n",
-    "tile_save": "stickslip_f",
-    "colx": "freq",
-    "coly": "pctg_glis_ad",
-    "rep_save": repsect1,
-    "label1": None,
-    # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
-    "labely": r"$\frac{stick}{slip} \quad (\%)$",
-    "color1": color1[0],
-    "endpoint": False,
-    "xpower": 5,
-    "ypower": 5,
-}
-traj.pltraj2d(df, **kwargs1)
-#%%
 # vitesses de rotations body frame :
+
 kwargs1 = {
-    "tile1": "Wx = f(f)" + "\n",
-    "tile_save": "Wx_f",
+    "tile1": "ux(G) adapter = f(f)" + "\n",
+    "tile_save": "uxgad_f",
     "colx": "freq",
-    "coly": "WX",
+    "coly": "uxg_tot_ad",
     "rep_save": repsect1,
-    "label1": r"$W_{X}$",
+    "label1": None,
     # "labelx": r"$t \quad (s)$",
     "labelx": r"$Loading Frequency$" + " (Hz)",
-    "labely": r"$W_X \quad (rad/s)$",
+    "labely": r"$u_x(G_ad)$"+" (m)",
     "color1": color1[2],
     "endpoint": False,
     "xpower": 5,
@@ -511,50 +214,31 @@ kwargs1 = {
 traj.pltraj2d(df, **kwargs1)
 
 kwargs1 = {
-    "tile1": "Wy = f(f)" + "\n",
-    "tile_save": "Wy_f",
-    "colx": "freq",
-    "coly": "WY",
+    "tile1": "ux(G) adapter = f(t)" + "\n",
+    "tile_save": "uxgad_t",
+    "colx": "t",
+    "coly": "uxg_tot_ad",
     "rep_save": repsect1,
-    "label1": r"$W_{Y}$",
+    "label1": None,
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
-    "labely": r"$W_Y \quad (rad/s)$",
+    "labelx": r"$t$" + " (s)",
+    "labely": r"$u_x(G_ad)$"+" (m)",
     "color1": color1[2],
     "endpoint": False,
     "xpower": 5,
     "ypower": 5,
 }
 traj.pltraj2d(df, **kwargs1)
-
 kwargs1 = {
-    "tile1": "Wz = f(f)" + "\n",
-    "tile_save": "Wz_f",
+    "tile1": "uy(G) adapter = f(f)" + "\n",
+    "tile_save": "uygad_f",
     "colx": "freq",
-    "coly": "WZ",
+    "coly": "uyg_tot_ad",
     "rep_save": repsect1,
-    "label1": r"$W_{Z}$",
+    "label1": None,
     # "labelx": r"$t \quad (s)$",
     "labelx": r"$Loading Frequency$" + " (Hz)",
-    "labely": r"$W_Z \quad (rad/s)$",
-    "color1": color1[2],
-    "endpoint": False,
-    "xpower": 5,
-    "ypower": 5,
-}
-traj.pltraj2d(df, **kwargs1)
-
-df['spindeg'] = df['spin'] * 180. / np.pi
-kwargs1 = {
-    "tile1": "Spin = f(f)" + "\n",
-    "tile_save": "psi_f",
-    "colx": "freq",
-    "coly": "spindeg",
-    "rep_save": repsect1,
-    "label1": r"$\psi$",
-    # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
-    "labely": r"$\psi \quad (\degree)$",
+    "labely": r"$u_y(G_ad)$"+" (m)",
     "color1": color1[2],
     "endpoint": False,
     "xpower": 5,
@@ -580,15 +264,15 @@ kwargs1 = {
 traj.pltraj2d(df, **kwargs1)
 
 kwargs1 = {
-    "tile1": "uy(G) adapter = f(f)" + "\n",
-    "tile_save": "uygad_f",
+    "tile1": "uz(G) adapter = f(f)" + "\n",
+    "tile_save": "uzgad_f",
     "colx": "freq",
-    "coly": "uyg_tot_ad",
+    "coly": "uzg_tot_ad",
     "rep_save": repsect1,
     "label1": None,
     # "labelx": r"$t \quad (s)$",
     "labelx": r"$Loading Frequency$" + " (Hz)",
-    "labely": r"$u_y(G_ad)$"+" (m)",
+    "labely": r"$u_z(G_ad)$"+" (m)",
     "color1": color1[2],
     "endpoint": False,
     "xpower": 5,
@@ -614,44 +298,10 @@ kwargs1 = {
 traj.pltraj2d(df, **kwargs1)
 
 kwargs1 = {
-    "tile1": "uz(M) adapter = f(t)" + "\n",
-    "tile_save": "uzgm_t",
-    "colx": "t",
-    "coly": "uzg_m",
-    "rep_save": repsect1,
-    "label1": None,
-    # "labelx": r"$t \quad (s)$",
-    "labelx": r"$t$" + " (s)",
-    "labely": r"$u_z(G_s)$"+" (m)",
-    "color1": color1[2],
-    "endpoint": False,
-    "xpower": 5,
-    "ypower": 5,
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "rela uy(PB) sleeve = f(t)" + "\n",
-    "tile_save": "uypb_t",
-    "colx": "t",
-    "coly": "uypbrela",
-    "rep_save": repsect1,
-    "label1": None,
-    # "labelx": r"$t \quad (s)$",
-    "labelx": r"$t$" + " (s)",
-    "labely": r"$u_y(P_{pin}^{l})$"+" (m)",
-    "color1": color1[2],
-    "endpoint": False,
-    "xpower": 5,
-    "ypower": 5,
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "rela uy(PB) sleeve = f(f)" + "\n",
-    "tile_save": "uypb_f",
+    "tile1": "uy(PB) sleeve = f(f)" + "\n",
+    "tile_save": "uypb_ft",
     "colx": "freq",
-    "coly": "uypbrela",
+    "coly": "uypb",
     "rep_save": repsect1,
     "label1": None,
     # "labelx": r"$t \quad (s)$",
@@ -665,27 +315,10 @@ kwargs1 = {
 traj.pltraj2d(df, **kwargs1)
 
 kwargs1 = {
-    "tile1": "rela uy(PH) sleeve = f(t)" + "\n",
-    "tile_save": "uyph_t",
-    "colx": "t",
-    "coly": "uyphrela",
-    "rep_save": repsect1,
-    "label1": None,
-    # "labelx": r"$t \quad (s)$",
-    "labelx": r"$t$" + " (s)",
-    "labely": r"$u_y(P_{pin}^{u})$"+" (m)",
-    "color1": color1[2],
-    "endpoint": False,
-    "xpower": 5,
-    "ypower": 5,
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "rela uy(PH) sleeve = f(f)" + "\n",
-    "tile_save": "uyph_f",
+    "tile1": "uy(PH) sleeve = f(f)" + "\n",
+    "tile_save": "uyph_ft",
     "colx": "freq",
-    "coly": "uyphrela",
+    "coly": "uyph",
     "rep_save": repsect1,
     "label1": None,
     # "labelx": r"$t \quad (s)$",
@@ -697,6 +330,9 @@ kwargs1 = {
     "ypower": 5,
 }
 traj.pltraj2d(df, **kwargs1)
+
+#%%
+sys.exit()
 #%% energies :
 repsect1 = f"{rep_save}energies/"
 if not os.path.exists(repsect1):
@@ -1286,7 +922,7 @@ if (lpcirc):
         "label1": None,
         "labelx": r"$t \quad (s)$",
         "labely": r"$F_{n}^l \quad (N)$",
-        "color1": color1[1],
+        "color1": color1[0],
     }
     traj.pltraj2d(df, **kwargs1)
 
@@ -1301,7 +937,7 @@ if (lpcirc):
         "label1": None,
         "labelx": r"$t \quad (s)$",
         "labely": r"$F_{n}^l \quad (N)$",
-        "color1": color1[2],
+        "color1": color1[0],
     }
     traj.pltraj2d(df, **kwargs1)
 if (lpion):
@@ -1372,7 +1008,7 @@ if (lpion):
         "label1": None,
         "labelx": r"$t \quad (s)$",
         "labely": r"$F_{n}^l \quad (N)$",
-        "color1": color1[1],
+        "color1": color1[0],
     }
     traj.pltraj2d(df, **kwargs1)
 
@@ -1386,7 +1022,7 @@ if (lpion):
         "label1": None,
         "labelx": r"$t \quad (s)$",
         "labely": r"$P_{W}^l \quad (W)$",
-        "color1": color1[2],
+        "color1": color1[0],
     }
     traj.pltraj2d(df, **kwargs1)
 

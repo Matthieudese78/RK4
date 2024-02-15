@@ -2,6 +2,99 @@
 import numpy as np
 import matplotlib.pyplot as plt
 #%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import chirp
+
+# Define parameters
+duration = 128  # Signal duration in seconds
+fs = 1.e3  # Sampling frequency in Hz
+t = np.arange(0, duration, 1/fs)  # Time vector
+
+# Plot the signal between 59 and 60 seconds
+start_time = 59.  # seconds
+end_time = 60.  # seconds
+
+# Find indices corresponding to the time range
+start_index = int(start_time * fs)
+end_index = int(end_time * fs)
+
+# Generate chirped sinusoidal signal
+f_start = 2  # Starting frequency in Hz
+f_end = 20  # Ending frequency in Hz
+signal = chirp(t, f0=f_start, f1=f_end, t1=duration, method='linear',phi=-90.)
+instantaneous_phase = np.unwrap(np.angle(signal))  # Unwrap the phase to handle phase wrapping
+instantaneous_frequency = np.gradient(instantaneous_phase) * fs / (2 * np.pi)
+# Plot the signal
+# plt.plot(t, signal)
+plt.plot(t[start_index:end_index], signal[start_index:end_index])
+# plt.plot(instantaneous_phase, signal)
+plt.xlabel('Time (seconds)')
+plt.ylabel('Amplitude')
+plt.title('Chirped Sinusoidal Signal')
+plt.grid(True)
+plt.show()
+
+# Open the file for writing
+# with open(f'signal{int(np.log10(fs))}.acc', 'w') as file:
+#     # Write each value of the signal to a separate line
+#     for value in signal:
+#         file.write(f'{value}\n')
+#%%
+duration = 128  # Signal duration in seconds
+fs = 1000  # Sampling frequency in Hz
+t = np.arange(0, duration+1/fs, 1/fs)  # Time vector
+f1 = 2 
+f2 = 20 
+df = (f2-f1)/((duration)*fs)
+freq = np.arange(f1,f2,df)
+omega = 2.*np.pi*freq
+signal = np.sin(omega*t)
+plt.plot(t[start_index:end_index], signal[start_index:end_index])
+plt.xlabel('Time (seconds)')
+plt.ylabel('Amplitude')
+plt.title('Chirped Sinusoidal Signal')
+plt.grid(True)
+plt.show()
+
+#%%
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import find_peaks
+# Generate chirped sinusoidal signal
+duration = 128  # Signal duration in seconds
+fs = 1000  # Sampling frequency in Hz
+t = np.linspace(0, duration, duration * fs, endpoint=False)  # Time vector
+f_start = 2  # Starting frequency in Hz
+f_end = 20  # Ending frequency in Hz
+omega = 2 * np.pi * np.linspace(f_start, f_end, duration * fs)  # Angular frequency vector
+signal = np.sin(omega * t)
+
+# Calculate instantaneous frequency
+peaks, _ = find_peaks(signal)
+instantaneous_frequency = fs / np.diff(peaks)
+
+# Plot the chirped signal and its instantaneous frequency
+fig, ax1 = plt.subplots()
+
+color = 'tab:red'
+ax1.set_xlabel('Time (seconds)')
+ax1.set_ylabel('Chirped Signal', color=color)
+ax1.plot(t, signal, color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+
+ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+color = 'tab:blue'
+ax2.set_ylabel('Instantaneous Frequency (Hz)', color=color)  
+ax2.plot(t[peaks[:-1]], instantaneous_frequency, color=color)
+ax2.tick_params(axis='y', labelcolor=color)
+
+fig.tight_layout()  
+plt.title('Chirped Signal and Instantaneous Frequency')
+plt.show()
+
+#%%
 # relation amor pour un contact ccone total (a plat) a 1 m . s^-1 :
 # 2.*np.pi*R_tete*1.*eta = x %
 R_tete = 4.68e-2

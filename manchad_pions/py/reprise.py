@@ -6,7 +6,7 @@ import pandas as pd
 import os
 import subprocess
 import shutil
-# import glob
+import glob
 # import sys
 # import json
 import rotation
@@ -19,7 +19,7 @@ source = f'../{filename}'
 repcast = f'../../build/'
 lstdout = False
 #%% nombre de slices :
-nslice = 256
+nslice = 128
 ttot = 128.
 # nslice = 3
 #%% parametres du calcul 
@@ -31,29 +31,30 @@ tcxp = 5.e-3
 
 mu = 0.6
 xi = 0.05
-ttot = 120.
 f1 = 2.
 f2 = 20.
-t = 0.5
+t = 1.
 lexp  = "faux" 
-raidiss  = "vrai" 
+raidiss = "vrai" 
+lbloq  = "faux" 
 # on bloc la rotation en ry de l'adaptateur ?
-blqry = "vrai"
-dte = 1.e-6
-nsort = 30
+blqry = "faux"
+# dte = 1.e-6
+dte = 5.e-6
+nsort = 5
 # 3 modes de flexion :
 nmode = 3
 n_tronq = 0
-nmode_ad = 7
+nmode_ad = 5
 Fext = 137.*np.sqrt(2.)
 fefin = 5.
-vlimoden = 1.e-4
+vlimoden = 1.e-5
 # amortissement modal :
 lamode = "vrai"
 amode_m = 0.02
 amode_ad = 0.02
 # amortissement ccone :
-amo_ccone = 17.
+amo_ccone = 5.*3.4
 # rappel : on a aussi remis thlim a 10^-5 dans devfb10.
 # amo_ccone = 3.4
 # on donne les 1ers angles en degres !
@@ -70,6 +71,16 @@ vxini = 0.
 vyini = 0.
 vzini = 0.
 
+    # chargement  
+lsin = "faux"
+lsinb = "vrai"
+    # springs 
+# h_lam = 40.e-3
+# lspring = 20.e-2
+b_lam = 5.5e-3
+h_lam = 50.e-3
+lspring = 45.e-2
+
 #%% retrait du 2eme mode de l'adaptateur ?
 lmad2 = "faux"
 nmad = nmode_ad
@@ -78,9 +89,12 @@ if (lmad2=="vrai"):
     nmad = 1
 #%% repertoire de sauvegarde : 
 vlostr = int(-np.log10(vlimoden))
-dtstr = int(-np.log10(dte))
+dtstr = int(1.e6*dte)
+# dtstr = int(-np.log10(dte/(1.e6*dte)))
 xistr = int(100.*xi)
-nameglob = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
+hlstr = int(h_lam*1.e3)
+lspringstr = int(lspring*1.e2)
+nameglob = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
 if (lamode=="vrai"):
   amodemstr = int(amode_m*100.)
   amodeadstr = int(amode_ad*100.)
@@ -90,7 +104,6 @@ if (lkxp=="vrai"):
   nameglob = f'{nameglob}_kxp'
 if (linert):
   nameglob = f'{nameglob}_inert'
-
 
 repglob = f'../{nameglob}/'
 #%%########################### CALCUL 0
@@ -104,10 +117,16 @@ slice = 0
 dictini = {
   #          reprise : 
              'reprise' : "vrai",
+  #          lsin : 
+             'lsin' : lsin,
+  #          lsinb : 
+             'lsinb' : lsinb,
   #          raideur de choc xp : 
              'lkxp' : lkxp,
   #          temps de choc xp : 
              'tcxp' : tcxp,
+  #          bloquee : 
+             'lbloq' : lbloq,
   #          ttot : 
              'ttot' : ttot,
   #          lexp : decroissance exponentielle du chargement
@@ -118,6 +137,11 @@ dictini = {
              'lmad2' : lmad2,
   #          lraidiss : on met les raidisseurs ? 
              'raidiss' : raidiss,
+  #          ressorts a lames : 
+  #          hauteur : 
+             'b_lam' : b_lam,
+             'h_lam' : h_lam,
+             'lspring' : lspring,
   #          trep : 
              'trep' : 0.,
   #          slice : 
@@ -125,12 +149,14 @@ dictini = {
   #          ttot : 
              'ttot' : ttot,
   #          amo_ccone : 
-             'amo_ccone' : 1.e2,
+             'amo_ccone' : 3.4,
   #          lamode : 
              'lamode' : "vrai",
   #          amode : 
-             'amode_ad' : 30.,
-             'amode_m' : 0.,
+             'amode_ad' : 0.02,
+             'amode_m' : 0.02,
+            #  'amode_ad' : 50.,
+            #  'amode_m' : 50.,
   #          f1 : 
              'f1' : f1,
   #          f2 : 
@@ -152,7 +178,8 @@ dictini = {
   #          amplitude F sinus : 
              'Fext' : 0.,
   #          vlimoden 
-             'vlimoden' : vlimoden,
+            #  'vlimoden' : vlimoden,
+             'vlimoden' : 1.e-5,
   #          ddls rig : manchette vect de rotation 
              'theta_rx' : theta_rx,
              'theta_ry' : theta_ry,
@@ -313,16 +340,26 @@ dict_rep = {
              't' : t,
   #          reprise : 
              'reprise' : "vrai",
+  #          lsin : 
+             'lsin' : lsin,
+  #          lsinb : 
+             'lsinb' : lsinb,
   #          raideur de choc xp : 
              'lkxp' : lkxp,
   #          temps de choc xp : 
              'tcxp' : tcxp,
+  #          bloquee : 
+             'lbloq' : lbloq,
   #          ttot : 
              'ttot' : ttot,
   #          lexp : 
              'lexp' : lexp,
   #          blqry : bloq rotq ry adaptateur
              'blqry' : blqry,
+  #          ressorts a lames : 
+             'b_lam' : b_lam,
+             'h_lam' : h_lam,
+             'lspring' : lspring,
   #          fefin : valeur de la force a la fin du calcul si lexp :
              'fefin' : fefin,
   #          lmad2 : on retire le 2eme mode de l'adapter 
@@ -369,10 +406,14 @@ dict_rep = {
              'axini' : df['qatx'].iloc[-1],
              'ayini' : df['qaty'].iloc[-1],
              'azini' : df['qatz'].iloc[-1],
+             'nsauvini' : df['nsauvini'].iloc[-1],
             }
 dfini = pd.DataFrame(dict_rep, index=[0])
 
-for i in np.arange(nmode - n_tronq):
+print(f"nsauvini : {df['nsauvini'].iloc[-1]}")
+    
+# for i in np.arange(nmode - n_tronq):
+for i in np.arange(dfini['nsauvini'][0]):
     nameu = f"q{i+1}"
     namev = f"q{i+1}v"
     namea = f"q{i+1}a"
@@ -478,19 +519,30 @@ for slice in range(2,nslice+1):
   vect = rotation.quat2vect2(q)
   # vect : en radians !! le .dgibi est adapte pour (reprise et (slice >EG 2))
 
+  print(f"trep = {df['t'].iloc[-1]:.6f} ")
   #  
     # manchette & adaptateur : 4 modes elastiques. 
   dict_rep = {
     #          reprise : 
                'reprise' : "vrai",
+    #          lsin : 
+               'lsin' : lsin,
+    #          lsinb : 
+               'lsinb' : lsinb,
     #          raideur de choc xp : 
                'lkxp' : lkxp,
     #          temps de choc xp : 
                'tcxp' : tcxp,
+    #          bloquee : 
+               'lbloq' : lbloq,
     #          ttot : 
                'ttot' : ttot,
     #          lexp : 
                'lexp' : lexp,
+    #          ressorts a lames : 
+               'b_lam' : b_lam,
+               'h_lam' : h_lam,
+               'lspring' : lspring,
     #          fefin : 
                'fefin' : fefin,
     #          lamode : 
@@ -535,10 +587,12 @@ for slice in range(2,nslice+1):
                'axini' : df['qatx'].iloc[-1],
                'ayini' : df['qaty'].iloc[-1],
                'azini' : df['qatz'].iloc[-1],
+               'nsauvini' : df['nsauvini'].iloc[-1],
               }
   dfini = pd.DataFrame(dict_rep, index=[0])
 
-  for i in np.arange(nmode - n_tronq):
+#   for i in np.arange(nmode - n_tronq):
+  for i in np.arange(dfini['nsauvini'][0]):
       nameu = f"q{i+1}"
       namev = f"q{i+1}v"
       namea = f"q{i+1}a"
@@ -629,6 +683,10 @@ shutil.copy(script_path,repglob)
 print(f"batch script {script_name} saved into {repglob}")
 shutil.copy(f'{repglob}calc_1/{filename}',repglob)
 print(f"1st .dgibi saved into {repglob}")
+ps_files = glob.glob(f'{repglob}calc_1/*.ps')
+for ps_file in ps_files:
+    shutil.copy(ps_file,repglob)
+print(f"calc_1/fig/*.ps saved into {repglob}") 
 
 #%%######################################### CLEAN
 # menage :

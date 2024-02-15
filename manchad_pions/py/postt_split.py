@@ -47,23 +47,29 @@ lchoc = False
 # namerep = "manchadela_RSG_conefixe"
 
 linert = True
-lamode = False
+lamode = True
 
 lpion = False
 lpcirc = True
 
 Fext = 193.
 mu = 0.3
-xi = 0.
-amode_m = 0.01
-amode_ad = 0.01
-vlimoden = 1.e-4
+xi = 0.05
+amode_m = 0.02
+amode_ad = 0.02
+vlimoden = 1.e-5
 spinini = 0.
-dte = 1.e-6
+dte = 5.e-6
+h_lam = 50.e-3
+lspring = 45.e-2
+
+hlstr = int(h_lam*1.e3)
+lspringstr = int(lspring*1.e2)
 vlostr = int(-np.log10(vlimoden))
-dtstr = int(-np.log10(dte))
+# dtstr = int(-np.log10(dte))
+dtstr = int(1.e6*dte)
 xistr = int(100.*xi)
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
 amodemstr = str(int(amode_m*100.))
 amodeadstr = str(int(amode_ad*100.))
 if lamode:
@@ -72,7 +78,7 @@ if (linert):
     namerep = f'{namerep}_inert'
 
 repload = f'./pickle/{namerep}/'
-rep_save = f"./fig/split_{namerep}/"
+rep_save = f"./fig/{namerep}/split/"
 
 # %%
 
@@ -92,8 +98,8 @@ t1 = 0.
 if (not linert):
     t1 = 0.1 
 t2 = 128.
-df = df[(df['t']>t1) & (df['t']<=t2)]
-df.reset_index(drop=True,inplace=True)
+# df = df[(df['t']>t1) & (df['t']<=t2)]
+# df.reset_index(drop=True,inplace=True)
 
 # %% 100 points par seconde 
     # nsort = 10 et x4 dans dopickle_slices :
@@ -103,11 +109,21 @@ if (linert):
     nsort = 30
     # on veut un point ttes les :
 discr = 1.e-3
-ndiscr = int(discr/(dte*nsort))
+dtsort = df.iloc[1]['t'] - df.iloc[0]['t']
+ndiscr = int(discr/(dtsort))
 df = df.iloc[::ndiscr]
 # rows2keep = df.index % ndiscr == 0 
 # df = df[rows2keep]
 df.reset_index(drop=True,inplace=True)
+#%%
+f1 = 2.
+f2 = 20.
+ttot = df.iloc[-1]['t']
+print(f"tmin = {df.iloc[0]['t']}")
+print(f"ttot = {ttot}")
+df['freq'] = f1 + ((f2-f1)/ttot)*df['t'] 
+print(f"fmin = {df.iloc[0]['freq']}")
+print(f"fmax = {df.iloc[-1]['freq']}")
 #%%
 nt = int(np.floor(np.log(len(df['t']))/np.log(2.)))
 indexpsd = df[df.index < 2**nt].index
@@ -365,8 +381,8 @@ if (lpcirc):
     indi_ph2 = df[(np.abs(df["FN_pcirch2"])>icrit)].index
     indi_ph3 = df[(np.abs(df["FN_pcirch3"])>icrit)].index
 # split en temps :
-t1 = 20.
-t2 = 39.
+t1 = 50.
+t2 = 80.
 indreso = df[(df['t']>=t1) & (df['t']<=t2)].index
 indp1   = df[(df['t']<=t1)].index
 indp2   = df[(df['t']>=t2)].index
@@ -448,6 +464,24 @@ kwargs1 = {
     "labely": r"$u_z(C_{circ})$"+" (m)",
     "color1": color1[0],
     "endpoint": False,
+    "xpower": 5,
+    "ypower": 2,
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "uz(G) adapter = f(f)" + "\n",
+    "tile_save": "uzccirc_f",
+    "colx": "freq",
+    "coly": "uzcerela",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": r"$t \quad (s)$",
+    "labely": "Loading Frequency (Hz)",
+    "color1": color1[0],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 2,
 }
 traj.pltraj2d(df, **kwargs1)
 

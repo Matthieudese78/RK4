@@ -74,8 +74,13 @@ lpcirc = True
 
 Fext = 193.
 spinini = 0.
+# manchette bloquee sinus balaye niveau n1 :
+lbloq = False
 
 namerep = f'XP_fext_{int(Fext)}_spin_{int(spinini)}'
+
+if lbloq:
+    namerep = f"{namerep}_bloq"
 
 repload = '/home/matthieu/Documents/EDF/mesures/data/donneesLaser/'
 orientation = [0.,30.,60.,90.,120.,150.,180.,-30.,-60.,-90 -120.,-150.]
@@ -107,6 +112,9 @@ elif icas < 14 :
 
 essai = lcasneuf[icas]
 
+# manchette bloquee dans l'adaptateur :
+if (lbloq):
+    essai = '20201126_1151'
 # O2 : decale de 30 degres :
 # essai = '20201127_1406'
 
@@ -133,18 +141,26 @@ df.reset_index(drop=True,inplace=True)
 #     t1 = 11. 
 # t2 = df['tL'].iloc[-1]
 # df = df[(df['tL']>=t1) & (df['tL']<=t2)]
+
 trigger_level = 2
 for i in range(len(df['TTL'])) :
     if df['TTL'][i] > trigger_level :
         imin = i
         break
 df = df[df.index>=imin]
+#%%
 df.sort_values(by='tL',inplace=True)
 df.reset_index(drop=True,inplace=True)
 #%% on remet l'origine du temps a 0 :
 df['tL'] = df['tL'] - df['tL'][0]
 nt = int(np.floor(np.log(len(df['tL']))/np.log(2.)))
-indexpsd = df[df.index < 2**nt].index
+indexpsd = df[df.index <= 2**nt].index
+
+#%% frequence en fonction du temps :
+f1 = 2.
+f2 = 20.
+ttot = df.iloc[-1]['tL']
+df['freq'] = f1 + ((f2-f1)/ttot)*df['tL'] 
 #%% frequence d'echantillonnage :
 fs = 1./(df['tL'][1]-df['tL'][0])
 # %% moyennage :
@@ -324,7 +340,6 @@ peaksPB_laser = scipy.signal.find_peaks(df['posPBr'].values,prominence=(prominen
 indpH = pd.Index(peaksH_laser)
 indpPH = pd.Index(peaksPH_laser)
 indpPB = pd.Index(peaksPB_laser)
-
 #%% old laser selectionne :
 # df['Gad'] = 0.5*(df['L1'] + df['L2'])
 laser = 'yA'
@@ -350,6 +365,34 @@ if not os.path.exists(repsect1):
     print(f"FOLDER : {repsect1} created.")
 else:
     print(f"FOLDER : {repsect1} already exists.")
+
+#%% courant tension :
+    # bruts :
+kwargs1 = {
+    "tile1": "courant pot = f(t)" + "\n",
+    "tile_save": "courant_ft",
+    "colx": "tL",
+    "coly": "Courant",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": r"$t \quad (s)$",
+    "labely": r"$I$"+" (A)",
+    "color1": color1[0],
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "courant pot = f(t)" + "\n",
+    "tile_save": "tension_ft",
+    "colx": "tL",
+    "coly": "Tension",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": r"$t \quad (s)$",
+    "labely": r"$U$"+" (V)",
+    "color1": color1[0],
+}
+traj.pltraj2d(df, **kwargs1)
 #%%
 kwargs1 = {
     "tile1": "uy(G) adapter = f(t)" + "\n",
@@ -361,8 +404,78 @@ kwargs1 = {
     "labelx": r"$t \quad (s)$",
     "labely": r"$u_y(G_ad)$"+" (m)",
     "color1": color1[0],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
 }
 traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "uy(G) adapter = f(f)" + "\n",
+    "tile_save": "uygad_f",
+    "colx": "freq",
+    "coly": "yA",
+    "rep_save": repsect1,
+    "label1": None,
+    # "labelx": r"$t \quad (s)$",
+    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labely": r"$u_y(G_ad)$"+" (m)",
+    "color1": color1[0],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df, **kwargs1)
+
+ind1 = df[(df['tL']>=39.) & (df['tL']<=40.)].index
+f = df['freq'].iloc[ind1[0]]
+print(f"f = {f}")
+
+kwargs1 = {
+    "tile1": f"uygad fload = {f}" + "\n",
+    "tile_save": f"zoom_traj2d_uygad_fload{int(f)}",
+    "ind": [ind1],
+    "colx": "tL",
+    "coly": "yA",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$u_y(G_{ad})$" + " (m)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": f"tension fload = {f}" + "\n",
+    "tile_save": f"zoom_tension_fload{int(f)}",
+    "ind": [ind1],
+    "colx": "tL",
+    "coly": "Tension",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": "Tension" + " (V)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
 
 kwargs1 = {
     "tile1": "uy(PH) adapter = f(t)" + "\n",
@@ -373,7 +486,27 @@ kwargs1 = {
     "label1": None,
     "labelx": r"$t \quad (s)$",
     "labely": r"$u_y(P_{pin}^u)$"+" (m)",
-    "color1": color1[1],
+    "color1": color1[0],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "uy(PH) sleeve = f(f)" + "\n",
+    "tile_save": "uyph_ft",
+    "colx": "freq",
+    "coly": "posPHym",
+    "rep_save": repsect1,
+    "label1": None,
+    # "labelx": r"$t \quad (s)$",
+    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labely": r"$u_y(P_{pin}^{u})$"+" (m)",
+    "color1": color1[0],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -386,7 +519,27 @@ kwargs1 = {
     "label1": None,
     "labelx": r"$t \quad (s)$",
     "labely": r"$u_y(P_{pin}^l)$"+" (m)",
-    "color1": color1[2],
+    "color1": color1[0],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "uy(PB) sleeve = f(f)" + "\n",
+    "tile_save": "uypb_ft",
+    "colx": "freq",
+    "coly": "posPBym",
+    "rep_save": repsect1,
+    "label1": None,
+    # "labelx": r"$t \quad (s)$",
+    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labely": r"$u_y(P_{pin}^{l})$"+" (m)",
+    "color1": color1[0],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -400,6 +553,9 @@ kwargs1 = {
     "labelx": r"$t \quad (s)$",
     "labely": r"$\Psi \quad (\degree)$",
     "color1": color1[0],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -413,6 +569,9 @@ kwargs1 = {
     "labelx": r"$t \quad (s)$",
     "labely": r"$\Psi \quad (\degree)$",
     "color1": color1[0],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -426,15 +585,30 @@ else:
 
 #%% psd :
     # uygad :
-power, freq = plt.psd(1.e6*df['yA'], NFFT=2**(nt-6), Fs=fs/10, scale_by_freq=0., color=color1[2])
-plt.close('all')
-# get the ordinate of plt.psd :
+# power, freq = plt.psd(1.e6*df['yA'], NFFT=2**(nt-6), Fs=fs/10, scale_by_freq=0., color=color1[2])
+
+nfft = 2**(nt)
+nblocks = (len(df)) / (nfft)
+print(f"nblocks = {nblocks}")
+# point d'application de la force :
+power, freq = plt.psd(1.e6*df['yA'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., color=color1[2])
+
 power_density = 10. * np.log10(power)
+
+powerb, freqb = plt.psd(1.e6*df['posPBym'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., color=color1[2])
+
+power_densityPB = 10. * np.log10(powerb)
+
+powerh, freqh = plt.psd(1.e6*df['posPHym'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., color=color1[2])
+power_densityPH = 10. * np.log10(powerh)
+
+#### get the ordinate of plt.psd :
 
 linteractif = False
 if (linteractif):
     fig, ax = plt.subplots()
-    ax.plot(freq, power_density, label='Data')
+    # ax.plot(freq, power_density, label='Data')
+    plt.xlim(0.,30.)
     # Enable cursor and display values
     mplcursors.cursor(hover=True).connect(
         "add", lambda sel: sel.annotation.set_text(f"{sel.target[0]:.2f}, {sel.target[1]:.2f}"))
@@ -446,7 +620,10 @@ if (linteractif):
     
     # Show the plot
     plt.show()
-lanot = [(0.30,59.86),(1.90,40.99),(4.60,27.33),(5.50,20.28)]
+lanot = [(2.77,59.52),(9.65,25.63),(21.64,17.46)]
+
+xmax = 30.
+ymax = 65.
 kwargs1 = {
     "tile1": " PSD uy(G) adapter = f(freq)" + "\n",
     "tile_save": "PSD_uygad_xp",
@@ -456,8 +633,54 @@ kwargs1 = {
     "label1": None,
     "labelx": r"$Frequency \quad (Hz)$",
     "labely": r"$Power \quad (dB)$",
-    "color1": color1[2],
+    "color1": color1[0],
     "annotations": lanot,
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "xmax": xmax,
+    "ymax": ymax,
+    "ymin": -50.,
+}
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+
+kwargs1 = {
+    "tile1": " PSD uy(PB) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uyPB_xp",
+    "x": freqb,
+    "y": power_densityPB,
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": color1[0],
+    "annotations": [],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "xmax": xmax,
+    "ymax": ymax,
+}
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+
+kwargs1 = {
+    "tile1": " PSD uy(PH) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uyPH_xp",
+    "x": freqb,
+    "y": power_densityPH,
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": color1[0],
+    "annotations": [],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "xmax": xmax,
+    "ymax": ymax,
 }
 # traj.PSD(df, **kwargs1)
 traj.pltraj2d_list(**kwargs1)
@@ -492,8 +715,11 @@ kwargs1 = {
     "label1": None,
     "labelx": r"$Frequency \quad (Hz)$",
     "labely": r"$Power \quad (dB)$",
-    "color1": color1[2],
+    "color1": color1[0],
     "annotations": lanot,
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
 }
 # traj.PSD(df, **kwargs1)
 traj.pltraj2d_list(**kwargs1)

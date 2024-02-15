@@ -1,89 +1,75 @@
-#!/bin/python3
 #%%
-import numpy as np
-import numpy.linalg as LA
-import pandas as pd
-import trajectories as traj
-import rotation as rota
-import repchange as rc
 import os
-
-#%% usefull parameters :
+# from csv_to_pickle import csv2pickle
+import numpy as np
+import pandas as pd
+import rotation as rota
+import trajectories as traj
+import repchange as rc
+import glob
+import shutil
+from csv_to_pickle import csv2pickle
+#%%
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
-view = [20, -50]
-# %% quel type de modele ?
-lraidtimo = False
-lplam = False
-lplow = False
-
-ltest = False
-# %% Scripts :
-    # which slice ?
-slice = 1
-# cas la lache de la manchette avec juste le poids :
-# namerep = "manchadela_weight"
-# namerep = "manchadela_RSG"
-# namerep = "manchadela_RSG_conefixe"
+#%% repertoire data
+  # on discretise ?
+ndiscr = 1
 linert = True
 lamode = True
-dte = 5.e-6
-Fext = 193
-mu = 0.3
+lkxp = False
+# Fext = 387.
+Fext = 193.
+mu = 0.6
 xi = 0.05
 amode_m = 0.02
 amode_ad = 0.02
-amodemstr = str(int(100.*amode_m))
-amodeadstr = str(int(100.*amode_ad))
 vlimoden = 1.e-5
 spinini = 0.
+dte = 5.e-6
 h_lam = 50.e-3
 lspring = 45.e-2
-
-hlstr = int(h_lam*1.e3)
-lspringstr = int(lspring*1.e2)
 
 vlostr = int(-np.log10(vlimoden))
 # dtstr = int(-np.log10(dte))
 dtstr = int(1.e6*dte)
 xistr = int(100.*xi)
-
+hlstr = int(h_lam*1.e3)
+lspringstr = int(lspring*1.e2)
 namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
-if (lamode):
-    namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
+
+amodemstr = str(int(amode_m*100.))
+amodeadstr = str(int(amode_ad*100.))
+if lamode:
+  namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
+
+if (lkxp):
+  namerep = f'{namerep}_kxp'
 if (linert):
-    namerep = f'{namerep}_inert'
+  namerep = f'{namerep}_inert'
 
-repload = f'./pickle/{namerep}/'
-# namerep = f"manchadela_pions_{slice}"
-# repload = f"./pickle/{namerep}/"
+repload = f'../{namerep}/pickle/'
+repsave = f'./pickle/slice_0/'
 
+if not os.path.exists(repsave):
+    os.makedirs(repsave)
+    print(f"FOLDER : {repsave} created.")
+
+repglob = f'../{namerep}/'
+#%%
+filename = 'manchadela_pions.dgibi'
+rawname = filename.split('.')[0]
+slice = 0
+print(f"saving {slice}th calc...")
+kwpi = {'rep_load' : f"{repglob}calc_{slice}/data/", 
+        'rep_save' : f"{repsave}",
+        'name_save' : f"result_{slice}"}
+csv2pickle(**kwpi)
 # %%
-rep_save = f"./fig/{namerep}/slice_0/"
+df = pd.read_pickle(f"{repsave}result_0.pickle")
 
-if not os.path.exists(rep_save):
-    os.makedirs(rep_save)
-    print(f"FOLDER : {rep_save} created.")
-else:
-    print(f"FOLDER : {rep_save} already exists.")
+# rep_save = f"./fig/{namerep}/slice_0/"
 
-if ltest:
-    repload = f'./pickle/slice_0/'
-    rep_save = f"./fig/slice_0/"
-
-    if not os.path.exists(rep_save):
-        os.makedirs(rep_save)
-        print(f"FOLDER : {rep_save} created.")
-    else:
-        print(f"FOLDER : {rep_save} already exists.")
-
-# %% lecture du dataframe :
-df = pd.read_pickle(f"{repload}result_0.pickle")
-
-#%% contact time interval :
-# df['tag'] = df['FN_pb1'] < 0
-# fst = df.index[df['tag'] & ~ df['tag'].shift(1).fillna(False)]
-# lst = df.index[df['tag'] & ~ df['tag'].shift(-1).fillna(False)]
-# prb1 = [(i,j) for i,j in zip(fst,lst)]
+rep_save = f"./fig/slice_0/"
 # %% On change de repere pour le tracer des trajectoires :
 exb = np.array([0.0, -1.0, 0.0])
 eyb = np.array([0.0, 0.0, 1.0])

@@ -4,9 +4,11 @@ from csv_to_pickle import csv2pickle
 
 #%%
 fnonly = False
+lbfin = False
 # script1 = 'manchadela_weight' 
 slice = 1 
 script1 = f'manchadela_pions_{slice}' 
+
 # script1 = 'manchadela_pion' 
 # script1 = 'manchadela_RSG' 
 
@@ -16,6 +18,9 @@ script1 = f'manchadela_pions_{slice}'
 #%% rep_load
 repload = '../data/'
 repsave = f'./pickle/'
+if lbfin:
+    repload = f'{repload}bfin/'
+    repsave = f'{repsave}bfin/'
 
 if (fnonly):
     script1 = f"slice_{slice}"

@@ -120,7 +120,7 @@ def statchoc2(df,**kwargs):
     print(f"temps de contact total = {sumtchoc} s")
     return meantchoc,stdtchoc,sumtchoc,len(tchoc)
 #%%
-globalstat = False
+globalstat = True
 #%% usefull parameters :
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 view = [20, -50]
@@ -149,19 +149,25 @@ lkxp = False
 lpion = False
 lpcirc = True
 Fext = 193.
-mu = 0.6
+mu = 0.3
 xi = 0.05
 amode_m = 0.02
 amode_ad = 0.02
 vlimoden = 1.e-5
 spinini = 0.
-dte = 1.e-6
+dte = 5.e-6
+h_lam = 50.e-3
+lspring = 45.e-2
 
 vlostr = int(-np.log10(vlimoden))
-dtstr = int(-np.log10(dte))
+# dtstr = int(-np.log10(dte))
+dtstr = int(1.e6*dte)
 xistr = int(100.*xi)
+hlstr = int(h_lam*1.e3)
+lspringstr = int(lspring*1.e2)
 
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
+# namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
 
 amodemstr = str(int(amode_m*100.))
 amodeadstr = str(int(amode_ad*100.))
@@ -214,9 +220,9 @@ df = df[['t',
          "FT_CCONE",
          "pusure_ccone",
          "pctg_glis_ad",
-         "pusure_pcirc.3",
-         "pusure_pcirc.4",
-         "pusure_pcirc.5",
+         "pusure_pb1",
+         "pusure_pb2",
+         "pusure_pb3",
          ]]
 print(df._is_copy is None)
 df['FN_pb'] = np.sqrt(df['FN_pcircb1']**2 + df['FN_pcircb1']**2 + df['FN_pcircb1'])
@@ -300,13 +306,13 @@ if globalstat:
     stat_pb3_tang = statchoc(df,**kw1)
 #%%
 if globalstat:
-    kw1 = {'colname' : 'pusure_pcirc.3', 'dt' : dt}
+    kw1 = {'colname' : 'pusure_pb1', 'dt' : dt}
     stat_pb1_pus = statenergy(df,**kw1)
     #
-    kw1 = {'colname' : 'pusure_pcirc.4', 'dt' : dt}
+    kw1 = {'colname' : 'pusure_pb2', 'dt' : dt}
     stat_pb2_pus = statenergy(df,**kw1)
     #
-    kw1 = {'colname' : 'pusure_pcirc.5', 'dt' : dt}
+    kw1 = {'colname' : 'pusure_pb3', 'dt' : dt}
     stat_pb3_pus = statenergy(df,**kw1)
 
     Euspb1 = stat_pb1_pus[0]
@@ -320,66 +326,83 @@ pin1 = r"$\textcolor{red}{\mbox{pin}_1}$"
 pin2 = r"$\textcolor{mydarkgreen}{\mbox{pin}_2}$" 
 pin3 = r"$\textcolor{blue}{\mbox{pin}_3}$" 
 row_names = [pin1,pin2,pin3]
-dict_tchoctot = {pin1 : [ str("$" + "%.2f" % stat_pb1[3] ) + "$ s","$" +  str("%.2f" % stat_pb12[2]) + "$ s","$" + str("%.2f" % stat_pb13[2]) + "$ s"] ,
-                 pin2 : [ str("$" + "%.2f" % stat_pb12[2]) + "$ s","$" +  str("%.2f" % stat_pb2[3] ) + "$ s", "$" + str("%.2f" % stat_pb23[2]) + "$ s"] ,
-                 pin3 : [ str("$" + "%.2f" % stat_pb13[2]) + "$ s","$" +  str("%.2f" % stat_pb23[2]) + "$ s","$" + str( "%.2f" % stat_pb3[3]) + "$ s"]} 
+    # matrix pleine 
+# dict_tchoctot = {pin1 : [ str("$" + "%.2f" % stat_pb1[3] ) + "$ s","$" +  str("%.2f" % stat_pb12[2]) + "$ s","$" + str("%.2f" % stat_pb13[2]) + "$ s"] ,
+#                  pin2 : [ str("$" + "%.2f" % stat_pb12[2]) + "$ s","$" +  str("%.2f" % stat_pb2[3] ) + "$ s", "$" + str("%.2f" % stat_pb23[2]) + "$ s"] ,
+#                  pin3 : [ str("$" + "%.2f" % stat_pb13[2]) + "$ s","$" +  str("%.2f" % stat_pb23[2]) + "$ s","$" + str( "%.2f" % stat_pb3[3]) + "$ s"]} 
+    # matrix semi-pleine 
+dict_tchoctot = {pin1 : [ str("$" + "%.2f" % stat_pb1[3] ) + "$ s","$" +  str("%.2f" % stat_pb12[2]) + "$ s" , "$" + str("%.2f" % stat_pb13[2]) + "$ s"] ,
+                 pin2 : [ "sym"                                   , "$" +  str("%.2f" % stat_pb2[3] ) + "$ s", "$" + str("%.2f" % stat_pb23[2]) + "$ s"] ,
+                 pin3 : [ "sym"                                   , "sym"                                    , "$" + str( "%.2f" % stat_pb3[3]) + "$ s"]} 
 df_tchoctot = pd.DataFrame(dict_tchoctot,index=row_names)
 latex_tchoctot = df_tchoctot.to_latex(escape=False)
 with open(f'{repsect1}tchoctot.tex', 'w') as f:
     f.write(latex_tchoctot)
 #%% meantchoc
+    # matrix pleine 
+# dict_stat = {pin1 : [ "$" + str(int(np.round(stat_pb1[1] *1.e6,0))) + "$ $\mu$s", "$" +  str(int(np.round(stat_pb12[0]*1.e6,0))) + "$ $\mu$s", "$" + str(int(np.round(stat_pb13[0]*1.e6,0))) + "$ $\mu$s"] ,
+#              pin2 : [ "$" + str(int(np.round(stat_pb12[0]*1.e6,0))) + "$ $\mu$s", "$" +  str(int(np.round(stat_pb2[1] *1.e6,0))) + "$ $\mu$s", "$" + str(int(np.round(stat_pb23[0]*1.e6,0))) + "$ $\mu$s"] ,
+#              pin3 : [ "$" + str(int(np.round(stat_pb13[0]*1.e6,0))) + "$ $\mu$s", "$" +  str(int(np.round(stat_pb23[0]*1.e6,0))) + "$ $\mu$s", "$" + str(int(np.round(stat_pb3[1]*1.e6,0)))  + "$ $\mu$s"]} 
+
+    # matrix semi-pleine 
 dict_stat = {pin1 : [ "$" + str(int(np.round(stat_pb1[1] *1.e6,0))) + "$ $\mu$s", "$" +  str(int(np.round(stat_pb12[0]*1.e6,0))) + "$ $\mu$s", "$" + str(int(np.round(stat_pb13[0]*1.e6,0))) + "$ $\mu$s"] ,
-             pin2 : [ "$" + str(int(np.round(stat_pb12[0]*1.e6,0))) + "$ $\mu$s", "$" +  str(int(np.round(stat_pb2[1] *1.e6,0))) + "$ $\mu$s", "$" + str(int(np.round(stat_pb23[0]*1.e6,0))) + "$ $\mu$s"] ,
-             pin3 : [ "$" + str(int(np.round(stat_pb13[0]*1.e6,0))) + "$ $\mu$s", "$" +  str(int(np.round(stat_pb23[0]*1.e6,0))) + "$ $\mu$s", "$" + str(int(np.round(stat_pb3[1]*1.e6,0)))  + "$ $\mu$s"]} 
+             pin2 : [ "sym"                                                     , "$" +  str(int(np.round(stat_pb2[1] *1.e6,0))) + "$ $\mu$s", "$" + str(int(np.round(stat_pb23[0]*1.e6,0))) + "$ $\mu$s"] ,
+             pin3 : [ "sym"                                                     , "sym"                                                      , "$" + str(int(np.round(stat_pb3[1]*1.e6,0)))  + "$ $\mu$s"]} 
 df_latex = pd.DataFrame(dict_stat,index=row_names)
 latex_df = df_latex.to_latex(escape=False)
 with open(f'{repsect1}tchocmean.tex', 'w') as f:
     f.write(latex_df)
 #%% impact number 
+    # matrix pleine 
+# dict_stat = {pin1 : [ "$" + str(int(stat_pb1[0] )) + "$", "$" +  str(int(stat_pb12[3])) + "$", "$" + str(int(stat_pb13[3])) + "$"] ,
+#              pin2 : [ "$" + str(int(stat_pb12[3])) + "$", "$" +  str(int(stat_pb2[0] )) + "$", "$" + str(int(stat_pb23[3])) + "$"] ,
+#              pin3 : [ "$" + str(int(stat_pb13[3])) + "$", "$" +  str(int(stat_pb23[3])) + "$", "$" + str(int(stat_pb3[0] )) + "$"] } 
+    # matrix semi-pleine 
 dict_stat = {pin1 : [ "$" + str(int(stat_pb1[0] )) + "$", "$" +  str(int(stat_pb12[3])) + "$", "$" + str(int(stat_pb13[3])) + "$"] ,
-             pin2 : [ "$" + str(int(stat_pb12[3])) + "$", "$" +  str(int(stat_pb2[0] )) + "$", "$" + str(int(stat_pb23[3])) + "$"] ,
-             pin3 : [ "$" + str(int(stat_pb13[3])) + "$", "$" +  str(int(stat_pb23[3])) + "$", "$" + str(int(stat_pb3[0] )) + "$"] } 
+             pin2 : [ "sym"                             , "$" +  str(int(stat_pb2[0] )) + "$", "$" + str(int(stat_pb23[3])) + "$"] ,
+             pin3 : [ "sym"                             , "sym"                              , "$" + str(int(stat_pb3[0] )) + "$"] } 
 df_latex = pd.DataFrame(dict_stat,index=row_names)
 latex_df = df_latex.to_latex(escape=False)
 with open(f'{repsect1}impactnumber.tex', 'w') as f:
     f.write(latex_df)
 #%% Fn, Ft, Eweat 
-dict_stat = {"$F_n$"      : [ str("$" + "%.2f" % stat_pb1[4] ) + "$ N","$" +  str("%.2f" % stat_pb2[4]) + "$ N","$" + str("%.2f" % stat_pb3[4]) + "$ N"] ,
+dict_stat = {"$F_n$"      : [ str("$" + "%.2f" % np.abs(stat_pb1[4]) ) + "$ N","$" +  str("%.2f" % np.abs(stat_pb2[4])) + "$ N","$" + str("%.2f" % np.abs(stat_pb3[4])) + "$ N"] ,
              "$F_t$"      : [ str("$" + "%.2f" % stat_pb1_tang[4]) + "$ N","$" +  str("%.2f" % stat_pb2_tang[4] ) + "$ N","$" + str("%.2f" % stat_pb3_tang[4]) + "$ N"] ,
-             "$E_{wear}$" : [ str("$" + "%.2f" % stat_pb1_pus[0]) + "$ J","$" +  str("%.2f" % stat_pb2_pus[0]) + "$ J","$" + str("%.2f" % stat_pb3_pus[0] ) + "$ J"]} 
+             "$E_{wear}$" : [ str("$" + "%.2f" % (stat_pb1_pus[0]*1.e2)) + "\times 10^{-2}$ J","$" +  str("%.2f" % (stat_pb2_pus[0]*1.e2)) + "\times 10^{-2}$ J","$" + str("%.2f" % (stat_pb3_pus[0]*1.e2))   + "\times 10^{-2}$ J"] , 
+             "$t_{mean}$" : [ "$" + str(int(np.round(stat_pb1[1] *1.e6,0))) + "$ $\mu$s"      ,"$" +  str(int(np.round(stat_pb2[1] *1.e6,0))) + "$ $\mu$s"      ,"$" + str(int(np.round(stat_pb3[1]*1.e6,0))) + "$ $\mu$s"]} 
 df_latex = pd.DataFrame(dict_stat,index=row_names)
 latex_df = df_latex.to_latex(escape=False)
 with open(f'{repsect1}F_Ewear.tex', 'w') as f:
     f.write(latex_df)
 #%%
-fig, ax = plt.subplots(figsize=(1, 1), dpi=600)
-ax.axis('tight')
-ax.axis('off')
-table = ax.table(cellText=df_tchoctot.values,
-        #  colLabels=df_tchoctot.columns,
-         colLabels=df_tchoctot.keys(),
-         rowLabels=df_tchoctot.keys(),
-         cellLoc = 'center', 
-         loc='center',
-         )
-table.auto_set_font_size(False)
-table.set_fontsize(10)
-table[(0, 0)].set_text_props(color='red')
-table[(0, 1)].set_text_props(color='green')
-table[(0, 2)].set_text_props(color='blue')
-table[(1, -1)].set_text_props(color='red')
-table[(2, -1)].set_text_props(color='green')
-table[(3, -1)].set_text_props(color='blue')
-for (row, col), cell in table.get_celld().items():
-  if (row == 0) | (col == -1):
-    cell.set_text_props(fontproperties=FontProperties(weight='bold'))
-    # cell.PAD = 0.5
-  if (col == -1):
-    cell.PAD = (0.2)
-table.auto_set_column_width(col=list(np.arange(4)))
+# fig, ax = plt.subplots(figsize=(1, 1), dpi=600)
+# ax.axis('tight')
+# ax.axis('off')
+# table = ax.table(cellText=df_tchoctot.values,
+#         #  colLabels=df_tchoctot.columns,
+#          colLabels=df_tchoctot.keys(),
+#          rowLabels=df_tchoctot.keys(),
+#          cellLoc = 'center', 
+#          loc='center',
+#          )
+# table.auto_set_font_size(False)
+# table.set_fontsize(10)
+# table[(0, 0)].set_text_props(color='red')
+# table[(0, 1)].set_text_props(color='green')
+# table[(0, 2)].set_text_props(color='blue')
+# table[(1, -1)].set_text_props(color='red')
+# table[(2, -1)].set_text_props(color='green')
+# table[(3, -1)].set_text_props(color='blue')
+# for (row, col), cell in table.get_celld().items():
+#   if (row == 0) | (col == -1):
+#     cell.set_text_props(fontproperties=FontProperties(weight='bold'))
+#     # cell.PAD = 0.5
+#   if (col == -1):
+#     cell.PAD = (0.2)
+# table.auto_set_column_width(col=list(np.arange(4)))
 
-fig.tight_layout()
-plt.savefig(f"{repsect1}tchoctot.png")
+# fig.tight_layout()
+# plt.savefig(f"{repsect1}tchoctot.png")
 # plt.show()
 
 #%% traitement statistique :
@@ -401,11 +424,11 @@ for i,indi in enumerate(indsplit):
     stat_pb2 = statchoc(df1,**kw1)
     kw1 = {'colname' : 'FN_pcircb3', 'dt' : dt}
     stat_pb3 = statchoc(df1,**kw1)
-    kw1 = {'colname' : 'pusure_pcirc.3', 'dt' : dt}
+    kw1 = {'colname' : 'pusure_pb1', 'dt' : dt}
     stat_pb1_pus = statenergy(df1,**kw1)
-    kw1 = {'colname' : 'pusure_pcirc.4', 'dt' : dt}
+    kw1 = {'colname' : 'pusure_pb2', 'dt' : dt}
     stat_pb2_pus = statenergy(df1,**kw1)
-    kw1 = {'colname' : 'pusure_pcirc.5', 'dt' : dt}
+    kw1 = {'colname' : 'pusure_pb3', 'dt' : dt}
     stat_pb3_pus = statenergy(df1,**kw1)
     # nb choc :
     lnchocpb[0].append(stat_pb1[0])
