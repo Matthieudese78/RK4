@@ -1205,7 +1205,8 @@ cladry = bloq adaptateur 'RY' ;
 si ((raidiss) et (non lraidtimo)) ;
 * adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 et lraid1 et lraid2 ;
   adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 ;
-sinon ;
+finsi ;
+si ((non raidisss) et (non lraidtimo)) ;
   adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 ;
 finsi ;
 *
