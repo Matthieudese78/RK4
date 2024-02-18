@@ -7,16 +7,23 @@ import os
 import subprocess
 import shutil
 import glob
-# import sys
+import sys
 # import json
 import rotation
 from csv_to_pickle import csv2pickle
+#%% lraidtimo :
+lraidtimo = True
 #%% script / dir :
 filename = 'manchadela_pions.dgibi'
+if lraidtimo:
+    filename = 'manchadela_pions_raidtimo.dgibi'
 rawname = filename.split('.')[0]
 original_directory = os.getcwd()
 source = f'../{filename}'
 repcast = f'../../build/'
+if lraidtimo:
+    repcast = f'../../cast_raidtimo/'
+#%%
 lstdout = False
 #%% nombre de slices :
 nslice = 128
@@ -45,8 +52,9 @@ nsort = 5
 # 3 modes de flexion :
 nmode = 3
 n_tronq = 0
-nmode_ad = 5
-Fext = 137.*np.sqrt(2.)
+nmode_ad = 4
+# Fext = 79.44
+Fext = 137. * np.sqrt(2.)
 fefin = 5.
 vlimoden = 1.e-5
 # amortissement modal :
@@ -661,7 +669,7 @@ for slice in range(2,nslice+1):
 #%%########################## MV SLICE 0
 # deplacement du calcul 0 :
 #############################
-rep0 = f'{repglob}/pickle/slice_0/'
+rep0 = f'{repglob}pickle/slice_0/'
 if not os.path.exists(rep0):
     os.makedirs(rep0)
     print(f"FOLDER : {rep0} created.")
@@ -711,3 +719,190 @@ for current_directory, subdirectories, files in os.walk(repglob, topdown=False):
 
 print(f"END")
 
+# sys.exit()
+#%%########################## 
+# calcul indiv  :
+############################# 
+slice = 128
+lstdout = True
+print(f"slice : {slice}") 
+
+scriptload = f"{rawname}_{slice - 1}.pickle"
+repload = f"{repglob}pickle/"
+
+repslice1 = f'{repglob}calc_{slice}/data/'
+if not os.path.exists(repslice1):
+    os.makedirs(repslice1)
+    print(f"FOLDER : {repslice1} created.")
+else:
+    print(f"FOLDER : {repslice1} already exists.")
+
+repfig = f'{repglob}calc_{slice}/fig/'
+if not os.path.exists(repfig):
+    os.makedirs(repfig)
+    print(f"FOLDER : {repfig} created.")
+else:
+    print(f"FOLDER : {repfig} already exists.")
+
+# on prend le script du dernier calcul comme ca on a les memes parametre a coup sur :
+source = f'{repglob}calc_{slice-1}/{filename}'
+# on copie le script :
+destination = f'{repglob}calc_{slice}/'
+shutil.copy(source,f"{destination}{filename}")
+# on copie l'executable :
+shutil.copy(f'{repcast}cast_64_21',f"{destination}cast_64_21")
+
+print(f"    files copied") 
+#  lecture du dataframe :
+df = pd.read_pickle(f"{repload}{scriptload}")
+df.sort_values(by='t',inplace=True)
+#  trnasfo quaternion to vecteur de rotation : 
+q = np.array([df['quat1'].iloc[-1],df['quat2'].iloc[-1],df['quat3'].iloc[-1],df['quat4'].iloc[-1]])
+vect = rotation.quat2vect2(q)
+# vect : en radians !! le .dgibi est adapte pour (reprise et (slice >EG 2))
+
+print(f"trep = {df['t'].iloc[-1]:.6f} ")
+#  
+  # manchette & adaptateur : 4 modes elastiques. 
+dict_rep = {
+  #          reprise : 
+             'reprise' : "vrai",
+  #          lsin : 
+             'lsin' : lsin,
+  #          lsinb : 
+             'lsinb' : lsinb,
+  #          raideur de choc xp : 
+             'lkxp' : lkxp,
+  #          temps de choc xp : 
+             'tcxp' : tcxp,
+  #          bloquee : 
+             'lbloq' : lbloq,
+  #          ttot : 
+             'ttot' : ttot,
+  #          lexp : 
+             'lexp' : lexp,
+  #          ressorts a lames : 
+             'b_lam' : b_lam,
+             'h_lam' : h_lam,
+             'lspring' : lspring,
+  #          fefin : 
+             'fefin' : fefin,
+  #          lamode : 
+             'lamode' : lamode,
+  #          amode : 
+             'amode_ad' : amode_ad,
+             'amode_m' : amode_m,
+  #          lmad2 : on retire le 2eme mode de l'adapter 
+             'lmad2' : lmad2,
+  #          lraidiss : on met les raidisseurs ? 
+             'raidiss' : raidiss,
+  #          slice : 
+             'slice' : df['slice'].drop_duplicates().values[0]+1,
+  #          nmode : 
+             'nmode' : df['nmode'].drop_duplicates().values[0],
+  #          nmode_ad : 
+             'nmode_ad' : df['nmode_ad'].drop_duplicates().values[0],
+  #          instant reprise : 
+             'trep' : df['t'].iloc[-1],
+  #          amplitude F sinus : 
+             'Fext' : df['Fext0'].drop_duplicates().values[0],
+  #          vlimoden 
+             'vlimoden' : df['vlimoden'].drop_duplicates().values[0],
+  #          ddls rig : manchette vect de rotation 
+             'theta_rx' : vect[0],
+             'theta_ry' : vect[1],
+             'theta_rz' : vect[2],
+  #          ddls rig : vitesse de rotation 
+             'wxini' : df['WX'].iloc[-1],
+             'wyini' : df['WY'].iloc[-1],
+             'wzini' : df['WZ'].iloc[-1],
+             'arxini' : df['AX'].iloc[-1],
+             'aryini' : df['AY'].iloc[-1],
+             'arzini' : df['AZ'].iloc[-1],
+  #          ddls rig : translations 
+             'uxini' : df['qtx'].iloc[-1],
+             'uyini' : df['qty'].iloc[-1],
+             'uzini' : df['qtz'].iloc[-1],
+             'vxini' : df['qvtx'].iloc[-1],
+             'vyini' : df['qvty'].iloc[-1],
+             'vzini' : df['qvtz'].iloc[-1],
+             'axini' : df['qatx'].iloc[-1],
+             'ayini' : df['qaty'].iloc[-1],
+             'azini' : df['qatz'].iloc[-1],
+             'nsauvini' : df['nsauvini'].iloc[-1],
+            }
+dfini = pd.DataFrame(dict_rep, index=[0])
+
+#  for i in np.arange(nmode - n_tronq):
+for i in np.arange(dfini['nsauvini'][0]):
+    nameu = f"q{i+1}"
+    namev = f"q{i+1}v"
+    namea = f"q{i+1}a"
+    new_cols = [nameu, namev, namea]
+    new_vals = [ df[nameu].iloc[-1] , df[namev].iloc[-1], df[namea].iloc[-1]]
+    for col,val in zip(new_cols,new_vals):
+      dfini[col] = val
+
+for i in np.arange(nmad):
+    nameuad = f"q{i+1}ad"
+    namevad = f"q{i+1}vad"
+    nameaad = f"q{i+1}aad"
+    new_cols = [nameuad, namevad, nameaad]
+    new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1], df[nameaad].iloc[-1] ]
+    for col,val in zip(new_cols,new_vals):
+      dfini[col] = val
+
+# Read the content of the existing file
+with open(f"{destination}{filename}", 'r') as file:
+    lines = file.readlines()
+
+# Update the values based on the DataFrame
+# for index, row in dfini.iterrows():
+for colname, colvalue in dfini.iteritems():
+    # Assuming the column names match the tags in the file (e.g., val1, val2)
+    tag = f'*# {colname} :'
+    # print(tag)
+    replacement = f'{colname} = {colvalue.values[0]} ;'
+    # print(replacement)
+
+    # Find and replace the line with the updated value
+    for i in range(len(lines)):
+        if lines[i].strip() == tag:
+            lines[i + 1] = f'{replacement}\n'
+            break
+
+# Write the modified content back to the file
+with open(f"{destination}{filename}", 'w') as file:
+    file.writelines(lines)
+
+print(f"    script initialized") 
+
+# 2nd calcul :
+print(f"    calc {slice} / {nslice}") 
+os.chdir(destination)
+# command to run :
+if lstdout:
+  command_to_run = [f'castem21 {filename}']
+else:
+  command_to_run = [f'castem21 {filename} > /dev/null 2>error.log']
+#
+# command_to_run = [f'castem21 {filename}']
+result = subprocess.run(command_to_run, shell=True, check=True)
+# Check the return code
+if result.returncode == 0:
+    print("Subprocess completed successfully.")
+else:
+    print(f"Subprocess failed with return code {result.returncode}")
+
+# on rentre :
+os.chdir(original_directory)
+
+#%% sauvegarde du pickle :
+slice = 128 
+
+print(f"saving {slice}th calc...")
+kwpi = {'rep_load' : f"{repglob}calc_{slice}/data/", 
+        'rep_save' : f"{repglob}pickle/",
+        'name_save' : f"{rawname}_{slice}"}
+csv2pickle(**kwpi)
+# %%

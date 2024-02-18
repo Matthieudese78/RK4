@@ -52,8 +52,9 @@ lkxp = False
 lpion = False
 lpcirc = True
 # Fext = 387.
-Fext = 193.
-mu = 0.3
+# Fext = 193.
+Fext = 79.44
+mu = 0.6
 xi = 0.05
 
 amode_m = 0.02
@@ -71,7 +72,8 @@ xistr = int(100.*xi)
 hlstr = int(h_lam*1.e3)
 lspringstr = int(lspring*1.e2)
 
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
+# namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
+namerep = f'rela_uz_bloq_rota_4cm/calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
 
 amodemstr = str(int(amode_m*100.))
 amodeadstr = str(int(amode_ad*100.))

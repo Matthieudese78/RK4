@@ -299,7 +299,7 @@ traj.pltraj2d(df, **kwargs1)
 
 kwargs1 = {
     "tile1": "uy(PB) sleeve = f(f)" + "\n",
-    "tile_save": "uypb_ft",
+    "tile_save": "uypb_f",
     "colx": "freq",
     "coly": "uypb",
     "rep_save": repsect1,
@@ -316,7 +316,7 @@ traj.pltraj2d(df, **kwargs1)
 
 kwargs1 = {
     "tile1": "uy(PH) sleeve = f(f)" + "\n",
-    "tile_save": "uyph_ft",
+    "tile_save": "uyph_t",
     "colx": "freq",
     "coly": "uyph",
     "rep_save": repsect1,

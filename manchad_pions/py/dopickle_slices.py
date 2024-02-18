@@ -13,6 +13,7 @@ lamode = True
 lkxp = False
 # Fext = 387.
 Fext = 193.
+# Fext = 79.44
 mu = 0.6
 xi = 0.05
 amode_m = 0.02

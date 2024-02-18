@@ -1,14 +1,15 @@
 #!/bin/python3
 #%%
 import numpy as np
-import numpy.linalg as LA
+# import numpy.linalg as LA
 import pandas as pd
 import trajectories as traj
-import rotation as rota
-import repchange as rc
+# import rotation as rota
+# import repchange as rc
 import os
 import matplotlib.pyplot as plt
 import mplcursors
+import matplotlib.cm as cm
 
 #%% usefull parameters :
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
@@ -32,16 +33,16 @@ linert = True
 lbloq = False
 # si oui quelle epaisseur pour les ressorts a lame ?
 lbfin = False
-lbepai = False
+lbepai = True
 
 lamode = True
 lpion = False
 lpcirc = True
-Fext = 193.
+Fext = 79.44
 amode_m = 0.02
 amode_ad = 0.02
 vlimoden = 1.e-5
-mu = 0.3
+mu = 0.6
 xi = 0.05
 spinini = 0.
 dte = 5.e-6
@@ -106,7 +107,7 @@ if lxp:
 else:
     df = pd.read_pickle(f"{repload}result.pickle")
 
-df = df[['t','uzg_tot_ad','Fext']]
+df = df[['t','uzg_tot_ad','uzpb','uzph','Fext']]
     # on trie et on reindexe :
 df.sort_values(by='t',inplace=True)
 df.reset_index(drop=True,inplace=True)
@@ -118,8 +119,8 @@ if (not linert):
 t2 =128.
 # if lbloq & lbfin:
 #     t2 = 40.
-df = df[(df['t']>t1) & (df['t']<=t2)]
-df.reset_index(drop=True,inplace=True)
+# df = df[(df['t']>t1) & (df['t']<=t2)]
+# df.reset_index(drop=True,inplace=True)
 # %% 100 points par seconde 
     # nsort = 10 et x4 dans dopickle_slices :
 # if (not linert):
@@ -365,6 +366,57 @@ kwargs1 = {
     # "clmax" : cmax,
 }
 traj.pltraj2d_ind(df, **kwargs1)
+#%%
+ind1 = df[(df['t']>=99.) & (df['t']<=105.)].index
+fs = df['freq'].iloc[ind1[0]]
+fe = df['freq'].iloc[ind1[-1]]
+print(f"fs = {fs}")
+print(f"fs = {fe}")
+kwargs1 = {
+    "tile1": f"long uygad fload = {fs} - {fe} Hz" + "\n",
+    "tile_save": f"longzoom_traj2d_uygad_fs{int(fs)}_fe{int(fe)}",
+    "ind": [ind1],
+    "colx": "t",
+    "coly": "uzg_tot_ad",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$u_y(G_{ad})$" + " (m)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": f"long fext = {fs} - {fe} Hz" + "\n",
+    "tile_save": f"longzoom_fext_fs{int(fs)}_fe{int(fe)}",
+    "ind": [ind1],
+    "colx": "t",
+    "coly": "Fext",
+    "rep_save": repsect1,
+    # "label1": r"$P_{pin}^u$",
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$F_{ext}$" + " (N)",
+    "color1": ['black','orange'],
+    # "rcirc" : ray_circ,
+    # "excent" : excent,
+    # "spinz" : spinz,     
+    "msize" : 0.1,
+    "scatter" : [True,True],
+    "endpoint" : [False,False],
+    # "arcwidth" : sect_pion_deg,
+    # "clmax" : cmax,
+}
+traj.pltraj2d_ind(df, **kwargs1)
 #%%############################################
 #           PLOTS : PSD :
 ###############################################
@@ -381,7 +433,8 @@ if (lbloq):
     # nfft = 2**(nt-5)
     nblocks = (len(df)) / (nfft)
     print(f"nblocks = {nblocks}")
-    power, freq = plt.psd(-1.e6*df['uzg_tot_ad'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., color=color1[2])
+    power, freq = plt.psd(1.e5*df['uzg_tot_ad'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., color=color1[2])
+
 
 if (not lbloq):
     # belle allure entre 0 et 30 hz : mais nfft fait la longueur du domaine
@@ -391,7 +444,12 @@ if (not lbloq):
     nvrlp = 0.
     nblocks = (len(df) - nvrlp) / (nfft - nvrlp)
     print(f"nblocks = {nblocks}")
-    power, freq = plt.psd(-1.e6*df['uzg_tot_ad'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., detrend='linear',color=color1[0],noverlap=nvrlp)
+    power, freq = plt.psd(1.e5*df['uzg_tot_ad'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., detrend='linear',color=color1[0])
+
+    powerPB, freqPB = plt.psd(1.e5*df['uzpb'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., detrend='linear',color=color1[0])
+
+    powerPH, freqPH = plt.psd(1.e5*df['uzph'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., detrend='linear',color=color1[0])
+    # power, freq = plt.psd(1.e5*df['uzg_tot_ad'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0., detrend='linear',color=color1[0],noverlap=nvrlp)
 
 if (lxp):
     # belle allure entre 0 et 30 hz : mais nfft fait la longueur du domaine
@@ -400,24 +458,40 @@ if (lxp):
     nblocks = (len(df) - nvrlp) / (nfft - nvrlp)
     print(f"nblocks = {nblocks}")
     power, freq = plt.psd(-1.e6*df['uzg_tot_ad'].iloc[indexpsd], NFFT=nfft, Fs=fs, scale_by_freq=0.,color=color1[0],noverlap=nvrlp)
-# nfft = 2**(nt-1)
-# nvrlp = 0.9*nfft
-# nblocks = (len(df) - nvrlp) / (nfft - nvrlp)
-# print(f"nblocks = {nblocks}")
-# power, freq = plt.psd(-1.e5*df['uzg_tot_ad'], NFFT=nfft, Fs=fs, scale_by_freq=True, detrend='linear',color=color1[2],noverlap=nvrlp)
 
-plt.close('all')
-# get the ordinate of plt.psd :
-power_density = 10. * np.log10(power)
+lpower = []
+lfreq = []
+lind = np.array_split(df.index,20)
+for indi in lind: 
+    dfi = df.iloc[indi]
+    dfi.sort_values(by='t',inplace=True)
+    dfi.reset_index(drop=True,inplace=True)
+    nt1 = int(np.floor(np.log(len(dfi['t']))/np.log(2.)))
+    indexpsd1 = dfi[dfi.index <= 2**nt1].index
+    print(f"nt1 = {nt1}")
+    nfft1 = 2**(nt1)
+    # nfft = 2**(nt-5)
+    nblocks = (len(dfi)) / (nfft1)
+    print(f"nblocks = {nblocks}")
+    poweri, freqi = plt.psd(1.e5*dfi['uzg_tot_ad'].iloc[indexpsd1], NFFT=nfft1, Fs=fs, scale_by_freq=0., color=color1[2])
+    lpower.append(poweri)
+    lfreq.append(freqi)
 
-linteractif = False
+# power_density = 10. * np.log10(power)
+power_density = power
+power_densityPB = powerPB
+power_densityPH = powerPH
+
+linteractif = True
 if (linteractif):
     fig, ax = plt.subplots()
     ax.plot(freq, power_density, label='Data')
+    ax.plot(freqPB, power_densityPB, label='Data')
+    ax.plot(freqPH, power_densityPH, label='Data')
     # Enable cursor and display values
     mplcursors.cursor(hover=True).connect(
         "add", lambda sel: sel.annotation.set_text(f"{sel.target[0]:.2f}, {sel.target[1]:.2f}"))
-    plt.xlim(0,30)
+    plt.xlim(0,20)
     # Adding labels and title
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
@@ -473,9 +547,12 @@ if (lbloq | lbepai):
 if (not lbloq):
     lanot = [(12.54,44.54)]
 
-xmax = 30.
-ymax = 60.
-ymin = -50.
+# xmax = 20.
+# ymax = 60.
+# ymin = -150.
+xmax = 20.
+ymax = 1.1*np.max(power_density)
+ymin = -10.
 kwargs1 = {
     "tile1": " PSD uy(G) adapter = f(freq)" + "\n",
     "tile_save": "PSD_uygad",
@@ -486,10 +563,36 @@ kwargs1 = {
     "labelx": r"$Frequency \quad (Hz)$",
     "labely": r"$Power \quad (dB)$",
     "color1": color1[2],
-    "annotations": lanot,
+    "annotations": [],
     "xmax": xmax,
     "ymax": ymax,
-    "ymin": -50.,
+    "ymin": ymin,
+    "ypower": 3,
+}
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+
+cmap2 = traj.truncate_colormap(cm.inferno,0.,0.85,100)
+lmax = [ np.max(powi) for powi in lpower ]
+lampl = [ cmap2(np.max(powi)/np.max(lmax)) for powi in lpower ]
+
+xmax = 20.
+ymax = 1.1*np.max(lmax)
+ymin = -500.
+kwargs1 = {
+    "tile1": "splir PSD uy(G) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uygad_split",
+    "x": lfreq,
+    "y": lpower,
+    "rep_save": repsect1,
+    "label1": [None]*len(lpower),
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": lampl,
+    "annotations": [],
+    "xmax": xmax,
+    "ymax": ymax,
+    "ymin": ymin,
     "ypower": 3,
 }
 # traj.PSD(df, **kwargs1)
