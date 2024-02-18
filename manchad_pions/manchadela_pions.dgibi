@@ -7,7 +7,7 @@ opti 'TRAC' PSC ;
 opti 'EPTR' 5 ;
 
 *# reprise :
-reprise = vrai ;
+reprise = faux ;
 
 **************************************************************
 *                   REPERE :
@@ -28,16 +28,16 @@ ez = (-1.) 0. 0. ;
 ttot = 128. ;
 
 *# t :
-T = 0.2 ;
+T = 128. ;
 
 *# phase :
 phase = 0. ;
 
 *# dte :
-dte = 5.e-6 ;
+dte = 1.e-4 ;
 
 *# nsort :
-nsort = 5 ;
+nsort = 1 ;
 
 * NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 NPASe = (ENTI 'PROCH' (T / DTe)) + nsort - 1 ;
@@ -49,16 +49,15 @@ si (reprise) ;
 *# trep :
 trep = 1. ;
 * on reajuste l'evolution du temps : pour le chargement uniquement !!
-* tprog_rep = prog trep 'PAS' dte 'NPAS' (npase + 1) ;
-* tprog_rep = tprog + trep ;
-  tprog_rep = tprog + (prog (dime tprog)*trep) ; 
+  offset = (prog (dime tprog)*trep) ;
+  tprog_rep = tprog + offset ; 
 finsi ;
 * opti donn 5 ; 
 **************************************************************
 *         adaptateur rigide ou raidtimo ?
 **************************************************************
 *# lbloq :
-lbloq = faux ;
+lbloq = vrai ;
 * le cone est il fixe ?
 lconefixe = faux ;
 * adaptateur : modele elastique ou modele FE ?
@@ -185,17 +184,7 @@ si (lsinb) ;
   df = (fend - f1) / ((dime tprog) - 1 ) ;
   freq = prog f1 'PAS' (df/2.) 'NPAS' ((dime tprog) - 1) ;
   omega = 360. * freq ; 
-*  omega = 180. * freq ; 
   Fprog2 =(sin ( omega * tprog ) ) ;
-******
-*  nligne = dime tprog ;
-*  pow = enti (((-1.)*(log dte)/(log 10.)) + 1.e-6) ;
-* opti 'ACQU' (chai './signal'pow'.acc');
-* ACQU Fprog2*'LISTREEL' nligne;
-* evfprogtr = EVOL 'BLEU' 'MANU' 't' tprog 'fprogtr' fprog2 ; 
-* opti trac x ;
-* dess evfprogtr 'LEGE' ;
-******
   si (T >EG (10.)) ;
   dtr = 1.e-3 ;
   nptr = (ENTI 'PROCH' (T / dtr)) - 1 ;
@@ -212,26 +201,47 @@ si (lsinb) ;
   omegtr = extr omegtr (lect ns 'PAS' 1 ne) ;
   fprogtr =(sin ( omegtr * ttrac ) ) ;
   evfprogtr = EVOL 'BLEU' 'MANU' 't' ttrac 'fprogtr' fprogtr ; 
-*  evfprogtr = EVOL 'BLEU' 'MANU' 't' ttrac 'omegtr' omegtr ; 
-*  opti trac x ;
   dess evfprogtr 'LEGE' ;
   finsi ;
-*   opti donn 5 ; 
+
   si reprise ;
-    fstart = f1 + ((trep/ttot)*(f2 - f1)) ; 
-    fend = fstart + ((T/ttot)*(f2 - f1)) ; 
-    df = (fend - fstart) / ((dime tprog) - 1 ) ;
-    freq = prog fstart 'PAS' df 'NPAS' ((dime tprog) - 1) ;
-    omega = 360. * freq ; 
-*   calcul de la phase :
-    n = slice - 1 ;
-    delta_f = t * (f2 - f1) / ttot ;
-    phase = 360. * t * (n*f1 + (n*(n+1)*delta_f/2.)) ;
-    Fprog2 = (sin ((omega * tprog) + phase)) ;
-    evfprogtr = EVOL 'BLEU' 'MANU' 't' tprog 'fprogtr' fprog2 ; 
-*    opti trac x ; 
-    dess evfprogtr 'LEGE' ;
-*    opti donn 5 ; 
+*   vecteurs temps et frequence dont on extrait les valeurs :
+    npastot  = (ENTI 'PROCH' (ttot / DTe)) ;
+    tprogtot = prog 0. 'PAS' Dte 'NPAS' npastot ;
+    df = (f2 - f1) / ((dime tprogtot) - 1 ) ;
+    freq = prog f1 'PAS' (df/2.) 'NPAS' ((dime tprogtot) - 1) ;
+    si ((slice*t) >EG ttot) ;
+      freq = freq et (prog (nsort - 1)*0.) ; 
+    finsi ;
+*   indices d'extraction :
+    npasstd = enti 'PROCH' (t/dte) ;
+    indstart = ((slice - 1) * npasstd) + 1 ;
+    indend = indstart + npase ;
+*   si (slice*t >EG ttot) ;
+*     indend = mini (lect indend npastot)  ; 
+*   finsi ;
+    si (slice ega 0) ;
+      indstart = 1 ;
+      indend = indstart + npase ;
+    finsi ;
+    freqel = extr freq (lect indstart 'PAS' 1 indend) ;
+*   evolution du chargement :
+    omega = 360. * freqel ; 
+    fprog2 = (sin (omega * tprog_rep)) ;
+******* old : probleme : cree un decalage   
+*    fstart = f1 + ((trep/ttot)*(f2 - f1)) ; 
+*    fend = fstart + ((T/ttot)*(f2 - f1)) ; 
+*    df = (fend - fstart) / ((dime tprog) - 1 ) ;
+*    freq = prog fstart 'PAS' df 'NPAS' ((dime tprog) - 1) ;
+*    omega = 360. * freq ; 
+*******   
+******* old :   calcul de la phase :
+*    n = slice - 1 ;
+*    delta_f = t * (f2 - f1) / ttot ;
+*    phase = 360. * t * (n*f1 + (n*(n+1)*delta_f/2.)) ;
+*    Fprog2 = (sin ((omega * tprog) + phase)) ;
+*    evfprogtr = EVOL 'BLEU' 'MANU' 't' tprog 'fprogtr' fprog2 ; 
+*******   
   finsi ;
 finsi ;
 * opti donn 5 ; 
@@ -1080,18 +1090,18 @@ nbelbat = 20 ;
 
 nbelbat = ENTI (NB_CORPS*(lspring)/L_CORPS) ;
 
-lbath1 = d nbelbat PLAM_H pbath1 ;
-lbath2 = d nbelbat PLAM_H pbath2 ;
-lbatb1 = d nbelbat PLAM_B pbatb1 ;
-lbatb2 = d nbelbat PLAM_B pbatb2 ;
+* old :
+* lbath1 = d nbelbat PLAM_H pbath1 ;
+* lbath2 = d nbelbat PLAM_H pbath2 ;
+* lbatb1 = d nbelbat PLAM_B pbatb1 ;
+* lbatb2 = d nbelbat PLAM_B pbatb2 ;
 
-si (raidiss) ;
 pmidh1 = plam_h plus (0.5*(lspring*ex)) ;
 pmidh2 = plam_h plus (0.5*(((-1.)*lspring)*ex)) ;
 pmidb1 = plam_b plus (0.5*(lspring*ex)) ;
 pmidb2 = plam_b plus (0.5*(((-1.)*lspring)*ex)) ;
 *# lsprbl :
-lsprbl = 5.e-2 ;
+lsprbl = 2.e-2 ;
 * a droite :
 pmidh1d = pmidh1 plus ((lsprbl/2.)*ex) ;
 pmidh2d = pmidh2 plus ((lsprbl/2.)*ex) ;
@@ -1126,6 +1136,8 @@ lbath1 = lbath11 et lbath12 ;
 lbath2 = lbath21 et lbath22 ;
 lbatb1 = lbatb11 et lbatb12 ;
 lbatb2 = lbatb21 et lbatb22 ;
+
+si (raidiss) ;
 * raidisseurs :
 lraid1 = d nbelbat12 pmidh1 pmidb1 ;
 lraid2 = d nbelbat12 pmidh2 pmidb2 ;
@@ -1135,7 +1147,8 @@ finsi ;
 cladry = bloq adaptateur 'RY' ;
 
 si (raidiss) ;
-adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 et lraid1 et lraid2 ;
+* adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 et lraid1 et lraid2 ;
+adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 ;
 sinon ;
 adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 ;
 finsi ;
@@ -1153,17 +1166,22 @@ modlb2 = mode lbatb2 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
 matlb2 = MATE modlb2 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
 *
 si (raidiss) ;
-igxraid = 10.*igx_lam ;
-* igyraid = 10.*igy_lam ;
-igyraid = 10.*igx_lam ;
-igraid = 10.*ig_lam ;
+* igxraid = 10.*igx_lam ;
+* igyraid = 10.*igx_lam ;
+* igraid = 10.*ig_lam ;
+igxraid = igx_lam ;
+igyraid = igx_lam ;
+igraid = ig_lam ;
+sraid = s_lam / 2. ;
 modraid1 = mode lraid1 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
-matraid1 = MATE modraid1 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
+matraid1 = MATE modraid1 'YOUN' E 'NU' nu 'RHO' rho  'SECT' sraid 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
 modraid2 = mode lraid2 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
-matraid2 = MATE modraid2 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
+matraid2 = MATE modraid2 'YOUN' E 'NU' nu 'RHO' rho  'SECT' sraid 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
 *
-mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 et modraid1 et modraid2 ;
-mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 et matraid1 et matraid2 ;
+* mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 et modraid1 et modraid2 ;
+* mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 et matraid1 et matraid2 ;
+mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 ;
+mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 ;
 sinon ;
 mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 ;
 mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 ;
@@ -1178,25 +1196,73 @@ clbath1 = bloq 'DEPL' 'ROTA' pbath1 ;
 clbath2 = bloq 'DEPL' 'ROTA' pbath2 ;
 clbatb1 = bloq 'DEPL' 'ROTA' pbatb1 ;
 clbatb2 = bloq 'DEPL' 'ROTA' pbatb2 ;
-
+*
+k_ad = k_ad et clbath1 et clbath2 et clbatb1 et clbatb2 ;
 * on bloque les 3 points sur 5 cm au milieu : 
-* a gauche :
-clbathcent = bloq 'ROTA' pmidh1g ;
+* au centre :
+si raidiss ;
+* cote droit :
+rlrxraid1  = rela 1. 'RX' pmidh1  + (-1.) 'RX' pmidb1  ;
+rlrxraid1d = rela 1. 'RX' pmidh1d + (-1.) 'RX' pmidb1d ;
+rlrxraid1g = rela 1. 'RX' pmidh1g + (-1.) 'RX' pmidb1g ;
+rlryraid1  = rela 1. 'RY' pmidh1  + (-1.) 'RY' pmidb1  ;
+rlryraid1d = rela 1. 'RY' pmidh1d + (-1.) 'RY' pmidb1d ;
+rlryraid1g = rela 1. 'RY' pmidh1g + (-1.) 'RY' pmidb1g ;
+rlrzraid1  = rela 1. 'RZ' pmidh1  + (-1.) 'RZ' pmidb1 ;
+rlrzraid1d = rela 1. 'RZ' pmidh1d + (-1.) 'RZ' pmidb1d ;
+rlrzraid1g = rela 1. 'RZ' pmidh1g + (-1.) 'RZ' pmidb1g ;
+rluzraid1  = rela 1. 'UZ' pmidh1  + (-1.) 'UZ' pmidb1 ;
+rluzraid1d = rela 1. 'UZ' pmidh1d + (-1.) 'UZ' pmidb1d ;
+rluzraid1g = rela 1. 'UZ' pmidh1g + (-1.) 'UZ' pmidb1g ;
+*
+rlraid1_rx = rlrxraid1 et rlrxraid1d et rlrxraid1g ; 
+rlraid1_ry = rlryraid1 et rlryraid1d et rlryraid1g ; 
+rlraid1_rz = rlrzraid1 et rlrzraid1d et rlrzraid1g ; 
+rlraid1_uz = rluzraid1 et rluzraid1d et rluzraid1g ;
+* rlraid1    = rlraid1_rx et rlraid1_ry et rlraid1_rz  et rlraid1_uz ;
+rlraid1    = rlraid1_uz ;
+*
+* cote gauche :
+rlrxraid2  = rela 1. 'RX' pmidh2  + (-1.) 'RX' pmidb2  ;
+rlrxraid2d = rela 1. 'RX' pmidh2d + (-1.) 'RX' pmidb2d ;
+rlrxraid2g = rela 1. 'RX' pmidh2g + (-1.) 'RX' pmidb2g ;
+rlryraid2  = rela 1. 'RY' pmidh2  + (-1.) 'RY' pmidb2  ;
+rlryraid2d = rela 1. 'RY' pmidh2d + (-1.) 'RY' pmidb2d ;
+rlryraid2g = rela 1. 'RY' pmidh2g + (-1.) 'RY' pmidb2g ;
+rlrzraid2  = rela 1. 'RZ' pmidh2  + (-1.) 'RZ' pmidb2 ;
+rlrzraid2d = rela 1. 'RZ' pmidh2d + (-1.) 'RZ' pmidb2d ;
+rlrzraid2g = rela 1. 'RZ' pmidh2g + (-1.) 'RZ' pmidb2g ;
+rluzraid2  = rela 1. 'UZ' pmidh2  + (-1.) 'UZ' pmidb2 ;
+rluzraid2d = rela 1. 'UZ' pmidh2d + (-1.) 'UZ' pmidb2d ;
+rluzraid2g = rela 1. 'UZ' pmidh2g + (-1.) 'UZ' pmidb2g ;
+*
+rlraid2_rx = rlrxraid2 et rlrxraid2d et rlrxraid2g ; 
+rlraid2_ry = rlryraid2 et rlryraid2d et rlryraid2g ; 
+rlraid2_rz = rlrzraid2 et rlrzraid2d et rlrzraid2g ; 
+rlraid2_uz = rluzraid2 et rluzraid2d et rluzraid2g ;
+* rlraid2    = rlraid2_rx et rlraid2_ry et rlraid2_rz  et rlraid2_uz ;
+rlraid2    = rlraid2_uz ;
+*
+k_ad = k_ad et rlraid1 et rlraid2 ;
+*
+clbathcent = bloq 'ROTA' pmidh1 ;
+clbathcent = clbathcent et  (bloq 'ROTA' pmidh2) ;
+clbathcent = clbathcent et  (bloq 'ROTA' pmidb1) ;
+clbathcent = clbathcent et  (bloq 'ROTA' pmidb2) ;
+* a gauche :                       
+clbathcent = clbathcent et  (bloq 'ROTA' pmidh1g) ;
 clbathcent = clbathcent et  (bloq 'ROTA' pmidh2g) ;
 clbathcent = clbathcent et  (bloq 'ROTA' pmidb1g) ;
 clbathcent = clbathcent et  (bloq 'ROTA' pmidb2g) ;
-* a droite :
+* a droite :                       
 clbathcent = clbathcent et  (bloq 'ROTA' pmidh1d) ;
 clbathcent = clbathcent et  (bloq 'ROTA' pmidh2d) ;
 clbathcent = clbathcent et  (bloq 'ROTA' pmidb1d) ;
 clbathcent = clbathcent et  (bloq 'ROTA' pmidb2d) ;
-* au centre :
-clbathcent = clbathcent et  (bloq 'ROTA' pmidh1) ;
-clbathcent = clbathcent et  (bloq 'ROTA' pmidh2) ;
-clbathcent = clbathcent et  (bloq 'ROTA' pmidb1) ;
-clbathcent = clbathcent et  (bloq 'ROTA' pmidb2) ;
 *
-k_ad = k_ad et clbath1 et clbath2 et clbatb1 et clbatb2 et clbathcent ;
+k_ad = k_ad et clbathcent ;
+*
+finsi ;
 * test horiz :
 si (blqry) ;
   k_ad = k_ad et cladry ;
@@ -1267,6 +1333,9 @@ finsi ;
 mopost = mots 'TABL' 'DEFO';
 postvibr  tmode_ad mopost ;
 
+* opti 'FTRA' './fig/bm_ad.ps' ;
+postvibr  tmode_ad ;
+
 opti 'FTRA' './fig/bm_ad.ps' ;
 repe bloc2 nmad ;
   u1 = tmode_ad . modes . &bloc2 . deformee_modale ;
@@ -1278,7 +1347,7 @@ repe bloc2 nmad ;
 fin bloc2 ;  
 opti 'FTRA' (chai 'fig/'script'.ps');
 
-* opti donn 5 ; 
+opti donn 5 ;
 *
 *pextr_ad = adaptateur poin 'PROC' p2 ; 
 ** mode1 :
@@ -2409,22 +2478,45 @@ si (lsin) ;
   Fprog2 = (SIN (OMEGA*tprog)) ;
 finsi ;
 si (reprise) ;
-* dt = ((extr tprog 2) - (extr tprog 1)) ;
-* tprog_rep = prog trep 'PAS' dt 'NPAS' ((dime tprog) - 1) ;
-  tprog_rep = tprog + (prog (dime tprog)*trep) ; 
+  offset = (prog (dime tprog)*trep) ;
+  tprog_rep = tprog + offset ; 
 finsi ;
 si (lsinb) ;
-  f2 = f1 + ((T/ttot)*(f2 - f1)) ; 
-  df = (f2 - f1) / ((dime tprog) - 1 ) ;
+  fend = f1 + ((T/ttot)*(f2 - f1)) ; 
+  df = (fend - f1) / ((dime tprog) - 1 ) ;
 * freq = prog f1 'PAS' df 'NPAS' ((dime tprog) - 1) ;
   freq = prog f1 'PAS' (df/2.) 'NPAS' ((dime tprog) - 1) ;
   omega = 360. * freq ; 
   Fprog2 =(sin ( omega * tprog ) ) ;
   si reprise ;
-    df = (fend - fstart) / ((dime tprog) - 1 ) ;
-    freq = prog fstart 'PAS' df 'NPAS' ((dime tprog) - 1) ;
-    omega = 360. * freq ; 
-    Fprog2 = (sin ( (omega * tprog) + phase) ) ;
+*   vecteurs temps et frequence dont on extrait les valeurs :
+    dtsort = nsort * dte ;
+    npastot  = (ENTI 'PROCH' (ttot / dtsort)) ;
+    tprogtot = prog 0. 'PAS' dtsort 'NPAS' npastot ;
+    df = (f2 - f1) / ((dime tprogtot) - 1 ) ;
+    freq = prog f1 'PAS' (df/2.) 'NPAS' ((dime tprogtot) - 1) ;
+*   indices d'extraction :
+*     nbr de pas dans la tranche de sortie :
+    npasstd = (ENTI 'PROCH' (t/dtsort)) ;
+    indstart = (((slice - 1) * npasstd)) + 1 ;
+    indend = indstart + (dime tprog) - 1 ;
+*    si ((t*slice) >EG ttot) ;
+*      indend = mini (lect indend npastot) ;
+*    finsi ;
+    si (slice ega 0) ;
+      indstart = 1 ;
+      indend = indstart + (dime tprog) - 1 ;
+    finsi ;
+    freqel = extr freq (lect indstart 'PAS' 1 indend) ;
+*   evolution du chargement :
+    omega = 360. * freqel ; 
+    fprog2 = (sin (omega * tprog_rep)) ;
+******* old : 
+*    df = (fend - fstart) / ((dime tprog) - 1 ) ;
+*    freq = prog fstart 'PAS' df 'NPAS' ((dime tprog) - 1) ;
+*    omega = 360. * freq ; 
+*    Fprog2 = (sin ( (omega * tprog) + phase) ) ;
+******* 
   finsi ;
 finsi ;
 si (lexp) ;
