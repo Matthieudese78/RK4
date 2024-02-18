@@ -141,7 +141,7 @@ cms : pour le couple resistant "hard code" :
 *      MATRICE    = .TRUE.
        MATRICE    = .FALSE.
 *     resistance au spin ?
-      lrspin = .false.
+      lrspin = .true.
 *     book toss ?
       lbt = .false.
 *     coulombic soft wall ?
