@@ -1,0 +1,97 @@
+Opti dime 3 ; 
+OPTI 'MODE' 'TRID' ;
+opti elem CUB8 ;
+opti 'TRAC' PSC ; 
+opti 'EPTR' 5 ;
+opti 'FTRA' './fig/testsinb.ps' ;
+*
+*# ttot :
+ttot = 128. ;
+
+nslice = 128 ;
+
+tslice = 1. ;
+
+*# t :
+T = nslice * tslice ;
+
+*# phase :
+phase = 0. ;
+
+*# dte :
+dte = 2.e-4 ;
+
+*# nsort :
+nsort = 1 ;
+
+NPASe = (ENTI 'PROCH' (T / DTe)) ;
+
+tprog = prog 0. 'PAS' Dte 'NPAS' npase ;
+
+*# evtot :
+f1 = 2. ; 
+f2 = 20. ; 
+fend = f1 + ((T/ttot)*(f2 - f1)) ; 
+df = (fend - f1) / ((dime tprog) - 1 ) ;
+freq = prog f1 'PAS' (df/2.) 'NPAS' ((dime tprog) - 1) ;
+omega = 360. * freq ; 
+Fprog2 =(sin ( omega * tprog ) ) ;
+evtot = EVOL 'BLEU' 'MANU' 't' tprog 'ftot' fprog2 ; 
+evfreqtot = EVOL 'BLEU' 'MANU' 't' tprog 'ftot' freq ; 
+
+*# evfrag :
+tprogfrag = prog ;
+ffrag = prog ;
+freqfrag = prog ;
+trep = 0. ;
+repe bfrag (nslice) ;
+  npasel = (ENTI 'PROCH' (tslice/ DTe)) ;
+
+  tprogel = prog 0. 'PAS' Dte 'NPAS' npasel ;
+  offset = (prog (dime tprogel)*trep) ;
+  tprog_rep = tprogel + offset  ;
+
+* fstart = f1 + ((trep/ttot)*(f2 - f1)) ; 
+* fend = fstart + ((tslice/ttot)*(f2 - f1)) ; 
+* dfel = (fend - fstart) / ((dime tprogel) - 1 ) ;
+* freq = prog fstart 'PAS' (dfel/2.) 'NPAS' ((dime tprogel) - 1) ;
+  indstart = ((&bfrag - 1) * npasel) + 1 ;
+  indend = indstart + npasel ;
+  freqel = extr freq (lect indstart 'PAS' 1 indend) ;
+
+  si (&bfrag >EG 2) ;
+    tprog_rep = extr tprog_rep (lect 2 'PAS' 1 (dime tprog_rep)) ;  
+    freqel = extr freqel (lect 2 'PAS' 1 (dime freqel)) ;  
+  finsi ;
+  omega = 360. * freqel ; 
+  ffrag = ffrag et (sin ((omega * tprog_rep))) ;
+  tprogfrag = tprogfrag et tprog_rep ;
+  freqfrag = freqfrag et freqel ;
+
+  trep = trep + tslice ; 
+*  mess (chai 'trep = 'trep) ;
+fin bfrag ;
+
+evtfrag = EVOL 'ROUG' 'MANU' 't' tprog 'ffrag' tprogfrag ; 
+dess (evtfrag) 'LEGE' ;
+
+evfrag = EVOL 'ROUG' 'MANU' 't' tprogfrag 'ffrag' ffrag ; 
+dess (evtot et evfrag) 'LEGE' ;
+
+evfreqfrag = EVOL 'ROUG' 'MANU' 't' tprogfrag 'ffrag' freqfrag ; 
+dess (evfreqfrag et evfreqtot) 'LEGE' ;
+
+* zoom sur differentes zones :
+ftest = 19. ;
+n1 = (enti (((ftest - f1)/(f2 - f1))*npase)) ; 
+n2 = n1 + (2*npasel) ;
+ttest = extr tprogfrag (lect n1 'PAS' 1 n2) ;
+ftest = extr ffrag (lect n1 'PAS' 1 n2) ;
+tref = extr tprog (lect n1 'PAS' 1 n2) ;
+fref = extr fprog2 (lect n1 'PAS' 1 n2) ;
+evtest = EVOL 'ROUG' 'MANU' 't' ttest 'f10' ftest ; 
+evref = EVOL 'BLEU' 'MANU' 't' tref 'f10' fref ; 
+dess evtest ;
+dess (evtest et evref) ;
+
+opti donn 5 ;
