@@ -153,7 +153,7 @@ C RCDEPEL    SOURCE    CB215821  20/11/25    13:38:35     10792
 *            que dans la ss base voulue (vue comme une base unique ici)
       CALL ACCTAB(ITBAS,'MOT',I0,X0,'SOUSTYPE',L0,IP0,
      &                  'MOT',I1,X1,TYPBAS,L1,IP1)
-cmsw      write(*,*)'rcdepel : TYPBAS = ',Typbas
+*      write(*,*)'rcdepel : TYPBAS = ',Typbas
 *
 *     Cas ou la base est unique
 *
@@ -195,7 +195,8 @@ cmsw         WRITE(*,*)'RCDEPEL: base ITBAS = ',ITBAS
          CALL ACCTAB(ITBAS,'ENTIER',IB,X0,' ',L0,IP0,
      &                       TYPRET,I1,X1,CHARRE,L1,ITTBAS)
          IF (ITTBAS.NE.0 .AND. TYPRET.EQ.'TABLE   ') THEN
-cmsw            write(*,*)'appel rcdepel2 ss base IB, ITTBAS = ',ITTBAS
+*            write(*,*)'appel rcdepel2 ss base IB, ITTBAS = ',ITTBAS
+*            write(*,*)'call rcdepel2, ITTBAS = ',ITTBAS
             CALL RCDEPEL2(ITTBAS,KTRAV,KCPR,KCHAR,XTEMP,IRET,ITRES,IPOS,
      &               ITLIA,ITYP,ICHD1,LTRIG,XTRIG)
             IF (IERR.NE.0) THEN
