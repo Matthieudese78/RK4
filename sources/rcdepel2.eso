@@ -173,7 +173,6 @@ cmsw      write(*,*)'       IBAS . MODES = IBBB = ',IBBB
          NSOUP1 = MCHPO1.IPCHP(/1)
 *         WRITE(*,*)' modele ICHD1 = ',ICHD1
 *         WRITE(*,*)' def modale mode a reco ICHDI',ICHDI
-*
 *         WRITE(*,*)'RCDEPEL2: '
 *         WRITE(*,*)'          NSOUPO = ',NSOUPO
 *         WRITE(*,*)'          NSOUP1 = ',NSOUP1
@@ -209,10 +208,10 @@ cmsw      write(*,*)'       IBAS . MODES = IBBB = ',IBBB
 *            WRITE(*,*)'RCDEPEL2: ISOU = ',ISOU
             MSOUP1 = MCHPO1.IPCHP(ISOU)
             MSOUPO = IPCHP(ISOU)
-            SEGACT MSOUP1,MSOUPO
 *            WRITE(*,*)'RCDEPEL2: SEGACT MSOUP1,MSOUPO'
 *            WRITE(*,*)'          MSOUP1 = ',MSOUP1
 *            WRITE(*,*)'          MSOUPO = ',MSOUPO
+            SEGACT MSOUP1,MSOUPO
             MPOVA1 = MSOUP1.IPOVAL
             MPOVAL = IPOVAL
             SEGACT MPOVA1,MPOVAL*MOD
@@ -233,7 +232,7 @@ cmsw      write(*,*)'       IBAS . MODES = IBBB = ',IBBB
 *              il faut incr�menter MSOUP1 sans incr�menter MSOUPO
 *            WRITE(*,*)'DEBUT correction si NSOUPO different NSOUP1'
             IF (NSOUPO.LT.NSOUP1) THEN
-              IF (NSOUPO.LT.(ISOU+1)) THEN
+              IF (NSOUPO.LT.(ISOU + 1)) THEN
 *                WRITE(*,*)'RCDEP2 : on ne peut pas sauter'
                 DO IC=1,NC
                   IF ((MSOUP1.NOCOMP(IC)).EQ.MOTLAG) THEN
@@ -246,7 +245,7 @@ cmsw      write(*,*)'       IBAS . MODES = IBBB = ',IBBB
                     SEGACT MPOVA1
                     N  = MPOVA1.VPOCHA(/1)
                     NC = MPOVA1.VPOCHA(/2)
-                    LJOK=.TRUE.
+                    LJOK = .TRUE.
 *                    WRITE(*,*)'RCDEP2 : on reprend'
                     GOTO 30
                   ENDIF
@@ -254,10 +253,13 @@ cmsw      write(*,*)'       IBAS . MODES = IBBB = ',IBBB
               ENDIF
             ELSEIF (NSOUPO.GT.NSOUP1) THEN
 *              WRITE(*,*)'Cas NSOUPO > NSOUP1'
-              IF (NSOUP1.LT.(ISOU+1)) THEN
+*              WRITE(*,*)'          NSOUPO = ',NSOUPO
+*              WRITE(*,*)'          NSOUP1 = ',NSOUP1
+*              WRITE(*,*)'          isou+1 = ',ISOU + 1
+              IF (NSOUP1.LT.(ISOU + 1)) THEN
 *                WRITE(*,*)'Initialement : '
-*                WRITE(*,*)'RCDEP2: N = ',VPOCHA(/1)
-*                WRITE(*,*)'RCDEP2: NC = ',VPOCHA(/2)
+*                WRITE(*,*)'RCDEPEL2: N = ',VPOCHA(/1)
+*                WRITE(*,*)'RCDEPEL2: NC = ',VPOCHA(/2)
                 NC1 = NOCOMP(/2)
                 DO IC1=1,NC1
                   IF ((NOCOMP(IC1)).EQ.MOTLAG) THEN
@@ -271,10 +273,11 @@ cmsw      write(*,*)'       IBAS . MODES = IBBB = ',IBBB
                     SEGACT MPOVAL*MOD
                     N  = VPOCHA(/1)
                     NC = VPOCHA(/2)
-                    LJOK=.TRUE.
-*                    WRITE(*,*)'RCDEP2: N = ',N
-*                    WRITE(*,*)'RCDEP2: NC = ',NC
-*                    WRITE(*,*)'RCDEP2 : on reprend'
+                    LJOK = .TRUE.
+*                    WRITE(*,*)'RCDEPEL2: ljok = ',ljok
+*                    WRITE(*,*)'RCDEPEL2: N = ',N
+*                    WRITE(*,*)'RCDEPEL2: NC = ',NC
+*                    WRITE(*,*)'RCDEPEL2 : on reprend'
                     GOTO 30                    
                   ENDIF
                 ENDDO
@@ -311,7 +314,12 @@ cmsw                WRITE(*,*)' SOUPO Mult. Lagrange saute'
                 ENDIF
                ENDDO
               ENDDO
-*              WRITE(*,*)'On passe au soupo suivant'
+*             reco ok, si on avait le cas pathologique nsoup1 diff. nsoupo :
+              IF (LJOK) THEN 
+                SEGDES MCHPO1
+                GOTO 20
+              ENDIF
+*             Sinon : On passe au soupo suivant
               GOTO 22
 *             Attention, ici on part du principe que les 3 comp. 'UX' 'UY' 'UZ'
 *             appartiennent toujours au meme SOUPO --> solution trouvee au cas ou: 
@@ -362,6 +370,7 @@ cmsw                WRITE(*,*)' SOUPO Mult. Lagrange saute'
  24         CONTINUE
             SEGDES MPOVA1,MPOVAL
             SEGDES MSOUP1,MSOUPO
+*            WRITE(*,*)'ljok = ',ljok
             IF (LJOK) THEN 
               SEGDES MCHPO1
               GOTO 20
