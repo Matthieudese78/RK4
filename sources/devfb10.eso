@@ -572,6 +572,10 @@ cmsw     WRITE(*,*)'DEVFB10 : XCOOLB(ID,ISB,NPOI) = ',XCOOLB(3,ISB,NPOI)
 *            WRITE(*,*)' cas flat XDN = ',XDN
 *            WRITE(*,*)' cas flat RC = ',RC
              IF (XDN.LT.0.D0) THEN
+              if (dabs(xdn).ge.5.d-5) then
+                write(*,*)'xdn too big = ',xdn
+                call exit(1)
+              endif
               write(*,*)'FLAT + penetration : goto 20'
               GOTO 20
              ELSE
@@ -584,47 +588,46 @@ cmsw     WRITE(*,*)'DEVFB10 : XCOOLB(ID,ISB,NPOI) = ',XCOOLB(3,ISB,NPOI)
 ************************************************************************ 
 *        Debut cas incline : check repere
 ************************************************************************
+*         WRITE(*,*)'DEVFB10 : vecteurs de la base repere du cone'
+*         WRITE(*,*)'          Ex(1) = ',XCO(1)
+*         WRITE(*,*)'          Ex(2) = ',XCO(2)
+*         WRITE(*,*)'          Ex(3) = ',XCO(3)
+*         WRITE(*,*)'          Ey(1) = EY(1) = ',YCE(1)
+*         WRITE(*,*)'          Ey(2) = EY(2) = ',YCE(2)
+*         WRITE(*,*)'          Ey(3) = EY(3) = ',YCE(3)
+*         WRITE(*,*)'          Ez(1) = ',ZCO(1)
+*         WRITE(*,*)'          Ez(2) = ',ZCO(2)
+*         WRITE(*,*)'          Ez(3) = ',ZCO(3)
+*
+*         WRITE(*,*)'DEVFB10 : vecteurs de la base repere de l ellipse'
+*         WRITE(*,*)'          EX(1) = ',XCE(1)
+*         WRITE(*,*)'          EX(2) = ',XCE(2)
+*         WRITE(*,*)'          EX(3) = ',XCE(3)
+*         WRITE(*,*)'          EZ(1) = ',ZCE(1)
+*         WRITE(*,*)'          EZ(2) = ',ZCE(2)
+*         WRITE(*,*)'          EZ(3) = ',ZCE(3)
+*
+*         WRITE(*,*)'DEVFB10 : normes des vecteurs : '
+*         WRITE(*,*)'     EX = ',dsqrt(XCE(1)**2 + XCE(2)**2 + XCE(3)**2)
+*         WRITE(*,*)'     Ey = ',dsqrt(YCE(1)**2 + YCE(2)**2 + YCE(3)**2)
+*         WRITE(*,*)'     EZ = ',dsqrt(ZCE(1)**2 + ZCE(2)**2 + ZCE(3)**2)
+*         WRITE(*,*)'     Ex = ',dsqrt(XCO(1)**2 + XCO(2)**2 + XCO(3)**2)
+*         WRITE(*,*)'     Ez = ',dsqrt(ZCO(1)**2 + ZCO(2)**2 + ZCO(3)**2)
+*         WRITE(*,*)'     xzprec = ',xzprec
+******   
          xnxce = dsqrt(xce(1)**2 + xce(2)**2 + xce(3)**2)
          xnyce = dsqrt(yce(1)**2 + yce(2)**2 + yce(3)**2)
          xnzce = dsqrt(zce(1)**2 + zce(2)**2 + zce(3)**2)
          xnxco = dsqrt(xco(1)**2 + xco(2)**2 + xco(3)**2)
          xnzco = dsqrt(zco(1)**2 + zco(2)**2 + zco(3)**2)
-         if ((dabs(xnxce-1.d0).gt.xzprec).or.
-     &       (dabs(xnyce-1.d0).gt.xzprec).or.
-     &       (dabs(xnzce-1.d0).gt.xzprec).or.
-     &       (dabs(xnxco-1.d0).gt.xzprec).or.
-     &       (dabs(xnzco-1.d0).gt.xzprec)) then
+         if ((dabs(xnxce-1.d0).gt.1.d-10).or.
+     &       (dabs(xnyce-1.d0).gt.1.d-10).or.
+     &       (dabs(xnzce-1.d0).gt.1.d-10).or.
+     &       (dabs(xnxco-1.d0).gt.1.d-10).or.
+     &       (dabs(xnzco-1.d0).gt.1.d-10)) then
             write(*,*)'cas incline + repere mal defini!!'           
             call exit(1)
          endif
-************************************************************************
-*****    CHECK REPERES : 
-*        WRITE(*,*)'DEVFB10 : vecteurs de la base repere du cone'
-*        WRITE(*,*)'          Ex(1) = ',XCO(1)
-*        WRITE(*,*)'          Ex(2) = ',XCO(2)
-*        WRITE(*,*)'          Ex(3) = ',XCO(3)
-*        WRITE(*,*)'          Ey(1) = EY(1) = ',YCE(1)
-*        WRITE(*,*)'          Ey(2) = EY(2) = ',YCE(2)
-*        WRITE(*,*)'          Ey(3) = EY(3) = ',YCE(3)
-*        WRITE(*,*)'          Ez(1) = ',ZCO(1)
-*        WRITE(*,*)'          Ez(2) = ',ZCO(2)
-*        WRITE(*,*)'          Ez(3) = ',ZCO(3)
-
-*        WRITE(*,*)'DEVFB10 : vecteurs de la base repere de l ellipse'
-*        WRITE(*,*)'          EX(1) = ',XCE(1)
-*        WRITE(*,*)'          EX(2) = ',XCE(2)
-*        WRITE(*,*)'          EX(3) = ',XCE(3)
-*        WRITE(*,*)'          EZ(1) = ',ZCE(1)
-*        WRITE(*,*)'          EZ(2) = ',ZCE(2)
-*        WRITE(*,*)'          EZ(3) = ',ZCE(3)
-
-*        WRITE(*,*)'DEVFB10 : normes des vecteurs : '
-*        WRITE(*,*)'     EX = ',dsqrt(XCE(1)**2 + XCE(2)**2 + XCE(3)**2)
-*        WRITE(*,*)'     Ey = ',dsqrt(YCE(1)**2 + YCE(2)**2 + YCE(3)**2)
-*        WRITE(*,*)'     EZ = ',dsqrt(ZCE(1)**2 + ZCE(2)**2 + ZCE(3)**2)
-*        WRITE(*,*)'     Ex = ',dsqrt(XCO(1)**2 + XCO(2)**2 + XCO(3)**2)
-*        WRITE(*,*)'     Ez = ',dsqrt(ZCO(1)**2 + ZCO(2)**2 + ZCO(3)**2)
-******   
 * On passe dans le repère global lié au plan de nutation : 
 *        Ex (XCO), Ey (YCE), Ez (Ncone=XPALB(ID1+ID))  
          XPROJ(1) = XPTP2(1)*XCO(1) + XPTP2(2)*XCO(2) + XPTP2(3)*XCO(3)
