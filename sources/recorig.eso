@@ -66,6 +66,8 @@
         IF((TYPRET.EQ.'TABLE').AND.(IDYN1.NE.0)) THEN
 *         ICHPT<0 car ne marche que en listreel:
           ICHPT=-1*IDYN1
+*          WRITE(*,*)'RECORIG: call rcdepel, chps depl : idyn1 = ',idyn1
+*          WRITE(*,*)'                                   ibas = ',ibas
           CALL RCDEPEL(IBAS,ICHPT,KCHAR,XTEMP,ITRES,IPOS,ITLIA,ICHD0,
      &                 0,ICHD1,LTRIG,XTRIG)
 *          WRITE(*,*)'RECORIG: XTRIG(1) = ',XTRIG(1)
