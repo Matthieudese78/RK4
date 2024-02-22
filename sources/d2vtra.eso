@@ -490,6 +490,7 @@ c           nature de la matrice : DIAGONALE (defaut) ou PLEINE ...
               TYPRET= ' '
               CALL ACCTAB(ITA,'MOT',I0,X0,'NATURE',L0,IP0,
      &                        TYPRET,I1,X1,CHARRE,L1,IP1)
+              write(*,*)'d2vtra : nature amortissement = ',charre
               IF(TYPRET(1:3).eq.'MOT') THEN
                if(iimpi.EQ.333) write(ioimp,*) 'Nature de C =',CHARRE
                IF(CHARRE(1:6).eq.'PLEINE') THEN
@@ -539,6 +540,9 @@ c                   position de cette inconnue dans IPOREF de MPREF
                     DO 76 IA=1,NPREF
                       IF (IPOREF(IA).EQ.NNODE) GOTO 79
  76                 CONTINUE
+                    do ia=1,nprig
+                      IF (iporig(IA).EQ.NNODE) GOTO 79
+                    enddo
                     write(ioimp,*) 'D2VTRA: Incoherence entre les ',
      &              'points de reference et la matrice AMORTISSEMENT'
                     CALL ERREUR(504)
