@@ -87,8 +87,13 @@ jeumax = ray_circ - h_pion*np.sin(np.pi/6.)
 xcmax = h_pion*np.cos(np.pi/6.)
 ycmax = np.sqrt((ray_circ**2) - (xcmax**2))
 cmax = ycmax - (h_pion*np.sin(np.pi/6.))
+
+L_tete = 28.5*1.e-3 
+
 # %% quel type de modele ?
-lraidtimo = False
+lraidtimo = True
+lraidiss = True
+lsplit = True
 lplam = False
 lplow = False
 # lconefixe = True
@@ -107,8 +112,8 @@ lamode = True
 lkxp = False
 lpion = False
 lpcirc = True
-Fext = 193.
-mu = 0.
+Fext = 35.
+mu = 0.6
 xi = 0.05
 
 amode_m = 0.02
@@ -136,12 +141,15 @@ if (lkxp):
   namerep = f'{namerep}_kxp'
 if (linert):
     namerep = f'{namerep}_inert'
+if (lraidtimo):
+    namerep = f'{namerep}_raidtimo'
+if (lraidiss):
+    namerep = f'{namerep}_raidiss'
 
 repload = f'./pickle/{namerep}/'
 rep_save = f"./fig/{namerep}/"
 
 # %%
-
 if not os.path.exists(rep_save):
     os.makedirs(rep_save)
     print(f"FOLDER : {rep_save} created.")
@@ -150,32 +158,28 @@ else:
 
 # %% lecture du dataframe :
 df = pd.read_pickle(f"{repload}result.pickle")
-    # choc cconea : on ne garde que ca
-
-ndiscr = 2
-df = df.iloc[::ndiscr]
-
-df.sort_values(by='t',inplace=True)
-df.reset_index(drop=True,inplace=True)
-
-
-indchoc = df[df['FN_CCONE'].abs()>1.e-12].index
-df = df.iloc[indchoc]
-
 # %% fenetrage en temps : 
-t1 = 0.
-if (not linert):
-    t1 = 1. 
-t2 = 128.
-# df = df[(df['t']>=t1) & (df['t']<=t2)]
-
-#%% frequence en fonction du temps :
+t1 = 20.
+t2 = 90.
+df = df[(df['t']>=t1) & (df['t']<=t2)]
 df.sort_values(by='t',inplace=True)
 df.reset_index(drop=True,inplace=True)
-f1 = 2.
-f2 = 20.
-ttot = df.iloc[-1]['t']
-df['freq'] = f1 + ((f2-f1)/ttot)*df['t'] 
+#%% on ne prend que les chocs ccone :
+indchoc = df[df['FN_CCONE'].abs()>1.e-5].index
+df = df.iloc[indchoc]
+df.sort_values(by='t',inplace=True)
+df.reset_index(drop=True,inplace=True)
+
+# ndiscr = 2
+# df = df.iloc[::ndiscr]
+# df.sort_values(by='t',inplace=True)
+# df.reset_index(drop=True,inplace=True)
+
+# #%% frequence en fonction du temps :
+# f1 = 2.
+# f2 = 20.
+# ttot = df.iloc[-1]['t']
+# df['freq'] = f1 + ((f2-f1)/ttot)*df['t'] 
 
 #%%
 df = df[['t','FN_CCONE','THMAX','pusure_ccone','pctg_glis_ad','DIMP','RCINC',
@@ -183,6 +187,10 @@ df = df[['t','FN_CCONE','THMAX','pusure_ccone','pctg_glis_ad','DIMP','RCINC',
          'quat2',
          'quat3',
          'quat4',
+         'quat1_ad',
+         'quat2_ad',
+         'quat3_ad',
+         'quat4_ad',
          'uxscone_tot',
          'uyscone_tot',
          'uzscone_tot',
@@ -192,16 +200,15 @@ df = df[['t','FN_CCONE','THMAX','pusure_ccone','pctg_glis_ad','DIMP','RCINC',
          'UXpincid',
          'UYpincid',
          'UZpincid',
+         'uxg_tot_ad',
+         'uyg_tot_ad',
+         'uzg_tot_ad',
         #  'VX_pincid',
         #  'VY_pincid',
         #  'VZ_pincid',
          ]]
-    # on trie et on reindexe :
-df.sort_values(by='t',inplace=True)
-df.reset_index(drop=True,inplace=True)
 
-# on prend les valeurs positives de deplacments impose :
-df['DIMP'] = - df['DIMP']
+
 # # %% 100 points par seconde 
 #     # nsort = 10 et x4 dans dopickle_slices :
 # if (not linert):
@@ -237,18 +244,21 @@ base2 = [exb, eyb, ezb]
 # %% matrice de rotation de la manchette :
 kq = {"colname": "mrot", "q1": "quat1", "q2": "quat2", "q3": "quat3", "q4": "quat4"}
 rota.q2mdf(df, **kq)
-
+if lraidtimo:
+    kq = {"colname": "mrot_ad", "q1": "quat1_ad", "q2": "quat2_ad", "q3": "quat3_ad", "q4": "quat4_ad"}
+    rota.q2mdf(df, **kq)
 # %% extraction du spin :
-    #%% matrice de rotation de la manchette dans le repere utilisateur :
-name_cols = ["mrotu"]
-kwargs1 = {"base2": base2, "mat": "mrot", "name_cols": name_cols}
-rc.repchgdf_mat(df, **kwargs1)
-    #%% extraction du spin : 
-name_cols = ["spin"] 
-kwargs1 = {"mat": "mrotu", "colnames": name_cols}
-rota.spinextrdf(df,**kwargs1)
-    # on drop la column "mrotu" qui prend de la place : 
-df.drop(['mrotu'],inplace=True,axis=1)
+#     #%% matrice de rotation de la manchette dans le repere utilisateur :
+# name_cols = ["mrotu"]
+# kwargs1 = {"base2": base2, "mat": "mrot", "name_cols": name_cols}
+# rc.repchgdf_mat(df, **kwargs1)
+
+#     #%% extraction du spin : 
+# name_cols = ["spin"] 
+# kwargs1 = {"mat": "mrotu", "colnames": name_cols}
+# rota.spinextrdf(df,**kwargs1)
+#     # on drop la column "mrotu" qui prend de la place : 
+# df.drop(['mrotu'],inplace=True,axis=1)
 
 # %% on fait xb - xcdr :
 lk = []
@@ -280,15 +290,122 @@ lk.append({"col1": "UYpincid", "col2": "uyscone_tot", "col3": "uypisc"})
 lk.append({"col1": "UZpincid", "col2": "uzscone_tot", "col3": "uzpisc"})
 [traj.rela(df, **ki) for i, ki in enumerate(lk)]
 
+    # on test : 
+if lraidtimo:
+    ktr = {
+        "colnames": ["uxpiscA", "uypiscA", "uzpiscA"],
+        "mrot": "mrot_ad",
+        "x": "uxpisc",
+        "y": "uypisc",
+        "z": "uzpisc",
+    }
+    rota.b2a(df, **ktr)
+
+    name_cols = ["uxpiscA", "uypiscA", "uzpiscA"]
+    kwargs1 = {"base2": base2, "name_cols": name_cols}
+    rc.repchgdf(df, **kwargs1)
+    # on passe dans le repere d'origine le centre du cercle a t = 0
+    df['uzpiscA'] += L_tete
+
+name_cols = ["uxpisc", "uypisc", "uzpisc"]
+kwargs1 = {"base2": base2, "name_cols": name_cols}
+rc.repchgdf(df, **kwargs1)
+# on passe dans le repere d'origine le centre du cercle a t = 0
+df['uzpisc'] += L_tete
+
+#%% Ccirc_ad --> Pincid exprime dans le repere de l'adaptateur :
+    # RQ : donne la meme chose que uxpiscA :
+ltest = False
+if (lraidtimo & ltest):
+        # GadPi = Pincid - (XGad + uGad) (base B)
+            # - uGad
+    lk = []
+    lk.append({"col1": "UXpincid", "col2": "uxg_tot_ad", "col3": "xgadpiB"})
+    lk.append({"col1": "UYpincid", "col2": "uyg_tot_ad", "col3": "ygadpiB"})
+    lk.append({"col1": "UZpincid", "col2": "uzg_tot_ad", "col3": "zgadpiB"})
+    [traj.rela(df, **ki) for i, ki in enumerate(lk)]
+            # - XGad
+    xgad = 0.35245
+    df['xgadpiB'] += -xgad 
+
+        # GadPi = R_ad^T(Pincid - Gad)
+    ktr = {
+        "colnames": ["xgadpiA", "ygadpiA", "zgadpiA"],
+        "mrot": "mrot_ad",
+        "x": "xgadpiB",
+        "y": "ygadpiB",
+        "z": "zgadpiB",
+    }
+    rota.b2a(df, **ktr)
+        # CcircadPi = CircGad + GadPi (base A)
+            # altitude G altitude ccircad = l_tete
+    ccircgad = xgad - L_tete
+    df['xgadpiA'] += ccircgad
+    df.rename(columns={'xgadpiA' : 'xcadpiA', 'ygadpiA' : 'ycadpiA', 'zgadpiA' : 'zcadpiA'},inplace=True)
+        # on passe dans le repere utilisateur :
+    name_cols = ["xcadpiA", "ycadpiA", "zcadpiA"]
+    kwargs1 = {"base2": base2, "name_cols": name_cols}
+    rc.repchgdf(df, **kwargs1)
+
+#%% selection des colonnes de depl. : les 3 sont equivalents
+colx = 'uxpisc'
+coly = 'uypisc'
+colz = 'uzpisc'
+
+    # pour l'adaptateur : foireux
+# colx = 'xcadpiA'
+# coly = 'xcadpiA'
+# colz = 'xcadpiA'
+ 
+if lraidtimo:
+    colx = 'uxpiscA'
+    coly = 'uypiscA'
+    colz = 'uzpiscA'
+
+#%%############################################
+#           preproc 
+###############################################
+zlim = 2.e-3
+df = df[(df[colz] <= np.mean(df[colz])+zlim) & (df[colz] >= np.mean(df[colz])-zlim)]
+    # on trie et on reindexe :
+df.sort_values(by='t',inplace=True)
+df.reset_index(drop=True,inplace=True)
+
+df['th'] = np.arctan2(df['uypisc'],df['uxpisc']) * 180. / np.pi
+df['thm'] = np.arctan2(df['uypicircA'],df['uxpicircA']) * 180. / np.pi
+
+nbsect = 72
+nbsect_ad = 144
+nbz_ad = 80
+
+# on prend les valeurs positives de deplacments impose :
+dtsort = df['t'].iloc[1] - df['t'].iloc[0] 
+df['DIMP'] = - df['DIMP']
+df['Wener'] = df['pusure_ccone']*dtsort
+
+#%%############################################
+# SPLIT :
+###############################################
+if lsplit:
+    if lraidtimo:
+        # t1 = 70.
+        # t2 = 110.
+        tr1 = t1 + (t2-t1)/3.
+        tr2 = t1 + 2.*(t2-t1)/3.
+    else:
+        t1 = 50.
+        t2 = 80.
+    indreso = df[(df['t']>=tr1) & (df['t']<=tr2)].index
+    indp1   = df[(df['t']<=tr1)].index
+    indp2   = df[(df['t']>=tr2)].index
 # %% on peut passer le point d'incidence dans la base utilisateur :
 name_cols = ["UXpincid", "UYpincid", "UZpincid"]
 kwargs1 = {"base2": base2, "name_cols": name_cols}
 rc.repchgdf(df, **kwargs1)
 
-name_cols = ["uxpisc", "uypisc", "uzpisc"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
-
+#%% pour les heatmaps :
+ymin = df[colz].min()
+ymax = df[colz].max()
 # %%          COLORATION : 
     # en fonction de l'usure :
 # kcol = {'colx' : 'pusure_ccone', 'ampl' : 200., 'logcol' : False}
@@ -297,30 +414,478 @@ rc.repchgdf(df, **kwargs1)
 # kcol = {'colx' : "FN_CCONE", 'color_normal' : 'black', 'color_impact' : 'orange'}
 # dfcolimpact = traj.color_impact(df,**kcol)
 
-# alternative :
-icrit = 1.e-12
-# ccone : 
-indi_ccone = df[np.abs(df["FN_CCONE"])>icrit].index
-indni_ccone = df.drop(indi_ccone).index
-
 #%%############################################
 #           preproc 
 ###############################################
-repsect1 = f"{rep_save}developpee/"
+repsect1 = f"{rep_save}variabales_ft/"
 if not os.path.exists(repsect1):
     os.makedirs(repsect1)
     print(f"FOLDER : {repsect1} created.")
 else:
     print(f"FOLDER : {repsect1} already exists.")
 
-# df1 = df.loc[indchoc][['uxpisc','uypisc','uzpisc','pusure_ccone']]
-df['uzpisc'] += 0.0285
-df['th'] = np.arctan2(df['uypisc'],df['uxpisc']) * 180. / np.pi
-df['thm'] = np.arctan2(df['uypicircA'],df['uxpicircA']) * 180. / np.pi
+#%% thermal sleeve :
+repsect1 = f"{rep_save}developpee/"
+#%% wear power 
+kw = {
+        "colval" : "pusure_ccone",
+        "angle"  : "thm", 
+        "nbsect" : nbsect,
+        "title1" : "WP_sleeve",
+        "title_save" : "WP_sleeve",
+        "rep_save" : repsect1,
+        "title_colbar" : "Wear Power (W)",
+}
+traj.plt_heat_circ(df,**kw)
 
+kw = {
+        "colval" : "Wener",
+        "angle"  : "thm", 
+        "nbsect" : nbsect,
+        "title1" : "wear_energy_sleeve_sum",
+        "title_save" : "wearener_sleeve_sum",
+        "rep_save" : repsect1,
+        "title_colbar" : "Wear Energy (J)",
+        "agreg" : "sum",
+}
+traj.plt_heat_circ(df,**kw)
+#%% thmax : 
+kw = {
+        "colval" : "THMAX",
+        "angle"  : "thm", 
+        "nbsect" : nbsect,
+        "title1" : "thmax_sleeve",
+        "title_save" : "thmax_sleeve",
+        "rep_save" : repsect1,
+        "title_colbar" : "Contact Angular Width " + r"$\theta_{max} \degree$",
+}
+traj.plt_heat_circ(df,**kw)
+
+#%% dimp : 
+kw = {
+        "colval" : "DIMP",
+        "angle"  : "thm", 
+        "nbsect" : nbsect,
+        "title1" : "dimp_sleeve",
+        "title_save" : "dimp_sleeve",
+        "rep_save" : repsect1,
+        "title_colbar" : "Penetration " + r"$\delta_{imp}$" + " (m)",
+}
+traj.plt_heat_circ(df,**kw)
+#%% Fn sleeve : 
+kw = {
+        "colval" : "FN_CCONE",
+        "angle"  : "thm", 
+        "nbsect" : nbsect,
+        "title1" : "FN_sleeve",
+        "title_save" : "FN_sleeve",
+        "rep_save" : repsect1,
+        "title_colbar" :"Force Normal Component " + r"$F_{n}$" + " (N)",
+}
+traj.plt_heat_circ(df,**kw)
+
+#%% heatmap wear power :
+
+kw = {
+       "numx"   : nbsect_ad,
+       "numy"   : nbz_ad,
+       "colx"   : "th",
+       "coly"   : colz,
+       "colval" : "pusure_ccone",
+       "agreg"  : "mean",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+    #    "ylim"   : [-1.e-4,1.e-4],
+       "zlim"   : 1.e-3,
+    }
+heatmap_WPad_mean = traj.heatmap(df,**kw)
+
+kw = {
+       "numx"   : nbsect_ad,
+       "numy"   : nbz_ad,
+       "colx"   : "th",
+       "coly"   : colz,
+       "colval" : "pusure_ccone",
+       "agreg"  : "sum",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+    #    "ylim"   : [-1.e-4,1.e-4],
+       "zlim"   : 1.e-3,
+    }
+heatmap_WPad_sum = traj.heatmap(df,**kw)
+# plot wear power adapter :
+kw = {
+       "heatmap" : heatmap_WPad_sum, 
+       "labelx"   : "Angular location " + r"$(\degree)$",
+       "labely"   : "Elevation " + r"$z$" + " (m)",
+       "title1"   : "heatmap_wearpower_sum",
+       "title_save"   : "wearpower_ad_sum",
+       "rep_save"   : repsect1,
+       "colval" : "pusure_ccone",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+       "title_colbar"   : "Wear Power (W)",
+       "cmap"   : "inferno",
+    }
+traj.plt_heat(df,**kw)
+
+kw = {
+       "numx"   : nbsect_ad,
+       "numy"   : nbz_ad,
+       "colx"   : "th",
+       "coly"   : colz,
+       "colval" : "Wener",
+       "agreg"  : "sum",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+    #    "ylim"   : [-1.e-4,1.e-4],
+       "zlim"   : 1.e-3,
+    }
+heatmap_Wener_sum = traj.heatmap(df,**kw)
+# plot wear power adapter :
+kw = {
+       "heatmap" : heatmap_Wener_sum, 
+       "labelx"   : "Angular location " + r"$(\degree)$",
+       "labely"   : "Elevation " + r"$z$" + " (m)",
+       "title1"   : "heatmap_wearenergy_sum",
+       "title_save"   : "wearpower_ad_ener_sum",
+       "rep_save"   : repsect1,
+       "colval" : "Wener",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+       "title_colbar"   : "Wear Energy (J)",
+       "cmap"   : "inferno",
+    }
+traj.plt_heat(df,**kw)
+#%% heatmap thmax :
+kw = {
+       "numx"   : nbsect_ad,
+       "numy"   : nbz_ad,
+       "colx"   : "th",
+       "coly"   : colz,
+       "colval" : "THMAX",
+       "agreg"  : "mean",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+    #    "ylim"   : [-1.e-4,1.e-4],
+    }
+heatmap_WPad = traj.heatmap(df,**kw)
+# plot wear power adapter :
+kw = {
+       "heatmap" : heatmap_WPad, 
+       "labelx"   : "Angular location " + r"$(\degree)$",
+       "labely"   : "Elevation " + r"$z$" + " (m)",
+       "title1"   : "heatmap_thmax",
+       "title_save"   : "thmax_ad",
+       "rep_save"   : repsect1,
+       "colval" : "THMAX",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+       "title_colbar"   : "Contact Angular Width " + r"$\theta_{max} \degree$",
+       "cmap"   : "inferno",
+    }
+traj.plt_heat(df,**kw)
+
+#%% heatmap Fn :
+kw = {
+       "numx"   : nbsect_ad,
+       "numy"   : nbz_ad,
+       "colx"   : "th",
+       "coly"   : colz,
+       "colval" : "FN_CCONE",
+       "agreg"  : "mean",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+    #    "ylim"   : [-1.e-4,1.e-4],
+    }
+heatmap_WPad = traj.heatmap(df,**kw)
+# plot wear power adapter :
+kw = {
+       "heatmap" : heatmap_WPad, 
+       "labelx"   : "Angular location " + r"$(\degree)$",
+       "labely"   : "Elevation " + r"$z$" + " (m)",
+       "title1"   : "heatmap_FN",
+       "title_save"   : "FN_ad",
+       "rep_save"   : repsect1,
+       "colval" : "FN_CCONE",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+       "title_colbar"   : "Force Normal Component " + r"$F_{n}$" + " (N)",
+       "cmap"   : "inferno",
+    }
+traj.plt_heat(df,**kw)
+
+# plot dimp adapter :
+kw = {
+       "numx"   : nbsect_ad,
+       "numy"   : nbz_ad,
+       "colx"   : "th",
+       "coly"   : colz,
+       "colval" : "DIMP",
+       "agreg"  : "mean",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+    #    "ylim"   : [-1.e-4,1.e-4],
+    }
+heatmap_WPad = traj.heatmap(df,**kw)
+kw = {
+       "heatmap" : heatmap_WPad, 
+       "labelx"   : r"$\delta_{imp}$" + " (m)",
+       "labely"   : "Elevation " + r"$z$" + " (m)",
+       "title1"   : "heatmap_dimp",
+       "title_save"   : "dimp_ad",
+       "rep_save"   : repsect1,
+       "colval" : "DIMP",
+       "xlim"   : [-180.,180.],
+       "ylim"   : [1.1*ymin,1.1*ymax],
+       "title_colbar"   : "Penetration " + r"$\delta_{imp}$" + " (m)",
+       "cmap"   : "inferno",
+    }
+traj.plt_heat(df,**kw)
+
+#%% split : 
+repsect1 = f"{rep_save}developpee/split/"
+if not os.path.exists(repsect1):
+    os.makedirs(repsect1)
+    print(f"FOLDER : {repsect1} created.")
+else:
+    print(f"FOLDER : {repsect1} already exists.")
+
+#%%
+if lsplit:
+    lind = [indp1,indreso,indp2]
+    for i,ind in enumerate(lind):
+      kw = {
+              "colval" : "pusure_ccone",
+              "angle"  : "thm", 
+              "nbsect" : nbsect,
+              "title1" : "WP_sleeve",
+              "title_save" : f"WP_sleeve_p{i+1}",
+              "rep_save" : repsect1,
+              "title_colbar" : "Wear Power (W)",
+      }
+      traj.plt_heat_circ(df.iloc[ind],**kw)
+      
+      kw = {
+              "colval" : "Wener",
+              "angle"  : "thm", 
+              "nbsect" : nbsect,
+              "title1" : "wear_energy_sleeve_sum",
+              "title_save" : f"wearener_sleeve_sum_p{i+1}",
+              "rep_save" : repsect1,
+              "title_colbar" : "Wear Energy (J)",
+              "agreg" : "sum",
+      }
+      traj.plt_heat_circ(df.iloc[ind],**kw)
+
+      # thmax : 
+      kw = {
+              "colval" : "THMAX",
+              "angle"  : "thm", 
+              "nbsect" : nbsect,
+              "title1" : "thmax_sleeve",
+              "title_save" : f"thmax_sleeve_p{i+1}",
+              "rep_save" : repsect1,
+              "title_colbar" : "Contact Angular Width " + r"$\theta_{max} \degree$",
+      }
+      traj.plt_heat_circ(df.iloc[ind],**kw)
+      
+      # dimp : 
+      kw = {
+              "colval" : "DIMP",
+              "angle"  : "thm", 
+              "nbsect" : nbsect,
+              "title1" : "dimp_sleeve",
+              "title_save" : f"dimp_sleeve_p{i+1}",
+              "rep_save" : repsect1,
+              "title_colbar" : "Penetration " + r"$\delta_{imp}$" + " (m)",
+      }
+      traj.plt_heat_circ(df.iloc[ind],**kw)
+      # Fn sleeve : 
+      kw = {
+              "colval" : "FN_CCONE",
+              "angle"  : "thm", 
+              "nbsect" : nbsect,
+              "title1" : "FN_sleeve",
+              "title_save" : f"FN_sleeve_p{i+1}",
+              "rep_save" : repsect1,
+              "title_colbar" :"Force Normal Component " + r"$F_{n}$" + " (N)",
+      }
+      traj.plt_heat_circ(df.iloc[ind],**kw)
+      
+      # heatmap wear power :
+      kw = {
+             "numx"   : nbsect_ad,
+             "numy"   : nbz_ad,
+             "colx"   : "th",
+             "coly"   : colz,
+             "colval" : "pusure_ccone",
+             "agreg"  : "mean",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+          #    "ylim"   : [-1.e-4,1.e-4],
+             "zlim"   : 1.e-3,
+          }
+      heatmap_WPad_mean = traj.heatmap(df.iloc[ind],**kw)
+      
+      kw = {
+             "numx"   : nbsect_ad,
+             "numy"   : nbz_ad,
+             "colx"   : "th",
+             "coly"   : colz,
+             "colval" : "pusure_ccone",
+             "agreg"  : "sum",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+          #    "ylim"   : [-1.e-4,1.e-4],
+             "zlim"   : 1.e-3,
+          }
+      heatmap_WPad_sum = traj.heatmap(df.iloc[ind],**kw)
+      # plot wear power adapter :
+      kw = {
+             "heatmap" : heatmap_WPad_sum, 
+             "labelx"   : "Angular location " + r"$(\degree)$",
+             "labely"   : "Elevation " + r"$z$" + " (m)",
+             "title1"   : "heatmap_wearpower_sum",
+             "title_save"   : f"wearpower_ad_sum_p{i+1}",
+             "rep_save" : repsect1,
+             "colval" : "pusure_ccone",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+             "title_colbar"   : "Wear Power (W)",
+             "cmap"   : "inferno",
+          }
+      traj.plt_heat(df.iloc[ind],**kw)
+      
+      kw = {
+             "numx"   : nbsect_ad,
+             "numy"   : nbz_ad,
+             "colx"   : "th",
+             "coly"   : colz,
+             "colval" : "Wener",
+             "agreg"  : "sum",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+          #    "ylim"   : [-1.e-4,1.e-4],
+             "zlim"   : 1.e-3,
+          }
+      heatmap_Wener_sum = traj.heatmap(df.iloc[ind],**kw)
+      # plot wear power adapter :
+      kw = {
+             "heatmap" : heatmap_Wener_sum, 
+             "labelx"   : "Angular location " + r"$(\degree)$",
+             "labely"   : "Elevation " + r"$z$" + " (m)",
+             "title1"   : "heatmap_wearenergy_sum",
+             "title_save" : f"wearener_ad_sum_p{i+1}",
+             "rep_save"   : repsect1,
+             "colval" : "Wener",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+             "title_colbar"   : "Wear Energy (J)",
+             "cmap"   : "inferno",
+          }
+      traj.plt_heat(df.iloc[ind],**kw)
+      # heatmap thmax :
+      kw = {
+             "numx"   : nbsect_ad,
+             "numy"   : nbz_ad,
+             "colx"   : "th",
+             "coly"   : colz,
+             "colval" : "THMAX",
+             "agreg"  : "mean",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+          #    "ylim"   : [-1.e-4,1.e-4],
+          }
+      heatmap_WPad = traj.heatmap(df.iloc[ind],**kw)
+      # plot wear power adapter :
+      kw = {
+             "heatmap" : heatmap_WPad, 
+             "labelx"   : "Angular location " + r"$(\degree)$",
+             "labely"   : "Elevation " + r"$z$" + " (m)",
+             "title1"   : "heatmap_thmax",
+             "title_save" : f"thmax_ad_p{i+1}",
+             "rep_save"   : repsect1,
+             "colval" : "THMAX",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+             "title_colbar"   : "Contact Angular Width " + r"$\theta_{max} \degree$",
+             "cmap"   : "inferno",
+          }
+      traj.plt_heat(df.iloc[ind],**kw)
+      
+      # heatmap Fn :
+      kw = {
+             "numx"   : nbsect_ad,
+             "numy"   : nbz_ad,
+             "colx"   : "th",
+             "coly"   : colz,
+             "colval" : "FN_CCONE",
+             "agreg"  : "mean",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+          #    "ylim"   : [-1.e-4,1.e-4],
+          }
+      heatmap_WPad = traj.heatmap(df.iloc[ind],**kw)
+      # plot wear power adapter :
+      kw = {
+             "heatmap" : heatmap_WPad, 
+             "labelx"   : "Angular location " + r"$(\degree)$",
+             "labely"   : "Elevation " + r"$z$" + " (m)",
+             "title1"   : "heatmap_FN",
+             "title_save" : f"FN_ad_p{i+1}",
+             "rep_save"   : repsect1,
+             "colval" : "FN_CCONE",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+             "title_colbar"   : "Force Normal Component " + r"$F_{n}$" + " (N)",
+             "cmap"   : "inferno",
+          }
+      traj.plt_heat(df.iloc[ind],**kw)
+      
+      # plot dimp adapter :
+      kw = {
+             "numx"   : nbsect_ad,
+             "numy"   : nbz_ad,
+             "colx"   : "th",
+             "coly"   : colz,
+             "colval" : "DIMP",
+             "agreg"  : "mean",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+          #    "ylim"   : [-1.e-4,1.e-4],
+          }
+      heatmap_WPad = traj.heatmap(df.iloc[ind],**kw)
+      kw = {
+             "heatmap" : heatmap_WPad, 
+             "labelx"   : r"$\delta_{imp}$" + " (m)",
+             "labely"   : "Elevation " + r"$z$" + " (m)",
+             "title1"   : "heatmap_dimp",
+             "title_save" : f"dimp_ad_p{i+1}",
+             "rep_save"   : repsect1,
+             "colval" : "DIMP",
+             "xlim"   : [-180.,180.],
+             "ylim"   : [1.1*ymin,1.1*ymax],
+             "title_colbar"   : "Penetration " + r"$\delta_{imp}$" + " (m)",
+             "cmap"   : "inferno",
+          }
+      traj.plt_heat(df.iloc[ind],**kw)
+
+#%%
 #%%
 plotpchoc = False
 if plotpchoc:
+    repsect1 = f"{rep_save}developpee/pchoc/"
+    if not os.path.exists(repsect1):
+      os.makedirs(repsect1)
+      print(f"FOLDER : {repsect1} created.")
+    else:
+      print(f"FOLDER : {repsect1} already exists.")
+
+    dtsort = df['t'].iloc[1] - df['t'].iloc[0]
+    discr = 1.e-3
+    ndiscr = int(discr/dtsort)
+    df = df.iloc[::ndiscr]
     kwargs1 = {
         "tile1": "point d'impact" + "\n",
         "tile_save": "pchocA_circ3d",
@@ -371,176 +936,23 @@ if plotpchoc:
         "msize" : 1,
     }
     traj.scat3d_pchoc(df.loc[indchoc], **kwargs1)
-
-#%% thermal sleeve :
-#%% wear power 
-kw = {
-        "colval" : "pusure_ccone",
-        "angle"  : "thm", 
-        "nbsect" : 72,
-        "title1" : "WP_sleeve",
-        "title_save" : "WP_sleeve",
-        "rep_save" : repsect1,
-        "title_colbar" : "Wear Power (W)",
-}
-traj.plt_heat_circ(df,**kw)
-
-#%% thmax : 
-kw = {
-        "colval" : "THMAX",
-        "angle"  : "thm", 
-        "nbsect" : 72,
-        "title1" : "thmax_sleeve",
-        "title_save" : "thmax_sleeve",
-        "rep_save" : repsect1,
-        "title_colbar" : "Contact Angular Width " + r"$\theta_{max} \degree$",
-}
-traj.plt_heat_circ(df,**kw)
-
-#%% dimp : 
-kw = {
-        "colval" : "DIMP",
-        "angle"  : "thm", 
-        "nbsect" : 72,
-        "title1" : "dimp_sleeve",
-        "title_save" : "dimp_sleeve",
-        "rep_save" : repsect1,
-        "title_colbar" : "Penetration " + r"$\delta_{imp}$" + " (m)",
-}
-traj.plt_heat_circ(df,**kw)
-#%% Fn sleeve : 
-kw = {
-        "colval" : "FN_CCONE",
-        "angle"  : "thm", 
-        "nbsect" : 72,
-        "title1" : "FN_sleeve",
-        "title_save" : "FN_sleeve",
-        "rep_save" : repsect1,
-        "title_colbar" :"Force Normal Component " + r"$F_{n}$" + " (N)",
-}
-traj.plt_heat_circ(df,**kw)
-
-#%% heatmap wear power :
-coly = 'uzpisc'
-ylim = 2.e-3
-df = df[(df[coly] <= np.mean(df[coly])+ylim) & (df[coly] >= np.mean(df[coly])-ylim)]
-
-ymin = df["uzpisc"].min()
-ymax = df["uzpisc"].max()
-
-kw = {
-       "numx"   : 72,
-       "numy"   : 40,
-       "colx"   : "th",
-       "coly"   : "uzpisc",
-       "colval" : "pusure_ccone",
-       "agreg"  : "mean",
-       "xlim"   : [-180.,180.],
-       "ylim"   : [1.1*ymin,1.1*ymax],
-    #    "ylim"   : [-1.e-4,1.e-4],
-       "zlim"   : 1.e-3,
-    }
-heatmap_WPad = traj.heatmap(df,**kw)
-# plot wear power adapter :
-kw = {
-       "heatmap" : heatmap_WPad, 
-       "labelx"   : "Angular location " + r"$(\degree)$",
-       "labely"   : "Elevation " + r"$z$" + " (m)",
-       "title1"   : "heatmap_wearpower",
-       "title_save"   : "wearpower_ad",
-       "rep_save"   : repsect1,
-       "colval" : "pusure_ccone",
-       "xlim"   : [-180.,180.],
-       "ylim"   : [1.1*ymin,1.1*ymax],
-       "title_colbar"   : "Wear Power (W)",
-       "cmap"   : "inferno",
-    }
-traj.plt_heat(df,**kw)
-
-#%% heatmap thmax :
-kw = {
-       "numx"   : 72,
-       "numy"   : 40,
-       "colx"   : "th",
-       "coly"   : "uzpisc",
-       "colval" : "THMAX",
-       "agreg"  : "mean",
-       "xlim"   : [-180.,180.],
-       "ylim"   : [1.1*ymin,1.1*ymax],
-    #    "ylim"   : [-1.e-4,1.e-4],
-    }
-heatmap_WPad = traj.heatmap(df,**kw)
-# plot wear power adapter :
-kw = {
-       "heatmap" : heatmap_WPad, 
-       "labelx"   : "Angular location " + r"$(\degree)$",
-       "labely"   : "Elevation " + r"$z$" + " (m)",
-       "title1"   : "heatmap_thmax",
-       "title_save"   : "thmax_ad",
-       "rep_save"   : repsect1,
-       "colval" : "THMAX",
-       "xlim"   : [-180.,180.],
-       "ylim"   : [1.1*ymin,1.1*ymax],
-       "title_colbar"   : "Contact Angular Width " + r"$\theta_{max} \degree$",
-       "cmap"   : "inferno",
-    }
-traj.plt_heat(df,**kw)
-#%% heatmap Fn :
-kw = {
-       "numx"   : 72,
-       "numy"   : 40,
-       "colx"   : "th",
-       "coly"   : "uzpisc",
-       "colval" : "FN_CCONE",
-       "agreg"  : "mean",
-       "xlim"   : [-180.,180.],
-       "ylim"   : [1.1*ymin,1.1*ymax],
-    #    "ylim"   : [-1.e-4,1.e-4],
-    }
-heatmap_WPad = traj.heatmap(df,**kw)
-# plot wear power adapter :
-kw = {
-       "heatmap" : heatmap_WPad, 
-       "labelx"   : "Angular location " + r"$(\degree)$",
-       "labely"   : "Elevation " + r"$z$" + " (m)",
-       "title1"   : "heatmap_FN",
-       "title_save"   : "FN_ad",
-       "rep_save"   : repsect1,
-       "colval" : "FN_CCONE",
-       "xlim"   : [-180.,180.],
-       "ylim"   : [1.1*ymin,1.1*ymax],
-       "title_colbar"   : "Force Normal Component " + r"$F_{n}$" + " (N)",
-       "cmap"   : "inferno",
-    }
-traj.plt_heat(df,**kw)
-
-# plot dimp adapter :
-kw = {
-       "numx"   : 72,
-       "numy"   : 40,
-       "colx"   : "th",
-       "coly"   : "uzpisc",
-       "colval" : "DIMP",
-       "agreg"  : "mean",
-       "xlim"   : [-180.,180.],
-       "ylim"   : [1.1*ymin,1.1*ymax],
-    #    "ylim"   : [-1.e-4,1.e-4],
-    }
-heatmap_WPad = traj.heatmap(df,**kw)
-kw = {
-       "heatmap" : heatmap_WPad, 
-       "labelx"   : r"$\delta_{imp}$" + " (m)",
-       "labely"   : "Elevation " + r"$z$" + " (m)",
-       "title1"   : "heatmap_dimp",
-       "title_save"   : "dimp_ad",
-       "rep_save"   : repsect1,
-       "colval" : "DIMP",
-       "xlim"   : [-180.,180.],
-       "ylim"   : [1.1*ymin,1.1*ymax],
-       "title_colbar"   : "Penetration " + r"$\delta_{imp}$" + " (m)",
-       "cmap"   : "inferno",
-    }
-traj.plt_heat(df,**kw)
+    if lraidtimo:
+        kwargs1 = {
+            "tile1": "point d'impact" + "\n",
+            "tile_save": "ceadpiA",
+            "colx": colx,
+            "coly": coly,
+            "colz": colz,
+            "rep_save": repsect1,
+            "label1": r"$P_{choc}$",
+            "labelx": r"$X \quad (m)$",
+            "labely": r"$Y \quad (m)$",
+            "labelz": r"$Z \quad (m)$",
+            "color1": color1[1],
+            "view": view,
+            "msize" : 1,
+        }
+        traj.scat3d_pchoc(df.loc[indchoc], **kwargs1)
 #%%
 sys.exit()
 

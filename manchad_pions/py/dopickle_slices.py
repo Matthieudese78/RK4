@@ -9,10 +9,13 @@ import shutil
   # on discretise ?
 ndiscr = 1
 linert = True
+lraidtimo = True
+raidiss = True
 lamode = True
 lkxp = False
 # Fext = 387.
-Fext = 193.
+# Fext = 193.
+Fext = 35.
 # Fext = 79.44
 mu = 0.6
 xi = 0.05
@@ -41,6 +44,10 @@ if (lkxp):
   namerep = f'{namerep}_kxp'
 if (linert):
   namerep = f'{namerep}_inert'
+if (lraidtimo):
+  namerep = f'{namerep}_raidtimo'
+if (raidiss):
+  namerep = f'{namerep}_raidiss'
 
 repload = f'../{namerep}/pickle/'
 repsave = f'./pickle/{namerep}/'

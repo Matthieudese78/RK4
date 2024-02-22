@@ -145,11 +145,13 @@ cmax = ycmax - (h_pion*np.sin(np.pi/6.))
 #%% options and directories :
 linert = True
 lamode = True
+lraidtimo = True
+lraidiss = True
 lkxp = False
 lpion = False
 lpcirc = True
-Fext = 193.
-mu = 0.3
+Fext = 35.
+mu = 0.6
 xi = 0.05
 amode_m = 0.02
 amode_ad = 0.02
@@ -178,6 +180,10 @@ if (lkxp):
   namerep = f'{namerep}_kxp'
 if (linert):
     namerep = f'{namerep}_inert'
+if (lraidtimo):
+    namerep = f'{namerep}_raidtimo'
+if (lraidiss):
+    namerep = f'{namerep}_raidiss'
 
 repload = f'./pickle/{namerep}/'
 rep_save = f"./fig/{namerep}/"

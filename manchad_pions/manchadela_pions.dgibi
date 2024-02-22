@@ -28,16 +28,16 @@ ez = (-1.) 0. 0. ;
 ttot = 128. ;
 
 *# t :
-T = 128. ;
+T = 0.2 ;
 
 *# phase :
 phase = 0. ;
 
 *# dte :
-dte = 1.e-4 ;
+dte = 5.e-6 ;
 
 *# nsort :
-nsort = 1 ;
+nsort = 500 ;
 
 * NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 NPASe = (ENTI 'PROCH' (T / DTe)) + nsort - 1 ;
@@ -57,7 +57,7 @@ finsi ;
 *         adaptateur rigide ou raidtimo ?
 **************************************************************
 *# lbloq :
-lbloq = vrai ;
+lbloq = faux ;
 * le cone est il fixe ?
 lconefixe = faux ;
 * adaptateur : modele elastique ou modele FE ?
@@ -120,7 +120,7 @@ EVOLRECO = VRAI ;
 SORTLIAI = VRAI ;
 
 *# FLVTK :
-FLVTK = faux ;
+FLVTK = vrai ;
 
 *# SORTEXCEL :
 SORTEXCEL = VRAI ;
@@ -1004,6 +1004,7 @@ P2_AD    = P2_AD    PLUS (((-1.)*DELTA_MC) 0. 0.) ;
 P3_AD    = P3_AD    PLUS (((-1.)*DELTA_MC) 0. 0.) ;
 SCONE_AD = SCONE_AD PLUS (((-1.)*DELTA_MC) 0. 0.) ;
 GTOT_AD  = GTOT_AD  PLUS (((-1.)*DELTA_MC) 0. 0.) ;
+GTOT_AD_BR  = GTOT_AD_BR  PLUS (((-1.)*DELTA_MC) 0. 0.) ;
 * Positions des pions deja exprimes dans le repere manchette
 PH_AD = L_PH 0. 0. ; 
 PB_AD = L_PB 0. 0. ; 
@@ -1048,6 +1049,9 @@ ADAPTATEUR = (L1_AD ET L2_AD ET L3_AD
            ET L4_AD ET L5_AD ET L6_AD ET L7_AD ET L8_AD ET L9_AD ET L10_AD) ;
 ELIM adaptateur 1.e-10 ;
 
+* opti trac x ;
+* trac 'QUAL' ADAPTATEUR ;
+* opti donn 5 ; 
 ***** Momments quadratiques et sections : **** 
 
 * Tete  :
@@ -1347,7 +1351,7 @@ repe bloc2 nmad ;
 fin bloc2 ;  
 opti 'FTRA' (chai 'fig/'script'.ps');
 
-opti donn 5 ;
+* opti donn 5 ;
 *
 *pextr_ad = adaptateur poin 'PROC' p2 ; 
 ** mode1 :
@@ -3498,7 +3502,8 @@ tmode . modes . maillage = manchette_vtk ;
 *
 **** modes elastiques :
 * repe brig (6+ntronq) ;
-repe bflex n_tronq ;
+* repe bflex n_tronq ;
+repe bflex nsauvini ;
 *    normalement : il suffit d'introduire MESHAD dans le 1er mode!!
   def_mod = Tmode_tot . ind_m . modes . &bflex . deformee_modale ;
 *    on donne a tous les points de MESHAD la valeurs des DDL au niveau du cercle
@@ -3623,9 +3628,9 @@ repe bela nmode_ad ;
 
   tmode_ad . modes . &bela . deformee_modale = (def_mod et def_ad) ;
 fin bela ;
-
+*  opti donn 5 ;
    N_DEF = 1 ;
-*  REPE BVTK (Nt - 2);
+*  REPE BVTK (Nt - 2) ;
    REPE BVTK (enti ((flott Nt)/(flott N_def))) ;
 * RECO:
     D1 =  RECO  TRESU  Tmode_tot (extr tprog (N_def*&BVTK)) 'DEPL';

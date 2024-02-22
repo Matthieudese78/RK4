@@ -12,7 +12,8 @@ import os
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 view = [20, -50]
 # %% quel type de modele ?
-lraidtimo = False
+lraidtimo = True
+lraidiss = True
 lplam = False
 lplow = False
 
@@ -27,8 +28,9 @@ slice = 1
 linert = True
 lamode = True
 dte = 5.e-6
-Fext = 193
-mu = 0.3
+# Fext = 193
+Fext = 35
+mu = 0.6
 xi = 0.05
 amode_m = 0.02
 amode_ad = 0.02
@@ -52,6 +54,10 @@ if (lamode):
     namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
 if (linert):
     namerep = f'{namerep}_inert'
+if (lraidtimo):
+  namerep = f'{namerep}_raidtimo'
+if (lraidiss):
+  namerep = f'{namerep}_raidiss'
 
 repload = f'./pickle/{namerep}/'
 # namerep = f"manchadela_pions_{slice}"

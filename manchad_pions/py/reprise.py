@@ -11,24 +11,25 @@ import sys
 # import json
 import rotation
 from csv_to_pickle import csv2pickle
+#%%
+lclean = True
 #%% lraidtimo :
-lraidtimo = True
+lraidtimo = "vrai"
 #%% script / dir :
 filename = 'manchadela_pions.dgibi'
-if lraidtimo:
+if (lraidtimo=="vrai"):
     filename = 'manchadela_pions_raidtimo.dgibi'
 rawname = filename.split('.')[0]
 original_directory = os.getcwd()
 source = f'../{filename}'
 repcast = f'../../build/'
-if lraidtimo:
+if (lraidtimo=="vrai"):
     repcast = f'../../cast_raidtimo/'
 #%%
 lstdout = False
 #%% nombre de slices :
-nslice = 128
+nslice = 64
 ttot = 128.
-# nslice = 3
 #%% parametres du calcul 
 
 linert = True
@@ -40,7 +41,7 @@ mu = 0.6
 xi = 0.05
 f1 = 2.
 f2 = 20.
-t = 1.
+t = 2.
 lexp  = "faux" 
 raidiss = "vrai" 
 lbloq  = "faux" 
@@ -54,7 +55,8 @@ nmode = 3
 n_tronq = 0
 nmode_ad = 4
 # Fext = 79.44
-Fext = 137. * np.sqrt(2.)
+# Fext = 137. * np.sqrt(2.)
+Fext = 35.
 fefin = 5.
 vlimoden = 1.e-5
 # amortissement modal :
@@ -66,8 +68,8 @@ amo_ccone = 5.*3.4
 # rappel : on a aussi remis thlim a 10^-5 dans devfb10.
 # amo_ccone = 3.4
 # on donne les 1ers angles en degres !
-theta_rx = 0.
 theta_ry = 0.
+theta_rz = 0.
 spinini = 0.
 wxini = 0.
 wyini = 0.
@@ -112,6 +114,10 @@ if (lkxp=="vrai"):
   nameglob = f'{nameglob}_kxp'
 if (linert):
   nameglob = f'{nameglob}_inert'
+if (lraidtimo=="vrai"):
+  nameglob = f'{nameglob}_raidtimo'
+if (raidiss=="vrai"):
+  nameglob = f'{nameglob}_raidiss'
 
 repglob = f'../{nameglob}/'
 #%%########################### CALCUL 0
@@ -135,6 +141,8 @@ dictini = {
              'tcxp' : tcxp,
   #          bloquee : 
              'lbloq' : lbloq,
+  #          lraidtimo : 
+             'lraidtimo' : lraidtimo,
   #          ttot : 
              'ttot' : ttot,
   #          lexp : decroissance exponentielle du chargement
@@ -157,20 +165,20 @@ dictini = {
   #          ttot : 
              'ttot' : ttot,
   #          amo_ccone : 
-             'amo_ccone' : 3.4,
+             'amo_ccone' : 3.4*200.,
+  #          xi : 
+             'xi' : xi,
   #          lamode : 
              'lamode' : "vrai",
   #          amode : 
-             'amode_ad' : 0.02,
-             'amode_m' : 0.02,
-            #  'amode_ad' : 50.,
-            #  'amode_m' : 50.,
+             'amode_ad' : 50.,
+             'amode_m' :  50.,
   #          f1 : 
              'f1' : f1,
   #          f2 : 
              'f2' : f2,
   #          t : 
-             't' : 0.1,
+             't' : 1.,
   #          dte : 
              'dte' : dte,
   #          nsort : 
@@ -189,8 +197,8 @@ dictini = {
             #  'vlimoden' : vlimoden,
              'vlimoden' : 1.e-5,
   #          ddls rig : manchette vect de rotation 
-             'theta_rx' : theta_rx,
              'theta_ry' : theta_ry,
+             'theta_rz' : theta_rz,
   #          ddls rig : vitesse de rotation 
              'wxini' : wxini,
              'wyini' : wyini,
@@ -238,6 +246,13 @@ if not os.path.exists(repfig):
     print(f"FOLDER : {repfig} created.")
 else:
     print(f"FOLDER : {repfig} already exists.")
+
+repvtk = f'{repglob}calc_{slice}/VTK/'
+if not os.path.exists(repvtk):
+    os.makedirs(repvtk)
+    print(f"FOLDER : {repvtk} created.")
+else:
+    print(f"FOLDER : {repvtk} already exists.")
 
 # on copie le script :
 destination = f'{repglob}calc_{slice}/'
@@ -324,6 +339,12 @@ if not os.path.exists(repfig):
 else:
     print(f"FOLDER : {repfig} already exists.")
 
+repvtk = f'{repglob}calc_{slice}/VTK/'
+if not os.path.exists(repvtk):
+    os.makedirs(repvtk)
+    print(f"FOLDER : {repvtk} created.")
+else:
+    print(f"FOLDER : {repvtk} already exists.")
 # on prend le script du premier calcul comme ca on a les memes parametre a coup sur :
 source = f'{repglob}calc_{slice-1}/{filename}'
 # on copie le script :
@@ -339,6 +360,12 @@ df.sort_values(by='t',inplace=True)
 #  trnasfo quaternion to vecteur de rotation : 
 q = np.array([df['quat1'].iloc[-1],df['quat2'].iloc[-1],df['quat3'].iloc[-1],df['quat4'].iloc[-1]])
 vect = rotation.quat2vect2(q)
+if (lraidtimo=="vrai"):
+  # transfo quaternion to vecteur de rotation : adapter 
+  qad = np.array([df['quat1_ad'].iloc[-1],df['quat2_ad'].iloc[-1],df['quat3_ad'].iloc[-1],df['quat4_ad'].iloc[-1]])
+  vect_ad = rotation.quat2vect2(qad)
+  print(f"rotation vect adapter : {vect_ad}")
+
 # vect : en radians !! le .dgibi est adapte pour (reprise et (slice >EG 2))
 
 #  
@@ -358,8 +385,12 @@ dict_rep = {
              'tcxp' : tcxp,
   #          bloquee : 
              'lbloq' : lbloq,
+  #          lraidtimo : 
+             'lraidtimo' : lraidtimo,
   #          ttot : 
              'ttot' : ttot,
+  #          amo_ccone : 
+             'amo_ccone' : 3.4,
   #          lexp : 
              'lexp' : lexp,
   #          blqry : bloq rotq ry adaptateur
@@ -383,6 +414,8 @@ dict_rep = {
              'slice' : df['slice'].drop_duplicates().values[0]+1,
   #          amo_ccone : 
              'amo_ccone' : amo_ccone,
+  #          xi : 
+             'xi' : xi,
   #          nmode : 
              'nmode' : df['nmode'].drop_duplicates().values[0],
   #          nmode_ad : 
@@ -430,14 +463,39 @@ for i in np.arange(dfini['nsauvini'][0]):
     for col,val in zip(new_cols,new_vals):
       dfini[col] = val
 
-for i in np.arange(nmad):
-    nameuad = f"q{i+1}ad"
-    namevad = f"q{i+1}vad"
-    nameaad = f"q{i+1}aad"
-    new_cols = [nameuad, namevad, nameaad]
-    new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1], df[nameaad].iloc[-1] ]
-    for col,val in zip(new_cols,new_vals):
-      dfini[col] = val
+if (not (lraidtimo=="vrai")):
+    # ddls elastiques :
+    for i in np.arange(nmad):
+        nameuad = f"q{i+1}ad"
+        namevad = f"q{i+1}vad"
+        nameaad = f"q{i+1}aad"
+        new_cols = [nameuad, namevad, nameaad]
+        new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1], df[nameaad].iloc[-1] ]
+        for col,val in zip(new_cols,new_vals):
+          dfini[col] = val
+
+if (lraidtimo=="vrai"):
+    # ddls rigides =
+    dfini['theta_rx_ad'] = vect_ad[0]
+    dfini['theta_ry_ad'] = vect_ad[1]
+    dfini['theta_rz_ad'] = vect_ad[2]
+    # ddls rig = vitesse de rotation 
+    dfini['wxini_ad']  = df['WX_AD'].iloc[-1]
+    dfini['wyini_ad']  = df['WY_AD'].iloc[-1]
+    dfini['wzini_ad']  = df['WZ_AD'].iloc[-1]
+    dfini['arxini_ad'] = df['AX_AD'].iloc[-1]
+    dfini['aryini_ad'] = df['AY_AD'].iloc[-1]
+    dfini['arzini_ad'] = df['AZ_AD'].iloc[-1]
+    # ddls rig = translations 
+    dfini['uxini_ad']  = df['qtx_ad'].iloc[-1]
+    dfini['uyini_ad']  = df['qty_ad'].iloc[-1]
+    dfini['uzini_ad']  = df['qtz_ad'].iloc[-1]
+    dfini['vxini_ad']  = df['qvtx_ad'].iloc[-1]
+    dfini['vyini_ad']  = df['qvty_ad'].iloc[-1]
+    dfini['vzini_ad']  = df['qvtz_ad'].iloc[-1]
+    dfini['axini_ad']  = df['qatx_ad'].iloc[-1]
+    dfini['ayini_ad']  = df['qaty_ad'].iloc[-1]
+    dfini['azini_ad']  = df['qatz_ad'].iloc[-1]
 
 # Read the content of the existing file
 with open(f"{destination}{filename}", 'r') as file:
@@ -510,6 +568,12 @@ for slice in range(2,nslice+1):
   else:
       print(f"FOLDER : {repfig} already exists.")
 
+  repvtk = f'{repglob}calc_{slice}/VTK/'
+  if not os.path.exists(repvtk):
+      os.makedirs(repvtk)
+      print(f"FOLDER : {repvtk} created.")
+  else:
+      print(f"FOLDER : {repvtk} already exists.")
   # on prend le script du dernier calcul comme ca on a les memes parametre a coup sur :
   source = f'{repglob}calc_{slice-1}/{filename}'
   # on copie le script :
@@ -522,10 +586,15 @@ for slice in range(2,nslice+1):
   #  lecture du dataframe :
   df = pd.read_pickle(f"{repload}{scriptload}")
   df.sort_values(by='t',inplace=True)
-  #  trnasfo quaternion to vecteur de rotation : 
+  #  transfo quaternion to vecteur de rotation : sleeve
   q = np.array([df['quat1'].iloc[-1],df['quat2'].iloc[-1],df['quat3'].iloc[-1],df['quat4'].iloc[-1]])
   vect = rotation.quat2vect2(q)
-  # vect : en radians !! le .dgibi est adapte pour (reprise et (slice >EG 2))
+  if (lraidtimo=="vrai"):
+    #  transfo quaternion to vecteur de rotation : adapter 
+    qad = np.array([df['quat1_ad'].iloc[-1],df['quat2_ad'].iloc[-1],df['quat3_ad'].iloc[-1],df['quat4_ad'].iloc[-1]])
+    vect_ad = rotation.quat2vect2(qad)
+    print(f"rotation vect adapter : {vect_ad}")
+  # Rq : vect : en radians !! le .dgibi est adapte pour (reprise et (slice >EG 2))
 
   print(f"trep = {df['t'].iloc[-1]:.6f} ")
   #  
@@ -543,8 +612,14 @@ for slice in range(2,nslice+1):
                'tcxp' : tcxp,
     #          bloquee : 
                'lbloq' : lbloq,
+    #          lraidtimo : 
+               'lraidtimo' : lraidtimo,
     #          ttot : 
                'ttot' : ttot,
+    #          amo_ccone : 
+               'amo_ccone' : 3.4,
+    #          xi : 
+               'xi' : xi,
     #          lexp : 
                'lexp' : lexp,
     #          ressorts a lames : 
@@ -609,14 +684,38 @@ for slice in range(2,nslice+1):
       for col,val in zip(new_cols,new_vals):
         dfini[col] = val
 
-  for i in np.arange(nmad):
-      nameuad = f"q{i+1}ad"
-      namevad = f"q{i+1}vad"
-      nameaad = f"q{i+1}aad"
-      new_cols = [nameuad, namevad, nameaad]
-      new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1], df[nameaad].iloc[-1] ]
-      for col,val in zip(new_cols,new_vals):
-        dfini[col] = val
+  if (not (lraidtimo=="vrai")):
+    for i in np.arange(nmad):
+        nameuad = f"q{i+1}ad"
+        namevad = f"q{i+1}vad"
+        nameaad = f"q{i+1}aad"
+        new_cols = [nameuad, namevad, nameaad]
+        new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1], df[nameaad].iloc[-1] ]
+        for col,val in zip(new_cols,new_vals):
+          dfini[col] = val
+
+  if (lraidtimo=="vrai"):
+      # ddls rigides =
+      dfini['theta_rx_ad'] = vect_ad[0]
+      dfini['theta_ry_ad'] = vect_ad[1]
+      dfini['theta_rz_ad'] = vect_ad[2]
+      # ddls rig = vitesse de rotation 
+      dfini['wxini_ad']  = df['WX_AD'].iloc[-1]
+      dfini['wyini_ad']  = df['WY_AD'].iloc[-1]
+      dfini['wzini_ad']  = df['WZ_AD'].iloc[-1]
+      dfini['arxini_ad'] = df['AX_AD'].iloc[-1]
+      dfini['aryini_ad'] = df['AY_AD'].iloc[-1]
+      dfini['arzini_ad'] = df['AZ_AD'].iloc[-1]
+      # ddls rig = translations 
+      dfini['uxini_ad']  = df['qtx_ad'].iloc[-1]
+      dfini['uyini_ad']  = df['qty_ad'].iloc[-1]
+      dfini['uzini_ad']  = df['qtz_ad'].iloc[-1]
+      dfini['vxini_ad']  = df['qvtx_ad'].iloc[-1]
+      dfini['vyini_ad']  = df['qvty_ad'].iloc[-1]
+      dfini['vzini_ad']  = df['qvtz_ad'].iloc[-1]
+      dfini['axini_ad']  = df['qatx_ad'].iloc[-1]
+      dfini['ayini_ad']  = df['qaty_ad'].iloc[-1]
+      dfini['azini_ad']  = df['qatz_ad'].iloc[-1]
 
   # Read the content of the existing file
   with open(f"{destination}{filename}", 'r') as file:
@@ -666,6 +765,37 @@ for slice in range(2,nslice+1):
   csv2pickle(**kwpi)
 
 
+#%%########################## SAVE SCRIPTS
+# sauvegarde du script de batch :
+#############################
+# Get the absolute path of the running script
+script_path = os.path.abspath(__file__)
+# Get the file name
+script_name = os.path.basename(script_path)
+shutil.copy(script_path,repglob)
+print(f"batch script {script_name} saved into {repglob}")
+shutil.copy(f'{repglob}calc_1/{filename}',repglob)
+print(f"1st .dgibi saved into {repglob}")
+
+ps_files = glob.glob(f'{repglob}calc_1/*.ps')
+for ps_file in ps_files:
+    shutil.copy(ps_file,repglob)
+print(f"calc_1/fig/*.ps saved into {repglob}") 
+
+repvtk = f"{repglob}VTK/"
+if not os.path.exists(repvtk):
+    os.makedirs(repvtk)
+    print(f"FOLDER : {repvtk} created.")
+else:
+    print(f"FOLDER : {repvtk} already exists.")
+
+vtu_files = glob.glob(f'{repglob}calc_{nslice}/VTK/*.vtu')
+pvd_files = glob.glob(f'{repglob}calc_{nslice}/VTK/*.pvd')
+for vtu, pvd in zip(vtu_files,pvd_files):
+    shutil.copy(vtu,repvtk)
+    shutil.copy(pvd,repvtk)
+print(f"vtk last slice saved")
+
 #%%########################## MV SLICE 0
 # deplacement du calcul 0 :
 #############################
@@ -680,46 +810,31 @@ calc0 = f"{repglob}pickle/{rawname}_0.pickle"
 shutil.move(calc0,f"{rep0}result.pickle")
 print(f"slice 0 moved to {rep0}")
 
-#%%########################## SAVE SCRIPTS
-# sauvegarde du script de batch :
-#############################
-# Get the absolute path of the running script
-script_path = os.path.abspath(__file__)
-# Get the file name
-script_name = os.path.basename(script_path)
-shutil.copy(script_path,repglob)
-print(f"batch script {script_name} saved into {repglob}")
-shutil.copy(f'{repglob}calc_1/{filename}',repglob)
-print(f"1st .dgibi saved into {repglob}")
-ps_files = glob.glob(f'{repglob}calc_1/*.ps')
-for ps_file in ps_files:
-    shutil.copy(ps_file,repglob)
-print(f"calc_1/fig/*.ps saved into {repglob}") 
-
 #%%######################################### CLEAN
 # menage :
 ############################################
-print(f"cleaning...")
-pattern = "calc"
-import os
-import shutil
+if lclean:
+  print(f"cleaning...")
+  pattern = "calc"
+  import os
+  import shutil
 
-for current_directory, subdirectories, files in os.walk(repglob, topdown=False):
-    # Check if any subdirectory contains the specified pattern
-    matching_subdirectories = [subdir for subdir in subdirectories if pattern in subdir]
-    
-    for matching_subdirectory in matching_subdirectories:
-        # Delete the subdirectory
-        subdirectory_path = os.path.join(current_directory, matching_subdirectory)
-        try:
-            shutil.rmtree(subdirectory_path)
-            print(f"Deleted subdirectory: {subdirectory_path}")
-        except Exception as e:
-            print(f"Error deleting {subdirectory_path}: {e}")
+  for current_directory, subdirectories, files in os.walk(repglob, topdown=False):
+      # Check if any subdirectory contains the specified pattern
+      matching_subdirectories = [subdir for subdir in subdirectories if pattern in subdir]
 
-print(f"END")
+      for matching_subdirectory in matching_subdirectories:
+          # Delete the subdirectory
+          subdirectory_path = os.path.join(current_directory, matching_subdirectory)
+          try:
+              shutil.rmtree(subdirectory_path)
+              print(f"Deleted subdirectory: {subdirectory_path}")
+          except Exception as e:
+              print(f"Error deleting {subdirectory_path}: {e}")
 
-# sys.exit()
+  print(f"END")
+
+sys.exit()
 #%%########################## 
 # calcul indiv  :
 ############################# 
@@ -759,6 +874,10 @@ df.sort_values(by='t',inplace=True)
 #  trnasfo quaternion to vecteur de rotation : 
 q = np.array([df['quat1'].iloc[-1],df['quat2'].iloc[-1],df['quat3'].iloc[-1],df['quat4'].iloc[-1]])
 vect = rotation.quat2vect2(q)
+if (lraidtimo=="vrai"):
+  #  transfo quaternion to vecteur de rotation : adapter 
+  qad = np.array([df['quat1_ad'].iloc[-1],df['quat2_ad'].iloc[-1],df['quat3_ad'].iloc[-1],df['quat4_ad'].iloc[-1]])
+  vect_ad = rotation.quat2vect2(qad)
 # vect : en radians !! le .dgibi est adapte pour (reprise et (slice >EG 2))
 
 print(f"trep = {df['t'].iloc[-1]:.6f} ")
@@ -843,14 +962,38 @@ for i in np.arange(dfini['nsauvini'][0]):
     for col,val in zip(new_cols,new_vals):
       dfini[col] = val
 
-for i in np.arange(nmad):
-    nameuad = f"q{i+1}ad"
-    namevad = f"q{i+1}vad"
-    nameaad = f"q{i+1}aad"
-    new_cols = [nameuad, namevad, nameaad]
-    new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1], df[nameaad].iloc[-1] ]
-    for col,val in zip(new_cols,new_vals):
-      dfini[col] = val
+if (not (lraidtimo=="vrai")):
+  for i in np.arange(nmad):
+      nameuad = f"q{i+1}ad"
+      namevad = f"q{i+1}vad"
+      nameaad = f"q{i+1}aad"
+      new_cols = [nameuad, namevad, nameaad]
+      new_vals = [ df[nameuad].iloc[-1], df[namevad].iloc[-1], df[nameaad].iloc[-1] ]
+      for col,val in zip(new_cols,new_vals):
+        dfini[col] = val
+
+if (lraidtimo=="vrai"):
+    # ddls rigides =
+    dfini['theta_rx_ad'] = vect_ad[0]
+    dfini['theta_ry_ad'] = vect_ad[1]
+    dfini['theta_rz_ad'] = vect_ad[2]
+    # ddls rig = vitesse de rotation 
+    dfini['wxini_ad']  = df['WX_AD'].iloc[-1]
+    dfini['wyini_ad']  = df['WY_ad'].iloc[-1]
+    dfini['wzini_ad']  = df['WZ_ad'].iloc[-1]
+    dfini['arxini_ad'] = df['AX_ad'].iloc[-1]
+    dfini['aryini_ad'] = df['AY_ad'].iloc[-1]
+    dfini['arzini_ad'] = df['AZ_ad'].iloc[-1]
+    # ddls rig = translations 
+    dfini['uxini_ad']  = df['qtx_ad'].iloc[-1]
+    dfini['uyini_ad']  = df['qty_ad'].iloc[-1]
+    dfini['uzini_ad']  = df['qtz_ad'].iloc[-1]
+    dfini['vxini_ad']  = df['qvtx_ad'].iloc[-1]
+    dfini['vyini_ad']  = df['qvty_ad'].iloc[-1]
+    dfini['vzini_ad']  = df['qvtz_ad'].iloc[-1]
+    dfini['axini_ad']  = df['qatx_ad'].iloc[-1]
+    dfini['ayini_ad']  = df['qaty_ad'].iloc[-1]
+    dfini['azini_ad']  = df['qatz_ad'].iloc[-1]
 
 # Read the content of the existing file
 with open(f"{destination}{filename}", 'r') as file:

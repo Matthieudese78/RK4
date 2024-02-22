@@ -32,7 +32,8 @@ xcmax = h_pion*np.cos(np.pi/6.)
 ycmax = np.sqrt((ray_circ**2) - (xcmax**2))
 cmax = ycmax - (h_pion*np.sin(np.pi/6.))
 # %% quel type de modele ?
-lraidtimo = False
+lraidtimo = True
+lraidiss = True
 lplam = False
 lplow = False
 # lconefixe = True
@@ -46,14 +47,15 @@ lchoc = False
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
 
-linert = True
+linert = False
 lamode = True
 
 lpion = False
 lpcirc = True
 
-Fext = 193.
-mu = 0.3
+# Fext = 193.
+Fext = 35.
+mu = 0.6
 xi = 0.05
 amode_m = 0.02
 amode_ad = 0.02
@@ -76,6 +78,10 @@ if lamode:
     namerep = f'{namerep}_amodem_{amodemstr}_amodead_{amodeadstr}'
 if (linert):
     namerep = f'{namerep}_inert'
+if (lraidtimo):
+    namerep = f'{namerep}_raidtimo'
+if (lraidiss):
+    namerep = f'{namerep}_raidiss'
 
 repload = f'./pickle/{namerep}/'
 rep_save = f"./fig/{namerep}/split/"
@@ -182,15 +188,15 @@ if lplow:
     rc.repchgdf(df, **kwargs1)
 
 if lraidtimo:
-    name_cols = ["pix_ad", "piy_ad", "piz_ad"]
+    name_cols = ["PIX_AD", "PIY_AD", "PIZ_AD"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
 
-    name_cols = ["wx_ad", "wy_ad", "wz_ad"]
+    name_cols = ["WX_AD", "WY_AD", "WZ_AD"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
 
-    name_cols = ["ax_ad", "ay_ad", "az_ad"]
+    name_cols = ["AX_AD", "AY_AD", "AZ_AD"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
 
@@ -381,8 +387,13 @@ if (lpcirc):
     indi_ph2 = df[(np.abs(df["FN_pcirch2"])>icrit)].index
     indi_ph3 = df[(np.abs(df["FN_pcirch3"])>icrit)].index
 # split en temps :
-t1 = 50.
-t2 = 80.
+if lraidtimo:
+    t1 = 70.
+    t2 = 110.
+else:
+    t1 = 50.
+    t2 = 80.
+
 indreso = df[(df['t']>=t1) & (df['t']<=t2)].index
 indp1   = df[(df['t']<=t1)].index
 indp2   = df[(df['t']>=t2)].index

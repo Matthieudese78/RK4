@@ -32,7 +32,8 @@ xcmax = h_pion*np.cos(np.pi/6.)
 ycmax = np.sqrt((ray_circ**2) - (xcmax**2))
 cmax = ycmax - (h_pion*np.sin(np.pi/6.))
 # %% quel type de modele ?
-lraidtimo = False
+lraidtimo = True
+raidiss = True
 lplam = False
 lplow = False
 # lconefixe = True
@@ -52,8 +53,8 @@ lkxp = False
 lpion = False
 lpcirc = True
 # Fext = 387.
-# Fext = 193.
-Fext = 79.44
+Fext = 35.
+# Fext = 79.44
 mu = 0.6
 xi = 0.05
 
@@ -72,8 +73,8 @@ xistr = int(100.*xi)
 hlstr = int(h_lam*1.e3)
 lspringstr = int(lspring*1.e2)
 
-# namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
-namerep = f'rela_uz_bloq_rota_4cm/calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
+# namerep = f'rela_uz_bloq_rota_4cm/calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
 
 amodemstr = str(int(amode_m*100.))
 amodeadstr = str(int(amode_ad*100.))
@@ -84,6 +85,11 @@ if (lkxp):
   namerep = f'{namerep}_kxp'
 if (linert):
     namerep = f'{namerep}_inert'
+if (lraidtimo):
+    namerep = f'{namerep}_raidtimo'
+if (raidiss):
+    namerep = f'{namerep}_raidiss'
+
 repload = f'./pickle/{namerep}/'
 rep_save = f"./fig/{namerep}/"
 
@@ -195,15 +201,15 @@ if lplow:
     rc.repchgdf(df, **kwargs1)
 
 if lraidtimo:
-    name_cols = ["pix_ad", "piy_ad", "piz_ad"]
+    name_cols = ["PIX_AD", "PIY_AD", "PIZ_AD"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
 
-    name_cols = ["wx_ad", "wy_ad", "wz_ad"]
+    name_cols = ["WX_AD", "WY_AD", "WZ_AD"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
 
-    name_cols = ["ax_ad", "ay_ad", "az_ad"]
+    name_cols = ["AX_AD", "AY_AD", "AZ_AD"]
     kwargs1 = {"base2": base2, "name_cols": name_cols}
     rc.repchgdf(df, **kwargs1)
 
