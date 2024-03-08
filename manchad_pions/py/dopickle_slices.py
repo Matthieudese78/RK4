@@ -9,7 +9,7 @@ import shutil
   # on discretise ?
 ndiscr = 1
 linert = True
-lraidtimo = True
+lraidtimo = False
 raidiss = True
 lamode = True
 lkxp = False
@@ -22,7 +22,7 @@ xi = 0.05
 amode_m = 0.02
 amode_ad = 0.02
 vlimoden = 1.e-5
-spinini = 0.
+spinini = 30.
 dte = 5.e-6
 h_lam = 50.e-3
 lspring = 45.e-2

@@ -432,7 +432,9 @@ else:
     print(f"FOLDER : {repsect1} already exists.")
 
 #%% forces d'excitation :
+Fext_xp = 79.44
 lfext = np.ones_like(df['t'].values) * Fext
+lfextxp = np.ones_like(df['t'].values) * Fext_xp
 lt = df['t'].values
 lfreq = np.linspace(2.,20.,len(df['t'].values))
 #%%
@@ -482,6 +484,23 @@ kwargs1 = {
     "ypower": 5,
 }
 traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "amplitude Fext = f(t)" + "\n",
+    "tile_save": "AFext_numxp_ft",
+    "x": [lt,lt],
+    "y": [lfext,lfextxp],
+    "rep_save": repsect1,
+    "label1": ['numeric','experiment'],
+    "labelx": r"$t \quad (s)$",
+    "labely": r"$F_{0} \quad (N)$",
+    "color1": [color1[2],color1[0]],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "loc_leg": "upper right",
+}
+traj.pltraj2d_list(**kwargs1)
 #%% stick / slip
 kwargs1 = {
     "tile1": "stickslip = f(f)" + "\n",
@@ -491,7 +510,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": None,
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$\frac{stick}{slip} \quad (\%)$",
     "color1": color1[0],
     "endpoint": False,
@@ -509,7 +528,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": r"$W_{X}$",
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$W_X \quad (rad/s)$",
     "color1": color1[2],
     "endpoint": False,
@@ -526,7 +545,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": r"$W_{Y}$",
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$W_Y \quad (rad/s)$",
     "color1": color1[2],
     "endpoint": False,
@@ -543,7 +562,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": r"$W_{Z}$",
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$W_Z \quad (rad/s)$",
     "color1": color1[2],
     "endpoint": False,
@@ -561,7 +580,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": r"$\psi$",
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$\psi \quad (\degree)$",
     "color1": color1[2],
     "endpoint": False,
@@ -595,7 +614,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": None,
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$u_y(G_ad)$"+" (m)",
     "color1": color1[2],
     "endpoint": False,
@@ -663,7 +682,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": None,
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$u_y(P_{pin}^{l})$"+" (m)",
     "color1": color1[2],
     "endpoint": False,
@@ -697,7 +716,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": None,
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$u_y(P_{pin}^{u})$"+" (m)",
     "color1": color1[2],
     "endpoint": False,

@@ -418,7 +418,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": None,
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$u_y(G_ad)$"+" (m)",
     "color1": color1[0],
     "endpoint": False,
@@ -501,7 +501,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": None,
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$u_y(P_{pin}^{u})$"+" (m)",
     "color1": color1[0],
     "endpoint": False,
@@ -534,7 +534,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": None,
     # "labelx": r"$t \quad (s)$",
-    "labelx": r"$Loading Frequency$" + " (Hz)",
+    "labelx": "Loading Frequency" + " (Hz)",
     "labely": r"$u_y(P_{pin}^{l})$"+" (m)",
     "color1": color1[0],
     "endpoint": False,
@@ -607,7 +607,7 @@ power_densityPH = 10. * np.log10(powerh)
 linteractif = False
 if (linteractif):
     fig, ax = plt.subplots()
-    # ax.plot(freq, power_density, label='Data')
+    ax.plot(freq, power_density, label='Data')
     plt.xlim(0.,30.)
     # Enable cursor and display values
     mplcursors.cursor(hover=True).connect(
@@ -616,11 +616,79 @@ if (linteractif):
     # Adding labels and title
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
-    plt.title('Interactive Plot with mplcursors')
+    plt.title('uyg : Interactive Plot with mplcursors')
     
     # Show the plot
     plt.show()
+
+    fig, ax = plt.subplots()
+    ax.plot(freqh, power_densityPH, label='Data')
+    plt.xlim(0.,30.)
+    # Enable cursor and display values
+    mplcursors.cursor(hover=True).connect(
+        "add", lambda sel: sel.annotation.set_text(f"{sel.target[0]:.2f}, {sel.target[1]:.2f}"))
+
+    # Adding labels and title
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.title('uyph : Interactive Plot with mplcursors')
+    
+    # Show the plot
+    plt.show()
+
+    fig, ax = plt.subplots()
+    ax.plot(freqb, power_densityPB, label='Data')
+    plt.xlim(0.,30.)
+    # Enable cursor and display values
+    mplcursors.cursor(hover=True).connect(
+        "add", lambda sel: sel.annotation.set_text(f"{sel.target[0]:.2f}, {sel.target[1]:.2f}"))
+
+    # Adding labels and title
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.title('uypb : Interactive Plot with mplcursors')
+    
+    # Show the plot
+    plt.show()
+
+#%% split :
+lpower = []
+lfreq = []
+lpowerph = []
+lfreqph = []
+lpowerpb = []
+lfreqpb = []
+lind = np.array_split(df.index,20)
+for indi in lind: 
+    dfi = df.iloc[indi]
+    dfi.sort_values(by='tL',inplace=True)
+    dfi.reset_index(drop=True,inplace=True)
+    nt1 = int(np.floor(np.log(len(dfi['tL']))/np.log(2.)))
+    indexpsd1 = dfi[dfi.index <= 2**nt1].index
+    print(f"nt1 = {nt1}")
+    nfft1 = 2**(nt1)
+    # nfft = 2**(nt-5)
+    nblocks = (len(dfi)) / (nfft1)
+    print(f"nblocks = {nblocks}")
+    poweri, freqi = plt.psd(1.e5*dfi['yA'].iloc[indexpsd1], NFFT=nfft1, Fs=fs, scale_by_freq=0., color=color1[2])
+    powerih, freqih = plt.psd(1.e5*dfi['posPBym'].iloc[indexpsd1], NFFT=nfft1, Fs=fs, scale_by_freq=0., color=color1[2])
+    powerib, freqib = plt.psd(1.e5*dfi['posPHym'].iloc[indexpsd1], NFFT=nfft1, Fs=fs, scale_by_freq=0., color=color1[2])
+    # 
+    poweri  = 10. * np.log10(poweri)
+    powerih = 10. * np.log10(powerih)
+    powerib = 10. * np.log10(powerib)
+    #
+    lpower.append(poweri)
+    lfreq.append(freqi)
+    lpowerph.append(powerih)
+    lfreqph.append(freqih)
+    lpowerpb.append(powerib)
+    lfreqpb.append(freqib)
+
+#%%
 lanot = [(2.77,59.52),(9.65,25.63),(21.64,17.46)]
+lanotph = [(2.77,21.13),(12.05,22.73),(21.12,10.81)]
+lanotpb = [(2.77,28.35),(12.05,30.76)]
 
 xmax = 30.
 ymax = 65.
@@ -629,10 +697,11 @@ kwargs1 = {
     "tile_save": "PSD_uygad_xp",
     "x": freq,
     "y": power_density,
+    # "y": power,
     "rep_save": repsect1,
     "label1": None,
-    "labelx": r"$Frequency \quad (Hz)$",
-    "labely": r"$Power \quad (dB)$",
+    "labelx": "Frequency (Hz)",
+    "labely": "Power (dB)",
     "color1": color1[0],
     "annotations": lanot,
     "endpoint": False,
@@ -640,7 +709,7 @@ kwargs1 = {
     "ypower": 5,
     "xmax": xmax,
     "ymax": ymax,
-    "ymin": -50.,
+    "ymin": -5.,
 }
 # traj.PSD(df, **kwargs1)
 traj.pltraj2d_list(**kwargs1)
@@ -652,15 +721,16 @@ kwargs1 = {
     "y": power_densityPB,
     "rep_save": repsect1,
     "label1": None,
-    "labelx": r"$Frequency \quad (Hz)$",
-    "labely": r"$Power \quad (dB)$",
+    "labelx": "Frequency (Hz)",
+    "labely": "Power (dB)",
     "color1": color1[0],
-    "annotations": [],
+    "annotations": lanotpb,
     "endpoint": False,
     "xpower": 5,
     "ypower": 5,
     "xmax": xmax,
     "ymax": ymax,
+    "ymin": -5.,
 }
 # traj.PSD(df, **kwargs1)
 traj.pltraj2d_list(**kwargs1)
@@ -672,8 +742,31 @@ kwargs1 = {
     "y": power_densityPH,
     "rep_save": repsect1,
     "label1": None,
-    "labelx": r"$Frequency \quad (Hz)$",
-    "labely": r"$Power \quad (dB)$",
+    "labelx": "Frequency (Hz)",
+    "labely": "Power (dB)",
+    "color1": color1[0],
+    "annotations": lanotph,
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "xmax": xmax,
+    "ymax": ymax,
+    "ymin": -5.,
+}
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+#%%
+ymax = 1.1*np.max(power)
+kwargs1 = {
+    "tile1": " PSD uy(G) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uygad_xp_nolog",
+    "x": freq,
+    # "y": power_density,
+    "y": power,
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": "Frequency (Hz)",
+    "labely": "Power (dB)",
     "color1": color1[0],
     "annotations": [],
     "endpoint": False,
@@ -681,6 +774,53 @@ kwargs1 = {
     "ypower": 5,
     "xmax": xmax,
     "ymax": ymax,
+    "ymin": -5.,
+}
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+
+ymax = 1.1*np.max(powerh)
+kwargs1 = {
+    "tile1": " PSD uy(PH) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uyph_xp_nolog",
+    "x": freqh,
+    # "y": power_density,
+    "y": powerh,
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": "Frequency (Hz)",
+    "labely": "Power (dB)",
+    "color1": color1[0],
+    "annotations": [],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "xmax": xmax,
+    "ymax": ymax,
+    "ymin": -5.,
+}
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+
+ymax = 1.1*np.max(powerb)
+kwargs1 = {
+    "tile1": " PSD uy(PB) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uypb_xp_nolog",
+    "x": freqb,
+    # "y": power_density,
+    "y": powerb,
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": "Frequency (Hz)",
+    "labely": "Power (dB)",
+    "color1": color1[0],
+    "annotations": [],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "xmax": xmax,
+    "ymax": ymax,
+    "ymin": -5.,
 }
 # traj.PSD(df, **kwargs1)
 traj.pltraj2d_list(**kwargs1)
@@ -692,19 +832,19 @@ power_density = 10. * np.log10(power)
 
 linteractif = False
 if (linteractif):
-    fig, ax = plt.subplots()
-    ax.plot(freq, power_density, label='Data')
-    # Enable cursor and display values
-    mplcursors.cursor(hover=True).connect(
-        "add", lambda sel: sel.annotation.set_text(f"{sel.target[0]:.2f}, {sel.target[1]:.2f}"))
+  fig,ax = plt.subplots()
+  ax.plot(freq, power_density, label='Data')
+  # Enable cursor and display values
+  mplcursors.cursor(hover=True).connect(
+      "add", lambda sel: sel.annotation.set_text(f"{sel.target[0]:.2f}, {sel.target[1]:.2f}"))
 
-    # Adding labels and title
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
-    plt.title('Interactive Plot with mplcursors')
+  # Adding labels and title
+  plt.xlabel('X-axis')
+  plt.ylabel('Y-axis')
+  plt.title('Interactive Plot with mplcursors')
     
-    # Show the plot
-    plt.show()
+  # Show the plot
+  plt.show()
 lanot = [(1.95,43.43),(4.66,24.26),(8.85,13.38),(23.45,7.16),(38.50,8.47)]
 kwargs1 = {
     "tile1": " PSD uy(PB) adapter = f(freq)" + "\n",
@@ -713,8 +853,8 @@ kwargs1 = {
     "y": power_density,
     "rep_save": repsect1,
     "label1": None,
-    "labelx": r"$Frequency \quad (Hz)$",
-    "labely": r"$Power \quad (dB)$",
+    "labelx": "Frequency (Hz)",
+    "labely": "Power (dB)",
     "color1": color1[0],
     "annotations": lanot,
     "endpoint": False,
@@ -723,6 +863,77 @@ kwargs1 = {
 }
 # traj.PSD(df, **kwargs1)
 traj.pltraj2d_list(**kwargs1)
+#%% psd split :
+cmap2 = traj.truncate_colormap(cm.inferno,0.,0.85,100)
+lmax = [ np.max(powi) for powi in lpower ]
+lampl = [ cmap2(np.max(powi)/np.max(lmax)) for powi in lpower ]
+lmaxph = [ np.max(powi) for powi in lpowerph ]
+lamplph = [ cmap2(np.max(powi)/np.max(lmax)) for powi in lpowerph ]
+lmaxpb = [ np.max(powi) for powi in lpowerpb ]
+lamplpb = [ cmap2(np.max(powi)/np.max(lmax)) for powi in lpowerpb ]
+ymax = 1.1*np.max([np.max(power_density),np.max(power_densityPB),np.max(power_densityPH)])
+
+xmax = 30.
+ymin = 0.
+
+ymaxsplit = 1.1*np.max(lmax)
+kwargs1 = {
+    "tile1": "splir PSD uy(G) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uygad_split",
+    "x": lfreq,
+    "y": lpower,
+    "rep_save": repsect1,
+    "label1": [None]*len(lpower),
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": lampl,
+    "annotations": [],
+    "xmax": xmax,
+    "ymax": ymaxsplit,
+    "ymin": ymin,
+    "ypower": 3,
+}
+traj.pltraj2d_list(**kwargs1)
+
+ymaxsplit = 1.1*np.max(lmaxpb)
+kwargs1 = {
+    "tile1": "split PSD uy(PB) sleeve = f(freq)" + "\n",
+    "tile_save": "PSD_uypb_split",
+    "x": lfreqpb,
+    "y": lpowerpb,
+    "rep_save": repsect1,
+    "label1": [None]*len(lpower),
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": lamplpb,
+    "annotations": [],
+    "xmax": xmax,
+    "ymax": ymaxsplit,
+    "ymin": ymin,
+    "ypower": 3,
+}
+traj.pltraj2d_list(**kwargs1)
+
+
+ymaxsplit = 1.1*np.max(lmaxph)
+kwargs1 = {
+    "tile1": "split PSD uy(PH) sleeve = f(freq)" + "\n",
+    "tile_save": "PSD_uyph_split",
+    "x": lfreqph,
+    "y": lpowerph,
+    "rep_save": repsect1,
+    "label1": [None]*len(lpower),
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": lamplph,
+    "annotations": [],
+    "xmax": xmax,
+    "ymax": ymaxsplit,
+    "ymin": ymin,
+    "ypower": 3,
+}
+traj.pltraj2d_list(**kwargs1)
+
 # %%
 repsect1 = f"{rep_save}traj_relatives_2d/"
 if not os.path.exists(repsect1):

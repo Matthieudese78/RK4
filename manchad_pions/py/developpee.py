@@ -159,11 +159,20 @@ else:
 # %% lecture du dataframe :
 df = pd.read_pickle(f"{repload}result.pickle")
 # %% fenetrage en temps : 
-t1 = 20.
-t2 = 90.
-df = df[(df['t']>=t1) & (df['t']<=t2)]
-df.sort_values(by='t',inplace=True)
-df.reset_index(drop=True,inplace=True)
+lfenetre = False
+t1 = df['t'].iloc[0]
+t2 = df['t'].iloc[-1]
+if lfenetre:
+    t1 = 5.
+    t2 = 6.
+    i1 = df[(df['t']>=t1) & (df['t']<=t2)].index
+    t12 = 95.
+    t22 = 96.
+    i2 = df[(df['t']>=t12) & (df['t']<=t22)].index
+    iwindow = i1.union(i2)
+    df = df.iloc[iwindow]
+    df.sort_values(by='t',inplace=True)
+    df.reset_index(drop=True,inplace=True)
 #%% on ne prend que les chocs ccone :
 indchoc = df[df['FN_CCONE'].abs()>1.e-5].index
 df = df.iloc[indchoc]
@@ -366,12 +375,15 @@ if lraidtimo:
 #           preproc 
 ###############################################
 zlim = 2.e-3
-df = df[(df[colz] <= np.mean(df[colz])+zlim) & (df[colz] >= np.mean(df[colz])-zlim)]
+# zlim = 1.e-4
+# df = df[(df[colz] <= np.mean(df[colz])+zlim) & (df[colz] >= np.mean(df[colz])-zlim)]
+df = df[(df[colz] <= zlim) & (df[colz] >= -zlim)]
     # on trie et on reindexe :
 df.sort_values(by='t',inplace=True)
 df.reset_index(drop=True,inplace=True)
 
-df['th'] = np.arctan2(df['uypisc'],df['uxpisc']) * 180. / np.pi
+# df['th'] = np.arctan2(df['uypisc'],df['uxpisc']) * 180. / np.pi
+df['th'] = np.arctan2(df[coly],df[colx]) * 180. / np.pi
 df['thm'] = np.arctan2(df['uypicircA'],df['uxpicircA']) * 180. / np.pi
 
 nbsect = 72
@@ -388,31 +400,101 @@ df['Wener'] = df['pusure_ccone']*dtsort
 ###############################################
 if lsplit:
     if lraidtimo:
-        # t1 = 70.
-        # t2 = 110.
-        tr1 = t1 + (t2-t1)/3.
-        tr2 = t1 + 2.*(t2-t1)/3.
+        ts = 70.
+        te = 110.
+        # tr1 = ts + (te-ts)/3.
+        # tr2 = ts + 2.*(te-ts)/3.
+        tr1 = ts 
+        tr2 = te 
+        indreso = df[(df['t']>=tr1) & (df['t']<=tr2)].index
+        indp1   = df[(df['t']<=tr1)].index
+        indp2   = df[(df['t']>=tr2)].index
+        # indp1 = df[(df['t']>=ts) & (df['t']<=te)].index
+        # indp2 = df[(df['t']>=ts2) & (df['t']<=te2)].index
+        # ireso = i1.union(i2)
     else:
-        t1 = 50.
-        t2 = 80.
-    indreso = df[(df['t']>=tr1) & (df['t']<=tr2)].index
-    indp1   = df[(df['t']<=tr1)].index
-    indp2   = df[(df['t']>=tr2)].index
+        ts = 50.
+        te = 80.
+
 # %% on peut passer le point d'incidence dans la base utilisateur :
-name_cols = ["UXpincid", "UYpincid", "UZpincid"]
-kwargs1 = {"base2": base2, "name_cols": name_cols}
-rc.repchgdf(df, **kwargs1)
+plotpchoc = False
+if plotpchoc:
+    name_cols = ["UXpincid", "UYpincid", "UZpincid"]
+    kwargs1 = {"base2": base2, "name_cols": name_cols}
+    rc.repchgdf(df, **kwargs1)
 
 #%% pour les heatmaps :
-ymin = df[colz].min()
-ymax = df[colz].max()
-# %%          COLORATION : 
-    # en fonction de l'usure :
-# kcol = {'colx' : 'pusure_ccone', 'ampl' : 200., 'logcol' : False}
-# dfcolpus = traj.color_from_value(df.loc[indchoc],**kcol)
+ymin = 1.01*df[colz].min()
+ymax = 1.01*df[colz].max()
+# %%          TEST : 
+if lfenetre:
+    i1 = df[(df['t']>=t1) & (df['t']<=t2)].index
+    i2 = df[(df['t']>=t12) & (df['t']<=t22)].index
+    iwindow = i1.union(i2)
 
-# kcol = {'colx' : "FN_CCONE", 'color_normal' : 'black', 'color_impact' : 'orange'}
-# dfcolimpact = traj.color_impact(df,**kcol)
+    # ymin = 1.01*df.loc[iwindow,colz].min()
+    # ymax = 1.01*df.loc[iwindow,colz].max()
+
+    ymin = 1.01*df.loc[iwindow,colz].min()
+    ymax = 1.01*df.loc[iwindow,colz].max()
+
+    df1 = df.loc[i1]
+
+    xticks = np.arange(ymin,ymax, step=20)
+    yticks = np.arange(ymin,ymax, step=1.e-5)
+
+    num_x = nbsect_ad 
+    num_y = nbz_ad
+    agreg = 'sum'
+    colval = 'Wener'
+
+    df1['Xbin'] = pd.cut(df1['th'], bins=np.linspace(-180.,180., nbsect_ad + 1), labels=False)
+    df1['Ybin'] = pd.cut(df1[colz], bins=np.linspace(ymin,ymax, nbz_ad + 1), labels=False)
+
+    nanx = df1[df1['th'].isna()].index
+    nanz = df1[df1[colz].isna()].index
+    if ((any(nanx)) or (any(nanz))):
+        print("il y a des nans dans colx ou colz !!")
+
+    nanxbin = df1[df1['Xbin'].isna()].index
+    nanybin = df1[df1['Ybin'].isna()].index
+    if ((any(nanxbin)) or (any(nanybin))):
+        print("il y a des nans dans Xbin ou Ybin !!")
+
+    # Create a new column 'Cell' to represent the cell for each point
+    df1['Cell'] = list(zip(df1['Xbin'], df1['Ybin']))
+    if (agreg=='mean'):
+        heatmap_data = df1.groupby('Cell')[colval].mean().reset_index()
+    if (agreg=='sum'):
+        heatmap_data = df1.groupby('Cell')[colval].sum().reset_index()
+
+    # Create a MultiIndex for the heatmap
+    heatmap_data.set_index('Cell', inplace=True)
+
+    all_cells = pd.MultiIndex.from_product([range(num_x+1), range(num_y+1)], names=['Xbin', 'Ybin'])
+    #
+    complete_grid = pd.DataFrame(index=all_cells)
+    # complete_grid.loc['Ybin',colval] = np.nan
+
+    heatmap_data.index = pd.MultiIndex.from_tuples(heatmap_data.index, names=['Xbin', 'Ybin'])
+
+    heatmap_data_complete = heatmap_data.combine_first(complete_grid)
+
+    heatmap_data_complete = heatmap_data_complete.values.reshape(num_x+1,num_y+1)
+
+    #### plt heatmap
+    f = plt.figure(figsize=(8, 4),dpi=600)
+    axes = f.gca()
+    axes.imshow(np.transpose(heatmap_data_complete),
+    # axes.imshow((heatmap_matrix_2d),
+                cmap = plt.cm.inferno,
+                interpolation='nearest', 
+                aspect='auto', 
+                origin='lower',
+                extent=[-180.,180.,ymin,ymax],
+               )
+    # plt.show()
+    plt.close('all')
 
 #%%############################################
 #           preproc 
@@ -485,7 +567,6 @@ kw = {
 traj.plt_heat_circ(df,**kw)
 
 #%% heatmap wear power :
-
 kw = {
        "numx"   : nbsect_ad,
        "numy"   : nbz_ad,
@@ -548,7 +629,7 @@ kw = {
        "labelx"   : "Angular location " + r"$(\degree)$",
        "labely"   : "Elevation " + r"$z$" + " (m)",
        "title1"   : "heatmap_wearenergy_sum",
-       "title_save"   : "wearpower_ad_ener_sum",
+       "title_save"   : "wearener_ad_sum",
        "rep_save"   : repsect1,
        "colval" : "Wener",
        "xlim"   : [-180.,180.],
@@ -873,7 +954,6 @@ if lsplit:
 
 #%%
 #%%
-plotpchoc = False
 if plotpchoc:
     repsect1 = f"{rep_save}developpee/pchoc/"
     if not os.path.exists(repsect1):

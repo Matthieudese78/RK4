@@ -1194,6 +1194,7 @@ pmidb1 = plam_b plus (0.5*(lspring*ex)) ;
 pmidb2 = plam_b plus (0.5*(((-1.)*lspring)*ex)) ;
 *# lsprbl :
 lsprbl = 2.e-2 ;
+
 * a droite :
 pmidh1d = pmidh1 plus ((lsprbl/2.)*ex) ;
 pmidh2d = pmidh2 plus ((lsprbl/2.)*ex) ;
@@ -3658,7 +3659,8 @@ tmode . modes . maillage = manchette_vtk ;
 *
 **** modes elastiques :
 * repe brig (6+ntronq) ;
-repe bflex n_tronq ;
+* repe bflex n_tronq ;
+repe bflex nsauvini ;
 *    normalement : il suffit d'introduire MESHAD dans le 1er mode!!
   def_mod = Tmode_tot . ind_m . modes . &bflex . deformee_modale ;
 *    on donne a tous les points de MESHAD la valeurs des DDL au niveau du cercle

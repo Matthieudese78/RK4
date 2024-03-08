@@ -47,7 +47,7 @@ lchoc = False
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
 
-linert = False
+linert = True
 lamode = True
 
 lpion = False
@@ -487,8 +487,8 @@ kwargs1 = {
     "coly": "uzcerela",
     "rep_save": repsect1,
     "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": "Loading Frequency (Hz)",
+    "labelx": "Loading Frequency (Hz)",
+    "labely": r"$u_z(C_{circ})$" + " (m)" ,
     "color1": color1[0],
     "endpoint": False,
     "xpower": 5,
@@ -525,7 +525,8 @@ kwargs1 = {
     "arcwidth" : sect_pion_deg,
     "clmax" : cmax,
     "offsetangle" : 0.,
-    "xymax" : maxdeplCC,
+    # "xymax" : maxdeplCC,
+    "xymax" : maxdeplPB,
 }
 traj.pltraj2d_pion(df, **kwargs1)
 
@@ -551,7 +552,8 @@ kwargs1 = {
     "arcwidth" : sect_pion_deg,
     "clmax" : cmax,
     "offsetangle" : 0.,
-    "xymax" : maxdeplCC,
+    # "xymax" : maxdeplCC,
+    "xymax" : maxdeplPB,
 }
 traj.pltraj2d_pion(df, **kwargs1)
 
@@ -577,7 +579,8 @@ kwargs1 = {
     "arcwidth" : sect_pion_deg,
     "clmax" : cmax,
     "offsetangle" : 0.,
-    "xymax" : maxdeplCC,
+    # "xymax" : maxdeplCC,
+    "xymax" : maxdeplPB,
 }
 traj.pltraj2d_pion(df, **kwargs1)
 
@@ -603,7 +606,8 @@ kwargs1 = {
     "arcwidth" : sect_pion_deg,
     "clmax" : cmax,
     "offsetangle" : 0.,
-    "xymax" : maxdeplCC,
+    # "xymax" : maxdeplCC,
+    "xymax" : maxdeplPB,
 }
 traj.pltraj2d_pion(df, **kwargs1)
 
@@ -629,7 +633,8 @@ kwargs1 = {
     "arcwidth" : sect_pion_deg,
     "clmax" : cmax,
     "offsetangle" : 0.,
-    "xymax" : maxdeplCC,
+    # "xymax" : maxdeplCC,
+    "xymax" : maxdeplPB,
 }
 traj.pltraj2d_pion(df, **kwargs1)
 
@@ -655,7 +660,8 @@ kwargs1 = {
     "arcwidth" : sect_pion_deg,
     "clmax" : cmax,
     "offsetangle" : 0.,
-    "xymax" : maxdeplCC,
+    # "xymax" : maxdeplCC,
+    "xymax" : maxdeplPB,
 }
 traj.pltraj2d_pion(df, **kwargs1)
 sys.exit()

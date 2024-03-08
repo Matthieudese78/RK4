@@ -58,12 +58,13 @@ def statenergy(df,**kwargs):
     intener = [ np.sum([ dt*(0.5*(df.iloc[i][col1]+df.iloc[i+1][col1])) for i in np.arange(fsti,lsti) ]) for fsti,lsti in zip(fst,lst) ]
     # print(f"intener = {intener}")
     meanener = np.mean(intener)
+    enertot = np.sum(intener)
     stdener = np.std(intener)
 
     print(f"Colonne : {col1}")
     print(f"energie moyenne durant un choc = {meanener} J")
     print(f"                          std = {stdener} J")
-    return meanener,stdener
+    return meanener,stdener,enertot
 
 def statchoc(df,**kwargs):
     col1 = kwargs['colname']
@@ -239,6 +240,16 @@ df.sort_values(by='t',inplace=True)
 df.reset_index(drop=True,inplace=True)
 dt = df['t'][1] - df['t'][0]
 
+# %% frequency = f(t) : 
+f1 = 2.
+f2 = 20.
+# ttot = df.iloc[-1]['t']
+ttot = 128.
+print(f"tmin = {df.iloc[0]['t']}")
+print(f"ttot = {ttot}")
+df['freq'] = f1 + ((f2-f1)/ttot)*df['t'] 
+print(f"fmin = {df.iloc[0]['freq']}")
+print(f"fmax = {df.iloc[-1]['freq']}")
 #%%
 icrit = 0.
     # ccone :
@@ -420,6 +431,7 @@ lmoyfpb = [[],[],[]]
 lsigmafpb = [[],[],[]]
 lmoyuspb = [[],[],[]]
 lsigmauspb = [[],[],[]]
+lenertotpb = [[],[],[]]
 for i,indi in enumerate(indsplit):
     df1 = df.iloc[indi]
     df1.sort_values(by='t',inplace=True)
@@ -460,19 +472,25 @@ for i,indi in enumerate(indsplit):
     lsigmafpb[0].append(stat_pb1[5])
     lsigmafpb[1].append(stat_pb2[5])
     lsigmafpb[2].append(stat_pb3[5])
-    # mean normal force :
+    # mean pusure :
     lmoyuspb[0].append(stat_pb1_pus[0])
     lmoyuspb[1].append(stat_pb2_pus[0])
     lmoyuspb[2].append(stat_pb3_pus[0])
-    # mean normal force :
+    # std pusure :
     lsigmauspb[0].append(stat_pb1_pus[1])
     lsigmauspb[1].append(stat_pb2_pus[1])
     lsigmauspb[2].append(stat_pb3_pus[1])
+    # sum energy usure :
+    lenertotpb[0].append(stat_pb1_pus[2])
+    lenertotpb[1].append(stat_pb2_pus[2])
+    lenertotpb[2].append(stat_pb3_pus[2])
 
 #%%
 time_interval = df.iloc[-1]['t']/(nbseg)
 x = np.linspace(0.,df.iloc[-1]['t']-time_interval,nbseg)
 
+freq_interval = (df.iloc[-1]['freq'] - df.iloc[0]['freq'])/(nbseg)
+freq = np.linspace(df.iloc[0]['freq'],df.iloc[-1]['freq']-freq_interval,nbseg)
 #%% mean normal force :
 colorpin = ['red','green','blue']
 ymaxf = np.max([ np.max(np.abs(fi)) for i,fi in  enumerate(lmoyfpb) ])
@@ -498,12 +516,42 @@ for ipin in np.arange(3):
 
     ax.set_ylabel("Mean Normal Force (N)",fontsize=12)
     ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
+    ax.set_xlim(xmin=0.)
     plt.xticks(rotation=0, ha='right')
     if figshow:
         plt.show()
     title=f"{repsect1}FN_pb{ipin+1}"
     fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
 
+for ipin in np.arange(3): 
+    fig = plt.figure(figsize=(8,6), dpi=1000)
+    ax=plt.axes()
+    ax.set_ylim(ymax=1.1*ymaxf)
+    # ax.set_ylim(ymax=1.1*np.max(np.abs(lmoyfpb[ipin])))
+    bars = plt.bar(freq,np.abs(lmoyfpb[ipin]),width=freq_interval,align='edge',color=colorpin[ipin],alpha=0.8)
+
+    # Rounding the edges
+    for bar in bars:
+        bar.set_edgecolor('black')
+        bar.set_linewidth(1.5)
+        bar.set_capstyle('round')
+        # bar.set_path_effects([PathPatch.PathPatchEffect(capstyle='round')])
+
+    for i,xi in enumerate(freq):
+        ax.annotate(r'$\sigma :{%d}$' % (lsigmafpb[ipin][i]) , 
+        (xi, np.abs(lmoyfpb[ipin][i])),
+        xytext=(1,4), textcoords='offset points',
+        family='sans-serif', fontsize=9, color='black') 
+
+    ax.set_ylabel("Mean Normal Force (N)",fontsize=12)
+    ax.set_xlabel("Loading Frequency (Hz)",fontsize=12)
+    ax.set_xlim(xmin=f1)
+    plt.xticks(rotation=0, ha='right')
+    if figshow:
+        plt.show()
+    title=f"{repsect1}FN_pb{ipin+1}_f"
+    fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
+    plt.close('all')
 #%% mean dissipated energy :
 colorpin = ['red','green','blue']
 ymaxe = np.max([ np.max(np.abs(fi)*1.e4) for i,fi in  enumerate(lmoyuspb) ])
@@ -529,11 +577,13 @@ for ipin in np.arange(3):
 
     ax.set_ylabel("Mean Wear Energy ("+r"$10^{-4}$"+" J)",fontsize=12)
     ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
+    ax.set_xlim(xmin=0.)
     plt.xticks(rotation=0, ha='right')
     if figshow:
         plt.show()
     title=f"{repsect1}Ewear_pb{ipin+1}"
     fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
+    plt.close('all')
 #%% mean impact time :
 colorpin = ['red','green','blue']
 ymaxt = np.max([ np.max(np.abs(fi)*1.e3) for i,fi in  enumerate(lmoytpb) ])
@@ -559,11 +609,105 @@ for ipin in np.arange(3):
 
     ax.set_ylabel("Mean Impact Time (ms)",fontsize=12)
     ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
+    ax.set_xlim(xmin=0.)
     plt.xticks(rotation=0, ha='right')
     if figshow:
         plt.show()
     title=f"{repsect1}tchoc_pb{ipin+1}"
     fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
+
+for ipin in np.arange(3): 
+    fig = plt.figure(figsize=(8,6), dpi=1000)
+    ax=plt.axes()
+    ax.set_ylim(ymax=1.1*ymaxt)
+    # ax.set_ylim(ymax=1.1*np.max(np.abs(lmoytpb[ipin])*1.e3))
+    bars = plt.bar(freq,np.abs(lmoytpb[ipin])*1.e3,width=freq_interval,align='edge',color=colorpin[ipin],alpha=0.8)
+
+    # Rounding the edges
+    for bar in bars:
+        bar.set_edgecolor('black')
+        bar.set_linewidth(1.5)
+        bar.set_capstyle('round')
+        # bar.set_path_effects([PathPatch.PathPatchEffect(capstyle='round')])
+
+    for i,xi in enumerate(freq):
+        ax.annotate(r'$\sigma :$' + r"${:.2f}$".format(lsigmatpb[ipin][i]*1.e3), 
+        (xi, np.abs(lmoytpb[ipin][i])*1.e3),
+        xytext=(1,4), textcoords='offset points',
+        family='sans-serif', fontsize=9, color='black') 
+
+    ax.set_ylabel("Mean Impact Time (ms)",fontsize=12)
+    ax.set_xlabel("Loading Frequency (Hz)",fontsize=12)
+    ax.set_xlim(xmin=f1)
+    plt.xticks(rotation=0, ha='right')
+    if figshow:
+        plt.show()
+    title=f"{repsect1}tchoc_pb{ipin+1}_f"
+    fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
+    plt.close('all')
+#%% total energy :
+colorpin = ['red','green','blue']
+ymaxt = np.max([ np.max(np.abs(fi)) for i,fi in  enumerate(lenertotpb) ])
+for ipin in np.arange(3): 
+    fig = plt.figure(figsize=(8,6), dpi=1000)
+    ax=plt.axes()
+    ax.set_ylim(ymax=1.1*ymaxt)
+    # ax.set_ylim(ymax=1.1*np.max(np.abs(lmoytpb[ipin])*1.e3))
+    bars = plt.bar(x,np.abs(lenertotpb[ipin]),width=time_interval,align='edge',color=colorpin[ipin],alpha=0.8)
+
+    # Rounding the edges
+    for bar in bars:
+        bar.set_edgecolor('black')
+        bar.set_linewidth(1.5)
+        bar.set_capstyle('round')
+        # bar.set_path_effects([PathPatch.PathPatchEffect(capstyle='round')])
+
+    # for i,xi in enumerate(x):
+    #     ax.annotate(r'$\sigma :$' + r"${:.2f}$".format(lsigmatpb[ipin][i]*1.e3), 
+    #     (xi, np.abs(lmoytpb[ipin][i])*1.e3),
+    #     xytext=(1,4), textcoords='offset points',
+    #     family='sans-serif', fontsize=9, color='black') 
+
+    ax.set_ylabel("Total wear energy  (J)",fontsize=12)
+    ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
+    ax.set_xlim(xmin=0.)
+    plt.xticks(rotation=0, ha='right')
+    if figshow:
+        plt.show()
+    title=f"{repsect1}enertot_pb{ipin+1}_t"
+    fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
+    plt.close('all')
+
+    # with loading frequency in the x axis :
+for ipin in np.arange(3): 
+    fig = plt.figure(figsize=(8,6), dpi=1000)
+    ax=plt.axes()
+    ax.set_ylim(ymax=1.1*ymaxt)
+    # ax.set_ylim(ymax=1.1*np.max(np.abs(lmoytpb[ipin])*1.e3))
+    bars = plt.bar(freq,np.abs(lenertotpb[ipin]),width=freq_interval,align='edge',color=colorpin[ipin],alpha=0.8)
+
+    # Rounding the edges
+    for bar in bars:
+        bar.set_edgecolor('black')
+        bar.set_linewidth(1.5)
+        bar.set_capstyle('round')
+        # bar.set_path_effects([PathPatch.PathPatchEffect(capstyle='round')])
+
+    # for i,xi in enumerate(x):
+    #     ax.annotate(r'$\sigma :$' + r"${:.2f}$".format(lsigmatpb[ipin][i]*1.e3), 
+    #     (xi, np.abs(lmoytpb[ipin][i])*1.e3),
+    #     xytext=(1,4), textcoords='offset points',
+    #     family='sans-serif', fontsize=9, color='black') 
+
+    ax.set_ylabel("Total wear energy  (J)",fontsize=12)
+    ax.set_xlabel("Loading Frequency (Hz)",fontsize=12)
+    ax.set_xlim(xmin=f1)
+    plt.xticks(rotation=0, ha='right')
+    if figshow:
+        plt.show()
+    title=f"{repsect1}enertot_pb{ipin+1}_f"
+    fig.savefig(title+".png",bbox_inches='tight',facecolor='white') 
+    plt.close('all')
 #%%
 
 sys.exit()

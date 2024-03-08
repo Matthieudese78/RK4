@@ -14,7 +14,7 @@ from csv_to_pickle import csv2pickle
 #%%
 lclean = True
 #%% lraidtimo :
-lraidtimo = "vrai"
+lraidtimo = "faux"
 #%% script / dir :
 filename = 'manchadela_pions.dgibi'
 if (lraidtimo=="vrai"):
@@ -30,6 +30,7 @@ lstdout = False
 #%% nombre de slices :
 nslice = 64
 ttot = 128.
+slicevtk = 50
 #%% parametres du calcul 
 
 linert = True
@@ -70,7 +71,7 @@ amo_ccone = 5.*3.4
 # on donne les 1ers angles en degres !
 theta_ry = 0.
 theta_rz = 0.
-spinini = 0.
+spinini = 30.
 wxini = 0.
 wyini = 0.
 wzini = 0.
@@ -90,6 +91,7 @@ lsinb = "vrai"
 b_lam = 5.5e-3
 h_lam = 50.e-3
 lspring = 45.e-2
+lsprbl = 4.e-2
 
 #%% retrait du 2eme mode de l'adaptateur ?
 lmad2 = "faux"
@@ -158,10 +160,12 @@ dictini = {
              'b_lam' : b_lam,
              'h_lam' : h_lam,
              'lspring' : lspring,
+             'lsprbl' : lsprbl,
   #          trep : 
              'trep' : 0.,
   #          slice : 
              'slice' : slice,
+             'slicevtk' : slicevtk,
   #          ttot : 
              'ttot' : ttot,
   #          amo_ccone : 
@@ -399,6 +403,7 @@ dict_rep = {
              'b_lam' : b_lam,
              'h_lam' : h_lam,
              'lspring' : lspring,
+             'lsprbl' : lsprbl,
   #          fefin : valeur de la force a la fin du calcul si lexp :
              'fefin' : fefin,
   #          lmad2 : on retire le 2eme mode de l'adapter 
@@ -412,6 +417,7 @@ dict_rep = {
              'amode_m' : amode_m,
   #          slice : 
              'slice' : df['slice'].drop_duplicates().values[0]+1,
+             'slicevtk' : slicevtk,
   #          amo_ccone : 
              'amo_ccone' : amo_ccone,
   #          xi : 
@@ -626,6 +632,7 @@ for slice in range(2,nslice+1):
                'b_lam' : b_lam,
                'h_lam' : h_lam,
                'lspring' : lspring,
+               'lsprbl' : lsprbl,
     #          fefin : 
                'fefin' : fefin,
     #          lamode : 
@@ -639,6 +646,7 @@ for slice in range(2,nslice+1):
                'raidiss' : raidiss,
     #          slice : 
                'slice' : df['slice'].drop_duplicates().values[0]+1,
+               'slicevtk' : slicevtk,
     #          nmode : 
                'nmode' : df['nmode'].drop_duplicates().values[0],
     #          nmode_ad : 
