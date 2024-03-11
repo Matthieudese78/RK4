@@ -94,7 +94,7 @@
           enddo
 *
           do id=1,3
-            qvth(id,ib) = 0.d0
+*           shabana old edition p321 : - d(I_{thth})/dt * W :
             do j=1,3
              qvth(id,ib) = qvth(id,ib) - (2.*xmpoi(ip,in,ib) * 
      &      (x1cha2(id,j)*q1(i2,ind)*q2(i2,ind))*omeg2(j,ind,ib)) -
@@ -116,14 +116,14 @@
         if (itrig(ib,in)) goto 2
         i2 = ina1 + in
       qvth(1,ib) = qvth(1,ib) - 
-     &  (omeg2(3,ind,ib)*(mfth(in,2)*q2(i2,ind)) -
-     &   omeg2(2,ind,ib)*(mfth(in,3)*q2(i2,ind)))
+     &  (omeg2(3,ind,ib)*(mfth(in,2,ib)*q2(i2,ind)) -
+     &   omeg2(2,ind,ib)*(mfth(in,3,ib)*q2(i2,ind)))
       qvth(2,ib) = qvth(2,ib) - 
-     &  (omeg2(3,ind,ib)*(mfth(in,1)*q2(i2,ind)) -
-     &   omeg2(1,ind,ib)*(mfth(in,3)*q2(i2,ind)))
+     &  (omeg2(3,ind,ib)*(mfth(in,1,ib)*q2(i2,ind)) -
+     &   omeg2(1,ind,ib)*(mfth(in,3,ib)*q2(i2,ind)))
       qvth(3,ib) = qvth(3,ib) - 
-     &  (omeg2(1,ind,ib)*(mfth(in,2)*q2(i2,ind)) -
-     &   omeg2(2,ind,ib)*(mfth(in,1)*q2(i2,ind)))
+     &  (omeg2(1,ind,ib)*(mfth(in,2,ib)*q2(i2,ind)) -
+     &   omeg2(2,ind,ib)*(mfth(in,1,ib)*q2(i2,ind)))
  2    continue
 
 ******************************************************************
@@ -133,7 +133,7 @@
         jw(id) = 0.d0 
         do j=1,3
           jw(id) = jw(id) + 
-     &    (inertie(id,j,ib)+mthth(id,j))*omeg2(j,ind,ib)
+     &    (inertie(id,j,ib)+mthth(id,j,ib))*omeg2(j,ind,ib)
         enddo
       enddo
       qvth(1,ib) = qvth(1,ib) - 
