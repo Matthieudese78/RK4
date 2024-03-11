@@ -141,11 +141,11 @@ cms : pour le couple resistant "hard code" :
       real*8 ine(3,3),invine(3,3)
 
 *     resistance au spin ?
-      lrspin = .true.
+      lrspin = .false.
 *     correction dexpinv ?
       lxpinv = .false.
 *     couplage inertiel ?
-      linert = .true.
+      linert = .false.
 *     method de calcul de la MAJ du tenseur d'inertie J ?
       methJ1 = .false.
       methJ2 = .true.

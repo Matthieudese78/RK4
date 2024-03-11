@@ -356,7 +356,7 @@ C DYNE26    SOURCE    CB215821  20/11/04    21:16:12     10766
            IF (IERR.NE.0) RETURN
            XM(IA1,1) = XMASSE
            write(*,*)'dyne26 : mode ia1 = ',ia1
-           write(*,*)'         xm * mtot = ',xmasse * xmtot
+*          write(*,*)'         xm * mtot = ',xmasse * xmtot
            CALL ACCTAB(IBAMOD,'MOT',I0,X0,'FREQUENCE',L0,IP0,
      &                  'FLOTTANT',I1,XFREQ,' ',L1,IP1)
            IF (IERR.NE.0) RETURN
