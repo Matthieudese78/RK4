@@ -13,6 +13,7 @@ import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.colors as pltcolors
 import mplcursors
+import sys
 #%%
 def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
     new_cmap = pltcolors.LinearSegmentedColormap.from_list(
@@ -41,6 +42,7 @@ jeumax = ray_circ - h_pion*np.sin(np.pi/6.)
 xcmax = h_pion*np.cos(np.pi/6.)
 ycmax = np.sqrt((ray_circ**2) - (xcmax**2))
 cmax = ycmax - (h_pion*np.sin(np.pi/6.))
+
 #%% manchette neuve
 pointH  = np.array([0,0,878])
 pointPH = np.array([0,0,697])
@@ -63,8 +65,6 @@ lplam = False
 lplow = False
 # lconefixe = True
 # %% Scripts :
-    # which slice ?
-slice = 1
 # cas la lache de la manchette avec juste le poids :
 # namerep = "manchadela_weight"
 # namerep = "manchadela_RSG"
@@ -72,7 +72,7 @@ slice = 1
 lpion = False
 lpcirc = True
 
-Fext = 193.
+Fext = 79.44
 spinini = 0.
 # manchette bloquee sinus balaye niveau n1 :
 lbloq = True
@@ -120,17 +120,6 @@ if (lbloq):
 
 filename = f'{repload}{essai}_laser.pickle'
 
-# namerep = f"edf_xp"
-# repload = f"./pickle/{namerep}/"
-
-# %%
-rep_save = f"./fig/{namerep}/"
-if not os.path.exists(rep_save):
-    os.makedirs(rep_save)
-    print(f"FOLDER : {rep_save} created.")
-else:
-    print(f"FOLDER : {rep_save} already exists.")
-
 # %% lecture du dataframe :
 df = pd.read_pickle(f"{filename}")
 df = pd.DataFrame(df)
@@ -154,7 +143,7 @@ df.reset_index(drop=True,inplace=True)
 #%% on remet l'origine du temps a 0 :
 df['tL'] = df['tL'] - df['tL'][0]
 nt = int(np.floor(np.log(len(df['tL']))/np.log(2.)))
-indexpsd = df[df.index <= 2**nt].index
+
 
 #%% frequence en fonction du temps :
 f1 = 2.
@@ -235,6 +224,15 @@ df['posPHy']  = df['yM'] + df['txM'] * pointPH[2]
 # posBy  = yM + txM * pointB[2]
 df['posPBx']  = (df['xM']-df['xA'])+(df['tyM']-df['tyA'])*pointPB[2]
 df['posPBy']  = df['yM'] + df['txM'] * pointPB[2]
+# position non relative des pions haut et bas :
+df['PHx'] = df['posPHx']
+df['PBx'] = df['posPBx']
+if lbloq:
+    df['PHx'] = (df['xM'])+(df['tyM']-df['tyA'])*pointPH[2]
+    df['PBx'] = (df['xM'])+(df['tyM']-df['tyA'])*pointPB[2]
+
+df['PHy']  = df['posPHy'] 
+df['PBy']  = df['posPBy'] 
 #%% on rajoute les coord bidons :
 df['yA'] = 0.*df['xA']
 df['zA'] = 0.*df['xA']
@@ -242,6 +240,8 @@ df['zM'] = 0.*df['xA']
 df['posHz'] = 0.*df['xA']
 df['posPHz'] = 0.*df['xA']
 df['posPBz'] = 0.*df['xA']
+df['PHz'] = 0.*df['xA']
+df['PBz'] = 0.*df['xA']
 
 #%% on change de repere :
 exb = np.array([0.0, -1.0, 0.0])
@@ -264,102 +264,79 @@ rc.repchgdf(df, **kwargs1)
 name_cols = ["posPBx", "posPBy", "posPBz"]
 kwargs1 = {"base2": base2, "name_cols": name_cols}
 rc.repchgdf(df, **kwargs1)
+name_cols = ["PHx", "PHy", "PHz"]
+kwargs1 = {"base2": base2, "name_cols": name_cols}
+rc.repchgdf(df, **kwargs1)
+name_cols = ["PBx", "PBy", "PBz"]
+kwargs1 = {"base2": base2, "name_cols": name_cols}
+rc.repchgdf(df, **kwargs1)
 
-#%% on vire eventuellement les offsets dus aux appareils de mesure :
-loffset = False
-def rmoffset(df,**kwargs):
-    # return "done"    
-    xval = df[kwargs['col1']]
-    xini = kwargs['valini']
-    return xval - xini
-
-def rmoffsetdf(df,**kwargs):
-    dict1 = {kwargs['col1'] : df.apply(rmoffset,**kwargs,axis=1)}
-    df1 = pd.DataFrame(dict1)
-    print (df1.index)
-    df[kwargs["col1"]] = df1
-if (loffset):
-    lk = []
-    lk.append({'col1' : 'xA', 'valini' :     df['xA'][0]})
-    lk.append({'col1' : 'yA', 'valini' :     df['yA'][0]})
-    lk.append({'col1' : 'zA', 'valini' :     df['zA'][0]})
-    lk.append({'col1' : 'xM', 'valini' :     df['xM'][0]})
-    lk.append({'col1' : 'yM', 'valini' :     df['yM'][0]})
-    lk.append({'col1' : 'zM', 'valini' :     df['zM'][0]})
-    lk.append({'col1' : 'posHx', 'valini' :  df['posHx'][0] })  
-    lk.append({'col1' : 'posHy', 'valini' :  df['posHy'][0] })  
-    lk.append({'col1' : 'posHz', 'valini' :  df['posHz'][0] })  
-    lk.append({'col1' : 'posPHx', 'valini' : df['posPHx'][0] }) 
-    lk.append({'col1' : 'posPHy', 'valini' : df['posPHy'][0] }) 
-    lk.append({'col1' : 'posPHz', 'valini' : df['posPHz'][0] }) 
-    lk.append({'col1' : 'posPBx', 'valini' : df['posPBx'][0] }) 
-    lk.append({'col1' : 'posPBy', 'valini' : df['posPBy'][0] }) 
-    lk.append({'col1' : 'posPBz', 'valini' : df['posPBz'][0] }) 
-    [ rmoffsetdf(df,**ki) for ki in lk]
-
-#%% trajectoires rela :
-lrela = False
-if lrela:
-    lk = []
-    lk.append({"col1": "posHx", "col2": "xA", "col3": "uxcerela"})
-    lk.append({"col1": "posHy", "col2": "yA", "col3": "uycerela"})
-    lk.append({"col1": "posHz", "col2": "zA", "col3": "uzcerela"})
-
-    lk.append({"col1": "posPHx", "col2": "xA", "col3": "uxphrela"})
-    lk.append({"col1": "posPHy", "col2": "yA", "col3": "uyphrela"})
-    lk.append({"col1": "posPHz", "col2": "zA", "col3": "uzphrela"})
-    lk.append({"col1": "posPBx", "col2": "xA", "col3": "uxpbrela"})
-    lk.append({"col1": "posPBy", "col2": "yA", "col3": "uypbrela"})
-    lk.append({"col1": "posPBz", "col2": "zA", "col3": "uzpbrela"})
-
-    [traj.rela(df, **ki) for i, ki in enumerate(lk)]
-
-#%% find peaks deplacements :
-
-jeuH = 1. # au niveau de la collerette ie  contact cône-cône?
-jeuB = 6.5 # sortie d'adaptateur?
-jeuPH = 2. # pion haut
-jeuPB = 2. # pion bas
-hpion = 2.4 # ??
-facteurProminence = 5
-
-df['posHr']  = np.sqrt(df['posHx']**2+df['posHy']**2)
-df['posPHr'] = np.sqrt(df['posPHx']**2+df['posPHy']**2)
-# df['posBr']  = np.sqrt(df['posBx']**2+df['posBy']**2)
-df['posPBr'] = np.sqrt(df['posPBx']**2+df['posPBy']**2)
-prominenceThrH  = jeuH/facteurProminence
-prominenceThrB  = jeuB/facteurProminence
-prominenceThrPB = jeuPB/facteurProminence
-prominenceThrPH = jeuPH/facteurProminence
-
-peaksH_laser = scipy.signal.find_peaks(df['posHr'].values,prominence=(prominenceThrH,None))[0]
-peaksPH_laser = scipy.signal.find_peaks(df['posPHr'].values,prominence=(prominenceThrPH,None))[0]
-# peaksB_laser = scipy.signal.find_peaks(df['posBr'].values,prominence=(prominenceThrB,None))[0]
-peaksPB_laser = scipy.signal.find_peaks(df['posPBr'].values,prominence=(prominenceThrPB,None))[0]
-
-indpH = pd.Index(peaksH_laser)
-indpPH = pd.Index(peaksPH_laser)
-indpPB = pd.Index(peaksPB_laser)
 #%% old laser selectionne :
-# df['Gad'] = 0.5*(df['L1'] + df['L2'])
-laser = 'yA'
 df['yA']      =  1.e-3 * df['yA']
 df['posPHxm'] =  1.e-3 * df['posPHx']
 df['posPHym'] =  1.e-3 * df['posPHy']
 df['posPBxm'] =  1.e-3 * df['posPBx']
 df['posPBym'] =  1.e-3 * df['posPBy']
-df['posHxm'] =  1.e-3 * df['posHx']
-df['posHym'] =  1.e-3 * df['posHy']
-df['posHrm'] =  1.e-3 * df['posHr']
+df['posHxm']  =  1.e-3 * df['posHx']
+df['posHym']  =  1.e-3 * df['posHy']
+df['PHxm']  =  1.e-3 * df['PHx']
+df['PHym']  =  1.e-3 * df['PHy']
+df['PBxm']  =  1.e-3 * df['PBx']
+df['PBym']  =  1.e-3 * df['PBy']
+# df['posHrm']  =  1.e-3 * df['posHr']
 
+# df['yA']      =  1. * df['xA']
+# df['posPHym'] =  1. * df['posPHx']
+# df['posPBym'] =  1. * df['posPBx']
 # %% maximum penetration :
 penePB = cmax - df['posPBxm'].abs().max()
 penePH = cmax - df['posPHxm'].abs().max()
 maxdeplPB = df['posPBxm'].abs().max()
 maxdeplPH = df['posPHxm'].abs().max()
-maxdeplHr = df['posHrm'].abs().max()
+
+df = df[['tL','freq','yA','posPHxm','posPHym','posPBxm','posPBym','PHxm','PHym','PBxm','PBym']]
+# df = df[['tL','freq','yA','posPHym','posPBym']]
+df.sort_values(by='tL',inplace=True)
+df.reset_index(drop=True,inplace=True)
+
+#%% NUM
+repload = "/home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/RK4/manchad_pions/py/pickle/manchadela_bloq/"
+
+dfnum = pd.read_pickle(f"{repload}result.pickle")
+dfnum = dfnum[['t','uzg_tot_ad','uzpb','uzph','Fext']]
+  # on trie et on reindexe :
+dfnum.sort_values(by='t',inplace=True)
+dfnum.reset_index(drop=True,inplace=True)
+
+  # on ajuste la frequence d'echantillonnage a l'XP :
+discr  = df.iloc[1]['tL'] - df.iloc[0]['tL']
+dtsort = dfnum.iloc[1]['t'] - dfnum.iloc[0]['t']
+ndiscr = max(1,int(discr/(dtsort)))
+print(f"ndiscr = {ndiscr}")
+dfnum = dfnum.iloc[::ndiscr]
+dfnum.reset_index(drop=True,inplace=True)
+    # frequence d'echantillonnage de la coimputation :
+fsnum = 1./(dfnum['t'][1]-dfnum['t'][0])
+ntnum = int(np.floor(np.log(len(dfnum['t']))/np.log(2.)))
+
+f1 = 2.
+f2 = 20.
+ttot = dfnum.iloc[-1]['t']
+dfnum['freqnum'] = f1 + ((f2-f1)/ttot)*dfnum['t'] 
+# dfxp = df
+
+df = pd.concat([df,dfnum],axis=1)
+    # on vire dfnum
+# del dfnum
+
+indexpsd = df[df.index <= 2**nt].index
+indexpsdnum = df[df.index <= 2**ntnum].index
+# %% numeric
 # %% lecture du dataframe :
+rep_save = f"./fig/superposition/"
+
 repsect1 = f"{rep_save}variables_ft/"
+
 if not os.path.exists(repsect1):
     os.makedirs(repsect1)
     print(f"FOLDER : {repsect1} created.")
@@ -368,48 +345,423 @@ else:
 
 #%% courant tension :
     # bruts :
-kwargs1 = {
-    "tile1": "courant pot = f(t)" + "\n",
-    "tile_save": "courant_ft",
-    "colx": "tL",
-    "coly": "Courant",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$I$"+" (A)",
-    "color1": color1[0],
-}
-traj.pltraj2d(df, **kwargs1)
-
-kwargs1 = {
-    "tile1": "courant pot = f(t)" + "\n",
-    "tile_save": "tension_ft",
-    "colx": "tL",
-    "coly": "Tension",
-    "rep_save": repsect1,
-    "label1": None,
-    "labelx": r"$t \quad (s)$",
-    "labely": r"$U$"+" (V)",
-    "color1": color1[0],
-}
-traj.pltraj2d(df, **kwargs1)
 #%%
 kwargs1 = {
     "tile1": "uy(G) adapter = f(t)" + "\n",
-    "tile_save": "uygad_t_xp",
-    "colx": "tL",
-    "coly": "yA",
+    "tile_save": "uygad_t_xpnum",
+    "colx": ["tL","t"],
+    "coly": ["yA","uzg_tot_ad"],
     "rep_save": repsect1,
-    "label1": None,
+    "label1": ["Experiment","Computation"],
     "labelx": r"$t \quad (s)$",
     "labely": r"$u_y(G_ad)$"+" (m)",
-    "color1": color1[0],
-    "endpoint": False,
+    "color1": color1,
+    "endpoint": [False,False],
     "xpower": 5,
     "ypower": 5,
 }
 traj.pltraj2d(df, **kwargs1)
 
+kwargs1 = {
+    "tile1": "uy(G) adapter = f(f)" + "\n",
+    "tile_save": "uygad_f_xpnum",
+    "colx": ["freq","freqnum"],
+    "coly": ["yA","uzg_tot_ad"],
+    "rep_save": repsect1,
+    "label1": ["Experiment","Computation"],
+    # "labelx": r"$t \quad (s)$",
+    "labelx": "Loading Frequency" + " (Hz)",
+    "labely": r"$u_y(G_ad)$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False],
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "uy(PH) adapter = f(t)" + "\n",
+    "tile_save": "uyph_t_xpnum",
+    "colx": ["tL","t"],
+    "coly": ["PHym","uzph"],
+    "rep_save": repsect1,
+    "label1": ["Experiment","Computation"],
+    "labelx": r"$t \quad (s)$",
+    "labely": r"$u_y(P_{pin}^u)$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False],
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "uy(PH) adapter = f(f)" + "\n",
+    "tile_save": "uyph_f_xpnum",
+    "colx": ["freq","freqnum"],
+    "coly": ["PHym","uzph"],
+    "rep_save": repsect1,
+    "label1": ["Experiment","Computation"],
+    "labelx": "Loading Frequency" + " (Hz)",
+    "labely": r"$u_y(P_{pin}^u)$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False],
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "uy(PB) adapter = f(t)" + "\n",
+    "tile_save": "uypb_t_xpnum",
+    "colx": ["tL","t"],
+    "coly": ["PBym","uzpb"],
+    "rep_save": repsect1,
+    "label1": ["Experiment","Computation"],
+    "labelx": r"$t \quad (s)$",
+    # "labelx": "Loading Frequency" + " (Hz)",
+    "labely": r"$u_y(P_{pin}^l)$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False],
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "uy(PB) adapter = f(f)" + "\n",
+    "tile_save": "uypb_f_xpnum",
+    "colx": ["freq","freqnum"],
+    "coly": ["PBym","uzpb"],
+    "rep_save": repsect1,
+    "label1": ["Experiment","Computation"],
+    "labelx": "Loading Frequency" + " (Hz)",
+    "labely": r"$u_y(P_{pin}^l)$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False],
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df, **kwargs1)
+
+#%%
+repsect1 = f"{rep_save}variables_ft/PSD/"
+if not os.path.exists(repsect1):
+    os.makedirs(repsect1)
+    print(f"FOLDER : {repsect1} created.")
+else:
+    print(f"FOLDER : {repsect1} already exists.")
+
+# nt = np.min(nt,ntnum)
+nfft = 2**nt
+nfftnum = 2**ntnum
+# # fs = np.min(fs,fsnum)
+# indexpsd = df[df.index <= 2**nt].index
+
+nvrlp = 64
+# nfftnum = 128
+# nfft = 128
+# nvrlp = 32
+# nblocks = (len(df.iloc[indexpsdnum]) - nvrlp) / (nfftnum - nvrlp)
+# nblocksxp = (len(df.iloc[indexpsd]) - nvrlp) / (nfftxp - nvrlp)
+
+power, freq = plt.psd((1.e8)*df['uzg_tot_ad'].iloc[indexpsdnum], NFFT=nfftnum, Fs=fsnum,   color=color1[2])
+
+powerPB, freqPB = plt.psd((1.e8)*df['uzpb'].iloc[indexpsdnum], NFFT=nfftnum, Fs=fsnum,   color=color1[2])
+
+powerPH, freqPH = plt.psd((1.e8)*df['uzph'].iloc[indexpsdnum], NFFT=nfftnum, Fs=fsnum,   color=color1[2])
+
+powerxp, freqxp = plt.psd((1.e8)*df['yA'].iloc[indexpsd], NFFT=nfft, Fs=fs,   color=color1[2],noverlap=nvrlp)
+
+powerPBxp, freqPBxp = plt.psd((1.e8)*df['PBym'].iloc[indexpsd], NFFT=nfft, Fs=fs,   color=color1[2])
+
+powerPHxp, freqPHxp = plt.psd((1.e8)*df['PHym'].iloc[indexpsd], NFFT=nfft, Fs=fs,   color=color1[2])
+
+xmax = 30.
+imax = np.where(freq>=xmax)[0][0] 
+
+psd_xp  = 10.*np.log10(powerxp / fs)
+psd_num = 10.*np.log10(power / fsnum)
+
+psdph_xp  = 10.*np.log10(powerPHxp / fs)
+psdph_num = 10.*np.log10(powerPH / fsnum)
+
+psdpb_xp  = 10.*np.log10(powerPBxp / fs)
+psdpb_num = 10.*np.log10(powerPB / fsnum)
+
+ymin = np.min(psd_xp[:imax])
+ymax = 1.1*np.max([np.max(psd_xp[:imax]),np.max(psd_num[:imax])])
+
+yminph = np.min(psdph_xp[:imax])
+ymaxph = 1.1*np.max([np.max(psdph_xp[:imax]),np.max(psdph_num[:imax])])
+
+yminpb = np.min(psdpb_xp[:imax])
+ymaxpb = 1.1*np.max([np.max(psdpb_xp[:imax]),np.max(psdpb_num[:imax])])
+
+kwargs1 = {
+    "tile1": " PSD uy(G) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uygad_xp",
+    "x": freqxp,
+    "y": psd_xp,
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": color1[0],
+    "annotations": [],
+    "xmax": xmax,
+    "ymax": ymax,
+    "ymin": ymin,
+    "ypower": 3,
+}
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+
+# ymin = np.min(psd_num)
+# ymax = 1.1*np.max(psd_num)
+kwargs1 = {
+    "tile1": " PSD uy(G) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uygad_num",
+    "x": freq,
+    "y": psd_num,
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": color1[2],
+    "annotations": [],
+    "xmax": xmax,
+    "ymax": ymax,
+    "ymin": ymin,
+    "ypower": 3,
+}
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+
+#%%
+imax = np.where(freq>=xmax)[0][0] 
+
+kwargs1 = {
+    "tile1": " PSD uy(G) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uygad_xpnum",
+    "x": [freqxp,freq],
+    "y": [psd_xp,psd_num],
+    "rep_save": repsect1,
+    # "label1": [None,None],
+    "label1": ["Experiment","Computation"],
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": color1,
+    "annotations": None,
+    "xmax": xmax,
+    "ymax": ymax,
+    "ymin": ymin,
+    "xpower": 3,
+    "ypower": 3,
+    "loc_leg": "upper right",
+}
+
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+
+    # pion haut :
+kwargs1 = {
+    "tile1": " PSD uy(PH) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uyph_xpnum",
+    "x": [freqPHxp,freqPH],
+    "y": [psdph_xp,psdph_num],
+    "rep_save": repsect1,
+    # "label1": [None,None],
+    "label1": ["Experiment","Computation"],
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": color1,
+    "annotations": None,
+    "xmax": xmax,
+    "ymax": ymaxph,
+    "ymin": yminph,
+    "xpower": 3,
+    "ypower": 3,
+    "loc_leg": "upper right",
+}
+
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+
+    # pion bas :
+kwargs1 = {
+    "tile1": " PSD uy(PB) adapter = f(freq)" + "\n",
+    "tile_save": "PSD_uypb_xpnum",
+    "x": [freqPBxp,freqPB],
+    "y": [psdpb_xp,psdpb_num],
+    "rep_save": repsect1,
+    # "label1": [None,None],
+    "label1": ["Experiment","Computation"],
+    "labelx": r"$Frequency \quad (Hz)$",
+    "labely": r"$Power \quad (dB)$",
+    "color1": color1,
+    "annotations": None,
+    "xmax": xmax,
+    "ymax": ymaxpb,
+    "ymin": yminpb,
+    "xpower": 3,
+    "ypower": 3,
+    "loc_leg": "upper right",
+}
+
+# traj.PSD(df, **kwargs1)
+traj.pltraj2d_list(**kwargs1)
+#%%
+repsect1 = f"{rep_save}variables_ft/specgram/"
+if not os.path.exists(repsect1):
+    os.makedirs(repsect1)
+    print(f"FOLDER : {repsect1} created.")
+else:
+    print(f"FOLDER : {repsect1} already exists.")
+
+#%% uygad 
+# uygad num  :
+kwargs1 = {
+    "title1": " spectogram uy(G) adapter = f(t)" + "\n",
+    "title_save": "specgram_uygad_num",
+    "x": "uzg_tot_ad",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": "Loading Frequency" + " (Hz)",
+    "labely": r"$Frequency \quad (Hz)$",
+    "annotations": None,
+    "nfft": 128,
+    "noverlap": 64,
+    "fs": fsnum,
+    "f1": f1,
+    "f2": f2,
+    "ymax": 80.,
+    "xpower": 3,
+    "ypower": 3,
+    "loc_leg": "upper right",
+}
+
+traj.spectro(df,**kwargs1)
+
+# uygad xp :
+kwargs1 = {
+    "title1": " spectrogram uy(G) adapter = f(t)" + "\n",
+    "title_save": "specgram_uygad_xp",
+    "x": "yA",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": "Loading Frequency" + " (Hz)",
+    "labely": r"$Frequency \quad (Hz)$",
+    "annotations": None,
+    "nfft": 128,
+    "noverlap": 64,
+    "fs": fs,
+    "f1": f1,
+    "f2": f2,
+    "ymax": 80.,
+    "xpower": 3,
+    "ypower": 3,
+    "loc_leg": "upper right",
+}
+
+traj.spectro(df,**kwargs1)
+
+#%% pions haut et bas :
+# uyph num :
+kwargs1 = {
+    "title1": " spectrogram uy(PH) adapter = f(t)" + "\n",
+    "title_save": "specgram_uyph_num",
+    "x": "uzph",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": "Loading Frequency" + " (Hz)",
+    "labely": r"$Frequency \quad (Hz)$",
+    "annotations": None,
+    "nfft": 128,
+    "noverlap": 64,
+    "fs": fs,
+    "f1": f1,
+    "f2": f2,
+    "ymax": 80.,
+    "xpower": 3,
+    "ypower": 3,
+    "loc_leg": "upper right",
+}
+
+traj.spectro(df,**kwargs1)
+
+# uyph xp :
+kwargs1 = {
+    "title1": " spectrogram uy(PH) adapter = f(t)" + "\n",
+    "title_save": "specgram_uyph_xp",
+    "x": "PHym",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": "Loading Frequency" + " (Hz)",
+    "labely": r"$Frequency \quad (Hz)$",
+    "annotations": None,
+    "nfft": 128,
+    "noverlap": 64,
+    "fs": fs,
+    "f1": f1,
+    "f2": f2,
+    "ymax": 80.,
+    "xpower": 3,
+    "ypower": 3,
+    "loc_leg": "upper right",
+}
+
+traj.spectro(df,**kwargs1)
+
+# uypb num :
+kwargs1 = {
+    "title1": " spectrogram uy(PB) adapter = f(t)" + "\n",
+    "title_save": "specgram_uypb_num",
+    "x": "uzpb",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": "Loading Frequency" + " (Hz)",
+    "labely": r"$Frequency \quad (Hz)$",
+    "annotations": None,
+    "nfft": 128,
+    "noverlap": 64,
+    "fs": fs,
+    "f1": f1,
+    "f2": f2,
+    "ymax": 80.,
+    "xpower": 3,
+    "ypower": 3,
+    "loc_leg": "upper right",
+}
+
+traj.spectro(df,**kwargs1)
+
+# uypb xp :
+kwargs1 = {
+    "title1": " spectrogram uy(PB) adapter = f(t)" + "\n",
+    "title_save": "specgram_uypb_xp",
+    "x": "PBym",
+    "rep_save": repsect1,
+    "label1": None,
+    "labelx": "Loading Frequency" + " (Hz)",
+    "labely": r"$Frequency \quad (Hz)$",
+    "annotations": None,
+    "nfft": 128,
+    "noverlap": 64,
+    "fs": fs,
+    "f1": f1,
+    "f2": f2,
+    "ymax": 80.,
+    "xpower": 3,
+    "ypower": 3,
+    "loc_leg": "upper right",
+}
+
+traj.spectro(df,**kwargs1)
+
+#%%
+sys.exit()
+#%%
 kwargs1 = {
     "tile1": "uy(G) adapter = f(f)" + "\n",
     "tile_save": "uygad_f",

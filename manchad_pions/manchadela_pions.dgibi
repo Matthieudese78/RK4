@@ -24,11 +24,14 @@ ez = (-1.) 0. 0. ;
 **************************************************************
 *                   Temps :
 **************************************************************
+*# lbloq :
+lbloq = faux ;
+
 *# ttot :
 ttot = 128. ;
 
 *# t :
-T = 0.2 ;
+T = 128. ;
 
 *# phase :
 phase = 0. ;
@@ -36,8 +39,12 @@ phase = 0. ;
 *# dte :
 dte = 5.e-6 ;
 
+* on prend le multiple de 2 le plus proche pour le pdt : 
+ndte = (enti ((log (1./dte))/(log 2.))) + 1 ;
+dte = (1./(2.**ndte)) ;
+
 *# nsort :
-nsort = 500 ;
+nsort = 4 ;
 
 * NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 NPASe = (ENTI 'PROCH' (T / DTe)) + nsort - 1 ;
@@ -56,8 +63,6 @@ finsi ;
 **************************************************************
 *         adaptateur rigide ou raidtimo ?
 **************************************************************
-*# lbloq :
-lbloq = faux ;
 * le cone est il fixe ?
 lconefixe = faux ;
 * adaptateur : modele elastique ou modele FE ?
@@ -76,8 +81,8 @@ amode_ad = 0.02 ;
 *# amode_m :
 amode_m = 0.02 ;
 *# amode_bloq :
-* amode_bloq = 0.019 ;
-amode_bloq = 0.025 ;
+* amode_bloq = 0.025 ;
+amode_bloq = 0.02 ;
 *# lexp :
 lexp = faux ;
 * est-ce qu'on retire le 2eme mode de l'adaptateur ?
@@ -145,6 +150,9 @@ script = (chai 'manchadela_pions_'slice) ;
 si lbfin ;
   script = (chai script'_bfin') ;
 finsi ;
+si lbloq ;
+  script = (chai script'_bloq') ;
+finsi ; 
 * si (LSMALLEXIT) ;
 * script = (chai 'slice_'slice) ;
 * finsi ;
@@ -160,7 +168,9 @@ opti 'FTRA' (chai 'fig/'script'.ps');
 
 
 *# Fext :
-Fext = 193. ;
+Fext = 79.44  ;
+
+* Fext = 79.44 * (2.**(0.5)) ;
 
 si (lbfin) ;
   fext = fext / 2. ;
@@ -251,7 +261,6 @@ si (lsinb) ;
 *******   
   finsi ;
 finsi ;
-* opti donn 5 ; 
 *si (lexp) ;
 ** on rajoute une decroissance exponentielle :
 *  Bf = (log (fefin/Fext))/ttot ; 
@@ -306,7 +315,7 @@ nmode = 3 ;
 n_tronq = 0 ;
 
 *# nmode_ad :
-nmode_ad = 5 ; 
+nmode_ad = 7 ; 
 
 * au cas ou lmad2 = faux :
 nmad = nmode_ad ;
@@ -920,9 +929,13 @@ lspring = 45.e-2 ;
 
 * bon pour bloquee :
 si lbloq ;
-  b_lam = 0.9*(1.e-2) ;
-  h_lam = 35.*(1.e-3) ;
-  lspring = 46.e-2 ; 
+* qui marche pas mal :
+*  b_lam = 0.9*(1.e-2) ;
+*  h_lam = 35.*(1.e-3) ;
+*  lspring = 46.e-2 ; 
+  b_lam = 5.5*(1.e-3) ;
+  h_lam = 50.*(1.e-3) ;
+  lspring = 45.e-2 ; 
 finsi ;
 * Section ressorts a lames :
 S_lam = b_lam * h_lam ;
@@ -1098,9 +1111,11 @@ pbatb2 = plam_b plus (((-1.)*lspring)*ex) ;
 * pbatb1_enc = plam_b plus (lspring*ex) ;
 * pbatb2_enc = plam_b plus (((-1.)*lspring)*ex) ;
 *
-nbelbat = 20 ;
 
-nbelbat = ENTI (NB_CORPS*(lspring)/L_CORPS) ;
+
+* nbelbat = ENTI (NB_CORPS*(lspring)/L_CORPS) ;
+
+nbelbat = 400 ;
 
 * old :
 * lbath1 = d nbelbat PLAM_H pbath1 ;
@@ -1114,7 +1129,7 @@ pmidb1 = plam_b plus (0.5*(lspring*ex)) ;
 pmidb2 = plam_b plus (0.5*(((-1.)*lspring)*ex)) ;
 
 *# lsprbl :
-lsprbl = 4.e-2 ;
+lsprbl = 5.e-3 ;
 
 * a droite :
 pmidh1d = pmidh1 plus ((lsprbl/2.)*ex) ;
@@ -1137,14 +1152,16 @@ nbelbat12 = ENTI (1.5*(flott nbelbat)/2.) ;
 * lbatb12 = d nbelbat12 pmidb1 pbatb1 ;
 * lbatb22 = d nbelbat12 pmidb2 pbatb2 ;
 * 
-lbath11 = (d nbelbat12 PLAM_H pmidh1g) et (d 2 pmidh1g pmidh1) ;
-lbath21 = (d nbelbat12 PLAM_H pmidh2d) et (d 2 pmidh2d pmidh2) ;
-lbatb11 = (d nbelbat12 PLAM_B pmidb1g) et (d 2 pmidb1g pmidb1) ;
-lbatb21 = (d nbelbat12 PLAM_B pmidb2d) et (d 2 pmidb2d pmidb2) ;
-lbath12 = (d 2 pmidh1 pmidh1d) et (d nbelbat12 pmidh1d pbath1) ;
-lbath22 = (d 2 pmidh2 pmidh2g) et (d nbelbat12 pmidh2g pbath2) ;
-lbatb12 = (d 2 pmidb1 pmidb1d) et (d nbelbat12 pmidb1d pbatb1) ;
-lbatb22 = (d 2 pmidb2 pmidb2g) et (d nbelbat12 pmidb2g pbatb2) ;
+nbelbl = nbelbat*(maxi (lect (enti (lsprbl / lspring)) 1)) ;
+* opti donn 5 ; 
+lbath11 = (d nbelbat12 PLAM_H pmidh1g) et (d nbelbl pmidh1g pmidh1) ;
+lbath21 = (d nbelbat12 PLAM_H pmidh2d) et (d nbelbl pmidh2d pmidh2) ;
+lbatb11 = (d nbelbat12 PLAM_B pmidb1g) et (d nbelbl pmidb1g pmidb1) ;
+lbatb21 = (d nbelbat12 PLAM_B pmidb2d) et (d nbelbl pmidb2d pmidb2) ;
+lbath12 = (d nbelbl pmidh1 pmidh1d) et (d nbelbat12 pmidh1d pbath1) ;
+lbath22 = (d nbelbl pmidh2 pmidh2g) et (d nbelbat12 pmidh2g pbath2) ;
+lbatb12 = (d nbelbl pmidb1 pmidb1d) et (d nbelbat12 pmidb1d pbatb1) ;
+lbatb22 = (d nbelbl pmidb2 pmidb2g) et (d nbelbat12 pmidb2g pbatb2) ;
 *
 lbath1 = lbath11 et lbath12 ;
 lbath2 = lbath21 et lbath22 ;
@@ -1153,18 +1170,18 @@ lbatb2 = lbatb21 et lbatb22 ;
 
 si (raidiss) ;
 * raidisseurs :
-lraid1 = d nbelbat12 pmidh1 pmidb1 ;
-lraid2 = d nbelbat12 pmidh2 pmidb2 ;
+lraid1 = d 10 pmidh1 pmidb1 ;
+lraid2 = d 10 pmidh2 pmidb2 ;
 *
 finsi ;
 * test adaptateur horiz :
 cladry = bloq adaptateur 'RY' ;
 
 si (raidiss) ;
-* adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 et lraid1 et lraid2 ;
-adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 ;
+adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 et lraid1 et lraid2 ;
+* adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 ;
 sinon ;
-adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 ;
+  adaptateur = adaptateur et lbath1 et lbath2 et lbatb1 et lbatb2 ;
 finsi ;
 *
 modlh1 = mode lbath1 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
@@ -1180,22 +1197,23 @@ modlb2 = mode lbatb2 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
 matlb2 = MATE modlb2 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
 *
 si (raidiss) ;
-* igxraid = 10.*igx_lam ;
-* igyraid = 10.*igx_lam ;
-* igraid = 10.*ig_lam ;
-igxraid = igx_lam ;
-igyraid = igx_lam ;
-igraid = ig_lam ;
-sraid = s_lam / 2. ;
+igxraid = 10.*igx_lam ;
+igyraid = 10.*igx_lam ;
+igraid = 10.*ig_lam ;
+sraid = 2.*s_lam ;
+* igxraid = igx_lam ;
+* igyraid = igx_lam ;
+* igraid = ig_lam ;
+* sraid = s_lam / 2. ;
 modraid1 = mode lraid1 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
 matraid1 = MATE modraid1 'YOUN' E 'NU' nu 'RHO' rho  'SECT' sraid 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
 modraid2 = mode lraid2 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
 matraid2 = MATE modraid2 'YOUN' E 'NU' nu 'RHO' rho  'SECT' sraid 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
 *
-* mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 et modraid1 et modraid2 ;
-* mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 et matraid1 et matraid2 ;
-mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 ;
-mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 ;
+mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 et modraid1 et modraid2 ;
+mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 et matraid1 et matraid2 ;
+* mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 ;
+* mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 ;
 sinon ;
 mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 ;
 mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 ;
@@ -1215,7 +1233,7 @@ k_ad = k_ad et clbath1 et clbath2 et clbatb1 et clbatb2 ;
 * on bloque les 3 points sur 5 cm au milieu : 
 * au centre :
 si raidiss ;
-* cote droit :
+* cote droit : couplage haut / bas :
 rlrxraid1  = rela 1. 'RX' pmidh1  + (-1.) 'RX' pmidb1  ;
 rlrxraid1d = rela 1. 'RX' pmidh1d + (-1.) 'RX' pmidb1d ;
 rlrxraid1g = rela 1. 'RX' pmidh1g + (-1.) 'RX' pmidb1g ;
@@ -1228,15 +1246,16 @@ rlrzraid1g = rela 1. 'RZ' pmidh1g + (-1.) 'RZ' pmidb1g ;
 rluzraid1  = rela 1. 'UZ' pmidh1  + (-1.) 'UZ' pmidb1 ;
 rluzraid1d = rela 1. 'UZ' pmidh1d + (-1.) 'UZ' pmidb1d ;
 rluzraid1g = rela 1. 'UZ' pmidh1g + (-1.) 'UZ' pmidb1g ;
-*
+* assemblage :
 rlraid1_rx = rlrxraid1 et rlrxraid1d et rlrxraid1g ; 
 rlraid1_ry = rlryraid1 et rlryraid1d et rlryraid1g ; 
 rlraid1_rz = rlrzraid1 et rlrzraid1d et rlrzraid1g ; 
 rlraid1_uz = rluzraid1 et rluzraid1d et rluzraid1g ;
-* rlraid1    = rlraid1_rx et rlraid1_ry et rlraid1_rz  et rlraid1_uz ;
-rlraid1    = rlraid1_uz ;
+* rlraid1    = rlraid1_rx et rlraid1_ry ;
+* rlraid1    = rlraid1_rx et rlraid1_ry et rlraid1_rz  ;
+* rlraid1    = rlraid1_uz ;
 *
-* cote gauche :
+* cote gauche : couplage haut / bas
 rlrxraid2  = rela 1. 'RX' pmidh2  + (-1.) 'RX' pmidb2  ;
 rlrxraid2d = rela 1. 'RX' pmidh2d + (-1.) 'RX' pmidb2d ;
 rlrxraid2g = rela 1. 'RX' pmidh2g + (-1.) 'RX' pmidb2g ;
@@ -1254,11 +1273,49 @@ rlraid2_rx = rlrxraid2 et rlrxraid2d et rlrxraid2g ;
 rlraid2_ry = rlryraid2 et rlryraid2d et rlryraid2g ; 
 rlraid2_rz = rlrzraid2 et rlrzraid2d et rlrzraid2g ; 
 rlraid2_uz = rluzraid2 et rluzraid2d et rluzraid2g ;
-* rlraid2    = rlraid2_rx et rlraid2_ry et rlraid2_rz  et rlraid2_uz ;
-rlraid2    = rlraid2_uz ;
+* rlraid2    = rlraid2_rx et rlraid2_ry ;
+* rlraid2    = rlraid2_rx et rlraid2_ry et rlraid2_rz  ;
+* rlraid2    = rlraid2_uz ;
+
+* cote droit : couplage points milieux indiv :
+rlrxraidh1  = rela 1. 'RX' pmidh1  + (-1.) 'RX' pmidh1d  ;
+rlrxraidh1  = rlrxraidh1 et (rela 1. 'RX' pmidh1  + (-1.) 'RX' pmidh1g) ;
+rlrxraidb1  = rela 1. 'RX' pmidb1  + (-1.) 'RX' pmidb1d  ;
+rlrxraidb1  = rlrxraidb1 et (rela 1. 'RX' pmidb1  + (-1.) 'RX' pmidb1g) ;
+rlryraidh1  = rela 1. 'RY' pmidh1  + (-1.) 'RY' pmidh1d  ;
+rlryraidh1  = rlryraidh1 et (rela 1. 'RY' pmidh1  + (-1.) 'RY' pmidh1g) ;
+rlryraidb1  = rela 1. 'RY' pmidb1  + (-1.) 'RY' pmidb1d  ;
+rlryraidb1  = rlryraidb1 et (rela 1. 'RY' pmidb1  + (-1.) 'RY' pmidb1g) ;
+rlrzraidh1  = rela 1. 'RZ' pmidh1  + (-1.) 'RZ' pmidh1d  ;
+rlrzraidh1  = rlrzraidh1 et (rela 1. 'RZ' pmidh1  + (-1.) 'RZ' pmidh1g) ;
+rlrzraidb1  = rela 1. 'RZ' pmidb1  + (-1.) 'RZ' pmidb1d  ;
+rlrzraidb1  = rlrzraidb1 et (rela 1. 'RZ' pmidb1  + (-1.) 'RZ' pmidb1g) ;
+
+* rlraid1 = rlrxraidh1 et rlrxraidb1 ;
+rlraid1 = rlrxraidh1 et rlrxraidb1 et rlryraidh1 et rlryraidb1 et rlrzraidh1 et rlrzraidb1 ;
+* rlraid1 = rlraid1 et rlrxraidh1 et rlrxraidb1 et rlryraidh1 et rlryraidb1 ;
+
+* cote gauche : couplage points milieux indiv :
+rlrxraidh2  = rela 1. 'RX' pmidh2  + (-1.) 'RX' pmidh2d  ;
+rlrxraidh2  = rlrxraidh2 et (rela 1. 'RX' pmidh2  + (-1.) 'RX' pmidh2g) ;
+rlrxraidb2  = rela 1. 'RX' pmidb2  + (-1.) 'RX' pmidb2d  ;
+rlrxraidb2  = rlrxraidb2 et (rela 1. 'RX' pmidb2  + (-1.) 'RX' pmidb2g) ;
+
+rlryraidh2  = rela 1. 'RY' pmidh2  + (-1.) 'RY' pmidh2d  ;
+rlryraidh2  = rlryraidh2 et (rela 1. 'RY' pmidh2  + (-1.) 'RY' pmidh2g) ;
+rlryraidb2  = rela 1. 'RY' pmidb2  + (-1.) 'RY' pmidb2d  ;
+rlryraidb2  = rlryraidb2 et (rela 1. 'RY' pmidb2  + (-1.) 'RY' pmidb2g) ;
+rlrzraidh2  = rela 1. 'RZ' pmidh2  + (-1.) 'RZ' pmidh2d  ;
+rlrzraidh2  = rlrzraidh2 et (rela 1. 'RZ' pmidh2  + (-1.) 'RZ' pmidh2g) ;
+rlrzraidb2  = rela 1. 'RZ' pmidb2  + (-1.) 'RZ' pmidb2d  ;
+rlrzraidb2  = rlrzraidb2 et (rela 1. 'RZ' pmidb2  + (-1.) 'RZ' pmidb2g) ;
+
+* rlraid2 = rlrxraidh2 et rlrxraidb2 ;
+rlraid2 = rlrxraidh2 et rlrxraidb2 et rlryraidh2 et rlryraidb2 et rlrzraidh2 et rlrzraidb2 ;
+* rlraid2 = rlraid2 et rlrxraidh2 et rlrxraidb2 et rlryraidh2 et rlryraidb2 ;
 *
 si (non lraidtimo) ;
-k_ad = k_ad et rlraid1 et rlraid2 ;
+* k_ad = k_ad et rlraid1 et rlraid2 ;
 finsi ;
 *
 clbathcent = bloq 'RX' 'RY' pmidh1 ;
@@ -1276,8 +1333,8 @@ clbathcent = clbathcent et  (bloq 'RX' 'RY' pmidh2d) ;
 clbathcent = clbathcent et  (bloq 'RX' 'RY' pmidb1d) ;
 clbathcent = clbathcent et  (bloq 'RX' 'RY' pmidb2d) ;
 *
-k_ad = k_ad et clbathcent ;
-*
+* k_ad = k_ad et clbathcent ;
+* fin si raidiss :
 finsi ;
 * test horiz :
 si (blqry) ;
@@ -1467,15 +1524,34 @@ Kmanchad = Kmanchad et rlxpb et rlypb et rlzpb et rlrxpb et rlrypb et rlrzpb ;
 
 
 * on cree une nouvelle base modale pour l'ensemble : 
+
 *# nmode_bloq :
-nmode_bloq = 6 ;
+nmode_bloq = 7 ;
+
 tmode_bloq = vibr 'IRAM' 0.1 nmode_bloq Kmanchad Mmanchad ;
 * pour checker : 
 * opti trac x ;
-postvibr tmode_bloq ;
 tmode = tmode_bloq ;
+
+postvibr tmode_bloq ;
+
+opti 'FTRA' './fig/bm_manchad_bloq.ps' ;
+
+repe bbloq nmode_bloq ;
+  u1 = tmode_bloq . modes . &bbloq . deformee_modale ;
+  u0 = manu 'CHPO' ((adaptateur et manchette) et mailrepad) 3 'UX' 0. 'UY' 0. 'UZ' 0. ;
+  coul1 = ((u1 coor 1)**2) + ((u1 coor 2)**2) + ((u1 coor 3)**2) ;
+  def1 = DEFO U1 ((adaptateur et manchette) et mailrepad) 0.5 (repad) coul1 ;
+  def0 = DEFO U0 ((adaptateur et manchette) et mailrepad) 'GRIS' ;
+  trac 'CACH' (def0 et def1) 'NOLE' ;
+fin bbloq ;  
+
+opti 'FTRA' (chai 'fig/'script'.ps');
+
 * opti donn 5 ; 
+
 finsi ;
+
 **************************************************************
 *                   Conditions initiales :
 **************************************************************
@@ -1982,6 +2058,13 @@ TINI . 'VITESSE'     = V0_P ;
 TINI . 'ACCELERATION'     = A0_P ;
 finsi ; 
 
+si lbloq ;
+  ptbl1 = (tmode . modes . 1 . point_repere) ; 
+  U0_P = MANU 'CHPO' ptbl1 'NATUR' 'DIFFUS' 'ALFA' 0. ;
+  TINI = TABLE 'INITIAL';
+  TINI . 'DEPLACEMENT' = U0_P ;
+finsi ;
+
 ****************************************************************************   
 *              CHARGEMENT 
 ****************************************************************************
@@ -2443,6 +2526,9 @@ repe bamoad (nmode_ad) ;
   mui = tmode_ad . modes . &bamoad . 'MASSE_GENERALISEE' ;
   fi  = tmode_ad . modes . &bamoad . 'FREQUENCE' ;
   ci = (2.*mui*(2.*pi*fi)*amode_ad) ;
+  si (&bamoad ega 1) ;
+    ci = 5.*ci ;
+  finsi ;
   l_amor_ad = l_amor_ad et ci ;
   mess (chai 'mui = 'mui) ;
   mess (chai 'fi = 'fi) ;
@@ -2456,6 +2542,9 @@ repe bamobl (nmode_bloq) ;
   mui = tmode . modes . &bamobl . 'MASSE_GENERALISEE' ;
   fi  = tmode . modes . &bamobl . 'FREQUENCE' ;
   ci = (2.*mui*(2.*pi*fi)*amode_bloq) ;
+  si (&bamobl ega 1) ;
+    ci = 5.*ci ;
+  finsi ;
   l_amor_bloq = l_amor_bloq et ci ;
   mess (chai 'mui = 'mui) ;
   mess (chai 'fi = 'fi) ;
@@ -2481,7 +2570,8 @@ si (non lbloq) ;
 finsi ;
 
 si (lbloq) ;
-  TRESU = DYNE 'DIFFERENCES_CENTREES' TMODE_bloq TCHAR TLIAI tamor TINI TSORT NPASe DTe NSORT;
+* TRESU = DYNE 'DIFFERENCES_CENTREES' TMODE_bloq TCHAR TLIAI tamor TINI TSORT NPASe DTe NSORT;
+  TRESU = DYNE 'DIFFERENCES_CENTREES' TMODE TCHAR TLIAI tamor TINI TSORT NPASe DTe NSORT;
 finsi ;
 
 ctime = ('TEMP' 'ENTI' 'HORL') ;

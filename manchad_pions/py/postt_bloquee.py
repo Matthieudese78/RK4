@@ -46,13 +46,13 @@ lchoc = False
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
 
-linert = True
+linert = False
 lbfin = False
 lamode = True
 lkxp = False
 lpion = False
 lpcirc = True
-Fext = 193.
+Fext = 79.44*np.sqrt(2.)
 mu = 0.6
 xi = 0.05
 
@@ -65,7 +65,7 @@ vlostr = int(-np.log10(vlimoden))
 dtstr = int(-np.log10(dte))
 xistr = int(100.*xi)
 
-namerep = "/home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/RK4/manchad_pions/py/pickle/manchadela_pions_1"
+namerep = "/home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/RK4/manchad_pions/py/pickle/manchadela_bloq"
 
 
 rep_save = f"./fig/manchadela_bloquee/"

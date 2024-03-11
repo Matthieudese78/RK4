@@ -5,9 +5,12 @@ from csv_to_pickle import csv2pickle
 #%%
 fnonly = False
 lbfin = False
+lbloq = True
 # script1 = 'manchadela_weight' 
 slice = 1 
 script1 = f'manchadela_pions_{slice}' 
+if lbloq:
+    script1 = f'manchadela_bloq' 
 
 # script1 = 'manchadela_pion' 
 # script1 = 'manchadela_RSG' 

@@ -33,7 +33,10 @@ ttot = 128.
 slicevtk = 50
 #%% parametres du calcul 
 
-linert = True
+linert = False
+if linert:
+    repcast = f'../../cinert/'
+
 # raideur de choc de l'experience basee sur le temps de choc :
 lkxp = "faux"
 tcxp = 5.e-3
@@ -50,14 +53,14 @@ lbloq  = "faux"
 blqry = "faux"
 # dte = 1.e-6
 dte = 5.e-6
-nsort = 5
+nsort = 4
 # 3 modes de flexion :
 nmode = 3
 n_tronq = 0
-nmode_ad = 4
+nmode_ad = 6
 # Fext = 79.44
 # Fext = 137. * np.sqrt(2.)
-Fext = 35.
+Fext = 79.44
 fefin = 5.
 vlimoden = 1.e-5
 # amortissement modal :
@@ -71,7 +74,7 @@ amo_ccone = 5.*3.4
 # on donne les 1ers angles en degres !
 theta_ry = 0.
 theta_rz = 0.
-spinini = 30.
+spinini = 0.
 wxini = 0.
 wyini = 0.
 wzini = 0.
@@ -91,7 +94,7 @@ lsinb = "vrai"
 b_lam = 5.5e-3
 h_lam = 50.e-3
 lspring = 45.e-2
-lsprbl = 4.e-2
+lsprbl = 5.e-3
 
 #%% retrait du 2eme mode de l'adaptateur ?
 lmad2 = "faux"
