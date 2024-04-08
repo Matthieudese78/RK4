@@ -3,26 +3,35 @@ import os
 from csv_to_pickle import csvs2pickle
 
 #%%
-stoia = True
-manchette = False
+stoia = False
+manchette = True
 limpact = True
+linert = False
+xi = 0.5
+thini = 45.
+nmode = 10
 #%%
+repload = '../data/'
+repsave = './pickle/'
 #%% rep_load
+if (stoia):
+  repload = f'{repload}stoia/'
+  repsave = f'{repsave}stoia/'
+if (manchette):
+  repload = f'{repload}manchette/'
+  repsave = f'{repsave}manchette/'
 if (limpact):
-    if (stoia):
-        repload = f'../data/impact/stoia/'
-        repsave = f'./pickle/impact/stoia/'
-    if (manchette):
-        repload = f'../data/impact/manchette/'
-        repsave = f'./pickle/impact/manchette/'
-
+  repload = f'{repload}impact/'
+  repsave = f'{repsave}impact/'
 if (not limpact):
-    if (stoia):
-        repload = f'../data/no_impact/stoia/'
-        repsave = f'./pickle/no_impact/stoia/'
-    if (manchette):
-        repload = f'../data/no_impact/manchette/'
-        repsave = f'./pickle/no_impact/manchette/'
+  repload = f'{repload}no_impact/'
+  repsave = f'{repsave}no_impact/'
+if (linert):
+  repload = f'{repload}inert/'
+  repsave = f'{repsave}inert/'
+
+repload = f'{repload}xi_{int(100.*xi)}/thini_{int(thini)}/nmode_{nmode}/'
+repsave = f'{repsave}xi_{int(100.*xi)}/thini_{int(thini)}/nmode_{nmode}/'
 
 if not os.path.exists(repsave):
     os.makedirs(repsave)

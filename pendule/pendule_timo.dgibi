@@ -17,7 +17,7 @@ nmb = faux ;
 xpinv = faux ;
 
 *# linert :
-linert = vrai ;
+linert = faux ;
 
 inert = 0 ;
 si linert ;
@@ -27,18 +27,19 @@ finsi ;
 *# limpact :
 limpact = vrai ;
 
+*# xi :
+xi = 0.5 ;
+
 *********************************************************************
 *                       Valeurs numeriques 
 *********************************************************************
 * opti impi 555 ;
 ***** General :
-* nbr de modes elastiques : 
-* qui marche :
-* nmode_ela = 2 ;
-* nnoeuds = 5 ;
 
 *# nmode_ela :
-nmode_ela = 4 ;
+nmode_ela = 10 ;
+
+nsauvmode = nmode_ela ; 
 
 *# ltronq :
 ltronq = vrai ; 
@@ -48,8 +49,6 @@ ltronq = vrai ;
 *# ntronq : 
 ntronq = 0 ;
 
-*# nnoeuds :
-nnoeuds = 150 ;
 
 * Gravite :
  g = 9.81 ;
@@ -61,15 +60,17 @@ nnoeuds = 150 ;
 ****** Geometrie:
 
 *# stoia :
-stoia = vrai ;
+stoia = faux  ;
 
 *# manchette :
-manchette = faux ;
+manchette = vrai ;
 
 *# theta_ini_x :
 theta_ini_x = 45. ;
+
 theta_ini_y = 0. ;
 theta_ini_z = 0. ;
+
 si (stoia) ;
 * Module d'Young :
  eac = 210.e9 ; 
@@ -84,13 +85,15 @@ h = 0.6 ;
 * Section de la poutre :
 sectpou = (Pi*(R**2)) ;
 * Volume:
-V = (Pi*(R**2.)*h) ;
+V = (Pi*(R**2)*h) ;
 * masse totale du solide utilisee dans tmode , rotas rigides :
 M = V * rho_ac ;
+* opti donn 5 ; 
 * Moment d'inertie / centre de gravite:
 Jx_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
 Jy_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
 Jz_G = 0.5*M*(R**2) ; 
+* opti donn 5 ; 
 * Moments quadratiques de la poutre:
 IGx = (Pi*((2.*R)**4))/64. ;
 IGy = (Pi*((2.*R)**4))/64. ;
@@ -113,18 +116,24 @@ R_ext = D_ext/2. ;
 D_int = 55.3*1.e-3 ;
 R_int = D_int/2. ;
 epai = R_ext - R_int ;
-* par rapport au centre de gravite :
-JX_G = 2.583844235854036 ;
-JY_G = 2.583844235854036 ;
-JZ_G = 0.010527338424895177 ;
 * Section de la poutre :
-sectpou = (Pi*(R_ext**2)) - (Pi*(R_ext**2)) ;
+sectpou = (Pi*(R_ext**2)) - (Pi*(R_int**2)) ;
+v = sectpou*h ;
+* massse manchette :
+* M = 11.46 ;
+M = rho_ac * v ;
+* par rapport au centre de gravite :
+* JX_G = 2.583844235854036 ;
+* JY_G = 2.583844235854036 ;
+* JZ_G = 0.010527338424895177 ;
+jx_g = (1./12.)*M*((3.*((R_ext**2)+(R_int**2))) + (h**2)) ;
+jy_g = jx_g ;
+jz_g = 0.5*M*((R_int**2)+(R_ext**2)) ;
 * Moments quadratiques de la poutre :
 IGx = ( Pi*((D_ext**4) - (D_int**4) )/64. ) ;
 IGy = IGx ;
 IG = ( Pi*((D_ext**4) -  (D_int**4) )/32. ) ;
 finsi ; 
-
 *# parametres de contact :
 Normale_PPLAN = 0. 0. -1. ; 
 * Stoianovici : 
@@ -133,8 +142,12 @@ Jeu1 = 2.*h*(sin theta_ini_x) ;
 muk = 0.075 ;
 Kchoc = 5.5E+07 ;
 
+
 *# bamo :
-Bamo = 2.0E+04 ;
+Bamo = 2.*JX_G*((Kchoc/JX_G)**0.5)*xi ;
+
+* Bamo = 2.0E+04 ;
+
 
 K_T= 0.01*Kchoc ;
 
@@ -160,6 +173,10 @@ finsi ;
 lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
 lindmode = lect (dime lfind)*1 ; 
 
+*# nnoeuds :
+* nnoeuds = 80 ;
+nnoeuds = extr lnoe nmode_ela ;
+
 * Position du centre de gravite : manchette ou stoianovici : 
  LG = (h/2.) ;
 *
@@ -175,13 +192,8 @@ n = 6 ;
 *# dte :
 dte = 1.e-6 ;
 
-* DTE = 10.**((-1.)*(flott n)) ;
-
-
-* on sort 200 pdt / s :
-NSORT = maxi (lect 1 (enti (1.e-3/dte))) ;
-
-* NSORT =  1 ;
+*# nsort :
+NSORT = 10 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -311,31 +323,57 @@ algo = (chai algo'_inert') ;
 finsi ;
 
 si limpact ;
-si (non (bamo <EG 1.e-10)) ;
-samo = (enti (log ((bamo/2.))/(log 10.))) ;
-script = ( chai script'_bamo_'samo) ;
-sinon ;
-script = ( chai script'_bamo_'0) ;
+  si (non (bamo <EG 1.e-10)) ;
+    samo = (enti (log ((bamo))/(log 10.))) ;
+    script = ( chai script'_bamo_'samo) ;
+  sinon ;
+    script = ( chai script'_bamo_'0) ;
+  finsi ;
 finsi ;
+* on rajoute le pdt ;
+script = (chai script'_dt_'dte) ;
 
+repfig = './fig/' ;
+repsave = './data/' ;
 si (stoia) ;
-opti 'FTRA' (chai './fig/stoia/'script'.ps' );
+  repfig = (chai repfig'stoia/') ;
+  repsave = (chai repsave'stoia/') ;
 finsi ;
 si (manchette) ;
-opti 'FTRA' (chai './fig/manchette/'script'.ps' );
+  repfig = (chai repfig'manchette/') ;
+  repsave = (chai repsave'manchette/') ;
+finsi ; 
+si (limpact) ;
+  repfig = (chai repfig'impact/') ;
+  repsave = (chai repsave'impact/') ;
+sinon ;
+  repfig = (chai repfig'no_impact/') ;
+  repsave = (chai repsave'no_impact/') ;
 finsi ;
+si (linert) ;
+  repfig = (chai repfig'inert/') ;
+  repsave = (chai repsave'inert/') ;
+finsi ;
+* on rajoute la valeur de xi :
+repsave = (chai repsave'xi_'(enti (100.*xi))'/') ; 
+* on rajoute la valeur de thini :
+repsave = (chai repsave'thini_'(enti theta_ini_x)'/') ; 
+* on rajoute la valeur de nmode_ela :
+repsave = (chai repsave'nmode_'nmode_ela'/') ; 
 
-* opti donn 5 ; 
+opti 'FTRA' (chai repfig script'.ps') ;
+opti 'SORT' (chai repsave script'.csv') ;
+
 * on rajoute le pas de temps :
-script = (chai script'_dt_'dte) ;
 *
 * Pour afficher les "IF (IIMPI.EQ.333) THEN WRITE(IOIMP,*)":
 * opti impi 333;
-oeil1 = (5.*R) (5.*R) (0.5*h) ;
+* oeil1 = (5.*R) (5.*R) (0.5*h) ;
 ***** RECO totale voulue ?
 RECOTOT = FAUX ;
 EVOLRECO = VRAI ;
-FLVTK = VRAI ;
+FLVTK = faux ;
+lanime = VRAI ;
 * SI (RECOTOT EGA FAUX);
 *   FLVTK = FAUX ;
 * FINSI ;
@@ -347,7 +385,11 @@ P2 = 0. 0. h ;
 * Centre de masse theorique:
 G1 = 0. 0. LG ; 
 ***** Maillage: nombre d'element de la poutre:
- L1 = d nnoeuds P1 P2 ;
+ n1 = (enti (nnoeuds/2)) ;
+ n2 = nnoeuds - n1 ; 
+ L1 = d n1 P1 G1 ;
+ L2 = d n2 G1 P2 ;
+ L1 = L1 et l2 ;
  MESHPOU = L1 ;
 *  OPTI 'TRAC' X ; 
 *  TRAC 'QUAL' meshpou ;
@@ -407,6 +449,8 @@ tmode_elax = vibr 'PROCHE' lfind lindmode kelax m1 ;
 tmode_elay = vibr 'PROCHE' lfind lindmode kelay m1 ; 
 * 
 tmodela = tmode_elaX ;
+* opti trac x ;
+postvibr tmodela ; 
 *
 si (ltronq) ;
 * mail1 = extr (TMODE_ELAX . modes . 1 . deformee_modale) 'MAIL' 'NOMU';
@@ -417,6 +461,8 @@ Tmodela . 'MAILLAGE_REPERE' = VIDE 'MAILLAGE' ;
 numode = 1 ;
 repe bmode (nmode_ela - ntronq) ;
 * mode traction-compression ? a ne prendre qu'une fois en compte.
+*  numdef = tmode_elax . modes . &bmode . 'NUMERO_MODE' ; 
+*  lect1 = lect numdef ;
   lect1 = lect &bmode ;
   tracomp = dans lect1 ltrac ;
 * on complete le maillage repere :
@@ -434,12 +480,13 @@ repe bmode (nmode_ela - ntronq) ;
 * incrementation de numode : 
   numode = numode + 1 ;
 fin bmode ;
-
+nsauvini = (numode - 1) ;
 finsi ;
 
 * postvibr Tmode_elaX ;
 * postvibr Tmode_elaY ;
 
+* opti trac x ;
 postvibr Tmodela ;
 * calcul des xmno : 
 * nmno = (enti (2. * (nmode_ela - ntronq))) ;
@@ -563,14 +610,14 @@ finsi;
 *
 *** TCHAR:
 TCHAR = TABL 'CHARGEMENT';
-		FPES   = FORC 'FZ' ((-1.)*(m*g)) G1;
-		FPESA = PJBA FPES Tmode;
+FPES   = FORC 'FZ' ((-1.)*(m*g)) G1;
+FPESA = PJBA FPES Tmode ;
 
-		Fprog = prog (dime tprog)*1. ; 
-		evolF = evol 'ROSE' 'MANU' 't' tprog 'F' Fprog;
-   DESS evolF 'TITRE' 'chargmt = f(t)' LEGE;
-		CHA_PES = CHAR 'FORC' FPES evolF ;
-		CHA_PESA = CHAR 'FORC' FPESA evolF ;
+Fprog = prog (dime tprog)*1. ; 
+evolF = evol 'ROSE' 'MANU' 't' tprog 'F' Fprog;
+* DESS evolF 'TITRE' 'chargmt = f(t)' LEGE;
+CHA_PES = CHAR 'FORC' FPES evolF ;
+CHA_PESA = CHAR 'FORC' FPESA evolF ;
 
 * Chargement introduit en base A et en base B:
   TCHAR .'BASE_A' = TABL;
@@ -619,12 +666,14 @@ TCHAR = TABL 'CHARGEMENT';
     TSORT . 'LIAISON_B' = TSORL ;
     TSTL2 = table ;
     TSTL2 . 'VITESSE_NORMALE' = VRAI ;
+    TSTL2 . 'VITESSE_TANGENTIELLE' = VRAI ;
     TSTL2 . 'FORCE_DE_CHOC_NORMALE' = VRAI ;
     TSTL2 . 'FORCE_DE_CHOC_TANGENTIELLE' = VRAI ;
     TSTL2 . 'PUISSANCE_USURE_INSTANTANEE' = VRAI ;
     TSORL . TL2 = TSTL2 ; 
    finsi ;
 
+* opti donn 5 ; 
 ************************************************************************
 *     					Resolution DYNE
 ************************************************************************
@@ -706,6 +755,7 @@ PI3 = tresu . TRAVAIL_INTERIEUR . ptrep_rig3;
 *
 *** Energie cinetique :
 EC1 = tresu . TRAVAIL_EXTERIEUR . ptrep_rig1 ;
+* ECDEF =  tresu . travail_exterieur . ptrep_ela_1 ;
 * EC1_ev = EVOL 'ROSE' MANU 't' tprog 'EC1' EC1 ;
 * TAB1 . 'TITRE' . 1 = 'EC';
 * Dess (EC1_ev) 'TITRE' 'EC = f(t)' TAB1 LEGE;
@@ -818,32 +868,6 @@ Dess(AX_ev et AY_ev et AZ_ev) 'TITRE' 'recotot: Acceleration = f(t)' TAB1 LEGE;
 * DTe = (chai 'FORMAT' '(F1.2)' DTe);
 * FIN RECOTOT:
 FINSI;
-******************** VTK *****************************************
-  SI (FLVTK);
-*   REPE BVTK (enti ((Nt)/10tprog (&BVTK)) 'DEPL';
-*    D1 =  RECO  TRESU  Tmode (extr ..));
-   REPE BVTK (Nt - 2);
-*   REPE BVTK (Nt - 2);
-    D1 =  RECO  TRESU  Tmode (extr tprog (&BVTK)) 'DEPL';
-    DEP2 = D1 exco (mots 'UX' 'UY' 'UZ') ;
-*    DEP3 = CHAN 'CHAM' DEP2 mod1 'GRAVITE' ;
-*    DEP4 = CHAN 'CHAM' DEP2 VOL1 ;
-     T_I = (extr tprog &BVTK) ;
-*    mess T_I ;
-*    VOL2 = EXTR DEP2 'MAIL';
-*    VOL3 = CHAN 'POI1' VOL1 ;
-**** DEformees:
-*     def1 = DEFO VOL1 DEP2 1. 'ROUG' ;
-*     def0 = DEFO VOL1 DEP2 0. 'VERT' ;
-*     def2 = def1 et def0 ;
-*     TRAC def2 VOL1 ;
-****
-* OPTI 'SORT'  (chai 'depl_vtk/'script);
-    OPTI 'SORT'  (chai 'depl_vtk/pendule_timo');
-    SORT 'VTK' meshpou 'MAIL' DEP2 'DEPL' 'TEMP' T_I;
-    FIN BVTK;
-* FIN FLVTK:
-  FINSI;
 *********************************************************************
 *                     EVOL RECO au centre de gravite
 *********************************************************************
@@ -936,6 +960,7 @@ dess (uxp2_ev et uYp2_ev et uzp2_ev) 'TITRE' 'P2' ;
 *************************************************************************** sorties rotas rigides : 
 TSORT = table ;
 TSORT . 'dt' = table ;
+TSORT . 'M' = table ;
 TSORT . 'amor' = table ;
 TSORT . 'algo' = table ;
 TSORT . 'rigi' = table ;
@@ -950,6 +975,7 @@ TSORT . 'wx' = table ;
 TSORT . 'wy' = table ;
 TSORT . 'wz' = table ;
 TSORT . 'dt' = prog (dime tprog)*dte ;
+TSORT . 'M' = prog (dime tprog)*M ;
 TSORT . 'amor' = prog (dime tprog)*bamo ;
 TSORT . 'algo' = (mots (dime tprog)*algo) ;
 TSORT . 'rigi' = lect (dime tprog)*irigi ;
@@ -958,7 +984,7 @@ TSORT . 'thini' = prog (dime tprog)*theta_ini_x ;
 * TSORT . 'thini_y' = prog (dime tprog)*theta_ini_x ;
 * TSORT . 'thini_z' = prog (dime tprog)*theta_ini_x ;
 TSORT . 'nnoe' = lect (dime tprog)*nnoeuds ;
-TSORT . 'nmode' = lect (dime tprog)*nmode_ela ;
+TSORT . 'nmode' = lect (dime tprog)*nsauvini ;
 TSORT . 'lbar' = prog (dime tprog)*h ;
 TSORT . 't' = tprog ;
 TSORT . 'ctime' = (prog (dime tprog)*ctime) ;
@@ -1005,8 +1031,9 @@ TSORT . 'quat2' = tresu . deplacement . ptrep_rig2 ;
 TSORT . 'quat3' = tresu . deplacement . ptrep_rig3 ;
 TSORT . 'quat4' = tresu . deplacement . ptrep_rig4 ;
 
-ncolexce = 33 ;
+ncolexce = 34 ; 
 
+si reprise ;
 repe bsauvq nmode_ela ;
   ptrpi = tmodela . modes . &bsauvq . point_repere ;  
   tsort . (chai 'q'&bsauvq)    = table ; 
@@ -1015,18 +1042,21 @@ repe bsauvq nmode_ela ;
   tsort . (chai 'q'&bsauvq'v') = tresu . vitesse . ptrpi ; 
   ncolexce = ncolexce + 2 ;
 fin bsauvq ;
+finsi ; 
 
 si (limpact) ;
 * Pusure durant les impacts : 
 TSORT . 'pusure' = table ;
 TSORT . 'fn' = table ;
 TSORT . 'ft' = table ;
+TSORT . 'vt' = table ;
 TSORT . 'vn' = table ;
 TSORT . 'pusure' = TRESU . TL2 . 'PUISSANCE_USURE_INSTANTANEE' ;
 TSORT . 'vn' = TRESU . TL2 . 'VITESSE_NORMALE' ;
+TSORT . 'vt' = TRESU . TL2 . 'VITESSE_TANGENTIELLE' ;
 TSORT . 'fn' = TRESU . TL2 . 'FORCE_DE_CHOC_NORMALE' ;
 TSORT . 'ft' = TRESU . TL2 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
-ncolexce = ncolexce + 4 ;
+ncolexce = ncolexce + 5 ;
 finsi ;
 *
 
@@ -1074,30 +1104,94 @@ TSORT . 'ayg' = ayg2 ;
 TSORT . 'azg' = azg2 ;
 ncolexce = ncolexce + 9 ;
 FINSI ; 
-si (typmode ega 1) ;
-tsort . 'q1' = tresu . deplacement . ptrep_ela_1  ;
-ncolexce = ncolexce + 1 ;
-finsi ; 
-********************************************************************
+numode = 0 ;
+repe bsauve (nsauvini) ;
+  ptrpi = tmodela . modes . &bsauve . point_repere ;  
+  tsort . (chai 'edef'&bsauve)    = table ; 
+  tsort . (chai 'ec'&bsauve) = table ;
+* tsort . (chai 'q'&bsauve'a') = table ;
+  tsort . (chai 'edef'&bsauve)  = tresu . travail_interieur . ptrpi ; 
+  tsort . (chai 'ec'&bsauve) = tresu . travail_exterieur . ptrpi ; 
 
-si (manchette) ;
-  si (limpact) ;
-    OPTI 'SORT' (CHAI './data/impact/manchette/'script) ;
-  finsi ;
-  si (non limpact) ;
-    OPTI 'SORT' (CHAI './data/no_impact/manchette/'script) ;
-  finsi ;
-finsi ;
-
-si (stoia) ;
-  si (limpact) ;
-    OPTI 'SORT' (CHAI './data/impact/stoia/'script) ;
-  finsi ;
-  si (non limpact) ;
-    OPTI 'SORT' (CHAI './data/no_impact/stoia/'script) ;
-  finsi ;
-finsi ;
+* tsort . (chai 'q'&bsauve'a') = tresu . acceleration . ptrpi ; 
+  ncolexce = ncolexce + 2 ;
+fin bsauve ;
 
 SORT 'EXCE' (TSORT) 'NCOL' ncolexce 'SEPA' 'VIRG' 'DIGI' 10 ;
 
-fin ;
+* si (typmode ega 1) ;
+* tsort . 'q1' = tresu . deplacement . ptrep_ela_1  ;
+* ncolexce = ncolexce + 1 ;
+* finsi ; 
+********************************************************************
+
+* si (manchette) ;
+*   si (limpact) ;
+*     OPTI 'SORT' (CHAI './data/impact/manchette/'script) ;
+*   finsi ;
+*   si (non limpact) ;
+*     OPTI 'SORT' (CHAI './data/no_impact/manchette/'script) ;
+*   finsi ;
+* finsi ;
+
+* si (stoia) ;
+*   si (limpact) ;
+*     OPTI 'SORT' (CHAI './data/impact/stoia/'script) ;
+*   finsi ;
+*   si (non limpact) ;
+*     OPTI 'SORT' (CHAI './data/no_impact/stoia/'script) ;
+*   finsi ;
+* finsi ;
+
+
+******************** VTK *****************************************
+SI (FLVTK) ;
+*   REPE BVTK (enti ((Nt)/10tprog (&BVTK)) 'DEPL';
+*    D1 =  RECO  TRESU  Tmode (extr ..));
+   Ndef = (enti (1.e-3/(nsort*dte))) ;
+   Ndef = maxi (lect 1 Ndef) ;
+   REPE BVTK (enti ((flott Nt)/(flott Ndef))) ;
+*   REPE BVTK (Nt - 2);
+    D1 =  RECO  TRESU  Tmode (extr tprog (Ndef*&BVTK)) 'DEPL';
+    DEP2 = D1 exco (mots 'UX' 'UY' 'UZ') ;
+*    DEP3 = CHAN 'CHAM' DEP2 mod1 'GRAVITE' ;
+*    DEP4 = CHAN 'CHAM' DEP2 VOL1 ;
+     T_I = (extr tprog &BVTK) ;
+*    mess T_I ;
+*    VOL2 = EXTR DEP2 'MAIL';
+*    VOL3 = CHAN 'POI1' VOL1 ;
+**** DEformees:
+*     def1 = DEFO VOL1 DEP2 1. 'ROUG' ;
+*     def0 = DEFO VOL1 DEP2 0. 'VERT' ;
+*     def2 = def1 et def0 ;
+*     TRAC def2 VOL1 ;
+****
+* OPTI 'SORT'  (chai 'depl_vtk/'script);
+    OPTI 'SORT'  (chai 'depl_vtk/pendule_timo') ;
+    SORT 'VTK' meshpou 'MAIL' DEP2 'DEPL' 'TEMP' T_I ;
+   FIN BVTK ;
+* FIN FLVTK:
+FINSI ;
+
+si lanime ;
+  opti 'FTRA' (chai './fig/'script'_anime') ;
+  maillage_vtk = (meshpou) ;
+  Ndef = (enti (5.e-2/(nsort*dte))) ;
+  Ndef = maxi (lect 1 Ndef) ;
+  REPETER BOUC1 (enti ((flott Nt)/(flott Ndef)))   ;
+    TT = EXTR tprog (&BOUC1*Ndef)         ;
+    DEP1 = RECO TRESU tmode TT DEPL        ;
+* DEF1 = DEFO maillage_vtk DEP1 500. (rep) 'BLEU'     ;
+    DEF1 = DEFO DEP1 maillage_vtk 1. ;
+* def1 = DEFO U1 (manchette et mailrep) 1. (rep) coul1 ;
+    SI (&BOUC1 EGA 1) ;
+      DEFTOT1 = DEF1 ; 
+    SINON ;
+      DEFTOT1= DEFTOT1 ET DEF1 ;
+    FINSI                                   ;
+  FIN BOUC1                              ;
+  TRAC DEFTOT1 'ANIME'    ;
+  MESS 'anime trace' ;
+finsi ;
+*
+FIN ;
