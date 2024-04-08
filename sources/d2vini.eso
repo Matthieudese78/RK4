@@ -625,10 +625,15 @@ c------- Cas K,C et M diagonal -----------------------------------
           INA2 = IORSB(IB) - 1
 *         energie de deformation :  
           edef(ib) = 0.d0
+          write(*,*)'inititalisation edef'
+          write(*,*)'na3 = ',na3
+          write(*,*)'ina2 = ',ina2
           do in=1,na3
             i2 = in + ina2
+*            write(*,*)'xk(i2,2) = ',xk(i2,2)
+*            write(*,*)'q1(i2,2) = ',q1(i2,2)
             if (.not.itrig(ib,in)) then
-             edef(ib) = edef(ib) + (xk(i2,2) * (q1(i2,2)**2)/2.d0)
+             edef(ib) = edef(ib) + (xk(i2,1) * (q1(i2,2)**2)/2.d0)
             endif
           enddo
 *         energie cinetique :

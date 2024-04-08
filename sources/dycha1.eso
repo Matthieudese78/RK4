@@ -1,0 +1,81 @@
+C DYCHA1    SOURCE    BP208322  20/03/26    21:15:40     10562          
+c
+C DYCHA4    SOURCE    CHAT      05/01/12    23:01:45     5004
+      SUBROUTINE DYCHA1(XDEP,XVITN,IDIM,IGP,XPALB,NLIAB,I,XFN,XFT,XPUS,
+     &                  iannul)
+      IMPLICIT INTEGER(I-N)
+      IMPLICIT REAL*8(A-H,O-Z)
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Operateur DYNE :                                               *
+*     Calcul de la force de choc pour une liaison  de type :         *
+*     - POINT_PLAN_FROTTEMENT                                        *
+*                                                                    *
+*--------------------------------------------------------------------*
+*                                                                    *
+*     Parametres:                                                    *
+*                                                                    *
+* e   XDEP    Valeur du deplacement sur la normale                   *
+* e   XVITN   Valeur de la vitesse normale au plan tangent du contact*
+* e   IGP     Indice de glissement au pas precedent                  *
+* e/s XPALB   Tableau contenant les parametres de la liaison         *
+* e   NLIAB   Nombre de liaisons sur la base B                       *
+* e   I       Numero de la liaison                                   *
+*   s XFN     Valeur de la force de choc suivant la normale.         *
+*   s XFT     Module de la force de choc projetee sur le plan tangent*
+*   s XPUS    Valeur de la puissance d'usure instantanee             *
+*                                                                    *
+*--------------------------------------------------------------------*
+      DIMENSION XPALB(NLIAB,*)
+      XFN = 0.D0
+      XFT = 0.D0
+      XPUS = 0.D0
+      XJEU  = XPALB(I,2)
+*
+      IF ((XDEP.GE.XJEU).AND.(iannul.EQ.0)) THEN
+*        on recupere les grandeurs scalaires
+         XRAIN = XPALB(I,1)
+         XAMON = XPALB(I,7)
+         XGLIS = XPALB(I,3)
+         XADHE = XPALB(I,4)
+         XRAIT = XPALB(I,5)
+         XAMOT = XPALB(I,6)
+*        on fournit la localisation dans XPALB des grandeurs vectorielles
+c          ID2 = 7 + IDIM
+c          ID3 = 7 + 2*IDIM
+c          ID4 = 7 + 3*IDIM
+c          ID6 = 7 + 5*IDIM
+c          ID7 = 7 + 6*IDIM
+*        Vt, dx_adhet, Ft, , Vt_{n-1 si glissement}, Ft_{fin_glissement}
+         ID2 = 9 + 2*IDIM
+         ID3 = 9 + 3*IDIM
+         ID4 = 9 + 4*IDIM
+         ID6 = 9 + 6*IDIM
+         ID7 = 9 + 7*IDIM
+         XVAL = XDEP - XJEU
+         XFN = - XRAIN * XVAL - XAMON * XVITN
+**        amortissement uniquement dans la phase d'enfoncement, pas de decollement (rappel : normal rentrante):
+*         if (xvitn.gt.0.d0) then
+*           XFN = - XRAIN * XVAL - XAMON * XVITN
+*         else 
+*           xfn = - xrain * xval
+*         endif
+*
+         CALL DYCHFR(IDIM,IGP,XPALB,NLIAB,I,ID2,ID3,ID4,ID6,ID7,XGLIS,
+     &               XADHE,XRAIT,XAMOT,XFN,XFT,XPUS)
+         
+         IF (XFN.GT.0.D0) XFN = 0.D0
+      ELSE
+         IGP = -1
+c          ID4 = 7 + 3*IDIM
+         ID4 = 9 + 4*IDIM
+         DO 10 ID=1,IDIM
+            XPALB(I,ID4+ID) = 0.D0
+ 10      CONTINUE
+      ENDIF
+*
+      RETURN
+      END
+
+
+ 

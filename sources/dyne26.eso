@@ -516,6 +516,12 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
           ENDIF
 *       Fin correction moment d'inertie.
         ENDIF
+* 4)  Si rk4 : on initialise mthth = inertie 
+        do id=1,3
+          do j=1,3
+            mthth(id,j,ib) = inertie(id,j,ib)
+          enddo
+        enddo
 *     Fin 
       ENDIF
 
