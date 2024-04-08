@@ -53,14 +53,19 @@ lbloq  = "faux"
 blqry = "faux"
 # dte = 1.e-6
 dte = 5.e-6
-nsort = 4
+# nsort = 16
+nsort = 8
 # 3 modes de flexion :
 nmode = 3
 n_tronq = 0
 nmode_ad = 6
-# Fext = 79.44
+Fext = 2.*79.44
 # Fext = 137. * np.sqrt(2.)
-Fext = 79.44
+    # pour b_lam = 6.5 :
+# Fext = 0.72*(2.*79.44)
+    # pour b_lam = 7.5 :
+# Fext = 0.83*(2.*79.44)
+
 fefin = 5.
 vlimoden = 1.e-5
 # amortissement modal :
@@ -91,7 +96,9 @@ lsinb = "vrai"
     # springs 
 # h_lam = 40.e-3
 # lspring = 20.e-2
-b_lam = 5.5e-3
+# b_lam = 5.5e-3
+# b_lam = 6.5e-3
+b_lam = 9.e-3
 h_lam = 50.e-3
 lspring = 45.e-2
 lsprbl = 5.e-3
@@ -108,8 +115,9 @@ dtstr = int(1.e6*dte)
 # dtstr = int(-np.log10(dte/(1.e6*dte)))
 xistr = int(100.*xi)
 hlstr = int(h_lam*1.e3)
+blstr = int(b_lam*1.e3)
 lspringstr = int(lspring*1.e2)
-nameglob = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
+nameglob = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_bl_{blstr}_lspr_{lspringstr}'
 if (lamode=="vrai"):
   amodemstr = int(amode_m*100.)
   amodeadstr = int(amode_ad*100.)
@@ -169,8 +177,6 @@ dictini = {
   #          slice : 
              'slice' : slice,
              'slicevtk' : slicevtk,
-  #          ttot : 
-             'ttot' : ttot,
   #          amo_ccone : 
              'amo_ccone' : 3.4*200.,
   #          xi : 
@@ -185,7 +191,7 @@ dictini = {
   #          f2 : 
              'f2' : f2,
   #          t : 
-             't' : 1.,
+             't' : 0.1,
   #          dte : 
              'dte' : dte,
   #          nsort : 

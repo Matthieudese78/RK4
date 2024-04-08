@@ -56,6 +56,9 @@ pL7 = np.array([0,0,-551])
 pL8 = np.array([0,0,-547])
 pL9 = np.array([0,0,139])
 pL10= np.array([0,0,135])
+# matthieu
+GPH = np.array([0.,0.,149.25])
+pointG = pointPH - GPH
 # 
 # %% quel type de modele ?
 lraidtimo = False
@@ -243,6 +246,8 @@ df['posHz'] = 0.*df['xA']
 df['posPHz'] = 0.*df['xA']
 df['posPBz'] = 0.*df['xA']
 
+    # matthieu depl Gtot_ad_br : 
+df['xA'] = (df['xA'])+(df['tyA'])*pointG[2]
 #%% on change de repere :
 exb = np.array([0.0, -1.0, 0.0])
 eyb = np.array([1.0, 0.0, 0.0])

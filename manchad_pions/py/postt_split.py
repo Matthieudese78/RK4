@@ -32,7 +32,7 @@ xcmax = h_pion*np.cos(np.pi/6.)
 ycmax = np.sqrt((ray_circ**2) - (xcmax**2))
 cmax = ycmax - (h_pion*np.sin(np.pi/6.))
 # %% quel type de modele ?
-lraidtimo = True
+lraidtimo = False
 lraidiss = True
 lplam = False
 lplow = False
@@ -47,14 +47,14 @@ lchoc = False
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
 
-linert = True
+linert = False
 lamode = True
 
 lpion = False
 lpcirc = True
 
 # Fext = 193.
-Fext = 35.
+Fext = 2.*79.44
 mu = 0.6
 xi = 0.05
 amode_m = 0.02
@@ -63,15 +63,17 @@ vlimoden = 1.e-5
 spinini = 0.
 dte = 5.e-6
 h_lam = 50.e-3
+b_lam = 9.e-3
 lspring = 45.e-2
 
 hlstr = int(h_lam*1.e3)
+blstr = int(b_lam*1.e3)
 lspringstr = int(lspring*1.e2)
 vlostr = int(-np.log10(vlimoden))
 # dtstr = int(-np.log10(dte))
 dtstr = int(1.e6*dte)
 xistr = int(100.*xi)
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_bl_{blstr}_lspr_{lspringstr}'
 amodemstr = str(int(amode_m*100.))
 amodeadstr = str(int(amode_ad*100.))
 if lamode:
@@ -95,7 +97,7 @@ else:
     print(f"FOLDER : {rep_save} already exists.")
 
 # %% lecture du dataframe :
-df = pd.read_pickle(f"{repload}result.pickle")
+df = pd.read_pickle(f"{repload}2048/result.pickle")
     # on trie et on reindexe :
 df.sort_values(by='t',inplace=True)
 df.reset_index(drop=True,inplace=True)
@@ -664,6 +666,157 @@ kwargs1 = {
     "xymax" : maxdeplPB,
 }
 traj.pltraj2d_pion(df, **kwargs1)
+    # pions bas
+kwargs1 = {
+    "tile1": "Phase 1 : traj. relative PB / PB_ad" + "\n",
+    "tile_save": "traj2d_pb_circ_phase1",
+    "ind": [indnipb1,indipb1],
+    # "ind": [indpPB],
+    "colx": "uxpbrela",
+    "coly": "uypbrela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "color1": ['black','orange'],
+    "rcirc" : ray_circ,
+    "excent" : excent,
+    "spinz" : spinz,     
+    "scatter" : True,
+    "msize" : 0.1,
+    "endpoint" : [False,False],
+    "markers" : ['s','s'],
+    "arcwidth" : sect_pion_deg,
+    "clmax" : cmax,
+    "offsetangle" : 0.,
+    # "xymax" : maxdeplCC,
+    "xymax" : maxdeplPB,
+}
+traj.pltraj2d_pion(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "Resonance : traj. relative PB / PB_ad" + "\n",
+    "tile_save": "traj2d_pb_circ_reso",
+    "ind": [indnipbreso,indipbreso],
+    # "ind": [indpPB],
+    "colx": "uxpbrela",
+    "coly": "uypbrela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "color1": ['black','orange'],
+    "rcirc" : ray_circ,
+    "excent" : excent,
+    "spinz" : spinz,     
+    "scatter" : True,
+    "msize" : 0.1,
+    "endpoint" : [False,False],
+    "markers" : ['s','s'],
+    "arcwidth" : sect_pion_deg,
+    "clmax" : cmax,
+    "offsetangle" : 0.,
+    # "xymax" : maxdeplCC,
+    "xymax" : maxdeplPB,
+}
+traj.pltraj2d_pion(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "Phase 2 : traj. relative PB / PB_ad" + "\n",
+    "tile_save": "traj2d_pb_circ_phase2",
+    "ind": [indnipb2,indipb2],
+    # "ind": [indpPB],
+    "colx": "uxpbrela",
+    "coly": "uypbrela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "color1": ['black','orange'],
+    "rcirc" : ray_circ,
+    "excent" : excent,
+    "spinz" : spinz,     
+    "scatter" : True,
+    "msize" : 0.1,
+    "endpoint" : [False,False],
+    "markers" : ['s','s'],
+    "arcwidth" : sect_pion_deg,
+    "clmax" : cmax,
+    "offsetangle" : 0.,
+    # "xymax" : maxdeplCC,
+    "xymax" : maxdeplPB,
+}
+traj.pltraj2d_pion(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": f"CDM traj. 3d PCcirc / PCad,colorimpact" + "\n",
+    "tile_save": f"traj3d_Ccirc_colimpact_p1",
+    "ind": [indnicc1,indicc1],
+    "colx": "uxcerela",
+    "coly": "uycerela",
+    "colz": "uzcerela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "labelz": r"$Z \quad (m)$",
+    "color1": ["black","orange"],
+    "view": view,
+    "scatter": True,
+    "endpoint": [True,False],
+    "msize": 0.15,
+    "loc_leg": (0.75,0.82),
+    "markers": ['s','s'],
+}
+
+traj.pltraj3d_ind(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": f"CDM traj. 3d PCcirc / PCad,colorimpact" + "\n",
+    "tile_save": f"traj3d_Ccirc_colimpact_reso",
+    "ind": [indniccreso,indiccreso],
+    "colx": "uxcerela",
+    "coly": "uycerela",
+    "colz": "uzcerela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "labelz": r"$Z \quad (m)$",
+    "color1": ["black","orange"],
+    "view": view,
+    "scatter": True,
+    "endpoint": [True,False],
+    "msize": 0.15,
+    "loc_leg": (0.75,0.82),
+    "markers": ['s','s'],
+}
+
+traj.pltraj3d_ind(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": f"CDM traj. 3d PCcirc / PCad,colorimpact" + "\n",
+    "tile_save": f"traj3d_Ccirc_colimpact_p2",
+    "ind": [indnicc2,indicc2],
+    "colx": "uxcerela",
+    "coly": "uycerela",
+    "colz": "uzcerela",
+    "rep_save": repsect1,
+    "label1": ['no contact','contact'],
+    "labelx": r"$X \quad (m)$",
+    "labely": r"$Y \quad (m)$",
+    "labelz": r"$Z \quad (m)$",
+    "color1": ["black","orange"],
+    "view": view,
+    "scatter": True,
+    "endpoint": [True,False],
+    "msize": 0.15,
+    "loc_leg": (0.75,0.82),
+    "markers": ['s','s'],
+}
+
+traj.pltraj3d_ind(df, **kwargs1)
+
 sys.exit()
 #%% centre du cercle - vis a vis adapter : 
 kwargs1 = {

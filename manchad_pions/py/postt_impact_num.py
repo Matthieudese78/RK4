@@ -144,14 +144,15 @@ xcmax = h_pion*np.cos(np.pi/6.)
 ycmax = np.sqrt((ray_circ**2) - (xcmax**2))
 cmax = ycmax - (h_pion*np.sin(np.pi/6.))
 #%% options and directories :
-linert = True
+linert = False
 lamode = True
-lraidtimo = True
+lraidtimo = False
 lraidiss = True
 lkxp = False
 lpion = False
 lpcirc = True
-Fext = 35.
+# Fext = 35.
+Fext = 2.*79.44
 mu = 0.6
 xi = 0.05
 amode_m = 0.02
@@ -160,6 +161,7 @@ vlimoden = 1.e-5
 spinini = 0.
 dte = 5.e-6
 h_lam = 50.e-3
+b_lam = 9.e-3
 lspring = 45.e-2
 
 vlostr = int(-np.log10(vlimoden))
@@ -167,10 +169,11 @@ vlostr = int(-np.log10(vlimoden))
 dtstr = int(1.e6*dte)
 xistr = int(100.*xi)
 hlstr = int(h_lam*1.e3)
+blstr = int(b_lam*1.e3)
 lspringstr = int(lspring*1.e2)
 
 # namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}'
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_bl_{blstr}_lspr_{lspringstr}'
 
 amodemstr = str(int(amode_m*100.))
 amodeadstr = str(int(amode_ad*100.))
@@ -203,6 +206,7 @@ else:
     print(f"FOLDER : {repsect1} already exists.")
 #%% lectue du DF :
 
+# df = pd.read_pickle(f"{repload}2048/result.pickle")
 df = pd.read_pickle(f"{repload}result.pickle")
 
 #%%
@@ -232,8 +236,8 @@ df = df[['t',
          "pusure_pb3",
          ]]
 print(df._is_copy is None)
-df['FN_pb'] = np.sqrt(df['FN_pcircb1']**2 + df['FN_pcircb1']**2 + df['FN_pcircb1'])
-df['FN_ph'] = np.sqrt(df['FN_pcirch1']**2 + df['FN_pcirch1']**2 + df['FN_pcirch1'])
+df['FN_pb'] = np.sqrt(df['FN_pcircb1']**2 + df['FN_pcircb1']**2 + df['FN_pcircb1']**2)
+df['FN_ph'] = np.sqrt(df['FN_pcirch1']**2 + df['FN_pcirch1']**2 + df['FN_pcirch1']**2)
 
 #%%
 df.sort_values(by='t',inplace=True)
@@ -385,7 +389,7 @@ with open(f'{repsect1}impactnumber.tex', 'w') as f:
 #%% Fn, Ft, Eweat 
 dict_stat = {"$F_n$"      : [ str("$" + "%.2f" % np.abs(stat_pb1[4]) ) + "$ N","$" +  str("%.2f" % np.abs(stat_pb2[4])) + "$ N","$" + str("%.2f" % np.abs(stat_pb3[4])) + "$ N"] ,
              "$F_t$"      : [ str("$" + "%.2f" % stat_pb1_tang[4]) + "$ N","$" +  str("%.2f" % stat_pb2_tang[4] ) + "$ N","$" + str("%.2f" % stat_pb3_tang[4]) + "$ N"] ,
-             "$E_{wear}$" : [ str("$" + "%.2f" % (stat_pb1_pus[0]*1.e2)) + "\times 10^{-2}$ J","$" +  str("%.2f" % (stat_pb2_pus[0]*1.e2)) + "\times 10^{-2}$ J","$" + str("%.2f" % (stat_pb3_pus[0]*1.e2))   + "\times 10^{-2}$ J"] , 
+             "$E_{wear}$" : [ str("$" + "%.2f" % (stat_pb1_pus[0]*1.e3)) + "$ mJ","$" +  str("%.2f" % (stat_pb2_pus[0]*1.e3)) + "$ mJ","$" + str("%.2f" % (stat_pb3_pus[0]*1.e3))   + "$ mJ"] , 
              "$t_{mean}$" : [ "$" + str(int(np.round(stat_pb1[1] *1.e6,0))) + "$ $\mu$s"      ,"$" +  str(int(np.round(stat_pb2[1] *1.e6,0))) + "$ $\mu$s"      ,"$" + str(int(np.round(stat_pb3[1]*1.e6,0))) + "$ $\mu$s"]} 
 df_latex = pd.DataFrame(dict_stat,index=row_names)
 latex_df = df_latex.to_latex(escape=False)
@@ -516,7 +520,7 @@ for ipin in np.arange(3):
 
     ax.set_ylabel("Mean Normal Force (N)",fontsize=12)
     ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
-    ax.set_xlim(xmin=0.)
+    ax.set_xlim(xmin=0.,xmax=ttot)
     plt.xticks(rotation=0, ha='right')
     if figshow:
         plt.show()
@@ -545,7 +549,7 @@ for ipin in np.arange(3):
 
     ax.set_ylabel("Mean Normal Force (N)",fontsize=12)
     ax.set_xlabel("Loading Frequency (Hz)",fontsize=12)
-    ax.set_xlim(xmin=f1)
+    ax.set_xlim(xmin=f1,xmax=f2)
     plt.xticks(rotation=0, ha='right')
     if figshow:
         plt.show()
@@ -577,7 +581,7 @@ for ipin in np.arange(3):
 
     ax.set_ylabel("Mean Wear Energy ("+r"$10^{-4}$"+" J)",fontsize=12)
     ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
-    ax.set_xlim(xmin=0.)
+    ax.set_xlim(xmin=0.,xmax=ttot)
     plt.xticks(rotation=0, ha='right')
     if figshow:
         plt.show()
@@ -609,7 +613,7 @@ for ipin in np.arange(3):
 
     ax.set_ylabel("Mean Impact Time (ms)",fontsize=12)
     ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
-    ax.set_xlim(xmin=0.)
+    ax.set_xlim(xmin=0.,xmax=ttot)
     plt.xticks(rotation=0, ha='right')
     if figshow:
         plt.show()
@@ -638,7 +642,7 @@ for ipin in np.arange(3):
 
     ax.set_ylabel("Mean Impact Time (ms)",fontsize=12)
     ax.set_xlabel("Loading Frequency (Hz)",fontsize=12)
-    ax.set_xlim(xmin=f1)
+    ax.set_xlim(xmin=f1,xmax=f2)
     plt.xticks(rotation=0, ha='right')
     if figshow:
         plt.show()
@@ -670,7 +674,7 @@ for ipin in np.arange(3):
 
     ax.set_ylabel("Total wear energy  (J)",fontsize=12)
     ax.set_xlabel(r"$t$"+" (s)",fontsize=12)
-    ax.set_xlim(xmin=0.)
+    ax.set_xlim(xmin=0.,xmax=ttot)
     plt.xticks(rotation=0, ha='right')
     if figshow:
         plt.show()
@@ -701,7 +705,7 @@ for ipin in np.arange(3):
 
     ax.set_ylabel("Total wear energy  (J)",fontsize=12)
     ax.set_xlabel("Loading Frequency (Hz)",fontsize=12)
-    ax.set_xlim(xmin=f1)
+    ax.set_xlim(xmin=f1,xmax=f2)
     plt.xticks(rotation=0, ha='right')
     if figshow:
         plt.show()

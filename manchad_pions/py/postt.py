@@ -32,7 +32,7 @@ xcmax = h_pion*np.cos(np.pi/6.)
 ycmax = np.sqrt((ray_circ**2) - (xcmax**2))
 cmax = ycmax - (h_pion*np.sin(np.pi/6.))
 # %% quel type de modele ?
-lraidtimo = True
+lraidtimo = False
 raidiss = True
 lplam = False
 lplow = False
@@ -47,14 +47,18 @@ lchoc = False
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
 
-linert = True
+linert = False
 lamode = True
 lkxp = False
 lpion = False
 lpcirc = True
 # Fext = 387.
-Fext = 35.
-# Fext = 79.44
+# Fext = 35.
+    # pour b_lam = 6.5
+# Fext = 0.72*2.*79.44
+    # pour b_lam = 7.5
+# Fext = 0.83*2.*79.44
+Fext = 2.*79.44
 mu = 0.6
 xi = 0.05
 
@@ -64,6 +68,7 @@ vlimoden = 1.e-5
 spinini = 0.
 dte = 5.e-6
 h_lam = 50.e-3
+b_lam = 9.e-3
 lspring = 45.e-2
 
 vlostr = int(-np.log10(vlimoden))
@@ -71,9 +76,10 @@ vlostr = int(-np.log10(vlimoden))
 dtstr = int(1.e6*dte)
 xistr = int(100.*xi)
 hlstr = int(h_lam*1.e3)
+blstr = int(b_lam*1.e3)
 lspringstr = int(lspring*1.e2)
 
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_bl_{blstr}_lspr_{lspringstr}'
 # namerep = f'rela_uz_bloq_rota_4cm/calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
 
 amodemstr = str(int(amode_m*100.))
@@ -106,7 +112,7 @@ else:
     print(f"FOLDER : {rep_save} already exists.")
 
 # %% lecture du dataframe :
-df = pd.read_pickle(f"{repload}result.pickle")
+df = pd.read_pickle(f"{repload}2048/result.pickle")
     # on trie et on reindexe :
 df.sort_values(by='t',inplace=True)
 df.reset_index(drop=True,inplace=True)
@@ -119,21 +125,12 @@ t2 = 128.
 # df = df[(df['t']>=t1) & (df['t']<=t2)]
 # df.reset_index(drop=True,inplace=True)
 
-
-# %% 100 points par seconde 
-    # nsort = 10 et x4 dans dopickle_slices :
-# if (not linert):
-#     nsort = 40
-# if (linert):
-#     nsort = 30
-    # on veut un point ttes les :
-discr = 1.e-3
-dtsort = df.iloc[1]['t'] - df.iloc[0]['t']
-ndiscr = int(discr/(dtsort))
-df = df.iloc[::ndiscr]
-# rows2keep = df.index % ndiscr == 0 
-# df = df[rows2keep]
-df.reset_index(drop=True,inplace=True)
+    # NDISCR :
+# discr = 1.e-3
+# dtsort = df.iloc[1]['t'] - df.iloc[0]['t']
+# ndiscr = int(discr/(dtsort))
+# df = df.iloc[::ndiscr]
+# df.reset_index(drop=True,inplace=True)
 # %% frequency = f(t) : 
 f1 = 2.
 f2 = 20.

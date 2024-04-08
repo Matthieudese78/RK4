@@ -25,7 +25,7 @@ ez = (-1.) 0. 0. ;
 *                   Temps :
 **************************************************************
 *# lbloq :
-lbloq = faux ;
+lbloq = vrai ;
 
 *# ttot :
 ttot = 128. ;
@@ -37,14 +37,17 @@ T = 128. ;
 phase = 0. ;
 
 *# dte :
-dte = 5.e-6 ;
+dte = 1./1024. ;
+
+* dte = 2.e-6 ;
 
 * on prend le multiple de 2 le plus proche pour le pdt : 
 ndte = (enti ((log (1./dte))/(log 2.))) + 1 ;
 dte = (1./(2.**ndte)) ;
 
 *# nsort :
-nsort = 4 ;
+nsort = 1 ;
+
 
 * NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 NPASe = (ENTI 'PROCH' (T / DTe)) + nsort - 1 ;
@@ -91,6 +94,15 @@ lmad2 = faux ;
 * raidisseurs entre les ressorts a lames ?
 *# raidiss :
 raidiss = vrai ;
+
+* couplage des rotations ressorts a lam :
+* longueur bloquee :
+*# lsprbl :
+lsprbl = 5.e-2 ;
+
+lmilieu = faux ;
+lhautbas = faux ;
+
 * on sort les depl de plam_h et plam_b ?
 lplam = faux ;
 * seulement 1 point cercle pour les pions haut et bas ?
@@ -126,6 +138,8 @@ SORTLIAI = VRAI ;
 
 *# FLVTK :
 FLVTK = vrai ;
+
+lanime = faux ;
 
 *# SORTEXCEL :
 SORTEXCEL = VRAI ;
@@ -168,9 +182,14 @@ opti 'FTRA' (chai 'fig/'script'.ps');
 
 
 *# Fext :
+* Fext = 2.*79.44  ;
 Fext = 79.44  ;
 
 * Fext = 79.44 * (2.**(0.5)) ;
+* pour blam = 6.5
+* Fext = 0.72 * 79.44 * 2. ;
+* pour blam = 7.5
+* Fext = 0.83 * 79.44 * 2. ;
 
 si (lbfin) ;
   fext = fext / 2. ;
@@ -292,6 +311,8 @@ grav = 9.81 ;
 E = 200.e+9 ;
 NU = 0.3 ;
 RHO = 7900. ; 
+* ressort a lames en acier courant
+Elam = 210.e+9 ;
 ****************************************************************************
 *                       Restitution des modeles 
 ****************************************************************************
@@ -647,13 +668,13 @@ repe bmode (nmode) ;
   ci = (2.*mui*(2.*pi*fi)*amode_m) ;
   l_amor_m = l_amor_m et ci ;
   si (non tracomp) ;
-* on complete le maillage repere :
-  tmode . 'MAILLAGE_REPERE' = (tmode . 'MAILLAGE_REPERE') et (Tmode_elay . 'MODES' . &bmode . 'POINT_REPERE') ;
-  tmode_elay . modes . &bmode . 'NUMERO_MODE' = (numode + 1) ; 
-  tmode . modes . (numode + 1) = tmode_elay . modes . &bmode ;
-* le mode est identique ne 'UY' donc l'amortiessement est le mm :
-  l_amor_m = l_amor_m et (2.*mui*(2.*pi*fi)*amode_m) ;
-  numode = numode + 1 ;
+*   on complete le maillage repere :
+    tmode . 'MAILLAGE_REPERE' = (tmode . 'MAILLAGE_REPERE') et (Tmode_elay . 'MODES' . &bmode . 'POINT_REPERE') ;
+    tmode_elay . modes . &bmode . 'NUMERO_MODE' = (numode + 1) ; 
+    tmode . modes . (numode + 1) = tmode_elay . modes . &bmode ;
+*   le mode est identique ne 'UY' donc l'amortiessement est le mm :
+    l_amor_m = l_amor_m et (2.*mui*(2.*pi*fi)*amode_m) ;
+    numode = numode + 1 ;
   finsi ;
 * incrementation de numode : 
   numode = numode + 1 ;
@@ -684,6 +705,24 @@ repe bloc1 nsauvini ;
   trac 'CACH' (def0 et def1) 'NOLE' ;
 fin bloc1 ;  
 
+opti 'FTRA' './fig/bm_m_2by2.ps' ;
+
+repe blocbi nsauvini ;
+  u1 = tmode . modes . &blocbi . deformee_modale ;
+* u1 = chan (tmode . modes . &blocbi . deformee_modale) nature diffus ;
+  u0 = manu 'CHPO' (manchette et mailrep) 3 'UX' 0. 'UY' 0. 'UZ' 0. ;
+  coul1 = ((u1 coor 1)**2) + ((u1 coor 2)**2) + ((u1 coor 3)**2) ;
+  def0 = DEFO U0 (manchette et mailrep) 'GRIS' ;
+  si ((&blocbi ega 2) ou (&blocbi ega 4) ou (&blocbi ega 6) ou (&blocbi ega 8)) ;  
+    def1 = def1 et (DEFO U1 (manchette et mailrep) 1. (rep) coul1) ;
+    trac 'CACH' (def0 et def1) 'NOLE' ;
+    def1 = vide 'CHPOINT ' ;
+  sinon ;
+    def1 = DEFO U1 (manchette et mailrep) 1. (rep) coul1 ;
+  finsi ;
+fin blocbi ;  
+
+* opti donn 5 ;
 
 opti 'FTRA' (chai 'fig/'script'.ps');
 
@@ -906,7 +945,10 @@ sinon ;
 finsi ;
 
 *# b_lam :
-b_lam = 5.5*(1.e-3) ;
+b_lam = 9.*(1.e-3) ;
+
+* b_lam = 5.5*(1.e-3) ;
+
 
 * hauteur section ressorts (gd cote = largeur bride) :
 * valeur d'origine :
@@ -930,13 +972,16 @@ lspring = 45.e-2 ;
 * bon pour bloquee :
 si lbloq ;
 * qui marche pas mal :
-*  b_lam = 0.9*(1.e-2) ;
+ b_lam = 0.9*(1.e-2) ;
 *  h_lam = 35.*(1.e-3) ;
 *  lspring = 46.e-2 ; 
-  b_lam = 5.5*(1.e-3) ;
+* b_lam = 5.5*(1.e-3) ;
+* b_lam = 6.5*(1.e-3) ;
   h_lam = 50.*(1.e-3) ;
   lspring = 45.e-2 ; 
 finsi ;
+blstr = enti (b_lam*1.e3) ;
+script = (chai script'_bl_'blstr) ;
 * Section ressorts a lames :
 S_lam = b_lam * h_lam ;
 
@@ -1128,8 +1173,6 @@ pmidh2 = plam_h plus (0.5*(((-1.)*lspring)*ex)) ;
 pmidb1 = plam_b plus (0.5*(lspring*ex)) ;
 pmidb2 = plam_b plus (0.5*(((-1.)*lspring)*ex)) ;
 
-*# lsprbl :
-lsprbl = 5.e-3 ;
 
 * a droite :
 pmidh1d = pmidh1 plus ((lsprbl/2.)*ex) ;
@@ -1153,6 +1196,9 @@ nbelbat12 = ENTI (1.5*(flott nbelbat)/2.) ;
 * lbatb22 = d nbelbat12 pmidb2 pbatb2 ;
 * 
 nbelbl = nbelbat*(maxi (lect (enti (lsprbl / lspring)) 1)) ;
+si lmilieu ;
+  nbelbl = 1 ;
+finsi ;
 * opti donn 5 ; 
 lbath11 = (d nbelbat12 PLAM_H pmidh1g) et (d nbelbl pmidh1g pmidh1) ;
 lbath21 = (d nbelbat12 PLAM_H pmidh2d) et (d nbelbl pmidh2d pmidh2) ;
@@ -1185,16 +1231,16 @@ sinon ;
 finsi ;
 *
 modlh1 = mode lbath1 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
-matlh1 = MATE modlh1 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
+matlh1 = MATE modlh1 'YOUN' Elam 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
 
 modlh2 = mode lbath2 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
-matlh2 = MATE modlh2 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
+matlh2 = MATE modlh2 'YOUN' Elam 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
 
 modlb1 = mode lbatb1 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
-matlb1 = MATE modlb1 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
+matlb1 = MATE modlb1 'YOUN' Elam 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
 
 modlb2 = mode lbatb2 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
-matlb2 = MATE modlb2 'YOUN' E 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
+matlb2 = MATE modlb2 'YOUN' Elam 'NU' nu 'RHO' rho  'SECT' S_lam 'INRZ' IGx_lam 'INRY' IGy_lam 'TORS' IG_lam ;
 *
 si (raidiss) ;
 igxraid = 10.*igx_lam ;
@@ -1206,9 +1252,9 @@ sraid = 2.*s_lam ;
 * igraid = ig_lam ;
 * sraid = s_lam / 2. ;
 modraid1 = mode lraid1 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
-matraid1 = MATE modraid1 'YOUN' E 'NU' nu 'RHO' rho  'SECT' sraid 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
+matraid1 = MATE modraid1 'YOUN' Elam 'NU' nu 'RHO' rho  'SECT' sraid 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
 modraid2 = mode lraid2 'MECANIQUE' 'ELASTIQUE' 'TIMO' ;
-matraid2 = MATE modraid2 'YOUN' E 'NU' nu 'RHO' rho  'SECT' sraid 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
+matraid2 = MATE modraid2 'YOUN' Elam 'NU' nu 'RHO' rho  'SECT' sraid 'INRZ' IGxraid 'INRY' IGyraid 'TORS' IGraid ;
 *
 mod1_ad = mod1_ad et modlh1 et modlh2 et modlb1 et modlb2 et modraid1 et modraid2 ;
 mat1_ad = mat1_ad et matlh1 et matlh2 et matlb1 et matlb2 et matraid1 et matraid2 ;
@@ -1251,6 +1297,8 @@ rlraid1_rx = rlrxraid1 et rlrxraid1d et rlrxraid1g ;
 rlraid1_ry = rlryraid1 et rlryraid1d et rlryraid1g ; 
 rlraid1_rz = rlrzraid1 et rlrzraid1d et rlrzraid1g ; 
 rlraid1_uz = rluzraid1 et rluzraid1d et rluzraid1g ;
+
+  rlraidhb1 = rlraid1_rx et rlraid1_ry et rlraid1_rz ;
 * rlraid1    = rlraid1_rx et rlraid1_ry ;
 * rlraid1    = rlraid1_rx et rlraid1_ry et rlraid1_rz  ;
 * rlraid1    = rlraid1_uz ;
@@ -1273,10 +1321,11 @@ rlraid2_rx = rlrxraid2 et rlrxraid2d et rlrxraid2g ;
 rlraid2_ry = rlryraid2 et rlryraid2d et rlryraid2g ; 
 rlraid2_rz = rlrzraid2 et rlrzraid2d et rlrzraid2g ; 
 rlraid2_uz = rluzraid2 et rluzraid2d et rluzraid2g ;
+
+  rlraidhb2 = rlraid2_rx et rlraid2_ry et rlraid2_rz ;
 * rlraid2    = rlraid2_rx et rlraid2_ry ;
 * rlraid2    = rlraid2_rx et rlraid2_ry et rlraid2_rz  ;
 * rlraid2    = rlraid2_uz ;
-
 * cote droit : couplage points milieux indiv :
 rlrxraidh1  = rela 1. 'RX' pmidh1  + (-1.) 'RX' pmidh1d  ;
 rlrxraidh1  = rlrxraidh1 et (rela 1. 'RX' pmidh1  + (-1.) 'RX' pmidh1g) ;
@@ -1291,9 +1340,7 @@ rlrzraidh1  = rlrzraidh1 et (rela 1. 'RZ' pmidh1  + (-1.) 'RZ' pmidh1g) ;
 rlrzraidb1  = rela 1. 'RZ' pmidb1  + (-1.) 'RZ' pmidb1d  ;
 rlrzraidb1  = rlrzraidb1 et (rela 1. 'RZ' pmidb1  + (-1.) 'RZ' pmidb1g) ;
 
-* rlraid1 = rlrxraidh1 et rlrxraidb1 ;
-rlraid1 = rlrxraidh1 et rlrxraidb1 et rlryraidh1 et rlryraidb1 et rlrzraidh1 et rlrzraidb1 ;
-* rlraid1 = rlraid1 et rlrxraidh1 et rlrxraidb1 et rlryraidh1 et rlryraidb1 ;
+rlraidmil1 = rlrxraidh1 et rlrxraidb1 et rlryraidh1 et rlryraidb1 et rlrzraidh1 et rlrzraidb1 ;
 
 * cote gauche : couplage points milieux indiv :
 rlrxraidh2  = rela 1. 'RX' pmidh2  + (-1.) 'RX' pmidh2d  ;
@@ -1310,12 +1357,29 @@ rlrzraidh2  = rlrzraidh2 et (rela 1. 'RZ' pmidh2  + (-1.) 'RZ' pmidh2g) ;
 rlrzraidb2  = rela 1. 'RZ' pmidb2  + (-1.) 'RZ' pmidb2d  ;
 rlrzraidb2  = rlrzraidb2 et (rela 1. 'RZ' pmidb2  + (-1.) 'RZ' pmidb2g) ;
 
-* rlraid2 = rlrxraidh2 et rlrxraidb2 ;
-rlraid2 = rlrxraidh2 et rlrxraidb2 et rlryraidh2 et rlryraidb2 et rlrzraidh2 et rlrzraidb2 ;
-* rlraid2 = rlraid2 et rlrxraidh2 et rlrxraidb2 et rlryraidh2 et rlryraidb2 ;
+rlraidmil2 = rlrxraidh2 et rlrxraidb2 et rlryraidh2 et rlryraidb2 et rlrzraidh2 et rlrzraidb2 ;
 *
-si (non lraidtimo) ;
-* k_ad = k_ad et rlraid1 et rlraid2 ;
+si (lhautbas et lmilieu) ;
+* droite
+  rlraid1 = rlraidhb1 et rlraidmil1 ;
+* gauche
+  rlraid2 = rlraidhb2 et rlraidmil2 ;
+finsi ;
+si (lhautbas et (non lmilieu)) ;
+* droite
+  rlraid1 = rlraidhb1 ;
+* gauche
+  rlraid2 = rlraidhb2 ;
+finsi ;
+si (lmilieu et (non lhautbas)) ;
+* droite
+  rlraid1 = rlraidmil1 ;
+* gauche
+  rlraid2 = rlraidmil2 ;
+finsi ;
+
+si ((non lraidtimo) et (lhautbas ou lmilieu)) ;
+  k_ad = k_ad et rlraid1 et rlraid2 ;
 finsi ;
 *
 clbathcent = bloq 'RX' 'RY' pmidh1 ;
@@ -1403,13 +1467,14 @@ tmode_ad = tmodead2 ;
 nmad = 6 ;
 finsi ;
 
-mopost = mots 'TABL' 'DEFO';
-postvibr  tmode_ad mopost ;
+* mopost = mots 'TABL' 'DEFO';
+* postvibr  tmode_ad mopost ;
 
-* opti 'FTRA' './fig/bm_ad.ps' ;
+opti 'FTRA' (chai 'fig/'script'.ps');
 postvibr  tmode_ad ;
 
-opti 'FTRA' './fig/bm_ad.ps' ;
+blstr = enti (b_lam*1.e3) ;
+opti 'FTRA' (chai './fig/bm_ad_bl_'blstr'.ps') ;
 repe bloc2 nmad ;
   u1 = tmode_ad . modes . &bloc2 . deformee_modale ;
   u0 = manu 'CHPO' (adaptateur et mailrepad) 3 'UX' 0. 'UY' 0. 'UZ' 0. ;
@@ -1535,7 +1600,8 @@ tmode = tmode_bloq ;
 
 postvibr tmode_bloq ;
 
-opti 'FTRA' './fig/bm_manchad_bloq.ps' ;
+blstr = enti (b_lam*1.e3) ;
+opti 'FTRA' (chai './fig/bm_manchad_bloq_bl_'blstr'.ps') ;
 
 repe bbloq nmode_bloq ;
   u1 = tmode_bloq . modes . &bbloq . deformee_modale ;
@@ -2528,6 +2594,7 @@ repe bamoad (nmode_ad) ;
   ci = (2.*mui*(2.*pi*fi)*amode_ad) ;
   si (&bamoad ega 1) ;
     ci = 5.*ci ;
+*   ci = 5.*ci ;
   finsi ;
   l_amor_ad = l_amor_ad et ci ;
   mess (chai 'mui = 'mui) ;
@@ -2543,7 +2610,11 @@ repe bamobl (nmode_bloq) ;
   fi  = tmode . modes . &bamobl . 'FREQUENCE' ;
   ci = (2.*mui*(2.*pi*fi)*amode_bloq) ;
   si (&bamobl ega 1) ;
-    ci = 5.*ci ;
+    ci = 4.*ci ;
+  finsi ;
+  si (&bamobl ega 2) ;
+    ci = 1.*ci ;
+* ci = 5.*ci ;
   finsi ;
   l_amor_bloq = l_amor_bloq et ci ;
   mess (chai 'mui = 'mui) ;
@@ -2767,7 +2838,7 @@ finsi ;
 OPTI 'SORT' (CHAI rep_sauv script) ;
 SORT 'EXCE' (TSORT) 'NCOL' ncolexce 'SEPA' 'VIRG' 'DIGI' 10 ;
 *
-si (flvtk) ;
+si ((flvtk) ou (lanime)) ;
 *   maillage fictif manchette :
 opti oeil (2*r_tete*ez) ;
 
@@ -2892,7 +2963,33 @@ repe bflex nmode_bloq ;
 
   Tmode . modes . &bflex . deformee_modale = (def_mod et def_circ et def_ad) ;
 fin bflex ; 
+* fin si flvtk ou lanime 
+finsi ; 
+
+* dess anime :
+si lanime ;
+  opti 'FTRA' (chai './fig/'script'_anime') ;
+  maillage_vtk = (MANCHETTE_VTK et ADAPTATEUR_VTK et mailrep) ;
+  N_DEF = 128                              ;
+  REPETER BOUC1((DIME tprog)/N_DEF)      ;
+    TT = EXTR tprog (&BOUC1*N_DEF)         ;
+    DEP1 = RECO TRESU tmode TT DEPL        ;
+* DEF1 = DEFO maillage_vtk DEP1 500. (rep) 'BLEU'     ;
+    DEF1 = DEFO DEP1 maillage_vtk 1000. (rep) 'BLEU' ;
+* def1 = DEFO U1 (manchette et mailrep) 1. (rep) coul1 ;
+    SI (&BOUC1 EGA 1) ;
+      DEFTOT1 = DEF1; 
+    SINON;
+      DEFTOT1= DEFTOT1 ET DEF1 ;
+    FINSI                                   ;
+  FIN BOUC1                               ;
+  oeil1 = (L_tot/2.)  (L_tot/2.)  (L_tot/2.)  ;
+  TRAC DEFTOT1 'ANIME'    ;
+  mess 'anime trace' ;
+finsi ;
+
 *   sortie vtk :
+si flvtk ;
 *     on tronque la sortie ne temps :
 *  t1 = 14. ;
 *  t2 = 28. ;
@@ -2914,15 +3011,16 @@ fin bflex ;
 * SORTIE VTK:  
 *   manchette + adaptateur solidares :
     OPTI 'SORT'  (chai 'VTK/'script);
-    SORT 'VTK' (MANCHETTE_VTK et adaptateur_vtk) 'MAIL' DEP1 'DEPL' 'TEMP' T_I;
+    SORT 'VTK' (MANCHETTE_VTK et adaptateur_vtk) 'MAIL' DEP1 'DEPL' 'TEMP' T_I ;
    FIN BVTK;
-
 *  fin si flvtk dans lbloq :
 finsi ;
+
 * on en termine la pour lbloq :
 *
 fin ; 
 *
+* opti donn 5 ;
 * fin si lbloq :
 finsi ;
 ****************************************************************************

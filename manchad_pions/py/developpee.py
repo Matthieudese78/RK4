@@ -91,7 +91,7 @@ cmax = ycmax - (h_pion*np.sin(np.pi/6.))
 L_tete = 28.5*1.e-3 
 
 # %% quel type de modele ?
-lraidtimo = True
+lraidtimo = False
 lraidiss = True
 lsplit = True
 lplam = False
@@ -107,12 +107,12 @@ lchoc = False
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
 
-linert = True
+linert = False
 lamode = True
 lkxp = False
 lpion = False
 lpcirc = True
-Fext = 35.
+Fext = 2.*79.44
 mu = 0.6
 xi = 0.05
 
@@ -126,11 +126,13 @@ vlostr = int(-np.log10(vlimoden))
 dtstr = int(1.e6*dte)
 xistr = int(100.*xi)
 h_lam = 50.e-3
+b_lam = 9.e-3
 lspring = 45.e-2
 hlstr = int(h_lam*1.e3)
+blstr = int(b_lam*1.e3)
 lspringstr = int(lspring*1.e2)
 
-namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_lspr_{lspringstr}'
+namerep = f'calc_fext_{int(Fext)}_spin_{int(spinini)}_vlo_{vlostr}_dt_{dtstr}_xi_{xistr}_mu_{mu}_hl_{hlstr}_bl_{blstr}_lspr_{lspringstr}'
 
 amodemstr = str(int(amode_m*100.))
 amodeadstr = str(int(amode_ad*100.))
@@ -191,32 +193,27 @@ df.reset_index(drop=True,inplace=True)
 # df['freq'] = f1 + ((f2-f1)/ttot)*df['t'] 
 
 #%%
-df = df[['t','FN_CCONE','THMAX','pusure_ccone','pctg_glis_ad','DIMP','RCINC',
-         'quat1',
-         'quat2',
-         'quat3',
-         'quat4',
-         'quat1_ad',
-         'quat2_ad',
-         'quat3_ad',
-         'quat4_ad',
-         'uxscone_tot',
-         'uyscone_tot',
-         'uzscone_tot',
-         'UXcdr',
-         'UYcdr',
-         'UZcdr',
-         'UXpincid',
-         'UYpincid',
-         'UZpincid',
-         'uxg_tot_ad',
-         'uyg_tot_ad',
-         'uzg_tot_ad',
-        #  'VX_pincid',
-        #  'VY_pincid',
-        #  'VZ_pincid',
-         ]]
+col2keep = ['t','FN_CCONE','THMAX','pusure_ccone','pctg_glis_ad','DIMP','RCINC',
+            'quat1',
+            'quat2',
+            'quat3',
+            'quat4',
+            'uxscone_tot',
+            'uyscone_tot',
+            'uzscone_tot',
+            'UXcdr',
+            'UYcdr',
+            'UZcdr',
+            'UXpincid',
+            'UYpincid',
+            'UZpincid',
+            'uxg_tot_ad',
+            'uyg_tot_ad',
+            'uzg_tot_ad']
+if lraidtimo:
+  col2keep.append(['quat1_ad','quat2_ad','quat3_ad','quat4_ad'])
 
+df = df[col2keep]
 
 # # %% 100 points par seconde 
 #     # nsort = 10 et x4 dans dopickle_slices :
@@ -413,8 +410,13 @@ if lsplit:
         # indp2 = df[(df['t']>=ts2) & (df['t']<=te2)].index
         # ireso = i1.union(i2)
     else:
-        ts = 50.
-        te = 80.
+        ts = 20.
+        te = 45.
+        tr1 = ts 
+        tr2 = te 
+        indreso = df[(df['t']>=tr1) & (df['t']<=tr2)].index
+        indp1   = df[(df['t']<=tr1)].index
+        indp2   = df[(df['t']>=tr2)].index
 
 # %% on peut passer le point d'incidence dans la base utilisateur :
 plotpchoc = False
@@ -499,15 +501,12 @@ if lfenetre:
 #%%############################################
 #           preproc 
 ###############################################
-repsect1 = f"{rep_save}variabales_ft/"
+repsect1 = f"{rep_save}developpee/"
 if not os.path.exists(repsect1):
     os.makedirs(repsect1)
     print(f"FOLDER : {repsect1} created.")
 else:
     print(f"FOLDER : {repsect1} already exists.")
-
-#%% thermal sleeve :
-repsect1 = f"{rep_save}developpee/"
 #%% wear power 
 kw = {
         "colval" : "pusure_ccone",
