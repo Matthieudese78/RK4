@@ -17,7 +17,7 @@ nmb = faux ;
 xpinv = faux ;
 
 *# linert :
-linert = faux ;
+linert = vrai ;
 
 inert = 0 ;
 si linert ;
@@ -28,7 +28,7 @@ finsi ;
 limpact = vrai ;
 
 *# xi :
-xi = 0.5 ;
+xi = 0. ;
 
 *********************************************************************
 *                       Valeurs numeriques 
@@ -37,7 +37,7 @@ xi = 0.5 ;
 ***** General :
 
 *# nmode_ela :
-nmode_ela = 10 ;
+nmode_ela = 5 ;
 
 nsauvmode = nmode_ela ; 
 
@@ -174,8 +174,8 @@ lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
 lindmode = lect (dime lfind)*1 ; 
 
 *# nnoeuds :
-* nnoeuds = 80 ;
-nnoeuds = extr lnoe nmode_ela ;
+nnoeuds = 2*(extr lnoe nmode_ela) ;
+* nnoeuds = 800 ;
 
 * Position du centre de gravite : manchette ou stoianovici : 
  LG = (h/2.) ;
@@ -184,16 +184,16 @@ nnoeuds = extr lnoe nmode_ela ;
 *
 ***** Temporel:
 *# t :
-T = 5. ;
+T = 10.e-6 ;
 
 *# n :
 n = 6 ;
 
 *# dte :
-dte = 1.e-6 ;
+dte = 2.e-6 ;
 
 *# nsort :
-NSORT = 10 ;
+NSORT = 1 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -413,6 +413,17 @@ matpou = MATE modpou 'YOUN' eac 'NU' nuac 'RHO' rho_ac  'SECT' sectpou 'INRZ' IG
 K = rigi modpou matpou ;
 * matrice de masse:
 M1 = mass modpou matpou ;
+*********************************************************************
+*                            check modele 
+*********************************************************************
+motgauss = mot 'MASSE' ;
+section = EXCO 'SECT' 1 matpou ;
+s_pou = (COOR meshpou 'CURV') ;
+s_pou = CHAN 'CHAM' s_pou modpou motgauss 'SCALAIRE' ;
+chaml_rho   = exco matpou 'RHO' 'SCAL' ;
+chaml_rho = chan motgauss modpou chaml_rho 'SCALAIRE';
+vmanch = (intg modpou section) ;
+mmanch = vmanch*rho_ac ;
 ****************************************************************************
 *                       Conditions limites 
 ****************************************************************************
@@ -432,6 +443,8 @@ CLelaY = BLOQ 'UY' meshpou ;
 KRX = K et CLRX ;
 KRY = K et CLRY ;
 KRZ = K et CLRZ ;
+* KelaX = K ;
+* KelaY = K ;
 KelaX = K et clelaX ;
 KelaY = K et clelaY ;
 * Kela = K ;
@@ -450,7 +463,8 @@ tmode_elay = vibr 'PROCHE' lfind lindmode kelay m1 ;
 * 
 tmodela = tmode_elaX ;
 * opti trac x ;
-postvibr tmodela ; 
+* postvibr tmodela ; 
+* opti donn 5 ; 
 *
 si (ltronq) ;
 * mail1 = extr (TMODE_ELAX . modes . 1 . deformee_modale) 'MAIL' 'NOMU';
@@ -678,6 +692,7 @@ CHA_PESA = CHAR 'FORC' FPESA evolF ;
 *     					Resolution DYNE
 ************************************************************************
 *
+* opti donn 5 ; 
 'TEMP' 'ZERO' ;
 si (sw) ;
   TRESU = DYNE 'DIFFERENCES_CENTREES' Tmode TLIAI TCHAR TINI TSORT NPASe DTe NSORT;

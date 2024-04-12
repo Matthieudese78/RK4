@@ -21,7 +21,7 @@ manchette = True
 limpact = True
 linert = True
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
-xi = 0.5
+xi = 0.
 thini = 45.
 nmode = 10
 #%% rep_load
@@ -116,7 +116,7 @@ df['ef'] = 0.*df['edef']
 
 #%% on isole les 4 premiers groupes de chocs :
 crit = 0.05
-nstchoc = 2 
+nstchoc = 1 
 lgrp = [[] for _ in range(nstchoc)]
 t0 = df.iloc[fst[0]]['t']
 lgrp[0].append(t0)

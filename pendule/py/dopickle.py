@@ -6,8 +6,8 @@ from csv_to_pickle import csvs2pickle
 stoia = False
 manchette = True
 limpact = True
-linert = False
-xi = 0.5
+linert = True
+xi = 0.
 thini = 45.
 nmode = 10
 #%%
