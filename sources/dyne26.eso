@@ -69,7 +69,7 @@ C DYNE26    SOURCE    CB215821  20/11/04    21:16:12     10766
          REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
          REAL*8 XMNO(NA2,NSB),QVTH(3,NSB),QVR(3,NSB),QVF(NA2,NSB)
          REAL*8 MRTH(3,3,NSB),MTHTH(3,3,NSB)
-         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB)
+         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB),MTOT(NTOT,NTOT,NSB)
          REAL*8 XMPOI(NPDEF,NA2,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
@@ -540,6 +540,62 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
 *       write(*,*)'         nb1m = ',nb1m
 *
         call filldef(ibas,ib,ktphi,ktrot,ktkam,npdef)
+*       on convertit tout ce qu'on peut avec le scaling factor des modes : 
+*       ds filldef le scaling factor est alpha = (xmno/xm)^(1/2)
+*       MAJ masse modale : le ratio mu_new/mu_old = alpha**2
+*       MAJ raideur modale : le ratio gamma_new/gamma_old = alpha**2
+*       MAJ xphilb : le ratio xphilb_new/xphilb_old = alpha
+        na3 = inmsb(ib)
+        ina1 = iorsb(ib) - 1
+        write(*,*)'na3 = ',na3
+        write(*,*)'ina1 = ',ina1
+        do in=1,na3
+          i2 = ina1 + in
+          if (.not.itrig(ib,in)) then
+            xalpha = dsqrt(xmno(in,ib)/xm(i2,1))
+            write(*,*)'xalpha = ',xalpha
+            xm(i2,1) = xmno(in,ib)
+            xk(i2,1) = (xalpha**2)*xk(i2,1)
+            do ip=1,nplsb
+             do id=1,idimb
+               xphilb(ib,ip,in,id) = xphilb(ib,ip,in,id) * xalpha
+             enddo
+            enddo
+          endif
+        enddo
+
+******* Construction des time-invariant matrices :
+*     SKL(3,3,na2,na2,nsb) : Phi_k^T * Phi_l , where Phi_k is the k^th row of the mode shape matrix
+*     k,l=1,..,3 --> coordinates
+*     i,j=1,..,na3 --> modes
+*           --> matrix of size (na2 x na2) for each pair (k,l)
+*     xmno : is the modal mass, since we normalized the modes to unity, 
+*     xmno = Mtot / npdef 
+*       i.e. the total mass of the solide divided by the number of nodes 
+*       i.e. the mass contribution of a node 
+      do k=1,3
+        do l=1,3
+          do i=1,na3
+            do j=1,na3
+              do ip=1,npdef
+                skl(k,l,i,j,ib) = skl(k,l,i,j,ib) +
+     &          (xmpoi(ip,ib) * (xtphi(k,ip,i,ib)*xtphi(l,ip,j,ib)))
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+*     ikl(3,3,na2,nsb) : X0_k wedge Phi_l (l^th line of the modal shape matrix)
+      do k=1,3
+        do l=1,3
+          do i=1,na3
+            do ip=1,npdef
+              ikl(k,l,i,ib) = ikl(k,l,i,ib) + 
+     & (xmpoi(ip,ib)*(xcoophi(k,ip,ib)-xcent(k,ib))*(xtphi(l,ip,i,ib)))
+            enddo
+          enddo
+        enddo
+      enddo
 *
 *        write(*,*)'dyne26 : xcoophi'
 *        do ip = 1,npdef

@@ -154,7 +154,7 @@ C DEVALO    SOURCE    CB215821  20/11/04    21:16:09     10766
          REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
          REAL*8 XMNO(NA2,NSB),QVTH(3,NSB),QVR(3,NSB),QVF(NA2,NSB)
          REAL*8 MRTH(3,3,NSB),MTHTH(3,3,NSB)
-         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB)
+         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB),MTOT(NTOT,NTOT,NSB)
          REAL*8 XMPOI(NPDEF,NA2,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
@@ -515,6 +515,8 @@ c       IF (ITBAS.NE.0.and.(.not.lmodyn)) THEN
           write(*,*)'devalo : BASE_MODALE detectee'
           NSB = 1
           NA2 = NA1
+          write(*,*)'dvalo : na2 = ',na2
+          write(*,*)'dvalo : na1 = ',na1
 *         changement de dimension en cas de corps rigide
           CALL ACCTAB(ITBAS2,'MOT',I0,X0,'MODES',L0,IP0,
      &                    'TABLE',I1,X1,' ',L1,IBAS)
@@ -748,6 +750,7 @@ c         --fin du cas lecture table de la IB ieme base modale non ok
 *                                                                     rigides.
 * old        NTRIG = NPREF + NPRIG
         NSB2 = 3*NSB
+        ntot = 3 + na2
         SEGINI,MTROT
         KTROT=MTROT
       ENDIF

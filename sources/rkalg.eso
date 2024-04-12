@@ -103,7 +103,7 @@
          REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
          REAL*8 XMNO(NA2,NSB),QVTH(3,NSB),QVR(3,NSB),QVF(NA2,NSB)
          REAL*8 MRTH(3,3,NSB),MTHTH(3,3,NSB)
-         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB)
+         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB),MTOT(NTOT,NTOT,NSB)
          REAL*8 XMPOI(NPDEF,NA2,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
@@ -156,6 +156,9 @@
       NIP    = XABSCI(/2)
       NCRIG = ILIRIG(/2)
       NSB    = INMSB(/1)
+*     les trnaslations sont inclues dans les modes flexibles,
+*     donc dans na2 :
+      NTOT = MTOT(/1)
       IERRD = 0
 * Si INMSB de MTPHI venait a disparaitre (nbr de modes elastiques dans la ss base IB):
       IF (RIGIDE) THEN
@@ -195,7 +198,7 @@ c       write(*,*) 'Q3(:,2) =',(Q3(iou,2),iou=1,NA1)
      &            FTOTB,FTOTBA,XPTB,
      &            FEXPSM,FINERT,IERRD,FTEST,FTEST2,
      &            WEXT,WINT,XABSCI,XORDON,NIP,FTEXB,FEXB,KTROT,
-     &            KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M)
+     &            KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M,NSB,NTOT)
       IF (IERRD.NE.0) THEN
          IF (IERRD.EQ.1) CALL ERREUR(528)
          RETURN
@@ -257,7 +260,7 @@ c        if(I.le.5) write(*,*) '=== Calcul du pas ===',I
      &             XVALB,FTOTB,FTOTBA,XPTB,
      &             FEXPSM,FINERT,IERRD,FTEST,FTEST2,
      &             WEXT,WINT,XABSCI,XORDON,NIP,FTEXB,FEXB,KTROT,
-     &             KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M)
+     &             KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M,NSB,NTOT)
 *
 *
          IF (IERRD.NE.0) THEN

@@ -30,7 +30,7 @@
          REAL*8 XTPHI(3,NPDEF,NA2,NSB),XCOOPHI(3,NPDEF,NSB) 
          REAL*8 XMNO(NA2,NSB),QVTH(3,NSB),QVR(3,NSB),QVF(NA2,NSB)
          REAL*8 MRTH(3,3,NSB),MTHTH(3,3,NSB)
-         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB)
+         REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB),MTOT(NTOT,NTOT,NSB)
          REAL*8 XMPOI(NPDEF,NA2,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
@@ -48,7 +48,7 @@
          REAL*8 XPHILB(NSB,NPLSB,NA2,IDIMB)
       ENDSEGMENT
 
-      logical l0,l1,lcoo
+      logical l0,l1,lcoo,lnortot,lnorcomp
       character*8  typret,charre,monmot,cmot,morigi
       integer lpoi(npts)
 *
@@ -67,6 +67,8 @@
 *     write(*,*)'          na1 = ',na1
 *
       lcoo = .false.
+      lnortot = .true.
+      lnorcomp = .false.
 *     initialisation list :
       do ip=1,npdef
         lpoi(ip) = 0
@@ -152,6 +154,7 @@
           endif
 *         sinon on rempli xtphi :
 *         write(*,*)'boucle sur xtphi'
+          xnortot = 0.d0
           do ip=1,npdef
             ipoin = lpoi(ip)
 *           write(*,*)'ipoin = ',ipoin
@@ -171,48 +174,82 @@
 *             MAJ max des composantes :
               xcmax = max(xcmax,dabs(xval))
 *             write(*,*)'uz = ',xval
+              xnortot = xnortot + ((xtphi(1,ip,inel,ib)**2) +
+     &                             (xtphi(2,ip,inel,ib)**2) +
+     &                             (xtphi(3,ip,inel,ib)**2))
             endif
           enddo
+          xnortot = dsqrt(xnortot)
+          if (lnortot) then
+            xalpha = xnortot
+          endif
+          if (lnorcomp) then
+            xalpha = xcmax
+          endif
+          write(*,*)'xalpha = ',xalpha
+          write(*,*)'xnortot = ',xnortot
+          write(*,*)'xcmax = ',xcmax
 *         on rempli xtphin avec la base modale normee / comp max : 
-          if (xcmax.gt.1.d-4) then
+*                    ou / norme euclidienne du mode.
+          ina1 = iorsb(ib) - 1
+          i2 = ina1 + inel
+          if (xalpha.gt.1.d-4) then
+*           normalisation de la masse modale :
+            xmno(inel,ib) = xm(i2,1)/(xalpha**2)
+*           normalisation des modes :
             xnortot = 0.d0
             do ip=1,npdef
-*             xtphin(1,ip,inel,ib) = xtphin(1,ip,inel,ib)/xcmax
-*             xtphin(2,ip,inel,ib) = xtphin(2,ip,inel,ib)/xcmax
-*             xtphin(3,ip,inel,ib) = xtphin(3,ip,inel,ib)/xcmax
+*             on norme par rapport a la plus grande composante :
+              xtphi(1,ip,inel,ib) = xtphi(1,ip,inel,ib)/xcmax
+              xtphi(2,ip,inel,ib) = xtphi(2,ip,inel,ib)/xcmax
+              xtphi(3,ip,inel,ib) = xtphi(3,ip,inel,ib)/xcmax
+*             on recalcule la norme si norm largest comp : 
               xnortot = xnortot + ((xtphi(1,ip,inel,ib)**2) +
      &                             (xtphi(2,ip,inel,ib)**2) +
      &                             (xtphi(3,ip,inel,ib)**2))
             enddo
-            xnortot = dsqrt(xnortot)
-*           write(*,*)'xnortot inel = ',xnortot
-*           on remplit xmno avec la masse modale normee / comp max : 
-            ina1 = iorsb(ib) - 1
-            i2 = ina1 + inel
-            xmno(inel,ib) = xm(i2,1) / (xcmax**2)
-*           write(*,*)'  xmno mode inel ',inel
-*           write(*,*)'                 ',xmno(inel,ib)
+            xnortot=dsqrt(xnortot)
+*
+            write(*,*)'  masse totale solide ib ',ib
+            write(*,*)'                   ',mtsb(ib)
+            write(*,*)'  masse modale d origine : xm inel ',inel
+            write(*,*)'                   ',xm(i2,1)
+            if (lnortot) then
+              write(*,*)'  eucl. norm normalization : xmno inel ',inel
+              write(*,*)'                    ',xmno(inel,ib)
+              write(*,*)'  npdef X xmno inel',float(npdef)*xmno(inel,ib)
+*             si normalisation / norme du mode : xmno = mtot / npdef
+*               = massse a attribuer a chacun des points.
+              do ip=1,npdef
+                xmpoi(ip,inel,ib) = xmno(inel,ib)
+              enddo
+            endif
+*
+            if (lnorcomp) then
+              write(*,*)'  largest comp normalization : xmno inel ',inel
+              write(*,*)'                     ',xmno(inel,ib)
+              write(*,*)'  4 X xmno inel ',4.d0*xmno(inel,ib)
+*             largest comp : masses ponctuelles individuelles : 
+              do ip=1,npdef
+                xnor = dsqrt((xtphi(1,ip,inel,ib)**2) + 
+     &                       (xtphi(2,ip,inel,ib)**2) +
+     &                       (xtphi(3,ip,inel,ib)**2))
+                xmpoi(ip,inel,ib) = xmno(inel,ib) * (xnor/xnortot)
+              enddo
+            endif
 *           warning : 
-            if (xmno(inel,ib).gt.mtsb(ib)) then
+            if (xmno(inel,ib).gt.(1.05*mtsb(ib))) then
               write(*,*)'filldef : '
-              write(*,*)'masse mode norme > masse totale ss base!!!'
+              write(*,*)'masse mode norme > 1.05*masse tot ss base!!!'
               call exit(1)
             endif
-*           masses ponctuelles individuelles : 
-            do ip=1,npdef
-              xnor = dsqrt((xtphi(1,ip,inel,ib)**2) + 
-     &                     (xtphi(2,ip,inel,ib)**2) +
-     &                     (xtphi(3,ip,inel,ib)**2))
-              xmpoi(ip,inel,ib) = xmno(inel,ib) * (xnor/xnortot)
-*             write(*,*)'xmpoi = '
-*             write(*,'((1X,F9.6))') , (xmpoi(ip,inel,ib))
-            enddo
           else 
+*           pour une torsion, tout est nul 
             xmno(inel,ib) = 0.d0
             do ip = 1,npdef
-*             do id=1,3
-*               xtphin(id,ip,inel,ib) = 0.d0
-*             enddo
+              do id=1,3
+                xtphi(id,ip,inel,ib) = 0.d0
+              enddo
               xmpoi(ip,inel,ib) = 0.d0
             enddo
           endif
