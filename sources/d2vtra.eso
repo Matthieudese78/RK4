@@ -146,11 +146,24 @@ c     segment local : calcule l operateur et son inverse
              do id=1,3
                xcoophi(id,ip,ib) = 0.d0
                do in=1,na2
-                 xmpoi(ip,in,ib) = 0.d0
+                 xmpoi(ip,ib) = 0.d0
                  xtphi(id,ip,in,ib) = 0.d0
                enddo
              enddo
            enddo
+         enddo
+*        on initialise les skl et ikl a 0 :
+         do ib=1,nsb
+            do in=1,na2
+               do id=1,3
+                  do j=1,3
+                     ikl(id,j,in,ib) = 0.d0
+                     do i2=1,na2
+                     skl(id,j,in,i2,ib) = 0.d0
+                     enddo
+                  enddo
+               enddo
+            enddo
          enddo
       endif
 ************************************************************************

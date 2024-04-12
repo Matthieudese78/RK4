@@ -80,7 +80,7 @@
             qv1(id) = 0.d0
             do j=1,3
               qv1(id) = qv1(id) +
-     &        ((wchap2(id,j)*x1(j)) * xmpoi(ip,in,ib)) 
+     &        ((wchap2(id,j)*x1(j)) * xmpoi(ip,ib)) 
             enddo
           enddo
 ******************************************************************
@@ -90,10 +90,10 @@
             do j=1,3
           qv1(id) = qv1(id) +
      &    (2. * wchap(id,j) * (xtphi(j,ip,in,ib)*q2(i2,ind)) *
-     &                xmpoi(ip,in,ib))
+     &                xmpoi(ip,ib))
             enddo
 **           ponderation par la masse ponctuelle : 
-*            qv1(id) = qv1(id) * xmpoi(ip,in,ib)
+*            qv1(id) = qv1(id) * xmpoi(ip,ib)
           enddo
 ******************************************************************
 *         projection sur le mode : (avec le signe -)

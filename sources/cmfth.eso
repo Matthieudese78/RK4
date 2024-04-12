@@ -118,11 +118,11 @@
           do j=1,na3
             i2 = j + ina1
             mfth(in,1,ib) = mfth(in,1,ib) + 
-                        q1(i2,1)*(skl(2,3,j,in,ib) - skl(3,2,j,in,ib))
+     &                q1(i2,1)*(skl(2,3,j,in,ib) - skl(3,2,j,in,ib))
             mfth(in,2,ib) = mfth(in,2,ib) + 
-                        q1(i2,1)*(skl(3,1,j,in,ib) - skl(1,3,j,in,ib))
+     &                q1(i2,1)*(skl(3,1,j,in,ib) - skl(1,3,j,in,ib))
             mfth(in,3,ib) = mfth(in,3,ib) + 
-                        q1(i2,1)*(skl(1,2,j,in,ib) - skl(2,1,j,in,ib))
+     &                q1(i2,1)*(skl(1,2,j,in,ib) - skl(2,1,j,in,ib))
           enddo
         endif
       enddo

@@ -119,11 +119,11 @@
             do j=1,3
               do k=1,3
                 mrth(id,j,ib) = mrth(id,j,ib) - 
-     &          (xmpoi(ip,in,ib)*rot(id,k,ind,ib)*Xtcha(k,j))
+     &          (xmpoi(ip,ib)*rot(id,k,ind,ib)*Xtcha(k,j))
               enddo
-*             mrth(id,j) =  xmpoi(ip,in,ib) * mrth(id,j)
+*             mrth(id,j) =  xmpoi(ip,ib) * mrth(id,j)
 *             write(*,*)'xmpoi(',ip,in,ib,') : '
-*             write(*,*),xmpoi(ip,in,ib)
+*             write(*,*),xmpoi(ip,ib)
 *             write(*,*)'mrth(id,j,ib) : '
 *             write(*,*),mrth(id,j,ib)
             enddo
@@ -134,7 +134,7 @@
 *             do k=1,3
 *               mthr(id,j) = mthr(id,j) + Xtcha(id,k) * rot(j,k,ind,ib)
 *             enddo
-*             mthr(id,j) =  xmpoi(ip,in,ib) * mthr(id,j)
+*             mthr(id,j) =  xmpoi(ip,ib) * mthr(id,j)
 *           enddo
 *         enddo
  1      continue

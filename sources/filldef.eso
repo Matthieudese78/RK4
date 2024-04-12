@@ -201,9 +201,9 @@
             xnortot = 0.d0
             do ip=1,npdef
 *             on norme par rapport a la plus grande composante :
-              xtphi(1,ip,inel,ib) = xtphi(1,ip,inel,ib)/xcmax
-              xtphi(2,ip,inel,ib) = xtphi(2,ip,inel,ib)/xcmax
-              xtphi(3,ip,inel,ib) = xtphi(3,ip,inel,ib)/xcmax
+              xtphi(1,ip,inel,ib) = xtphi(1,ip,inel,ib)/xalpha
+              xtphi(2,ip,inel,ib) = xtphi(2,ip,inel,ib)/xalpha
+              xtphi(3,ip,inel,ib) = xtphi(3,ip,inel,ib)/xalpha
 *             on recalcule la norme si norm largest comp : 
               xnortot = xnortot + ((xtphi(1,ip,inel,ib)**2) +
      &                             (xtphi(2,ip,inel,ib)**2) +
@@ -222,7 +222,7 @@
 *             si normalisation / norme du mode : xmno = mtot / npdef
 *               = massse a attribuer a chacun des points.
               do ip=1,npdef
-                xmpoi(ip,inel,ib) = xmno(inel,ib)
+                xmpoi(ip,ib) = xmno(inel,ib)/float(npdef)
               enddo
             endif
 *
@@ -235,7 +235,7 @@
                 xnor = dsqrt((xtphi(1,ip,inel,ib)**2) + 
      &                       (xtphi(2,ip,inel,ib)**2) +
      &                       (xtphi(3,ip,inel,ib)**2))
-                xmpoi(ip,inel,ib) = xmno(inel,ib) * (xnor/xnortot)
+                xmpoi(ip,ib) = xmno(inel,ib) * (xnor/xnortot)
               enddo
             endif
 *           warning : 
@@ -251,7 +251,7 @@
               do id=1,3
                 xtphi(id,ip,inel,ib) = 0.d0
               enddo
-              xmpoi(ip,inel,ib) = 0.d0
+              xmpoi(ip,ib) = 0.d0
             enddo
           endif
 *           

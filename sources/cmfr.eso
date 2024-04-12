@@ -55,11 +55,11 @@
           do ip=1,npdef
             do j=1,3
               mfr(in,id,ib) = mfr(in,id,ib) + 
-     &        (xmpoi(ip,in,ib)*(xtphi(j,ip,in,ib) * rot(id,j,ind,ib)))
+     &        (xmpoi(ip,ib)*(xtphi(j,ip,in,ib) * rot(id,j,ind,ib)))
             enddo
 *         **** fin boucle sur les points 
           enddo
-*         mfr(in,id) = xmpoi(ip,in,ib) * mfr(in,id)
+*         mfr(in,id) = xmpoi(ip,ib) * mfr(in,id)
         enddo
 *       mrf :
 *       do id=1,3
@@ -68,7 +68,7 @@
 *           mrf(in,id) = mrf(in,id) +
 *     &                 (rot(id,j,ind,ib) * xtphi(j,ip,in,ib))
 *         enddo
-*         mrf(in,id) = xmpoi(ip,in,ib) * mrf(in,id)
+*         mrf(in,id) = xmpoi(ip,ib) * mrf(in,id)
 *       enddo
  1    continue
 

@@ -110,7 +110,7 @@
           do in=1,na3
             i2 = ina1 + in
             mthth(k,l,ib) = mthth(k,l,ib) - 
-     &                     q1(i2)*(ikl(k,l,in,ib)+ikl(l,k,in,ib)) 
+     &                     q1(i2,1)*(ikl(k,l,in,ib)+ikl(l,k,in,ib)) 
           enddo
         endif
       enddo

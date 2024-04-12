@@ -97,9 +97,9 @@
           do id=1,3
 *           shabana old edition p321 : - d(I_{thth})/dt * W :
             do j=1,3
-             qvth(id,ib) = qvth(id,ib) - (2.*xmpoi(ip,in,ib) * 
+             qvth(id,ib) = qvth(id,ib) - (2.*xmpoi(ip,ib) * 
      &      (x1cha2(id,j)*q1(i2,ind)*q2(i2,ind))*omeg2(j,ind,ib)) -
-     &      (xmpoi(ip,in,ib)*(xcof(id,j)+xfco(id,j))*q2(i2,ind)*
+     &      (xmpoi(ip,ib)*(xcof(id,j)+xfco(id,j))*q2(i2,ind)*
      &         omeg2(j,ind,ib))
 *              write(*,*)'xfco+xcof(id,j) = ',(xcof(id,j)+xfco(id,j))
             enddo
