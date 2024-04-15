@@ -46,37 +46,47 @@
 *     ina1 = iorsb(ib) - 1
 ******************************************************************
 ******************************************************************
-      do 1 in = 1,na3
-        if (itrig(ib,in)) goto 1
-        i2 = ina1 + in
-*        mfr :
-        do id=1,3
-          mfr(in,id,ib) = 0.d0
-*         **** debut boucle sur les points 
-          do ip=1,npdef
-            do j=1,3
-              mfr(in,id,ib) = mfr(in,id,ib) + 
-     &        (xmpoi(ip,ib)*(xtphi(j,ip,in,ib) * rot(id,j,ind,ib)))
-            enddo
-*         **** fin boucle sur les points 
-          enddo
-*         mfr(in,id) = xmpoi(ip,ib) * mfr(in,id)
-        enddo
-*       mrf :
-*       do id=1,3
-*         mrf(in,id) = 0.d0
-*         do j=1,3
-*           mrf(in,id) = mrf(in,id) +
-*     &                 (rot(id,j,ind,ib) * xtphi(j,ip,in,ib))
-*         enddo
-*         mrf(in,id) = xmpoi(ip,ib) * mrf(in,id)
-*       enddo
- 1    continue
+*      do 1 in = 1,na3
+*        if (itrig(ib,in)) goto 1
+*        i2 = ina1 + in
+**        mfr :
+*        do id=1,3
+*          mfr(in,id,ib) = 0.d0
+**         **** debut boucle sur les points 
+*          do ip=1,npdef
+*            do j=1,3
+*              mfr(in,id,ib) = mfr(in,id,ib) + 
+*     &        (xmpoi(ip,ib)*(xtphi(j,ip,in,ib) * rot(id,j,ind,ib)))
+*            enddo
+**         **** fin boucle sur les points 
+*          enddo
+**         mfr(in,id) = xmpoi(ip,ib) * mfr(in,id)
+*        enddo
+**       mrf :
+**       do id=1,3
+**         mrf(in,id) = 0.d0
+**         do j=1,3
+**           mrf(in,id) = mrf(in,id) +
+**     &                 (rot(id,j,ind,ib) * xtphi(j,ip,in,ib))
+**         enddo
+**         mrf(in,id) = xmpoi(ip,ib) * mrf(in,id)
+**       enddo
+* 1    continue
 
 *       write(*,*)'MFR :'
 *       do in=1,na3
 *          write(*,'(3(1X,F8.5))') , (mfr(in,id,ib),id=1,3)
 *       enddo
+******************************************************************
+*     NEW : AVEC BLF
+******************************************************************
+      do in=1,na3      
+        do id=1,3
+          do j=1,3
+           mfr(in,id,ib) = mfr(in,id,ib)+rot(id,j,1,ib)*blf(j,in,ib)
+          enddo
+        enddo
+      enddo
 
 *
       END

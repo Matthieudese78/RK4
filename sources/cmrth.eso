@@ -73,80 +73,111 @@
 ******************************************************************
 *   Partie statique
 ******************************************************************
-      call chap(XCG(1,ib),XCGcha(1,1)) 
-*      write(*,*)'cmrth : xcgcha :'
-*      write(*,*)'mtsb = ',mtsb(ib)
-*       do id=1,3
-*          write(*,'(3(1X,F8.5))') , (xcgcha(id,j),j=1,3)
-*       enddo
-*      write(*,*)'cmrth : rot :'
-*       do id=1,3
-*          write(*,'(3(1X,F8.5))') , (rot(id,j,ind,ib),j=1,3)
-*       enddo
-      do id=1,3
-        do j=1,3
-          mrth(id,j,ib) = 0.d0
-          do k=1,3
-           mrth(id,j,ib) = mrth(id,j,ib)-(rot(id,k,ind,ib)*XCGcha(k,j))
-          enddo
-          mrth(id,j,ib) = mtsb(ib) * mrth(id,j,ib)
-*         mthr(id,j) = 0.d0
-*         do k=1,3
-*           mthr(id,j) = mthr(id,j) + XCGcha(id,k) * rot(j,k,ind,ib)
-*         enddo
-*         mthr(id,j) = mtsb(ib) * mthr(id,j)
-        enddo
-      enddo
-*      write(*,*)'cmrth : partie statique :'
+*      call chap(XCG(1,ib),XCGcha(1,1)) 
+**      write(*,*)'cmrth : xcgcha :'
+**      write(*,*)'mtsb = ',mtsb(ib)
+**       do id=1,3
+**          write(*,'(3(1X,F8.5))') , (xcgcha(id,j),j=1,3)
+**       enddo
+**      write(*,*)'cmrth : rot :'
+**       do id=1,3
+**          write(*,'(3(1X,F8.5))') , (rot(id,j,ind,ib),j=1,3)
+**       enddo
 *      do id=1,3
 *        do j=1,3
-*          write(*,*) , mrth(id,j,ib)
+*          mrth(id,j,ib) = 0.d0
+*          do k=1,3
+*           mrth(id,j,ib) = mrth(id,j,ib)-(rot(id,k,ind,ib)*XCGcha(k,j))
+*          enddo
+*          mrth(id,j,ib) = mtsb(ib) * mrth(id,j,ib)
+**         mthr(id,j) = 0.d0
+**         do k=1,3
+**           mthr(id,j) = mthr(id,j) + XCGcha(id,k) * rot(j,k,ind,ib)
+**         enddo
+**         mthr(id,j) = mtsb(ib) * mthr(id,j)
 *        enddo
 *      enddo
-******************************************************************
-*     Partie corrective :
-******************************************************************
-      do ip=1,npdef
-******************************************************************
-        do 1 in = 1,na3
-          if (itrig(ib,in)) goto 1
-          i2 = ina1 + in
-          do id=1,3
-            Xt(id) = xtphi(id,ip,in,ib) * q1(i2,ind) 
-          enddo
-          call chap(Xt(1),Xtcha(1,1)) 
-*         mrth :
-          do id=1,3
-            do j=1,3
-              do k=1,3
-                mrth(id,j,ib) = mrth(id,j,ib) - 
-     &          (xmpoi(ip,ib)*rot(id,k,ind,ib)*Xtcha(k,j))
-              enddo
-*             mrth(id,j) =  xmpoi(ip,ib) * mrth(id,j)
-*             write(*,*)'xmpoi(',ip,in,ib,') : '
-*             write(*,*),xmpoi(ip,ib)
-*             write(*,*)'mrth(id,j,ib) : '
-*             write(*,*),mrth(id,j,ib)
-            enddo
-          enddo
-*         mthr :
-*         do id=1,3
-*           do j=1,3
-*             do k=1,3
-*               mthr(id,j) = mthr(id,j) + Xtcha(id,k) * rot(j,k,ind,ib)
-*             enddo
-*             mthr(id,j) =  xmpoi(ip,ib) * mthr(id,j)
-*           enddo
-*         enddo
- 1      continue
-***** fin boucle sur les points 
-      enddo
-*
-*      write(*,*)'MRTH tot :'
-*      do id=1,3
-*         do j=1,3
-*         write(*,*) , (mrth(id,j,ib))
-*         enddo
+**      write(*,*)'cmrth : partie statique :'
+**      do id=1,3
+**        do j=1,3
+**          write(*,*) , mrth(id,j,ib)
+**        enddo
+**      enddo
+*******************************************************************
+**     Partie corrective :
+*******************************************************************
+*      do ip=1,npdef
+*******************************************************************
+*        do 1 in = 1,na3
+*          if (itrig(ib,in)) goto 1
+*          i2 = ina1 + in
+*          do id=1,3
+*            Xt(id) = xtphi(id,ip,in,ib) * q1(i2,ind) 
+*          enddo
+*          call chap(Xt(1),Xtcha(1,1)) 
+**         mrth :
+*          do id=1,3
+*            do j=1,3
+*              do k=1,3
+*                mrth(id,j,ib) = mrth(id,j,ib) - 
+*     &          (xmpoi(ip,ib)*rot(id,k,ind,ib)*Xtcha(k,j))
+*              enddo
+**             mrth(id,j) =  xmpoi(ip,ib) * mrth(id,j)
+**             write(*,*)'xmpoi(',ip,in,ib,') : '
+**             write(*,*),xmpoi(ip,ib)
+**             write(*,*)'mrth(id,j,ib) : '
+**             write(*,*),mrth(id,j,ib)
+*            enddo
+*          enddo
+**         mthr :
+**         do id=1,3
+**           do j=1,3
+**             do k=1,3
+**               mthr(id,j) = mthr(id,j) + Xtcha(id,k) * rot(j,k,ind,ib)
+**             enddo
+**             mthr(id,j) =  xmpoi(ip,ib) * mthr(id,j)
+**           enddo
+**         enddo
+* 1      continue
+****** fin boucle sur les points 
 *      enddo
+
+*     NEW : AVEC LES BRAS DE LEVIER CALCULES DANS DYNE26 :      
+*     le bras de levier est egal a la partie statique ...
+      do id=1,3
+        xt(id) = bl0(id,ib) 
+      enddo
+*     ... plus la partie dynamique :
+      do in=1,na3
+        i2 = ina1 + in
+        do id=1,3
+          xt(id) = xt(id) + blf(id,in,ib)*q1(i2,1) 
+        enddo
+      enddo
+*     on fait le produit vectoriel
+      xtcha(1,1) = 0.d0
+      xtcha(2,2) = 0.d0
+      xtcha(3,3) = 0.d0
+      xtcha(1,2) = -xt(3)
+      xtcha(1,3) = xt(2)
+      xtcha(2,3) = -xt(1)
+      xtcha(2,1) = -xtcha(1,2)
+      xtcha(3,1) = -xtcha(1,3)
+      xtcha(3,2) = -xtcha(2,3)
+*     on mutliplie a gauche par -R(t) :
+      do id=1,3
+        do j=1,3
+          do k=1,3
+            mrth(id,j,ib) = mrth(id,j,ib) - rot(id,k,1,ib)*xtcha(k,j)
+          enddo
+        enddo
+      enddo
+* done
+      write(*,*)'MRTH tot :'
+      do id=1,3
+         do j=1,3
+         write(*,*) , (mrth(id,j,ib))
+         enddo
+      enddo
 *
       END

@@ -598,6 +598,24 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
           enddo
         enddo
       enddo
+*     calcul du bras de levier :
+*       statique :
+      do ip=1,npdef
+        bl0(1,ib) = bl0(1,ib) +
+     &   xmpoi(ip,ib)*(xcoophi(1,ip,ib)-xcent(1,ib))
+        bl0(2,ib) = bl0(2,ib) +
+     &   xmpoi(ip,ib)*(xcoophi(2,ip,ib)-xcent(2,ib))
+        bl0(3,ib) = bl0(3,ib) +
+     &   xmpoi(ip,ib)*(xcoophi(3,ip,ib)-xcent(3,ib))
+      enddo
+*       dynamique :
+      do in=1,na3
+        do ip=1,npdef
+          blf(1,in,ib)= blf(1,in,ib) + xmpoi(ip,ib)*(xtphi(1,ip,in,ib))
+          blf(2,in,ib)= blf(2,in,ib) + xmpoi(ip,ib)*(xtphi(2,ip,in,ib))
+          blf(3,in,ib)= blf(3,in,ib) + xmpoi(ip,ib)*(xtphi(3,ip,in,ib))
+        enddo
+      enddo
 *
 *        write(*,*)'dyne26 : xcoophi'
 *        do ip = 1,npdef
