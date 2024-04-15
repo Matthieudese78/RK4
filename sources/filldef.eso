@@ -32,6 +32,7 @@
          REAL*8 MRTH(3,3,NSB),MTHTH(3,3,NSB)
          REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB),MTOT(NTOT,NTOT,NSB)
          REAL*8 SKL(3,3,NA2,NA2,NSB),IKL(3,3,NA2,NSB)
+         REAL*8 BL0(3,NSB),BLF(3,NA2,NSB)
          REAL*8 XMPOI(NPDEF,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
@@ -49,7 +50,7 @@
          REAL*8 XPHILB(NSB,NPLSB,NA2,IDIMB)
       ENDSEGMENT
 
-      logical l0,l1,lcoo,lnortot,lnorcomp
+      logical l0,l1,lcoo,lnortot,lnorcomp,lnormtot
       character*8  typret,charre,monmot,cmot,morigi
       integer lpoi(npts)
 *
@@ -68,8 +69,9 @@
 *     write(*,*)'          na1 = ',na1
 *
       lcoo = .false.
-      lnortot = .true.
+      lnortot = .false.
       lnorcomp = .false.
+      lnormtot = .true.
 *     initialisation list :
       do ip=1,npdef
         lpoi(ip) = 0
@@ -181,29 +183,32 @@
             endif
           enddo
           xnortot = dsqrt(xnortot)
+          ina1 = iorsb(ib) - 1
+          i2 = ina1 + inel
           if (lnortot) then
-            xalpha = xnortot
+            xalpha = 1.d0/xnortot
           endif
           if (lnorcomp) then
-            xalpha = xcmax
+            xalpha = 1.d0/xcmax
+          endif
+          if (lnormtot) then
+            xalpha = dsqrt(mtsb(ib)/xm(i2,1))
           endif
           write(*,*)'xalpha = ',xalpha
           write(*,*)'xnortot = ',xnortot
           write(*,*)'xcmax = ',xcmax
 *         on rempli xtphin avec la base modale normee / comp max : 
 *                    ou / norme euclidienne du mode.
-          ina1 = iorsb(ib) - 1
-          i2 = ina1 + inel
           if (xalpha.gt.1.d-4) then
 *           normalisation de la masse modale :
-            xmno(inel,ib) = xm(i2,1)/(xalpha**2)
+            xmno(inel,ib) = xm(i2,1)*(xalpha**2)
 *           normalisation des modes :
             xnortot = 0.d0
             do ip=1,npdef
 *             on norme par rapport a la plus grande composante :
-              xtphi(1,ip,inel,ib) = xtphi(1,ip,inel,ib)/xalpha
-              xtphi(2,ip,inel,ib) = xtphi(2,ip,inel,ib)/xalpha
-              xtphi(3,ip,inel,ib) = xtphi(3,ip,inel,ib)/xalpha
+              xtphi(1,ip,inel,ib) = xtphi(1,ip,inel,ib)*xalpha
+              xtphi(2,ip,inel,ib) = xtphi(2,ip,inel,ib)*xalpha
+              xtphi(3,ip,inel,ib) = xtphi(3,ip,inel,ib)*xalpha
 *             on recalcule la norme si norm largest comp : 
               xnortot = xnortot + ((xtphi(1,ip,inel,ib)**2) +
      &                             (xtphi(2,ip,inel,ib)**2) +
@@ -222,7 +227,7 @@
 *             si normalisation / norme du mode : xmno = mtot / npdef
 *               = massse a attribuer a chacun des points.
               do ip=1,npdef
-                xmpoi(ip,ib) = xmno(inel,ib)/float(npdef)
+                xmpoi(ip,ib) = xmno(inel,ib)
               enddo
             endif
 *
@@ -232,10 +237,23 @@
               write(*,*)'  4 X xmno inel ',4.d0*xmno(inel,ib)
 *             largest comp : masses ponctuelles individuelles : 
               do ip=1,npdef
-                xnor = dsqrt((xtphi(1,ip,inel,ib)**2) + 
-     &                       (xtphi(2,ip,inel,ib)**2) +
-     &                       (xtphi(3,ip,inel,ib)**2))
-                xmpoi(ip,ib) = xmno(inel,ib) * (xnor/xnortot)
+*                xnor = dsqrt((xtphi(1,ip,inel,ib)**2) + 
+*     &                       (xtphi(2,ip,inel,ib)**2) +
+*     &                       (xtphi(3,ip,inel,ib)**2))
+*                xmpoi(ip,ib) = xmno(inel,ib) * (xnor/xnortot)
+                xmpoi(ip,ib) = xmno(inel,ib)/npdef
+              enddo
+            endif
+            if (lnormtot) then
+              write(*,*)'  mu_i = mtot normalization : xmno inel ',inel
+              write(*,*)'                     ',xmno(inel,ib)
+*             mu_i = mtot : masses ponctuelles individuelles : 
+              do ip=1,npdef
+*                xnor = dsqrt((xtphi(1,ip,inel,ib)**2) + 
+*     &                       (xtphi(2,ip,inel,ib)**2) +
+*     &                       (xtphi(3,ip,inel,ib)**2))
+*                xmpoi(ip,ib) = xmno(inel,ib) * (xnor/xnortot)
+                xmpoi(ip,ib) = xmno(inel,ib)/npdef
               enddo
             endif
 *           warning : 

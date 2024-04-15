@@ -95,6 +95,7 @@
          REAL*8 MRTH(3,3,NSB),MTHTH(3,3,NSB)
          REAL*8 MFTH(NA2,3,NSB),MFR(NA2,3,NSB),MTOT(NTOT,NTOT,NSB)
          REAL*8 SKL(3,3,NA2,NA2,NSB),IKL(3,3,NA2,NSB)
+         REAL*8 BL0(3,NSB),BLF(3,NA2,NSB)
          REAL*8 XMPOI(NPDEF,NSB)
          INTEGER IBASR(NSB2)
          CHARACTER*4 ITCOMP(NSB2)
@@ -242,7 +243,6 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
 *      
       if (.not.linert) then
       IF (RIGIDE) THEN
-        NSB = ROT(/4)
         DO 7 IIB=1,NSB
 CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
 cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
@@ -480,22 +480,25 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
         do i=1,3
           dtheta(i,iib) = omeg2(i,5,iib)*dt + omeg3(i,5,iib)*dt22
         enddo
-*        calcul de EXPTH pour eq. dynamique:
+*       calcul de EXPTH pour eq. dynamique:
         call expthr(dtheta(1,iib),expth(1,1,1,iib))
 *        increment de rotation --> quaternion
         call vect2quat(dtheta(1,iib),dquat)
 *        maj quaternion omeg1:
         call pquat(omeg1(1,5,iib),dquat,omeg1(1,1,iib))
         call quat2mat(omeg1(1,1,iib),rot(1,1,1,iib)) 
+*       vitesse au 1/2 pas de temps
         do i=1,3
           omeg2(i,1,iib) = dtheta(i,iib) / dt
         enddo
         endif
+*       fin boucle prediction sur les ss bases
         enddo
-*        flexible
+*       ddls flexibles 
         do  i = 1,na1
          q1(i,1) = q1(i,5) + q2(i,5)*dt + q3(i,5)*dt22
         enddo
+*       vitesse au 1/2 pas de temps
         do i=1,na1
          q2(i,1)=(q1(i,1)-q1(i,5))/dt
         enddo
@@ -504,7 +507,8 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *     Calcul des forces de liaisons
 ************************************************************************
 *     Totalisation des forces ext�rieures pour la base A a la fin du pas
-      CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
+*     rq : rkfxa ne perturbe pas l'implementation des forces exterieures 
+      CALL RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &              NPLB,IDIMB,RIGIDE)
 *     Ajout des forces de liaison
       IF (NLIAA.NE.0) THEN
@@ -520,13 +524,14 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *        WRITE(*,*)'rkpas : appel au sous-programme D2VLFB'
 *        dernier arg = .false. --> calcul du moment au pas t_n+1 via rkmom
          if (linert) then 
-*        differences centrees --> devmom 
+*        differences centrees mais pas simo et wong --> rkmom  
+*        couple exterieur estime a l'instant tn+1 <--> ind = 1
          CALL D2VLFB(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,NLIAB,
      &               XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,dt,tfin,
      &               NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,1,
      &               FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
      &               FEXB,KTROT,IAROTA,XCHPFB,
-     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.true.)
+     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.false.)
 *     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.false.)
          endif
          if (.not.linert) then
@@ -657,8 +662,21 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             mfth(in,id,iib) = 0.d0
           enddo
         enddo
+        do i1=1,ntot
+          do i2=1,ntot
+            mtot(i1,i2,iib) = 0.d0
+          enddo
+        enddo
 *       maintenant on peut sauter les ss bases ss rotas rigides :
         if (iarota(iib).eq.0) goto 1
+*       on repere le nombre de translations rigides a retirer de la  
+*       dimension pour inverser.
+        ntrig = 0
+        do in=1,na3
+          if (itrig(iib,in)) then 
+            ntrig = ntrig + 1
+          endif
+        enddo
 ******************************************************************
 *       indice auquel sont calculees les forces d'inertie :
 ******************************************************************
@@ -670,47 +688,37 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *        do id=1,3
 *           write(*,'(3(1X,F8.5))') , (rot(id,j,ind1,iib),j=1,3)
 *        enddo
-        call cmrth(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
+        if (ntrig.gt.0) then
+          call cmrth(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
+        endif
 ******************************************************************
 ******************************************************************
 *     M_{fR} (dim : nmodes x 3) : couplage elas-translas shabana p 320
 ******************************************************************
-      call cmfr(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
+        if (ntrig.gt.0) then
+          call cmfr(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
+        endif
 ******************************************************************
 ******************************************************************
 *     M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
 ******************************************************************
-      call cmfth(Q1,XM,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
+        call cmfth(Q1,XM,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
 *******************************************************************
 ******************************************************************
 *    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
 *                          (shabana p 320)
 ******************************************************************
-      call cmthth(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
+        call cmthth(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
 *******************************************************************
 * remplissage mtot :  
 *******************************************************************
 *     objecif : dans la matrice mtot(ntot,ntot,nsb), squizzer en haut a 
 *     gauche les parties pleines (necessaire pour inversion via invalm).
 *     initialisation :
-      do i1=1,ntot
-        do i2=1,ntot
-          mtot(i1,i2,iib) = 0.d0
-        enddo
-      enddo
 *       write(*,*)'tenseur d inertie :'
 *       do id=1,3
 *          write(*,'(3(1X,F8.5))') , (inertie(id,j,iib),j=1,3)
 *       enddo
-*     on repere le nombre de translations rigides a retirer de la  
-*     dimension pour inverser.
-      ntrig = 0
-*      write(*,*)'na3 = ',na3
-      do in=1,na3
-        if (itrig(iib,in)) then 
-          ntrig = ntrig + 1
-        endif
-      enddo
 *      write(*,*)'ntrig = ',ntrig
 ****** blocs diagonaux :
 *     lignes 1-3 : translations
@@ -758,7 +766,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
       in1 = 3 + ntrig + 1
       do in=1,na3
         if (.not.itrig(iib,in)) then
-          do id=1,3 
+          do id=1,ntrig 
             mtot(in1,id,iib) = mfr(in,id,iib)
             mtot(id,in1,iib) = mfr(in,id,iib)
           enddo
@@ -785,7 +793,6 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *      enddo
 *     inversion de mtot : on part du principe qu'il y a 3 rotas rigides 
 *         (nbr de modes flexibles = in1 - 7)
-      ninv = 3 + na3 
 *      write(*,*)'rkpas : ntrig = ',ntrig
 *      write(*,*)'        in1 = ',in1
 *      write(*,*)'        na2 = ',na2
@@ -798,6 +805,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *          write(*,*) , mtot(i2,i1,iib)
 *         enddo
 *      enddo
+      ninv = 3 + na3 
       call invalm(mtot,ntot,ninv,kerre,1.d-10)
 *      call invalm(mtot(1,1,iib),ntot,ninv,kerre,1.d-10)
 *      write(*,*)'        matrice inversee :'
@@ -811,7 +819,9 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *       Quadratic velocity vector : coriolis, centrifuge ...
 ********************3 + ntrig*********************************************
 *       translation : 
-      call cqvr(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
+      if (ntrig.gt.0) then
+        call cqvr(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
+      endif
 ******************************************************************
 *       rotation : 
       call cqvth(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
