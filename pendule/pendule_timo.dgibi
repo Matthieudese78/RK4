@@ -12,7 +12,7 @@ reprise = faux ;
 *# algo :
 rk4 = vrai ;
 
-sw = vrai ;
+sw = faux ;
 nmb = faux ; 
 xpinv = faux ;
 
