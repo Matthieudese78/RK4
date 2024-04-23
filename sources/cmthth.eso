@@ -40,9 +40,9 @@
       ENDSEGMENT
 *
       REAL*8 Q1(NA1,*)
-      REAL*8 xcgcha(3,3),xtcha(3,3),xt(3),xtcha2(3,3)
-      REAL*8 xco(3),xcocha(3,3)
-      REAL*8 xcof(3,3),xfco(3,3),xcoco(3,3)
+*      REAL*8 xcgcha(3,3),xtcha(3,3),xt(3),xtcha2(3,3)
+*      REAL*8 xco(3),xcocha(3,3)
+*      REAL*8 xcof(3,3),xfco(3,3),xcoco(3,3)
 ******************************************************************
       mtrot = ktrot
 ******************************************************************
@@ -93,6 +93,10 @@
 * 1      continue
 ****** fin boucle sur les points 
 *      enddo
+
+****************************************************************
+*     new : avec les matrices invariantes :
+****************************************************************
 * ikl 
 *   termes diagonaux :
       do in=1,na3
@@ -133,20 +137,22 @@
      &    (q1(i2,1)*skl(3,1,in,j,ib)*q1(j2,1))
           mthth(2,3,ib) = mthth(2,3,ib) - 
      &    (q1(i2,1)*skl(3,2,in,j,ib)*q1(j2,1))
+          mthth(2,1,ib) = mthth(2,1,ib) - 
+     &    (q1(i2,1)*skl(1,2,in,j,ib)*q1(j2,1))
+          mthth(3,1,ib) = mthth(3,1,ib) - 
+     &    (q1(i2,1)*skl(1,3,in,j,ib)*q1(j2,1))
+          mthth(3,2,ib) = mthth(3,2,ib) - 
+     &    (q1(i2,1)*skl(2,3,in,j,ib)*q1(j2,1))
         enddo
       enddo
-* on remplit les symetriques :
-      mthth(2,1,ib) = mthth(1,2,ib)
-      mthth(3,1,ib) = mthth(1,3,ib)
-      mthth(3,2,ib) = mthth(2,3,ib)
 
-      write(*,*)'MTHTH :'
-      do id=1,3
-         write(*,'(3(1X,F8.5))') , (mthth(id,j,ib),j=1,3)
-      enddo
-      write(*,*)'inertie :'
-      do id=1,3
-         write(*,'(3(1X,F8.5))') , (inertie(id,j,ib),j=1,3)
-      enddo
+*      write(*,*)'MTHTH :'
+*      do id=1,3
+*         write(*,'(3(1X,F8.5))') , (mthth(id,j,ib),j=1,3)
+*      enddo
+*      write(*,*)'inertie :'
+*      do id=1,3
+*         write(*,'(3(1X,F8.5))') , (inertie(id,j,ib),j=1,3)
+*      enddo
 *
       END

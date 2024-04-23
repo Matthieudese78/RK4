@@ -112,9 +112,10 @@
          LOGICAL ITRIG(NSB,NA2)
       ENDSEGMENT
 *
-      LOGICAL L0,L1,REPRIS,RIGIDE
+      LOGICAL L0,L1,REPRIS,RIGIDE,linert
       CHARACTER*8 TYPRET
 *
+      linert = .true.
       RIGIDE = KTROT.NE.0
       IF (RIGIDE) THEN
         MTROT = KTROT
@@ -194,13 +195,23 @@ c       write(*,*) 'Q3(:,2) =',(Q3(iou,2),iou=1,NA1)
       IF (IIMPI.EQ.555) THEN
          WRITE(IOIMP,*)'D2VALG : appel au sous-programme rkpas'
       ENDIF
-      CALL rkpas(Q1,Q2,Q3,NA1,NPC1,XK,XASM,XM,PDT,T,1,FTOTA,FEXA,
+      if (linert) then
+        CALL rkpasin(Q1,Q2,Q3,NA1,NPC1,XK,XASM,XM,PDT,T,1,FTOTA,FEXA,
      &            NPFEXA,NLIAA,NLSA,IPALA,IPLIA,XPALA,XVALA,
      &            NLIAB,NLSB,NPLB,IDIMB,IPALB,IPLIB,JPLIB,XPALB,XVALB,
      &            FTOTB,FTOTBA,XPTB,
      &            FEXPSM,FINERT,IERRD,FTEST,FTEST2,
      &            WEXT,WINT,XABSCI,XORDON,NIP,FTEXB,FEXB,KTROT,
      &            KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M,NSB,NTOT)
+      else
+        CALL rkpas(Q1,Q2,Q3,NA1,NPC1,XK,XASM,XM,PDT,T,1,FTOTA,FEXA,
+     &            NPFEXA,NLIAA,NLSA,IPALA,IPLIA,XPALA,XVALA,
+     &            NLIAB,NLSB,NPLB,IDIMB,IPALB,IPLIB,JPLIB,XPALB,XVALB,
+     &            FTOTB,FTOTBA,XPTB,
+     &            FEXPSM,FINERT,IERRD,FTEST,FTEST2,
+     &            WEXT,WINT,XABSCI,XORDON,NIP,FTEXB,FEXB,KTROT,
+     &            KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M,NSB,NTOT)
+      endif
       IF (IERRD.NE.0) THEN
          IF (IERRD.EQ.1) CALL ERREUR(528)
          RETURN
@@ -241,7 +252,7 @@ c       write(*,*) 'Q3(:,2) =',(Q3(iou,2),iou=1,NA1)
 *
 *      Decalage ou mise a zero dans les tableaux pour le pas suivant:
 ************************************************************************
-          CALL RKNE16(Q1,Q2,Q3,NA1,FTOTA,XPTB,NPLB,IDIMB,FINERT,
+        CALL RKNE16(Q1,Q2,Q3,NA1,FTOTA,XPTB,NPLB,IDIMB,FINERT,
      &                WEXT,WINT,KTROT)
               
 *
@@ -250,19 +261,30 @@ c       write(*,*) 'Q3(:,2) =',(Q3(iou,2),iou=1,NA1)
        PDT=XDT(I)
        T=XTEMPS(I)
 *
-c        if(I.le.5) write(*,*) '=== Calcul du pas ===',I
+c       if(I.le.5) write(*,*) '=== Calcul du pas ===',I
 *       WRITE(*,*)'D2VALG : appel au sous-programme rkpas'
        IF (IIMPI.EQ.555) THEN
            WRITE(IOIMP,*)'D2VALG : appel au sous-programme rkpas'
        ENDIF
-       WRITE(*,*)'RKALG : appel rkpas instant : t = ',T
-       CALL rkpas(Q1,Q2,Q3,NA1,NPC1,XK,XASM,XM,PDT,T,I,FTOTA,FEXA,
+       if (linert) then
+        WRITE(*,*)'RKALG : appel rkpasin instant : t = ',T
+        CALL rkpasin(Q1,Q2,Q3,NA1,NPC1,XK,XASM,XM,PDT,T,I,FTOTA,FEXA,
      &             NPFEXA,NLIAA,NLSA,IPALA,IPLIA,XPALA,XVALA,
      &             NLIAB,NLSB,NPLB,IDIMB,IPALB,IPLIB,JPLIB,XPALB,
      &             XVALB,FTOTB,FTOTBA,XPTB,
      &             FEXPSM,FINERT,IERRD,FTEST,FTEST2,
      &             WEXT,WINT,XABSCI,XORDON,NIP,FTEXB,FEXB,KTROT,
      &             KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M,NSB,NTOT)
+       else
+        WRITE(*,*)'RKALG : appel rkpas instant : t = ',T
+        CALL rkpas(Q1,Q2,Q3,NA1,NPC1,XK,XASM,XM,PDT,T,I,FTOTA,FEXA,
+     &             NPFEXA,NLIAA,NLSA,IPALA,IPLIA,XPALA,XVALA,
+     &             NLIAB,NLSB,NPLB,IDIMB,IPALB,IPLIB,JPLIB,XPALB,
+     &             XVALB,FTOTB,FTOTBA,XPTB,
+     &             FEXPSM,FINERT,IERRD,FTEST,FTEST2,
+     &             WEXT,WINT,XABSCI,XORDON,NIP,FTEXB,FEXB,KTROT,
+     &             KTPHI,XCHPFB,XOPER,NB1,NB1K,NB1C,NB1M,NSB,NTOT)
+       endif
 *
 *
          IF (IERRD.NE.0) THEN

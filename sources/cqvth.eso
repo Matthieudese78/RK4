@@ -50,9 +50,10 @@
       
 *
       REAL*8 Q1(NA1,*),q2(na1,*)
-      real*8 x1(3),x1cha(3,3),x1cha2(3,3),jw(3)
-      REAL*8 xco(3),xcocha(3,3)
-      REAL*8 xcof(3,3),xfco(3,3)
+*      real*8 x1(3),x1cha(3,3),x1cha2(3,3)
+*      REAL*8 xco(3),xcocha(3,3)
+*      REAL*8 xcof(3,3),xfco(3,3)
+      real*8 jw(3),jwf(3),dmth(3,3)
 ******************************************************************
       mtrot = ktrot
 ******************************************************************
@@ -65,90 +66,185 @@
 *     ina1 = iorsb(ib) - 1
 
 
-******************************************************************
-      do ip=1,npdef
-******************************************************************
-        do 1 in = 1,na3
-          if (itrig(ib,in)) goto 1
-          i2 = ina1 + in
-******************************************************************
-*     2eme partie : 
-*     - dot(I_thth) * W = - 2 * m_ij * (chap(phi_ij)^T * chap(phi_ij) ) * q_f^i * dot(q_f^i) * W
-******************************************************************
-          do id=1,3
-            x1(id) = xtphi(id,ip,in,ib)
-            xco(id) = xcoophi(id,ip,ib) - xcent(id,ib)
-          enddo
-          call chap(x1(1),x1cha(1,1)) 
-          call chap(xco(1),xcocha(1,1))
-*         chap(phi_ij)^T * chap(ph_ij) :
-          do id=1,3
-            do j=1,3
-              x1cha2(id,j) = 0.d0
-              xcof(id,j) = 0.d0
-              xfco(id,j) = 0.d0
-              do k=1,3
-                x1cha2(id,j) = x1cha2(id,j) + (x1cha(k,id)*x1cha(k,j))
-                xcof(id,j) = Xcof(id,j) + (xcocha(k,id)*X1cha(k,j))
-                xfco(id,j) = Xfco(id,j) + (x1cha(k,id)*Xcocha(k,j))
-              enddo
-            enddo
-          enddo
+*******************************************************************
+*      do ip=1,npdef
+*******************************************************************
+*        do 1 in = 1,na3
+*          if (itrig(ib,in)) goto 1
+*          i2 = ina1 + in
+*******************************************************************
+**     2eme partie : 
+**     - dot(I_thth) * W = - 2 * m_ij * (chap(phi_ij)^T * chap(phi_ij) ) * q_f^i * dot(q_f^i) * W
+*******************************************************************
+*          do id=1,3
+*            x1(id) = xtphi(id,ip,in,ib)
+*            xco(id) = xcoophi(id,ip,ib) - xcent(id,ib)
+*          enddo
+*          call chap(x1(1),x1cha(1,1)) 
+*          call chap(xco(1),xcocha(1,1))
+**         chap(phi_ij)^T * chap(ph_ij) :
+*          do id=1,3
+*            do j=1,3
+*              x1cha2(id,j) = 0.d0
+*              xcof(id,j) = 0.d0
+*              xfco(id,j) = 0.d0
+*              do k=1,3
+*                x1cha2(id,j) = x1cha2(id,j) + (x1cha(k,id)*x1cha(k,j))
+*                xcof(id,j) = Xcof(id,j) + (xcocha(k,id)*X1cha(k,j))
+*                xfco(id,j) = Xfco(id,j) + (x1cha(k,id)*Xcocha(k,j))
+*              enddo
+*            enddo
+*          enddo
+**
+*          do id=1,3
+**           shabana old edition p321 : - d(I_{thth})/dt * W :
+*            do j=1,3
+*             qvth(id,ib) = qvth(id,ib) - (2.*xmpoi(ip,ib) * 
+*     &      (x1cha2(id,j)*q1(i2,ind)*q2(i2,ind))*omeg2(j,ind,ib)) -
+*     &      (xmpoi(ip,ib)*(xcof(id,j)+xfco(id,j))*q2(i2,ind)*
+*     &         omeg2(j,ind,ib))
+**              write(*,*)'xfco+xcof(id,j) = ',(xcof(id,j)+xfco(id,j))
+*            enddo
+*          enddo
+**
+* 1      continue
+****** fin boucle sur les points 
+*      enddo
+*******************************************************************
 *
-          do id=1,3
-*           shabana old edition p321 : - d(I_{thth})/dt * W :
-            do j=1,3
-             qvth(id,ib) = qvth(id,ib) - (2.*xmpoi(ip,ib) * 
-     &      (x1cha2(id,j)*q1(i2,ind)*q2(i2,ind))*omeg2(j,ind,ib)) -
-     &      (xmpoi(ip,ib)*(xcof(id,j)+xfco(id,j))*q2(i2,ind)*
-     &         omeg2(j,ind,ib))
-*              write(*,*)'xfco+xcof(id,j) = ',(xcof(id,j)+xfco(id,j))
-            enddo
-          enddo
+*******************************************************************
+**       3. : - chap(W) * (I_thf * dot(q_f)) 
+*******************************************************************
+*      do 2 in=1,na3
+*        if (itrig(ib,in)) goto 2
+*        i2 = ina1 + in
+*      qvth(1,ib) = qvth(1,ib) - 
+*     &  (omeg2(3,ind,ib)*(mfth(in,2,ib)*q2(i2,ind)) -
+*     &   omeg2(2,ind,ib)*(mfth(in,3,ib)*q2(i2,ind)))
+*      qvth(2,ib) = qvth(2,ib) - 
+*     &  (omeg2(3,ind,ib)*(mfth(in,1,ib)*q2(i2,ind)) -
+*     &   omeg2(1,ind,ib)*(mfth(in,3,ib)*q2(i2,ind)))
+*      qvth(3,ib) = qvth(3,ib) - 
+*     &  (omeg2(1,ind,ib)*(mfth(in,2,ib)*q2(i2,ind)) -
+*     &   omeg2(2,ind,ib)*(mfth(in,1,ib)*q2(i2,ind)))
+* 2    continue
 *
- 1      continue
-***** fin boucle sur les points 
-      enddo
-******************************************************************
+*******************************************************************
+**       1. : - chap(W) * (I_thth * W) , Ithth = (J + mthth) 
+*******************************************************************
+*      do id=1,3
+*        jw(id) = 0.d0 
+*        do j=1,3
+*          jw(id) = jw(id) + 
+*     &    (inertie(id,j,ib)+mthth(id,j,ib))*omeg2(j,ind,ib)
+*        enddo
+*      enddo
+*      qvth(1,ib) = qvth(1,ib) - 
+*     &  (omeg2(3,ind,ib)*jw(2) -
+*     &   omeg2(2,ind,ib)*jw(3))
+*      qvth(2,ib) = qvth(2,ib) - 
+*     &  (omeg2(3,ind,ib)*jw(1) -
+*     &   omeg2(1,ind,ib)*jw(3))
+*      qvth(3,ib) = qvth(3,ib) - 
+*     &  (omeg2(1,ind,ib)*jw(2) -
+*     &   omeg2(2,ind,ib)*jw(1))
+* 
 
-******************************************************************
-*       3. : - chap(W) * (I_thf * dot(q_f)) 
-******************************************************************
-      do 2 in=1,na3
-        if (itrig(ib,in)) goto 2
-        i2 = ina1 + in
-      qvth(1,ib) = qvth(1,ib) - 
-     &  (omeg2(3,ind,ib)*(mfth(in,2,ib)*q2(i2,ind)) -
-     &   omeg2(2,ind,ib)*(mfth(in,3,ib)*q2(i2,ind)))
-      qvth(2,ib) = qvth(2,ib) - 
-     &  (omeg2(3,ind,ib)*(mfth(in,1,ib)*q2(i2,ind)) -
-     &   omeg2(1,ind,ib)*(mfth(in,3,ib)*q2(i2,ind)))
-      qvth(3,ib) = qvth(3,ib) - 
-     &  (omeg2(1,ind,ib)*(mfth(in,2,ib)*q2(i2,ind)) -
-     &   omeg2(2,ind,ib)*(mfth(in,1,ib)*q2(i2,ind)))
- 2    continue
-
-******************************************************************
-*       1. : - chap(W) * (I_thth * W) , Ithth = (J + mthth) 
-******************************************************************
+*******************************************************************
+*       new : on utilise les matrices macros 
+*******************************************************************
+*     calcul de -wjw 
       do id=1,3
-        jw(id) = 0.d0 
+      jw(id) = 0.d0
+      do j=1,3
+      jw(id)=jw(id) + ((inertie(id,j,ib)+mthth(id,j,ib))*omeg2(j,1,ib))
+      enddo
+      enddo
+*     
+      qvth(1,ib) = qvth(1,ib)-(omeg2(2,1,ib)*jw(3)-omeg2(3,1,ib)*jw(2))
+      qvth(2,ib) = qvth(2,ib)-(omeg2(3,1,ib)*jw(1)-omeg2(1,1,ib)*jw(3))
+      qvth(3,ib) = qvth(3,ib)-(omeg2(1,1,ib)*jw(2)-omeg2(2,1,ib)*jw(1))
+*     caclul de d(mthth)/dt :     
+      do id=1,3
         do j=1,3
-          jw(id) = jw(id) + 
-     &    (inertie(id,j,ib)+mthth(id,j,ib))*omeg2(j,ind,ib)
+          dmth(id,j) = 0.d0
         enddo
       enddo
-      qvth(1,ib) = qvth(1,ib) - 
-     &  (omeg2(3,ind,ib)*jw(2) -
-     &   omeg2(2,ind,ib)*jw(3))
-      qvth(2,ib) = qvth(2,ib) - 
-     &  (omeg2(3,ind,ib)*jw(1) -
-     &   omeg2(1,ind,ib)*jw(3))
-      qvth(3,ib) = qvth(3,ib) - 
-     &  (omeg2(1,ind,ib)*jw(2) -
-     &   omeg2(2,ind,ib)*jw(1))
-* 
-*     write(*,*)'QVTH :'
-*     write(*,'(3(1X,F8.5))') , (qvth(id,ib),id=1,3)
+*     partie ikl :
+*     termes diagonaux :
+      do in=1,na3
+        i2 = ina1 + in
+        dmth(1,1) = dmth(1,1) + 
+     &  (2.d0*q2(i2,1)*(ikl(2,2,in,ib) + ikl(3,3,in,ib)))
+        dmth(2,2) = dmth(2,2) + 
+     &  (2.d0*q2(i2,1)*(ikl(1,1,in,ib) + ikl(3,3,in,ib)))
+        dmth(3,3) = dmth(3,3) + 
+     &  (2.d0*q2(i2,1)*(ikl(1,1,in,ib) + ikl(2,2,in,ib)))
+      enddo
+*     termes non diagonaux :
+      do k=1,3
+      do l=1,3
+        if (k.ne.l) then
+          do in=1,na3
+            i2 = ina1 + in
+            dmth(k,l) = dmth(k,l) - 
+     &                  q2(i2,1)*(ikl(k,l,in,ib)+ikl(l,k,in,ib)) 
+          enddo
+        endif
+      enddo
+      enddo
+*     partie skl :
+      do in=1,na3
+        i2 = ina1 + in
+        do j=1,na3
+          j2 = ina1 + j
+          dmth(1,1) = dmth(1,1) + 
+     &    (q2(i2,1)*(skl(2,2,in,j,ib) + skl(3,3,in,j,ib))*q2(j2,1))
+          dmth(2,2) = dmth(2,2) + 
+     &    (q2(i2,1)*(skl(1,1,in,j,ib) + skl(3,3,in,j,ib))*q2(j2,1))
+          dmth(3,3) = dmth(3,3) + 
+     &    (q2(i2,1)*(skl(1,1,in,j,ib) + skl(2,2,in,j,ib))*q2(j2,1))
+          dmth(1,2) = dmth(1,2) - 
+     &    (q2(i2,1)*skl(2,1,in,j,ib)*q2(j2,1))
+          dmth(1,3) = dmth(1,3) - 
+     &    (q2(i2,1)*skl(3,1,in,j,ib)*q2(j2,1))
+          dmth(2,3) = dmth(2,3) - 
+     &    (q2(i2,1)*skl(3,2,in,j,ib)*q2(j2,1))
+          mthth(2,1,ib) = mthth(2,1,ib) - 
+     &    (q2(i2,1)*skl(1,2,in,j,ib)*q2(j2,1))
+          mthth(3,1,ib) = mthth(3,1,ib) - 
+     &    (q2(i2,1)*skl(1,3,in,j,ib)*q2(j2,1))
+          mthth(3,2,ib) = mthth(3,2,ib) - 
+     &    (q2(i2,1)*skl(2,3,in,j,ib)*q2(j2,1))
+        enddo
+      enddo
+**     on remplit les symetriques :
+*      dmth(2,1) = dmth(1,2)
+*      dmth(3,1) = dmth(1,3)
+*      dmth(3,2) = dmth(2,3)
+*     on calcul le terme dmth * W :
+      do id=1,3
+      do j=1,3
+        qvth(id,ib)=qvth(id,ib)-(dmth(id,j)*omeg2(j,1,ib)) 
+      enddo
+      enddo
+*     calcul du terme W wedge (mthf*dqf/dt)
+*     jwf = mthf * dqf/dt
+      do id=1,3
+      jwf(id)=0.d0
+      do in=1,na3
+        if (.not.(itrig(ib,in))) then
+          i2=ina1+in
+          jwf(id) = jwf(id) + (mfth(in,id,ib)*q2(i2,1))
+        endif
+      enddo
+      enddo
+*     
+      qvth(1,ib)=qvth(1,ib)-(omeg2(2,1,ib)*jwf(3)-omeg2(3,1,ib)*jwf(2))
+      qvth(2,ib)=qvth(2,ib)-(omeg2(3,1,ib)*jwf(1)-omeg2(1,1,ib)*jwf(3))
+      qvth(3,ib)=qvth(3,ib)-(omeg2(1,1,ib)*jwf(2)-omeg2(2,1,ib)*jwf(1))
+*
+*      write(*,*)'QVTH :'
+*      write(*,'(3(1X,F15.10))') , (qvth(id,ib),id=1,3)
 *
       END

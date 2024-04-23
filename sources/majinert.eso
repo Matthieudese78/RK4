@@ -9,6 +9,13 @@
 *--------------------------------------------------------------------*      
 *
       REAL*8 INERT(3,3),XCG(3)
+*     
+      write(*,*)'majinert : '
+      write(*,*)'xmtot ',xmasse
+      write(*,*)'xcg ',xcg(1)
+      write(*,*)'ycg ',xcg(2)
+      write(*,*)'zcg ',xcg(3)
+      write(*,*)'correction en x :',XMASSE*(XCG(3)**2 + XCG(2)**2)
 *
       INERT(1,1) = INERT(1,1) + XMASSE*(XCG(3)**2 + XCG(2)**2)
       INERT(2,2) = INERT(2,2) + XMASSE*(XCG(3)**2 + XCG(1)**2)

@@ -44,8 +44,9 @@
       
 *
       REAL*8 Q1(NA1,*),q2(na1,*)
-      REAL*8 qv2(3)
-      REAL*8 wchap(3,3),wchap2(3,3)
+*      REAL*8 qv2(3)
+*      REAL*8 wchap(3,3),wchap2(3,3)
+      real*8 bl(3),v1(3),wbl(3),w2bl(3),wv(3)
 ******************************************************************
       mtrot = ktrot
 ******************************************************************
@@ -57,85 +58,116 @@
 *     1er mode elast ou transl rigi de la sous base ib ds l'ensemble des modes elast + trans rigis
 *     ina1 = iorsb(ib) - 1
 
-******************************************************************
-*     calcul de chap(W), chap(W)**2 :
-******************************************************************
-      call chap(omeg2(1,ind,ib),wchap(1,1))
-      do id=1,3
-        do j=1,3
-          wchap2(id,j) = 0.d0
-          do k=1,3
-            wchap2(id,j) = wchap2(id,j) + wchap(id,k) * wchap(k,j)
-          enddo
-*          write(*,*)'wchap2(id,j) = ',wchap2(id,j)
-        enddo
-      enddo
-******************************************************************
-*     1ere partie :
-******************************************************************
-*       - 1.1 partie statique : chap(W)**2 * bras de levier
-******************************************************************
-      do id=1,3
-        qvr(id,ib) = 0.d0
-        do j=1,3
-          qvr(id,ib) = qvr(id,ib) + wchap2(id,j)*XCG(j,ib)
-        enddo
-        qvr(id,ib) = mtsb(ib) * qvr(id,ib)
-*        write(*,*)'1 : qvr(id,ib) = ',qvr(id,ib)
-      enddo
+*******************************************************************
+**     calcul de chap(W), chap(W)**2 :
+*******************************************************************
+*      call chap(omeg2(1,ind,ib),wchap(1,1))
+*      do id=1,3
+*        do j=1,3
+*          wchap2(id,j) = 0.d0
+*          do k=1,3
+*            wchap2(id,j) = wchap2(id,j) + wchap(id,k) * wchap(k,j)
+*          enddo
+**          write(*,*)'wchap2(id,j) = ',wchap2(id,j)
+*        enddo
+*      enddo
+*******************************************************************
+**     1ere partie :
+*******************************************************************
+**       - 1.1 partie statique : chap(W)**2 * bras de levier
+*******************************************************************
+*      do id=1,3
+*        qvr(id,ib) = 0.d0
+*        do j=1,3
+*          qvr(id,ib) = qvr(id,ib) + wchap2(id,j)*XCG(j,ib)
+*        enddo
+*        qvr(id,ib) = mtsb(ib) * qvr(id,ib)
+**        write(*,*)'1 : qvr(id,ib) = ',qvr(id,ib)
+*      enddo
+*
+*******************************************************************
+*      do ip=1,npdef
+*******************************************************************
+*        do 1 in = 1,na3
+*          if (itrig(ib,in)) goto 1
+*          i2 = ina1 + in
+*******************************************************************
+**       - 1.2 partie corrective : chap(W)**2 * m_ij * u_f_ij
+*******************************************************************
+*          do id=1,3
+*            do j=1,3
+*              qvr(id,ib) = qvr(id,ib) +
+*     &   (wchap2(id,j)*(xtphi(j,ip,in,ib)*q1(i2,ind))*xmpoi(ip,ib))
+**              write(*,*)'    xtphi(j,ip,in,ib) = ',xtphi(j,ip,in,ib)
+*            enddo
+**            write(*,*)'2 : q1(i2,ind) = ',q1(i2,ind)
+**            write(*,*)'    xmpoi(ip,ib) = ',xmpoi(ip,ib)
+**            write(*,*)'2 : qvr(id,ib) = ',qvr(id,ib)
+*          enddo
+*******************************************************************
+**       - 2. :  2 * chap(W) * sum_j m_ij phi_ij dot(q_f^i) 
+*******************************************************************
+*          do id=1,3
+*            do j=1,3
+*              qvr(id,ib) = qvr(id,ib) +  
+*     &   (2.*wchap(id,j)*xtphi(j,ip,in,ib)*q2(i2,ind)*xmpoi(ip,ib))
+*            enddo
+**            write(*,*)'3 : qvr(id,ib) = ',qvr(id,ib)
+***           ponderation par la masse ponctuelle :
+**            qvr(id,ib) = qvr(id,ib) * xmpoi(ip,ib)
+*          enddo
+* 1      continue
+****** fin boucle sur les points 
+*      enddo
+*******************************************************************
+**       final :  - A * (1.1 + 1.2 + 2.)
+*******************************************************************
+*      do id=1,3
+*        qv2(id) = 0.d0
+*        do j=1,3
+*          qv2(id) = qv2(id) - (rot(id,j,ind,ib) * qvr(j,ib))
+*        enddo
+*        if (qv2(id).ne.qv2(id)) then
+*         write(*,*)'cqvr : qv2 = NaN!'
+*         call exit(1)
+*        endif
+*      enddo
+*      qvr(1,ib) = qv2(1) 
+*      qvr(2,ib) = qv2(2) 
+*      qvr(3,ib) = qv2(3) 
 
 ******************************************************************
-      do ip=1,npdef
-******************************************************************
-        do 1 in = 1,na3
-          if (itrig(ib,in)) goto 1
-          i2 = ina1 + in
-******************************************************************
-*       - 1.2 partie corrective : chap(W)**2 * m_ij * u_f_ij
-******************************************************************
-          do id=1,3
-            do j=1,3
-              qvr(id,ib) = qvr(id,ib) +
-     &   (wchap2(id,j)*(xtphi(j,ip,in,ib)*q1(i2,ind))*xmpoi(ip,ib))
-*              write(*,*)'    xtphi(j,ip,in,ib) = ',xtphi(j,ip,in,ib)
-            enddo
-*            write(*,*)'2 : q1(i2,ind) = ',q1(i2,ind)
-*            write(*,*)'    xmpoi(ip,ib) = ',xmpoi(ip,ib)
-*            write(*,*)'2 : qvr(id,ib) = ',qvr(id,ib)
-          enddo
-******************************************************************
-*       - 2. :  2 * chap(W) * sum_j m_ij phi_ij dot(q_f^i) 
-******************************************************************
-          do id=1,3
-            do j=1,3
-              qvr(id,ib) = qvr(id,ib) +  
-     &   (2.*wchap(id,j)*xtphi(j,ip,in,ib)*q2(i2,ind)*xmpoi(ip,ib))
-            enddo
-*            write(*,*)'3 : qvr(id,ib) = ',qvr(id,ib)
-**           ponderation par la masse ponctuelle :
-*            qvr(id,ib) = qvr(id,ib) * xmpoi(ip,ib)
-          enddo
- 1      continue
-***** fin boucle sur les points 
-      enddo
-******************************************************************
-*       final :  - A * (1.1 + 1.2 + 2.)
+*     new : avec les matrices invariantes
 ******************************************************************
       do id=1,3
-        qv2(id) = 0.d0
-        do j=1,3
-          qv2(id) = qv2(id) - (rot(id,j,ind,ib) * qvr(j,ib))
+        bl(id) = bl0(id,ib)
+        v1(id) = 0.d0
+        do in=1,na3
+          i2=ina1+in
+          bl(id) = bl(id) + (blf(id,in,ib)*q1(i2,1))
+          v1(id) = blf(id,in,ib)*q2(i2,1)
         enddo
-        if (qv2(id).ne.qv2(id)) then
-         write(*,*)'cqvr : qv2 = NaN!'
-         call exit(1)
-        endif
       enddo
-      qvr(1,ib) = qv2(1) 
-      qvr(2,ib) = qv2(2) 
-      qvr(3,ib) = qv2(3) 
+      wbl(1)=(omeg2(2,1,ib)*bl(3)-omeg2(3,1,ib)*bl(2))
+      wbl(2)=(omeg2(3,1,ib)*bl(1)-omeg2(1,1,ib)*bl(3))
+      wbl(3)=(omeg2(1,1,ib)*bl(2)-omeg2(2,1,ib)*bl(1))
+* 
+      w2bl(1)=(omeg2(2,1,ib)*wbl(3)-omeg2(3,1,ib)*wbl(2))
+      w2bl(2)=(omeg2(3,1,ib)*wbl(1)-omeg2(1,1,ib)*wbl(3))
+      w2bl(3)=(omeg2(1,1,ib)*wbl(2)-omeg2(2,1,ib)*wbl(1))
+*
+      wv(1)=(omeg2(2,1,ib)*v1(3)-omeg2(3,1,ib)*v1(2))
+      wv(2)=(omeg2(3,1,ib)*v1(1)-omeg2(1,1,ib)*v1(3))
+      wv(3)=(omeg2(1,1,ib)*v1(2)-omeg2(2,1,ib)*v1(1))
+*
+      do id=1,3
+        do j=1,3
+         qvr(id,ib)=qvr(id,ib) - rot(id,j,1,ib)*(w2bl(j)+(2.d0*wv(j)))
+        enddo
+      enddo
+*     
 ******************************************************************
-*      write(*,*)'QVR :'
-*      write(*,'(3(1X,F8.5))') , (qvr(id,ib),id=1,3)
+      write(*,*)'QVR :'
+      write(*,'(3(1X,F8.5))') , (qvr(id,ib),id=1,3)
 *
       END

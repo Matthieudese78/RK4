@@ -34,8 +34,9 @@
       ENDSEGMENT
 *
       REAL*8 Q1(NA1,*),q2(na1,*)
-      REAL*8 qv1(3)
-      real*8 wchap(3,3),wchap2(3,3),x1(3)
+*      REAL*8 qv1(3)
+*      real*8 wchap(3,3),wchap2(3,3),x1(3)
+      real*8 bl(3),wbl(3),v1(3)
 ******************************************************************
       mtrot = ktrot
 ******************************************************************
@@ -45,69 +46,128 @@
       do in=1,na2
         qvf(in,ib) = 0.d0
       enddo
-******************************************************************
-*     nbr de modes elastiques dans la sous bases :
-******************************************************************
-*     na3 = inmsb(ib)
-*     1er mode elast ou transl rigi de la sous base ib ds l'ensemble des modes elast + trans rigis
-*     ina1 = iorsb(ib) - 1
-******************************************************************
-*     calcul de chap(W), chap(W)**2 :
-******************************************************************
-      call chap(omeg2(1,ind,ib),wchap(1,1))
-      do id=1,3
-        do j=1,3
-          wchap2(id,j) = 0.d0
-          do k=1,3
-            wchap2(id,j) = wchap2(id,j) + wchap(id,k) * wchap(k,j)
-          enddo
-        enddo
-      enddo
+*******************************************************************
+**     nbr de modes elastiques dans la sous bases :
+*******************************************************************
+**     na3 = inmsb(ib)
+**     1er mode elast ou transl rigi de la sous base ib ds l'ensemble des modes elast + trans rigis
+**     ina1 = iorsb(ib) - 1
+*******************************************************************
+**     calcul de chap(W), chap(W)**2 :
+*******************************************************************
+*      call chap(omeg2(1,ind,ib),wchap(1,1))
+*      do id=1,3
+*        do j=1,3
+*          wchap2(id,j) = 0.d0
+*          do k=1,3
+*            wchap2(id,j) = wchap2(id,j) + wchap(id,k) * wchap(k,j)
+*          enddo
+*        enddo
+*      enddo
+*
+*******************************************************************
+*      do ip=1,npdef
+*******************************************************************
+*        do 1 in = 1,na3
+*          if (itrig(ib,in)) goto 1
+*          i2 = ina1 + in
+*******************************************************************
+**         part 1 :
+*******************************************************************
+*          do id=1,3
+*            x1(id) = xcoophi(id,ip,ib) - xcent(id,ib) +
+*     &              (xtphi(id,ip,in,ib) * q1(i2,ind))
+*          enddo
+*          do id=1,3
+*            qv1(id) = 0.d0
+*            do j=1,3
+*              qv1(id) = qv1(id) +
+*     &        ((wchap2(id,j)*x1(j)) * xmpoi(ip,ib)) 
+*            enddo
+*          enddo
+*******************************************************************
+**         part 2 :
+*******************************************************************
+*          do id=1,3
+*            do j=1,3
+*          qv1(id) = qv1(id) +
+*     &    (2. * wchap(id,j) * (xtphi(j,ip,in,ib)*q2(i2,ind)) *
+*     &                xmpoi(ip,ib))
+*            enddo
+***           ponderation par la masse ponctuelle : 
+**            qv1(id) = qv1(id) * xmpoi(ip,ib)
+*          enddo
+*******************************************************************
+**         projection sur le mode : (avec le signe -)
+*******************************************************************
+*          do id=1,3
+*            qvf(in,ib) = qvf(in,ib) - (xtphi(id,ip,in,ib) * qv1(id))
+*          enddo
+**
+* 1      continue
+****** fin boucle sur les points 
+*      enddo
 
 ******************************************************************
+*         NEW : EN UTILISANT LES MATRICES INVARIANTES
+******************************************************************
       do ip=1,npdef
-******************************************************************
-        do 1 in = 1,na3
-          if (itrig(ib,in)) goto 1
-          i2 = ina1 + in
-******************************************************************
-*         part 1 :
-******************************************************************
+*     calcul de : chap(W)**2 * (bl0 + blf*qf)
+      do id=1,3
+        bl(id) = xcoophi(id,ip,ib) - xcent(id,ib)
+      enddo
+*     
+      do in=1,na3
+        i2=ina1+in
+        if (.not.itrig(ib,in)) then
           do id=1,3
-            x1(id) = xcoophi(id,ip,ib) - xcent(id,ib) +
-     &              (xtphi(id,ip,in,ib) * q1(i2,ind))
+            bl(id) = bl(id) + (xtphi(id,ip,in,ib)*q1(i2,1))
           enddo
-          do id=1,3
-            qv1(id) = 0.d0
-            do j=1,3
-              qv1(id) = qv1(id) +
-     &        ((wchap2(id,j)*x1(j)) * xmpoi(ip,ib)) 
-            enddo
-          enddo
-******************************************************************
-*         part 2 :
-******************************************************************
-          do id=1,3
-            do j=1,3
-          qv1(id) = qv1(id) +
-     &    (2. * wchap(id,j) * (xtphi(j,ip,in,ib)*q2(i2,ind)) *
-     &                xmpoi(ip,ib))
-            enddo
-**           ponderation par la masse ponctuelle : 
-*            qv1(id) = qv1(id) * xmpoi(ip,ib)
-          enddo
-******************************************************************
-*         projection sur le mode : (avec le signe -)
-******************************************************************
-          do id=1,3
-            qvf(in,ib) = qvf(in,ib) - (xtphi(id,ip,in,ib) * qv1(id))
-          enddo
+        endif
+      enddo
 *
- 1      continue
-***** fin boucle sur les points 
+      wbl(1)=(omeg2(2,1,ib)*bl(3)-omeg2(3,1,ib)*bl(2))
+      wbl(2)=(omeg2(3,1,ib)*bl(1)-omeg2(1,1,ib)*bl(3))
+      wbl(3)=(omeg2(1,1,ib)*bl(2)-omeg2(2,1,ib)*bl(1))
+*     projection sur la valeur du mode au point ip de masse(point) * (W wedge W wedge X):
+      do in=1,na3
+        i2=ina1+in
+        if (.not.itrig(ib,in)) then
+      qvf(in,ib) = qvf(in,ib) - (xmpoi(ip,ib)*xtphi(1,ip,in,ib)*
+     &      (omeg2(2,1,ib)*wbl(3)-omeg2(3,1,ib)*wbl(2)))
+      qvf(in,ib) = qvf(in,ib) - (xmpoi(ip,ib)*xtphi(2,ip,in,ib)*
+     &      (omeg2(3,1,ib)*wbl(1)-omeg2(1,1,ib)*wbl(3)))
+      qvf(in,ib) = qvf(in,ib) - (xmpoi(ip,ib)*xtphi(3,ip,in,ib)*
+     &      (omeg2(1,1,ib)*wbl(2)-omeg2(2,1,ib)*wbl(1)))
+        endif
+      enddo
+*     calcul de : 2.*chap(W) * Phi d(qf)/dt
+      do id=1,3
+        v1(id) = 0.d0
+        do in=1,na3
+          i2=ina1+in
+          if (.not.itrig(ib,in)) then
+            i2=ina1+in
+            v1(id) = v1(id) + (xtphi(id,ip,in,ib)*q2(i2,1))
+          endif
+        enddo
+      enddo
+*     projection sur la valeur du mode au point ip de masse(point) * (2 * W wedge vf):
+      do in=1,na3 
+        i2=ina1+in
+        if (.not.itrig(ib,in)) then
+      qvf(in,ib) = qvf(in,ib) - (2.d0*xmpoi(ip,ib)*xtphi(1,ip,in,ib)*
+     &      (omeg2(2,1,ib)*v1(3)-omeg2(3,1,ib)*v1(2)))
+      qvf(in,ib) = qvf(in,ib) - (2.d0*xmpoi(ip,ib)*xtphi(2,ip,in,ib)*
+     &      (omeg2(3,1,ib)*v1(1)-omeg2(1,1,ib)*v1(3)))
+      qvf(in,ib) = qvf(in,ib) - (2.d0*xmpoi(ip,ib)*xtphi(3,ip,in,ib)*
+     &      (omeg2(1,1,ib)*v1(2)-omeg2(2,1,ib)*v1(1)))
+        endif
+      enddo
+*     fin boucle sur les points 
       enddo
 * 
-*     write(*,*)'QVF :'
-*     write(*,'(3(1X,F8.5))') , (qvf(in,ib),in=1,na3)
+*      write(*,*)'QVF :'
+*      write(*,'(1X,F15.10)') , (qvf(in,ib),in=1,na3)
 *
       END

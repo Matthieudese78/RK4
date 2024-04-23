@@ -128,7 +128,7 @@ cmsw      WRITE(*,*)'IPLIB(1,1) = ',IPLIB(1,1)
      &                 NA2,NA1,NSB,NPLSB,NPLB,IND,IDIM,KTROT)
         else
 *          moment calcule a t_n+1
-           write(*,*)'d2vlfb : call rkmom :'
+*           write(*,*)'d2vlfb : call rkmom :'
            CALL RKMOM(FTOTB,Q1,FEXB,XPHILB,IAROTA,IBASB,IPLSB,INMSB,
      &                 NA2,NA1,NSB,NPLSB,NPLB,IND,IDIM,KTROT)
         endif

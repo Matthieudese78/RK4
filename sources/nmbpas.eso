@@ -343,9 +343,9 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 
 *     Ajout des forces de raideur
 *     F = F - K Q_1
-      IF (IIMPI.EQ.333) THEN
+*      IF (IIMPI.EQ.333) THEN
 cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme DEVLK0'
-      ENDIF
+*      ENDIF
       CALL DEVLK0(Q1,XK,FTOTA,NA1,NB1K,1)
 
 *     forces d'amortissement
@@ -664,9 +664,10 @@ cmsw     &                     XPHILB(IIB,1,IN,ID)
 cmsw               WRITE(*,*)' Q2(',IN2,2,') = ',Q2(IN2,2)
 cmsw               WRITE(*,*)' XTC = ',XTC 
               ENDDO
-            ELSE
-*              On ajoute l'energie cinetique associee aux modes flexibles : 
-               XTC = XTC + (0.5 * (Q2(IN2,2)**2) * XM(IN,1))
+*            finalement on met l'energie cinetique du mode dans wext (cf. plus loin)
+*            ELSE
+**              On ajoute l'energie cinetique associee aux modes flexibles : 
+*               XTC = XTC + (0.5 * (Q2(IN2,2)**2) * XM(IN,1))
             ENDIF 
           ENDDO
           TCIN(IIB) = TCIN(IIB) + XTC
@@ -723,7 +724,9 @@ c           F2 = F2 - XASM(I)*Q2(I,1)
           F2 = F2 - FAMO1(I)
           DWIN = -(F1 + F2)/2D0 * DQ1
 
-          WEXT(I,1) = WEXT(I,2) + DWEX
+*          WEXT(I,1) = WEXT(I,2) + DWEX
+*         finalemenent ds wext on met l'energie cinetique du mode
+          wext(i,1) = (xm(i,1) * (q2(i,1)**2)/2.d0)
           WINT(I,1) = WINT(I,2) + DWIN
 cmsw      WRITE(*,*)'wext(i,1) = ',wext(i,1) 
 cmsw      WRITE(*,*)'wint(i,1) = ',wint(i,1) 

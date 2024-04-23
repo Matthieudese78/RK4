@@ -148,7 +148,7 @@ cms : pour le couple resistant "hard code" :
 *     correction dexpinv ?
       lxpinv = .false.
 *     couplage inertiel ?
-      linert = .true.
+      linert = .false.
 *     method de calcul de la MAJ du tenseur d'inertie J ?
       methJ1 = .false.
       methJ2 = .true.
@@ -212,24 +212,6 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
 *     pas de condition sur l'appel a d2vfxa.
       CALL RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &              NPLB,IDIMB,RIGIDE)
-*      write(*,*)'rkpas : fexb :'
-*      write(*,'(3(1X,F8.5))') , ((fexb(ip,3,j),j=1,3),ip=1,nplb)
-*      write(*,*)'rkpas : ftota :'
-*      do i=1,na1
-*      write(*,'(3(1X,F8.5))') , (ftota(i,ind1),ind1=1,3)
-*      enddo
-*      write(*,*)'rkpas : finert :'
-*      do i=1,na1
-*      write(*,'(1X,F8.5)') , finert(i,1)
-*      enddo
-* ddls elastiques :  
-*      do in=1,npfexa 
-**        fel(in,3) = ftota(in,2)
-**       force au demi-pas de temps :
-*        fel(in,2) = fota(in,2) + ((ftota(in,1) - ftota(in,2))/2.d0)
-*        fel(in,2) = 
-*      enddo
-      
 ************************************************************************
 *     todo : ici : l'interpolation des forces exterieures
 ************************************************************************
@@ -237,11 +219,6 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
 ************************************************************************
 *     Corps rigides: prediction, MAJ matrice de rotation
 ************************************************************************
-* TODO dans D2VINI / DYNE18: initialisation de toutes les ss bases
-* pour l'instant, seulement 1 seule ss base inititalisee
-     
-*      
-      if (.not.linert) then
       IF (RIGIDE) THEN
         DO 7 IIB=1,NSB
 CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
@@ -376,16 +353,6 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
      &                             + 2.d0*omeg3(id,3) 
      &                             + omeg3(id,2)) 
           enddo
-*         si linert : il nous faut une estimation de l'acceleration :
-          if (linert) then
-            do id=1,3
-             omeg3(id,1,iib) = omeg3(id,2,iib)
-*              omeg3(id,1,iib) = (1.d0/6.d0)*( omeg3(id,5,iib) 
-*     &                                      + 2.d0*omeg3(id,4) 
-*     &                                      + 2.d0*omeg3(id,3) 
-*     &                                      + omeg3(id,2)) 
-            enddo
-          endif
 ******** fin boucle sur les ss bases
  7      continue
       ENDIF
@@ -397,18 +364,9 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *     k1 = (q2(i,5), q3(i,5))^T
 *     u2 = y + k1*dt2
 ************************************************************************
-*      write(*,*)'rkpas : indice 5'
-*      do i = 1,na1
-*      write(*,*)'q1 :',q1(i,5)
-*      write(*,*)'q2 :',q2(i,5)
-*      enddo
-
-*     write(*,*)'rkpas 1st pred :'
       do i = 1,na1
         q1(i,4) = q1(i,5) + q2(i,5) * dt2
         q2(i,4) = q2(i,5) + q3(i,5) * dt2
-*       write(*,*)'q1 :',q1(i,4)
-*       write(*,*)'q2 :',q2(i,4)
       enddo
 *     1/2 pdt --> ifex = 3
       call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
@@ -457,59 +415,19 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
 *       vitesse :
       q2(i,1)=q2(i,5)+(dt/6.d0)*(q3(i,5) + 2.d0*q3(i,4) + 2.d0*q3(i,3) +
      &                       q3(i,2))
-*       if linert, il nous faut une estimation de l'acceleration :
-        if (linert) then
-          q3(i,1) = q3(i,2)
-*      q3(i,1)=(1.d0/6.d0)*(q3(i,5) + 2.d0*q3(i,4) + 2.d0*q3(i,3) +
-*     &                       q3(i,2))
-        endif
 *      write(*,*)'rkpas avant liaison :'
 *      write(*,*)'q1 :',q1(i,1)
 *      write(*,*)'q1 :',q1(i,1)
 *      write(*,*)'q2 :',q2(i,1)
 *      write(*,*)'q2 :',q2(i,1)
       enddo
-*     fin if .not. linert
-      endif
-********************
-      if (linert) then
-***** court-circuit : prediction diff centrees :
-*         rotations :
-        do iib=1,nsb
-        if (.not.(iarota(iib).eq.0)) then
-        do i=1,3
-          dtheta(i,iib) = omeg2(i,5,iib)*dt + omeg3(i,5,iib)*dt22
-        enddo
-*       calcul de EXPTH pour eq. dynamique:
-        call expthr(dtheta(1,iib),expth(1,1,1,iib))
-*        increment de rotation --> quaternion
-        call vect2quat(dtheta(1,iib),dquat)
-*        maj quaternion omeg1:
-        call pquat(omeg1(1,5,iib),dquat,omeg1(1,1,iib))
-        call quat2mat(omeg1(1,1,iib),rot(1,1,1,iib)) 
-*       vitesse au 1/2 pas de temps
-        do i=1,3
-          omeg2(i,1,iib) = dtheta(i,iib) / dt
-        enddo
-        endif
-*       fin boucle prediction sur les ss bases
-        enddo
-*       ddls flexibles 
-        do  i = 1,na1
-         q1(i,1) = q1(i,5) + q2(i,5)*dt + q3(i,5)*dt22
-        enddo
-*       vitesse au 1/2 pas de temps
-        do i=1,na1
-         q2(i,1)=(q1(i,1)-q1(i,5))/dt
-        enddo
-      endif
+
 ************************************************************************
 *     Calcul des forces de liaisons
 ************************************************************************
-*     Totalisation des forces ext�rieures pour la base A a la fin du pas
-*     rq : rkfxa ne perturbe pas l'implementation des forces exterieures 
-      CALL RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
-     &              NPLB,IDIMB,RIGIDE)
+*     deja appele en debut de subroutine :
+*      CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
+*     &              NPLB,IDIMB,RIGIDE)
 *     Ajout des forces de liaison
       IF (NLIAA.NE.0) THEN
          CALL D2VLFA(Q1,Q2,FTOTA,NA1,IPALA,IPLIA,XPALA,XVALA,
@@ -519,31 +437,16 @@ cmsw          WRITE(*,*)'D2VPAS : IAROTA(',IIB,') = ',IAROTA(IIB)
       IF (IIMPI.EQ.333) WRITE(IOIMP,*)'D2VPAS: NLIAB = ',NLIAB
       IF (NLIAB.NE.0) THEN
          IF (IIMPI.EQ.333) THEN
-cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
          ENDIF      
-*        WRITE(*,*)'rkpas : appel au sous-programme D2VLFB'
 *        dernier arg = .false. --> calcul du moment au pas t_n+1 via rkmom
-         if (linert) then 
-*        differences centrees mais pas simo et wong --> rkmom  
-*        couple exterieur estime a l'instant tn+1 <--> ind = 1
-         CALL D2VLFB(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,NLIAB,
-     &               XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,dt,tfin,
-     &               NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,1,
-     &               FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
-     &               FEXB,KTROT,IAROTA,XCHPFB,
-     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.false.)
-*     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.false.)
-         endif
-         if (.not.linert) then
 *        rk4 
          CALL D2VLFB(Q1,Q2,FTOTA,NA1,IPALB,IPLIB,XPALB,XVALB,NLIAB,
      &               XPHILB,JPLIB,NPLB,IDIMB,FTOTB,FTOTBA,XPTB,dt,tfin,
      &               NPAS,IBASB,IPLSB,INMSB,IORSB,NSB,NPLSB,NA2,1,
      &               FEXPSM,NPC1,IERRD,FTEST2,XABSCI,XORDON,NIP,
      &               FEXB,KTROT,IAROTA,XCHPFB,
-     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.false.)
-*     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.true.)
-         endif
+     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.true.)
+*     &               KTOTXA,KTOTVA,KTOTXB,KTOTVB,.FALSE.,.false.)
 *
          IF (IERRD.NE.0) RETURN
       ENDIF
@@ -585,399 +488,42 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
         fmomtot(3,1,ibad) = fmomtot(3,1,ibad) + 
      &                        0.
       endif
-******************************************************************
-*     force de raideur / d'amortissement :
-******************************************************************
-*     ajout des forces de raideurs :
-      CALL RKLK0(Q1,XK,FTOTA,NA1,NB1K,1,1)
-*     ajout des forces d'amortissement :
-      IF (NB1C.GT.1) THEN
-        DO I=1,NA1
-           FAMOR(I) = 0.D0
-          DO J=1,NB1
-            FAMOR(I) = FAMOR(I) + XASM(I,J) * Q2(J,1)
-          enddo
-        enddo
-      ELSE
-        DO I=1,NA1
-           FAMOR(I) = XASM(I,1) * Q2(I,1)
-        enddo
-      ENDIF
 ************************************************************************
 *     EquilibreS DynamiqueS (separes)
 ************************************************************************
 * elastique :
 ************************************************************************
-      if (.not.linert) then
-        call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
+      call rkpasel(q1,q2,q3,xk,xm,ftota,na1,nb1k,nb1c,nb1,famor,
      &               xasm,xopm1,finert,1,1,pdt)
 *       MAJ vitesse generalisee : pour newmark only
-*       do in=1,na1
+*       vitesse :
+*      do in=1,na1
+*      q2(i,1)=q2(i,5)+(dt/6.d0)*(q3(i,5) + 2.d0*q3(i,4) + 2.d0*q3(i,3) +
+*     &                       q3(i,1))
 *         q2(in,1) = q2(in,5) + (dt/2.d0)*(q3(in,1)+q3(in,5))
-*       enddo
+*      enddo
 ************************************************************************
 * rotas rigides :
 ************************************************************************
-        do 22 iib=1,nsb
+      do 22 iib=1,nsb
         if (iarota(iib).eq.0) goto 22
         call rkpasrig(omeg1,omeg2,omeg3,rot,mthth,invinert,nsb,iib,
      &    dtheta(1,iib),fmomtot,xcoolb,fexb,nplb,1,1,.false.,.false.,
      &    .false.)
 *         MAJ vitesse angulaire : pour newmark only
+*          do id=1,3
+*            omeg2(id,1,iib) = omeg2(id,5,iib) +
+*     &                   (dt/6.d0)*( omeg3(id,5,iib) 
+*     &                             + 2.d0*omeg3(id,4) 
+*     &                             + 2.d0*omeg3(id,3) 
+*     &                             + omeg3(id,1)) 
+*          enddo
 *       do id = 1,3
 *         omeg2(id,1,iib) = omeg2(id,5,iib) + 
 *    &                    (dt/2.d0)*(omeg3(id,1,iib)+omeg3(id,5,iib))
 *       enddo
- 22     continue
+ 22   continue
         
-      endif
-
-************************************************************************
-* ROTATIONS RIGIDES: calcul des matrices necessaires au calcul des forces d'inertie 
-*     dans le repere spatial --> on prend le quaternion omeg1 (orientation dans le repere spatial).
-******************************************************************
-      if (linert) then
-      if (rigide) then
-******************************************************************
-        do 1 iib=1,nsb
-**        na3 : nombre de modes elastiques + translations rig
-**              dans la ss base iib.
-        na3 = inmsb(iib)
-*        premier mode elast ou transl rigi de la sous base iib ds l'ensemble des modes elast + trans rigis
-        ina1 = iorsb(iib) - 1
-*        initialisation des forces d'inertie, pour ttes les ss bases!
-*         --> apparaissent apres dans l'equilibre dynamique
-        do id=1,3
-          qvr(id,iib) = 0.d0
-          qvth(id,iib) = 0.d0
-          do j=1,3
-            mrth(id,j,iib) = 0.d0
-            mthth(id,j,iib) = 0.d0
-          enddo
-        enddo
-        do in=1,na2
-          qvf(in,iib) = 0.d0
-          do id=1,3
-            mfr(in,id,iib) = 0.d0
-            mfth(in,id,iib) = 0.d0
-          enddo
-        enddo
-        do i1=1,ntot
-          do i2=1,ntot
-            mtot(i1,i2,iib) = 0.d0
-          enddo
-        enddo
-*       maintenant on peut sauter les ss bases ss rotas rigides :
-        if (iarota(iib).eq.0) goto 1
-*       on repere le nombre de translations rigides a retirer de la  
-*       dimension pour inverser.
-        ntrig = 0
-        do in=1,na3
-          if (itrig(iib,in)) then 
-            ntrig = ntrig + 1
-          endif
-        enddo
-******************************************************************
-*       indice auquel sont calculees les forces d'inertie :
-******************************************************************
-        ind1=1
-******************************************************************
-*     M_{Rth} : couplage rotas-trnaslas shabana p 320
-******************************************************************
-*        write(*,*)'rkpas call cmrth : rot :'
-*        do id=1,3
-*           write(*,'(3(1X,F8.5))') , (rot(id,j,ind1,iib),j=1,3)
-*        enddo
-        if (ntrig.gt.0) then
-          call cmrth(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
-        endif
-******************************************************************
-******************************************************************
-*     M_{fR} (dim : nmodes x 3) : couplage elas-translas shabana p 320
-******************************************************************
-        if (ntrig.gt.0) then
-          call cmfr(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
-        endif
-******************************************************************
-******************************************************************
-*     M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
-******************************************************************
-        call cmfth(Q1,XM,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
-*******************************************************************
-******************************************************************
-*    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
-*                          (shabana p 320)
-******************************************************************
-        call cmthth(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
-*******************************************************************
-* remplissage mtot :  
-*******************************************************************
-*     objecif : dans la matrice mtot(ntot,ntot,nsb), squizzer en haut a 
-*     gauche les parties pleines (necessaire pour inversion via invalm).
-*     initialisation :
-*       write(*,*)'tenseur d inertie :'
-*       do id=1,3
-*          write(*,'(3(1X,F8.5))') , (inertie(id,j,iib),j=1,3)
-*       enddo
-*      write(*,*)'ntrig = ',ntrig
-****** blocs diagonaux :
-*     lignes 1-3 : translations
-*     bloc (1,1) : mRR a 
-      if (ntrig.gt.0) then
-      do id=1,ntrig 
-        mtot(id,id,iib) = mtsb(iib) 
-*        write(*,*)'mtsb(iib) = ',mtsb(iib)
-      enddo
-      endif
-*     lignes ntrig+1 -> ntrig+3 : rotations
-*     bloc (2,2) du milieu : cmthth
-      do id=1,3  
-        id2 = id + ntrig
-        do j=1,3
-          j2= j + ntrig
-          mtot(id2,j2,iib) = mthth(id,j,iib)
-*          mtot(id2,j2,iib) = inertie(id,j,iib) + mthth(id,j,iib)
-*          write(*,*)'rempl. mthth = ',mtot(id2,j2,iib)
-        enddo
-      enddo
-*     lignes 7-na2 : flexible
-*     bloc (3,3) : cmff cas diagonal 
-      in1 = 3 + ntrig + 1
-      do in=1,na3
-        i2 = ina1 + in
-        if (.not.itrig(iib,in)) then 
-          mtot(in1,in1,iib) = xm(i2,1)  
-          in1 = in1 + 1
-        endif
-      enddo
-****** blocs non-diagonaux :
-*     bloc (1,2) : mRth 
-      if (ntrig.gt.0) then
-      do id=1,3
-        do j=1,3
-          j2 = j + ntrig
-          mtot(id,j2,iib) = mrth(id,j,iib)
-          mtot(j2,id,iib) = mrth(id,j,iib)
-        enddo
-      enddo
-      endif
-*     bloc (1,3) : mRf = mfR^T
-      if (ntrig.gt.0) then
-      in1 = 3 + ntrig + 1
-      do in=1,na3
-        if (.not.itrig(iib,in)) then
-          do id=1,ntrig 
-            mtot(in1,id,iib) = mfr(in,id,iib)
-            mtot(id,in1,iib) = mfr(in,id,iib)
-          enddo
-          in1 = in1 + 1
-        endif
-      enddo
-      endif
-*     bloc (2,3) : cmthf = cmfth^T
-      in1 = 3 + ntrig + 1
-      do in=1,na3  
-        if (.not.itrig(iib,in)) then
-          do id=1,3
-            id2 = id + ntrig
-            mtot(in1,id2,iib) = mfth(in,id,iib)
-            mtot(id2,in1,iib) = mfth(in,id,iib)
-          enddo
-          in1 = in1 + 1 
-        endif
-      enddo
-
-*      write(*,*)'        matrice totale :'
-*      do in=1,ntot
-*         write(*,'((16X,F8.5))') , (mtot(in,in1,iib),in1=1,ntot)
-*      enddo
-*     inversion de mtot : on part du principe qu'il y a 3 rotas rigides 
-*         (nbr de modes flexibles = in1 - 7)
-*      write(*,*)'rkpas : ntrig = ',ntrig
-*      write(*,*)'        in1 = ',in1
-*      write(*,*)'        na2 = ',na2
-*      write(*,*)'   3 + ntrig    ntot = ',ntot
-*      write(*,*)'        ninv = ',ninv
-*      write(*,*)'        matrice mtot :'
-*      do i1=1,ntot
-*         write(*,*)'column :',i1
-*         do i2=1,ntot
-*          write(*,*) , mtot(i2,i1,iib)
-*         enddo
-*      enddo
-      ninv = 3 + na3 
-      call invalm(mtot,ntot,ninv,kerre,1.d-10)
-*      call invalm(mtot(1,1,iib),ntot,ninv,kerre,1.d-10)
-*      write(*,*)'        matrice inversee :'
-*      do i1=1,ntot
-*         do i2=1,ntot
-*          write(*,*) , mtot(i1,i2,iib)
-*         enddo
-*      enddo
-
-*******************************************************************
-*       Quadratic velocity vector : coriolis, centrifuge ...
-********************3 + ntrig*********************************************
-*       translation : 
-      if (ntrig.gt.0) then
-        call cqvr(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
-      endif
-******************************************************************
-*       rotation : 
-      call cqvth(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
-******************************************************************
-*       coordonnees modales : 
-      call cqvf(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
-******************************************************************
-******************************************************************
-*      on implemente les forces d'inertie d'entrainement
-*      dues aux blocs non diagonnaux de la matrice de masse ET
-*      au "quadratic velocity vector" :
-*      * mthr, mrth, mthf, mfth, mrf, mfr
-*      * qvr, qvth, qvf
-******************************************************************
-      ftrans(1) = 0.d0
-      ftrans(2) = 0.d0
-      ftrans(3) = 0.d0
-      id = 1
-      do in=1,na3
-        i2 = ina1 + in
-*       QVF : 
-        if (.not.itrig(iib,in)) then 
-          ftota(i2,ind1) = ftota(i2,ind1) + qvf(in,iib)
-        endif
-*       QVR : 
-        if (itrig(iib,in)) then
-          ftota(i2,ind1) = ftota(i2,ind1) + qvr(in,iib)
-          ftrans(id) = ftota(i2,ind1) 
-          id = id + 1
-        endif
-      enddo
-*     passage du couple exterieur resultant dans le body frame :
-      do id=1,3
-        rtgex(id) = 0.d0
-        do j=1,3
-          rtgex(id) = rtgex(id) + rot(j,id,1,iib)*fmomtot(j,1,iib)
-        enddo
-      enddo
-*     on recalcule le terme convectif wjw car j a change :
-      do id=1,3
-        jw(id) = 0.d0
-        do j=1,3
-          jw(id) = jw(id) + 
-     &    (mthth(id,j,iib))*omeg2(j,1,iib)
-*     &    (inertie(id,j,iib) + mthth(id,j,iib))*omeg2(j,1,iib)
-        enddo
-      enddo
-      wjw(1) = omeg2(2,1,iib)*jw(3) - omeg2(3,1,iib)*jw(2) 
-      wjw(2) = omeg2(3,1,iib)*jw(1) - omeg2(1,1,iib)*jw(3) 
-      wjw(3) = omeg2(1,1,iib)*jw(2) - omeg2(2,1,iib)*jw(1) 
-************************************************************************
-*       NEW MTOT : equilibre dynamique a t_n+1
-************************************************************************
-*       translations :
-*       M^{-1}(1,1) * F_R
-        id = 1
-        in1 = ntrig + 3 + 1
-        do in=1,na3
-          i2 = ina1 + in
-          q3(i2,1) = 0.d0
-          if (itrig(iib,in)) then
-            do j=1,ntrig
-              q3(i2,1) = q3(i2,1) + mtot(id,j,iib) * ftrans(j)
-            enddo
-*           M^{-1}(1,2) * F_th
-            do j=1,3
-              j2 = j + ntrig
-              q3(i2,1) = q3(i2,1) +
-     &         mtot(id,j2,iib)*(rtgex(j) + qvth(j,iib) - wjw(j))
-*     &         mtot(id,j2,iib)*(rtgex(j) - wjw(j))
-            enddo
-*           M^{-1}(1,3) * F_f
-            do inf=1,na3
-              i3 = ina1 + inf
-              if (.not.itrig(iib,inf)) then
-                q3(i2,1) = q3(i2,1) +
-     &           mtot(id,in1,iib)*(FTOTA(i3,1)-FAMOR(i3))
-                in1 = in1 + 1
-              endif
-            enddo
-            id = id + 1
-          endif
-        enddo
-*       rotations :
-        do id=1,3 
-          id2 = id + ntrig
-          in1 = 3 + ntrig + 1
-          omeg3(id,1,iib) = 0.d0
-          do j=1,3
-            j2 = j + ntrig
-*           M^{-1}(2,1) * F_R
-            omeg3(id,1,iib) = omeg3(id,1,iib) +
-     &                         mtot(id2,j,iib) * ftrans(j)
-*           M^{-1}(2,2) * F_th
-            omeg3(id,1,iib) = omeg3(id,1,iib) +
-     &       mtot(id2,j2,iib)*(rtgex(j) + qvth(j,iib) - wjw(j))
-          enddo
-*         M^{-1}(2,3) * F_f
-          do in=1,na3
-            i2 = ina1 + in
-            if (.not.itrig(iib,in)) then
-              omeg3(id,1,iib) = omeg3(id,1,iib) +
-     &         mtot(id2,in1,iib)*(FTOTA(i2,1)-FAMOR(i2))  
-              in1 = in1 + 1
-            endif
-          enddo
-        enddo
-*       flexible :
-        in1 = 3 + ntrig + 1
-        do in=1,na3
-          i2 = ina1 + in
-          if (.not.itrig(iib,in)) then
-*           M^{-1}(3,1) * F_R
-            do j=1,ntrig
-              q3(i2,1) = q3(i2,1) + mtot(in1,j,iib) * ftrans(j)
-            enddo
-*           M^{-1}(3,2) * F_th
-            do j=1,3
-              j2 = j + ntrig
-              q3(i2,1) = q3(i2,1) +
-     &         mtot(in1,j2,iib) * (rtgex(j) + qvth(j,iib) - wjw(j))
-            enddo
-*           M^{-1}(3,3) * F_f
-            in2 = 3 + ntrig + 1
-            do inf=1,na3
-              i3 = ina1 + inf
-              if (.not.itrig(iib,inf)) then 
-                q3(i2,1) = q3(i2,1) +
-     &                      mtot(in1,in2,iib)*(FTOTA(i3,1)-FAMOR(i3))
-                in2 = in2 + 1
-              endif
-            enddo
-            in1 = in1 + 1
-          endif
-        enddo
-*       maj des vitesses (differences centrees) :
-        do i=1,na3
-          i2 = ina1 + in
-          q2(i2,1) = q2(i2,5) + (q3(i2,5) + q3(i2,1))*dt2
-        enddo
-        do i=1,3
-          omeg2(i,1,iib) = omeg2(i,5,iib) +
-     &    (omeg3(i,5,iib) + omeg3(i,1,iib))*dt2
-        enddo
-***********************************************************************
-*     FIN boucle sur les ss bases
-***********************************************************************
- 1    continue
-***********************************************************************
-*     FIN IF RIGIDE
-***********************************************************************
-      endif
-************************************************************************
-*     fin if linert
-************************************************************************
-      endif
 ************************************************************************
 *     Energies
 ************************************************************************
@@ -1000,28 +546,6 @@ CMS :     pour l'energie de deformation et cinetique (xec), on a calule pour tte
              xec = xec + wext(i2,1)
             endif
           enddo
-*         les slots wext et wint sont libres car on appelle pas d2vene.
-*         --> on les utilise pour edef et ecin qu'ons stock dans les premiers modes.
-*          if (iarota(iib).eq.0) then
-*            wint(1,1) = edef(iib)
-**           old : energie cinetique :
-*            xec = 0.d0
-*            do in=1,na3
-*              IF (.not. (ITRIG(IIB,IN))) THEN
-*                i2 = in + ina2
-*                xec = xec + (5.d-1 * xm(i2,1) * (q2(i2,1)**2))
-*                xec = xec + wext(i2,1)
-*              endif
-*            enddo
-*            wext(1,1) = xec
-*          endif
-*          if (lcb) then 
-**           energie potentielle magnetique :
-*            edef(iib) = edef(iib) - (- ((1.1+rot(3,3,1,ibad))**(-1.d0))
-*     &               + (1.d-3*((1.1+rot(3,3,1,ibad))**(-10.d0))))
-*          endif
-*         write(*,*)'rkpas : edef = ',edef(iib)
-CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
           IF (IAROTA(IIB).EQ.0) GOTO 8
 ***       Calcul du moment cinetique : 
           DO I=1,3
@@ -1030,7 +554,8 @@ CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
               DYN2(J) = 0.D0
               DO K=1,3
                 DYN2(J) = DYN2(J) +
-     &                    ROT(I,K,1,IIB)*mthth(K,J,IIB)
+     &          ROT(I,K,1,IIB)*(inertie(k,j,iib))
+*     &                    ROT(I,K,1,IIB)*mthth(K,J,IIB)
               ENDDO
               PICIN(NSB,I) = PICIN(IIB,I)+DYN2(J)*OMEG2(J,1,IIB)
             ENDDO
@@ -1045,8 +570,8 @@ CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
             DYN2(I) = 0.D0
             DO J=1,3
               DYN2(I) = DYN2(I) + 
-     &        (mthth(I,J,IIB))*OMEG2(J,1,IIB)
-*     &        (inertie(i,j,iib) + mthth(I,J,IIB))*OMEG2(J,1,IIB)
+*     &        (mthth(I,J,IIB))*OMEG2(J,1,IIB)
+     &        (inertie(i,j,iib))*OMEG2(J,1,IIB)
             ENDDO
             TCIN(IIB) = TCIN(IIB) + (OMEG2(I,1,IIB)*DYN2(I)/2.d0) 
           ENDDO

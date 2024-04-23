@@ -166,6 +166,15 @@ c     segment local : calcule l operateur et son inverse
                enddo
             enddo
          enddo
+*        on initialise les bras de leviers :
+         do ib=1,nsb
+            do id=1,3
+              bl0(id,ib) = 0.d0
+              do in=1,na2
+                blf(id,in,ib) = 0.d0
+              enddo
+            enddo
+         enddo
       endif
 ************************************************************************
 *     Traitement des matrices de variables generalisees K et M

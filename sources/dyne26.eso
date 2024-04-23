@@ -87,12 +87,13 @@ C DYNE26    SOURCE    CB215821  20/11/04    21:16:12     10766
         integer itbmod,lsstru(np1),nsstru
       endsegment
 *
-      LOGICAL L0,L1,RIGIDE,LMODYN
+      LOGICAL L0,L1,RIGIDE,LMODYN,lnor
       CHARACTER*4 NOMTRI(6),NOMAXI(6),NOMPLA(3),MOTCOMP
 ** Matthieu: ajout de MONMOT pour detection rota rigide
       CHARACTER*8 CMOT,TYPRET,MORIGI,CHARRE,MONMOT,CMOT1
       REAL*8      XAXROT(3),XROTA(2,3),XXGP(3),XGRAV(3)
       REAL*8      JINERT(3,3),INERT2(3,3)
+      real*8      ikl0(3,3),jtest(3,3),mff(20,20)
 *      real*8      lmode(na2)
 
 *
@@ -146,6 +147,7 @@ C DYNE26    SOURCE    CB215821  20/11/04    21:16:12     10766
       NA2    = XPHILB(/3)
       IDIMB  = XPHILB(/4)
       DEUXPI = 2.D0 * XPI
+      lnor = .true.
 *
       IORSB(IB) = IA1 + 1
       IAROTA(IB) = 0
@@ -508,13 +510,21 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
           IF (XCG2.GT.XPETIT) THEN
             IF (IERR.NE.0) RETURN
             WRITE(*,*)'Appel MAJINERT '
-            CALL MAJINERT(XCG,XMTOT,INERTIE(1,1,IB))
+            CALL MAJINERT(XCG(1,IB),MTSB(ib),INERTIE(1,1,IB))
 *           Inversion avec la methode des cofacteurs:
             IF (IDIM.EQ.3) THEN
               CALL HINV33(INERTIE(1,1,IB),INVINERT(1,1,NSB))
             ELSEIF (IDIM.EQ.2) THEN
               CALL HINV22(INERTIE(1,1,IB),INVINERT(1,1,NSB))
             ENDIF
+            write(*,*)'post-majinert : inertie :'
+            do id=1,3
+               write(*,'(3(1X,F8.5))') , (inertie(id,j,ib),j=1,3)
+            enddo
+            write(*,*)'                invinert :'
+            do id=1,3
+               write(*,'(3(1X,F15.10))') , (invinert(id,j,ib),j=1,3)
+            enddo
           ENDIF
 *       Fin correction moment d'inertie.
         ENDIF
@@ -541,7 +551,14 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
 *       write(*,*)'         na1 = ',na1
 *       write(*,*)'         nb1m = ',nb1m
 *
-        call filldef(ibas,ib,ktphi,ktrot,ktkam,npdef)
+        call filldef(ibas,ib,ktphi,ktrot,ktkam,npdef,lnor)
+        xsum = 0.d0
+        do ip=1,npdef
+          xsum = xsum + xmpoi(ip,ib)
+        enddo
+        write(*,*)' dyne26 : somme xmpoi :',xsum
+        write(*,*)'          mtsb :',mtsb(ib)
+        write(*,*)'          pourcentage : ',(xsum*100./mtsb(ib))
 *       on convertit tout ce qu'on peut avec le scaling factor des modes : 
 *       ds filldef le scaling factor est alpha = (xmno/xm)^(1/2)
 *       MAJ masse modale : le ratio mu_new/mu_old = alpha**2
@@ -551,20 +568,25 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
         ina1 = iorsb(ib) - 1
         write(*,*)'na3 = ',na3
         write(*,*)'ina1 = ',ina1
+        if (lnor) then
         do in=1,na3
           i2 = ina1 + in
           if (.not.itrig(ib,in)) then
             xalpha = dsqrt(xmno(in,ib)/xm(i2,1))
-            write(*,*)'xalpha = ',xalpha
+            write(*,*)'xalpha**2 = ',xalpha**2
             xm(i2,1) = xmno(in,ib)
+            write(*,*)'dyne26 : xk avant : ',xk(i2,1)
             xk(i2,1) = (xalpha**2)*xk(i2,1)
+            write(*,*)'         xk apres : ',xk(i2,1)
+            write(*,*)' omega = sqrt(xk/xm) = ',dsqrt(xk(i2,1)/xm(i2,1))
             do ip=1,nplsb
              do id=1,idimb
-               xphilb(ib,ip,in,id) = xphilb(ib,ip,in,id) * xalpha
+               xphilb(ib,ip,in,id) = xphilb(ib,ip,in,id)*xalpha
              enddo
             enddo
           endif
         enddo
+        endif
 
 ******* Construction des time-invariant matrices :
 *     SKL(3,3,na2,na2,nsb) : Phi_k^T * Phi_l , where Phi_k is the k^th row of the mode shape matrix
@@ -587,6 +609,16 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
           enddo
         enddo
       enddo
+      write(*,*)'        skl : '
+      do k=1,3
+        write(*,*)'        K ',k
+        do l=1,3
+          write(*,*)'        L ',l
+          do in=1,na3
+             write(*,'(4(1X,F8.5))') , (skl(k,l,in,j,ib),j=1,na3)
+          enddo
+        enddo
+      enddo
 *     ikl(3,3,na2,nsb) : X0_k wedge Phi_l (l^th line of the modal shape matrix)
       do k=1,3
         do l=1,3
@@ -595,6 +627,16 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
               ikl(k,l,i,ib) = ikl(k,l,i,ib) + 
      & (xmpoi(ip,ib)*(xcoophi(k,ip,ib)-xcent(k,ib))*(xtphi(l,ip,i,ib)))
             enddo
+          enddo
+        enddo
+      enddo
+      write(*,*)'        ikl : '
+      do k=1,3
+        write(*,*)'        K ',k
+        do l=1,3
+          write(*,*)'        L ',l
+          do in=1,na3
+             write(*,'(1X,F8.5)') , (ikl(k,l,in,ib))
           enddo
         enddo
       enddo
@@ -608,6 +650,9 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
         bl0(3,ib) = bl0(3,ib) +
      &   xmpoi(ip,ib)*(xcoophi(3,ip,ib)-xcent(3,ib))
       enddo
+      write(*,*)'        bl0 : '
+      write(*,'(1X,F15.10)') , (bl0(id,ib),id=1,3)
+
 *       dynamique :
       do in=1,na3
         do ip=1,npdef
@@ -616,6 +661,106 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
           blf(3,in,ib)= blf(3,in,ib) + xmpoi(ip,ib)*(xtphi(3,ip,in,ib))
         enddo
       enddo
+      write(*,*)'        blf : '
+      do in=1,na3
+        write(*,'(1X,F15.10)') , (blf(id,in,ib),id=1,3)
+      enddo
+*     TEST : ikl0 : X0_k wedge X0_l (l^th line of the modal shape matrix)
+      do k=1,3
+        do l=1,3
+          ikl0(k,l) = 0.d0
+          do ip=1,npdef
+              ikl0(k,l) = ikl0(k,l) + xmpoi(ip,ib) *
+     &  ((xcoophi(k,ip,ib)-xcent(k,ib))*(xcoophi(l,ip,ib)-xcent(l,ib)))
+          enddo
+        enddo
+      enddo
+*   jtest : termes diagonaux :
+      jtest(1,1) = ikl0(2,2) + ikl0(3,3)
+      jtest(2,2) = ikl0(1,1) + ikl0(3,3)
+      jtest(3,3) = ikl0(1,1) + ikl0(2,2)
+*   termes non diagonaux :
+      do k=1,3
+        do l=1,3
+          if (k.ne.l) then
+            jtest(k,l) = - ikl0(l,k)
+          endif
+        enddo
+      enddo
+*     on remplace inertie par jtest
+*      do id=1,3
+*        do j=1,3
+*          if (jtest(id,j).gt.1.d-10) then
+*            inertie(id,j,ib) = jtest(id,j)
+*          endif
+*        enddo
+*      enddo
+      write(*,*)'ikl0 :'
+      do id=1,3
+         write(*,'(3(1X,F15.10))') , (ikl0(id,j),j=1,3)
+      enddo
+      write(*,*)'jtest :'
+      do id=1,3
+         write(*,'(3(1X,F15.10))') , (jtest(id,j),j=1,3)
+      enddo
+      write(*,*)'inertie issu de majinert :'
+      do id=1,3
+         write(*,'(3(1X,F15.10))') , (inertie(id,j,ib),j=1,3)
+      enddo
+      write(*,*)'ecart jtest / inertie :'
+      write(*,'(3(1X,F15.10))') ,
+     &  (100.d0*(1.d0 - jtest(id,id)/inertie(id,id,ib)),id=1,3)
+*     on remplace inertie par jtest
+*      do id=1,3
+*        if (jtest(id,id).gt.1.d-10) then
+*          inertie(id,id,ib) = jtest(id,id)
+*        endif
+*      enddo
+*
+      write(*,*)'inertie definitive :'
+      do id=1,3
+      write(*,'(20F15.10)'),inertie(id,id,ib)
+      enddo
+*     mff 
+      do in1=1,na2
+        do in2=1,na2
+          mff(in1,in2) = 0.d0 
+        enddo
+      enddo
+      do in1=1,na3
+        if (.not.itrig(ib,in1)) then
+          do in2=1,na3
+            if (.not.itrig(ib,in2)) then
+              do id=1,3
+              do ip=1,npdef
+                mff(in1,in2) = mff(in1,in2) +
+     &          xmpoi(ip,ib)*xtphi(id,ip,in1,ib)*xtphi(id,ip,in2,ib)
+              enddo
+              enddo
+            endif
+          enddo
+        endif
+      enddo
+      WRITE(*,*)'masse modale : '
+      do in=1,na3
+      i2 = ina1 + in
+      if (.not.itrig(ib,in)) then
+        write(*,'(20F12.8)'),(xm(i2,1))
+      endif
+      enddo
+      WRITE(*,*)'mff : '
+      do in=1,na3
+        write(*,'(20F15.10)'),(mff(in,in2),in2= 1,na3)
+      enddo
+*     on corrige les masses et raideurs generalisees pour que ca colle avec les valeurs integrees
+*      do in=1,na3
+*        i2 = ina1 + in
+*        if (.not.itrig(ib,in)) then
+*          xalpha = (mff(in,in)/xm(i2,1))
+*          xm(i2,1) = xalpha*xm(i2,1)
+*          xk(i2,1) = xalpha*xk(i2,1)
+*        endif
+*      enddo
 *
 *        write(*,*)'dyne26 : xcoophi'
 *        do ip = 1,npdef
