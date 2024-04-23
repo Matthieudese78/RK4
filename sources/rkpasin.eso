@@ -207,38 +207,41 @@ c     if(LWRITE) write(*,*) '-------- NPAS =',NPAS
 ************************************************************************
 *     remplissage de fexb(ip,1,id) et ftota(i,1) : "les deux extremites du pas de temps"
 ************************************************************************
-*     pas de condition sur l'appel a d2vfxa.
-      CALL RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
-     &              NPLB,IDIMB,RIGIDE)
 ***** court-circuit : prediction diff centrees :
 *     rotations :
       do iib=1,nsb
       if (.not.(iarota(iib).eq.0)) then
       do i=1,3
-        dtheta(i,iib) = omeg2(i,5,iib)*dt + omeg3(i,5,iib)*dt22
+        dtheta(i,iib) = omeg2(i,2,iib)*dt + omeg3(i,2,iib)*dt22
       enddo
 *      calcul de EXPTH pour eq. dynamique:
       call expthr(dtheta(1,iib),expth(1,1,1,iib))
 *       increment de rotation --> quaternion
       call vect2quat(dtheta(1,iib),dquat)
 *       maj quaternion omeg1:
-      call pquat(omeg1(1,5,iib),dquat,omeg1(1,1,iib))
+      call pquat(omeg1(1,2,iib),dquat,omeg1(1,1,iib))
       call quat2mat(omeg1(1,1,iib),rot(1,1,1,iib)) 
-*      vitesse au 1/2 pas de temps
-      do i=1,3
-        omeg2(i,1,iib) = dtheta(i,iib) / dt
-      enddo
       endif
 *      fin boucle prediction sur les ss bases
       enddo
 *     ddls flexibles 
       do  i = 1,na1
-       q1(i,1) = q1(i,5) + q2(i,5)*dt + q3(i,5)*dt22
+       q1(i,1) = q1(i,2) + q2(i,2)*dt + q3(i,2)*dt22
       enddo
-*     vitesse au 1/2 pas de temps
+*     remplissage de ftota avec fexa :
+      CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
+     &              NPLB,IDIMB,RIGIDE)
+*     rotations : vitesse au 1/2 pas de temps
+      do i=1,3
+        omeg2(i,1,iib) = dtheta(i,iib)/dt
+      enddo
+*     flexibles : vitesse au 1/2 pas de temps
       do i=1,na1
-       q2(i,1)=(q1(i,1)-q1(i,5))/dt
+       q2(i,1)=(q1(i,1)-q1(i,2))/dt
       enddo
+*     pas de condition sur l'appel a d2vfxa.
+*      CALL RKFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
+*     &              NPLB,IDIMB,RIGIDE)
 ************************************************************************
 *     Calcul des forces de liaisons
 ************************************************************************
@@ -424,7 +427,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
       do in=1,na3
         i2=ina1+in
         if (itrig(iib,in)) then
-          mtot(id,id,iib) = xm(i2,1) 
+          mtot(id,id,iib) = xm(i2,1)  
           id = id + 1
         endif
       enddo
@@ -446,7 +449,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
       do in=1,na3
         i2 = ina1 + in
         if (.not.itrig(iib,in)) then 
-          mtot(in1,in1,iib) = xm(i2,1)  
+          mtot(in1,in1,iib) = xm(i2,1) + dt2*XASM(I2,1) - FINERT(I2,1)  
           in1 = in1 + 1
         endif
       enddo
@@ -678,11 +681,11 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *       maj des vitesses (differences centrees) :
         do i=1,na3
           i2 = ina1 + in
-          q2(i2,1) = q2(i2,5) + (q3(i2,5) + q3(i2,1))*dt2
+          q2(i2,1) = q2(i2,2) + (q3(i2,2) + q3(i2,1))*dt2
         enddo
         do i=1,3
-          omeg2(i,1,iib) = omeg2(i,5,iib) +
-     &    (omeg3(i,5,iib) + omeg3(i,1,iib))*dt2
+          omeg2(i,1,iib) = omeg2(i,2,iib) +
+     &    (omeg3(i,2,iib) + omeg3(i,1,iib))*dt2
         enddo
 ***********************************************************************
 *     FIN boucle sur les ss bases
@@ -709,14 +712,14 @@ CMS :     pour l'energie de deformation et cinetique (xec), on a calule pour tte
             if (.not.itrig(iib,in)) then
 *            estimation des forces :
              FAMO2(I2) = XASM(I2,1)*Q2(I2,1)
-             FAMO1(I2) = XASM(I2,1)*Q2(I2,5)
+             FAMO1(I2) = XASM(I2,1)*Q2(I2,2)
              F1 = FEXA(I2,NPAS,2)
              F2 = FEXA(I2,NPAS,1)
              F1 = FTOTA(I2,2) - F1
              F2 = FTOTA(I2,1) - F2
              F1 = F1 - FAMO2(I2)
              F2 = F2 - FAMO1(I2)
-             DQ1 = Q1(I2,1) - Q1(I2,5)
+             DQ1 = Q1(I2,1) - Q1(I2,2)
              DWIN = -(F1 + F2)/2D0 * DQ1
 *
              WINT(I2,1) = WINT(I2,2) + DWIN
@@ -846,7 +849,7 @@ CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
             enddo
           enddo
           do id=1,3
-            xefth = omeg2(id,1,iib)*x(id)
+            xefth = xefth + omeg2(id,1,iib)*x(id)
           enddo
 *         chacun des 3 termes non diagonaux calcules precedemment
 *         intervient 2 fois dans l'energie cinetique totale (q^t M q) :         

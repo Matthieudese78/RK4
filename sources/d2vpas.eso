@@ -281,9 +281,9 @@ cms 07/23 :  Prediction en vitesse pour les forces de liaisons :
 ************************************************************************
 
 *     Totalisation des forces ext�rieures pour la base A a la fin du pas
-      IF (IIMPI.EQ.333) THEN
+*      IF (IIMPI.EQ.333) THEN
 cmsw         WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VFXA'
-      ENDIF
+*      ENDIF
         CALL D2VFXA(FEXA,FTOTA,NPFEXA,NA1,NPC1,NPAS,FTEXB,FEXB,
      &              NPLB,IDIMB,RIGIDE)
 
@@ -338,9 +338,9 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 
 *     Ajout des forces de raideur
 *     F = F - K Q_1
-      IF (IIMPI.EQ.333) THEN
+*      IF (IIMPI.EQ.333) THEN
 cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme DEVLK0'
-      ENDIF
+*      ENDIF
       CALL DEVLK0(Q1,XK,FTOTA,NA1,NB1K,1)
 
 *     forces d'amortissement
