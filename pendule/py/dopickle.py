@@ -3,13 +3,16 @@ import os
 from csv_to_pickle import csvs2pickle
 
 #%%
-stoia = False
-manchette = True
+stoia = True
+manchette = False
 limpact = True
-linert = True
+linert = False
+lnortot = False
+lnorcomp = False
+lnormtot = False
 xi = 0.
 thini = 45.
-nmode = 10
+nmode = 2
 #%%
 repload = '../data/'
 repsave = './pickle/'
@@ -29,6 +32,15 @@ if (not limpact):
 if (linert):
   repload = f'{repload}inert/'
   repsave = f'{repsave}inert/'
+  if lnortot:
+    repload = f'{repload}nortot/'
+    repsave = f'{repsave}nortot/'
+  if lnorcomp:
+    repload = f'{repload}norcomp/'
+    repsave = f'{repsave}norcomp/'
+  if lnormtot:
+    repload = f'{repload}normtot/'
+    repsave = f'{repsave}normtot/'
 
 repload = f'{repload}xi_{int(100.*xi)}/thini_{int(thini)}/nmode_{nmode}/'
 repsave = f'{repsave}xi_{int(100.*xi)}/thini_{int(thini)}/nmode_{nmode}/'

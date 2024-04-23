@@ -5,25 +5,28 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import trajectories as traj
-import rotation as rota
+# import rotation as rota
 # import matplotlib as mpl
 # import matplotlib.cm as cm
 # import matplotlib.colors as pltcolors
 from matplotlib import ticker
-import scipy
+# import scipy
 # from matplotlib.patches import PathPatch
 import sys
-from rich.console import Console
-from matplotlib.font_manager import FontProperties
+# from rich.console import Console
+# from matplotlib.font_manager import FontProperties
 #%%
-stoia = False
-manchette = True
+stoia = True
+manchette = False
 limpact = True
-linert = True
+linert = False
+lnortot = False
+lnorcomp = False
+lnormtot = False
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 xi = 0.
 thini = 45.
-nmode = 10
+nmode = 2
 #%% rep_load
 repload = './pickle/'
 repsave = './fig/'
@@ -42,6 +45,15 @@ if (not limpact):
 if (linert):
   repload = f'{repload}inert/'
   repsave = f'{repsave}inert/'
+  if lnortot:
+    repload = f'{repload}nortot/'
+    repsave = f'{repsave}nortot/'
+  if lnorcomp:
+    repload = f'{repload}norcomp/'
+    repsave = f'{repsave}norcomp/'
+  if lnormtot:
+    repload = f'{repload}normtot/'
+    repsave = f'{repsave}normtot/'
 
 repload = f'{repload}xi_{int(100.*xi)}/thini_{int(thini)}/nmode_{nmode}/'
 repsave = f'{repsave}xi_{int(100.*xi)}/thini_{int(thini)}/nmode_{nmode}/'
@@ -86,92 +98,93 @@ df['pene'] = df['uzp2'].abs() + zsol
 df['pene'] = df['pene'].apply(lambda x: 0 if x < 0 else x)
 # df['estock'] = 0.*df['edef']
 df['estock'] = 0.5*Kchoc*(df['pene']**2)
-df['etot'] = df['epot'] + df['edef'] + df['ec'] + df['ecbar']
+df['etot'] = df['edef'] + df['ec'] + df['ecbar']
+# df['etot'] = df['estock'] + df['epot'] + df['edef'] + df['ec'] + df['ecbar']
 
-indchoc = df[df['fn'].abs()>0.]
-# indni = df.drop(indchoc).index
-
-df['efric'] = 0.*df['edef'] 
-df['efric'] = muk*df['ft'].abs()*dt
+if limpact:
+  indchoc = df[df['fn'].abs()>0.]
+  # indni = df.drop(indchoc).index
+  df['efric'] = 0.*df['edef'] 
+  df['efric'] = muk*df['ft'].abs()*dt
 
 # for i,
 #  df['']]
 #%% localisation des chocs :
-col1 = 'fn'
-df['tag'] = df.loc[:,col1].abs() > 0.
-fst = df.index[df['tag'] & ~ df['tag'].shift(1).fillna(False)]
-lst = df.index[df['tag'] & ~ df['tag'].shift(-1).fillna(False)]
-# prb1 = [(i,j) for i,j in zip(fst,lst)]
-dt = df.iloc[fst[0]+1]['t'] - df.iloc[fst[0]]['t']
-# on vire le dernier choc :
-# fst = fst[:-1]
-# lst = lst[:-1]
-instant_choc = [df.iloc[fsti]['t'] for fsti in fst]
-tchoc = [ dt*(j-i) for i,j in zip(fst,lst) ]
-# energie cinetique de reference
-# etotst = [df.iloc[fsti-1]['etot'] for fsti in fst]
-# df = df[df['t']<=(instant_choc[-1]+0.1)]
-df['ef'] = 0.*df['edef'] 
+if limpact:
+  col1 = 'fn'
+  df['tag'] = df.loc[:,col1].abs() > 0.
+  fst = df.index[df['tag'] & ~ df['tag'].shift(1).fillna(False)]
+  lst = df.index[df['tag'] & ~ df['tag'].shift(-1).fillna(False)]
+  # prb1 = [(i,j) for i,j in zip(fst,lst)]
+  dt = df.iloc[fst[0]+1]['t'] - df.iloc[fst[0]]['t']
+  # on vire le dernier choc :
+  # fst = fst[:-1]
+  # lst = lst[:-1]
+  instant_choc = [df.iloc[fsti]['t'] for fsti in fst]
+  tchoc = [ dt*(j-i) for i,j in zip(fst,lst) ]
+  # energie cinetique de reference
+  # etotst = [df.iloc[fsti-1]['etot'] for fsti in fst]
+  # df = df[df['t']<=(instant_choc[-1]+0.1)]
+  df['ef'] = 0.*df['edef'] 
 
+  # vols :  on isole les 4 premiers groupes de chocs :
+  crit = 0.05
+  nstchoc = 5 
+  lgrp = [[] for _ in range(nstchoc)]
+  t0 = df.iloc[fst[0]]['t']
+  lgrp[0].append(t0)
+  igrp = 0
+  ichoc = 0
+  while igrp <= (nstchoc-1): 
+    ichoc += 1
+    if ((df.iloc[fst[ichoc]]['t'] - df.iloc[fst[ichoc-1]]['t'])>=crit):
+      igrp += 1
+      lgrp[igrp-1].append(df.iloc[lst[ichoc-1]]['t'])
+      if (igrp<nstchoc): 
+        lgrp[igrp].append(df.iloc[fst[ichoc]]['t'])
 
-#%% on isole les 4 premiers groupes de chocs :
-crit = 0.05
-nstchoc = 1 
-lgrp = [[] for _ in range(nstchoc)]
-t0 = df.iloc[fst[0]]['t']
-lgrp[0].append(t0)
-igrp = 0
-ichoc = 0
-while igrp <= (nstchoc-1): 
-  ichoc += 1
-  if ((df.iloc[fst[ichoc]]['t'] - df.iloc[fst[ichoc-1]]['t'])>=crit):
-    igrp += 1
-    lgrp[igrp-1].append(df.iloc[lst[ichoc-1]]['t'])
-    if (igrp<nstchoc): 
-      lgrp[igrp].append(df.iloc[fst[ichoc]]['t'])
+  lindchoc = []
+  lindvol = []
+  tfinprec = 0.
+  for ichoc in np.arange(nstchoc):
+    lindchoc.append(df[(df['t']>=lgrp[ichoc][0]) & (df['t']<=lgrp[ichoc][1])].index)
+    if (ichoc>0):
+      tfinprec = lgrp[ichoc-1][1]
+    lindvol.append(df[(df['t']>=tfinprec) & (df['t']<=lgrp[ichoc][0])].index)
 
-lindchoc = []
-lindvol = []
-tfinprec = 0.
-for ichoc in np.arange(nstchoc):
-  lindchoc.append(df[(df['t']>=lgrp[ichoc][0]) & (df['t']<=lgrp[ichoc][1])].index)
-  if (ichoc>0):
-    tfinprec = lgrp[ichoc-1][1]
-  lindvol.append(df[(df['t']>=tfinprec) & (df['t']<=lgrp[ichoc][0])].index)
+  # valeur de l'energie totale avant chaque choc :
+  lest = [df.iloc[fsti[0]-1]['ecdef'] for i,fsti in enumerate(lindchoc)]
+  # energie dissipee : calcul par difference
 
-# valeur de l'energie totale avant chaque choc :
-lest = [df.iloc[fsti[0]-1]['ecdef'] for i,fsti in enumerate(lindchoc)]
-#%% energie dissipee : calcul par difference
+  def calcef(df,**kwargs):
+    #  ef = kwargs['lst'] - (df["etot"] + df["estock"]) 
+     ef = kwargs['lst'] - (df["ecdef"] + df["estock"]) 
+    #  print(f"ef = {ef}")
+     return ef
 
-def calcef(df,**kwargs):
-  #  ef = kwargs['lst'] - (df["etot"] + df["estock"]) 
-   ef = kwargs['lst'] - (df["ecdef"] + df["estock"]) 
-  #  print(f"ef = {ef}")
-   return ef
+  # def efdf(df, **kwargs):
+  #     col3 = "ef"
+  #     dict1 = {col3: df.apply(calcef,**kwargs, axis=1)}
+  #     df1 = pd.DataFrame(dict1)
+  #     df.loc[df1.index, col3] = df1
+  #     return "Done"
+  df['ef'] = 0.*df['edef']
+  for i,indi in enumerate(lindchoc):
+      kw = {'lst' : lest[i], 'ind' : indi}
+      dict1 = {'ef' : df.apply(calcef, **kw,axis=1)}
+      df1 = pd.DataFrame(dict1)
+      df.loc[indi, 'ef'] = df1.iloc[indi]
+      del df1
 
-# def efdf(df, **kwargs):
-#     col3 = "ef"
-#     dict1 = {col3: df.apply(calcef,**kwargs, axis=1)}
-#     df1 = pd.DataFrame(dict1)
-#     df.loc[df1.index, col3] = df1
-#     return "Done"
-df['ef'] = 0.*df['edef']
-for i,indi in enumerate(lindchoc):
-    kw = {'lst' : lest[i], 'ind' : indi}
-    dict1 = {'ef' : df.apply(calcef, **kw,axis=1)}
-    df1 = pd.DataFrame(dict1)
-    df.loc[indi, 'ef'] = df1.iloc[indi]
-    del df1
+  # edamp : calcul via vn
+  df['edamp'] = 0.*df['edef'] 
+  edamp0 = 0.
+  for fsti,lsti in zip(fst,lst):
+    indi = range(fst[0],lst[0]-1)
+    df.loc[indi,'edamp'] = edamp0 + (dt*bamo*df.loc[indi,'vn'].abs().cumsum())
+    edamp0 = df.loc[indi,'edamp'].iloc[-1]
 
-#%% edamp : calcul via vn
-df['edamp'] = 0.*df['edef'] 
-edamp0 = 0.
-for fsti,lsti in zip(fst,lst):
-  indi = range(fst[0],lst[0]-1)
-  df.loc[indi,'edamp'] = edamp0 + (dt*bamo*df.loc[indi,'vn'].abs().cumsum())
-  edamp0 = df.loc[indi,'edamp'].iloc[-1]
-
-# edamp = [df.at[i,'edamp'] + df.at[i-1,'edamp']]
+  # edamp = [df.at[i,'edamp'] + df.at[i-1,'edamp']]
 
 #%% spin :
 # kq = {"colname": "mrot", "q1": "quat1", "q2": "quat2", "q3": "quat3", "q4": "quat4"}
@@ -189,6 +202,22 @@ else:
     print(f"FOLDER : {repsect1} already exists.")
 #%%
 kwargs1 = {
+    "tile1": "wx sleeve = f(t)" + "\n",
+    "tile_save": "wx_ft",
+    "colx": ["t"],
+    "coly": ["wx"],
+    "rep_save": repsect1,
+    "label1": [r"$W_{X}$",r"$E_{vibr}$",r"$E_{pot}$",r"$E_{tot}$"],
+    "labelx": r"$t \quad (s)$",
+    "labely": r"$W_{X}$"+" (rad/s)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df[df['t']<0.9], **kwargs1)
+
+kwargs1 = {
     "tile1": "energies sleeve = f(t)" + "\n",
     "tile_save": "energies_ft",
     "colx": ["t","t","t","t"],
@@ -201,8 +230,9 @@ kwargs1 = {
     "endpoint": [False,False,False,False],
     "xpower": 5,
     "ypower": 5,
+    "alpha" : [0.7]*10,
 }
-traj.pltraj2d(df, **kwargs1)
+traj.pltraj2d(df[df['t']<0.9], **kwargs1)
 
 kwargs1 = {
     "tile1": "energies sleeve = f(t)" + "\n",
@@ -266,6 +296,7 @@ for i in np.arange(df['nmode'][0]):
       "endpoint": [False,False,False,False],
       "xpower": 5,
       "ypower": 5,
+      "alpha" : [0.7]*10,
   }
   traj.pltraj2d(df, **kwargs1)
   kwargs1 = {

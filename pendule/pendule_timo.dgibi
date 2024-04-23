@@ -12,12 +12,18 @@ reprise = faux ;
 *# algo :
 rk4 = vrai ;
 
-sw = faux ;
+sw = vrai ;
 nmb = faux ; 
 xpinv = faux ;
 
 *# linert :
 linert = vrai ;
+* norme / norme eucl du mode :
+lnortot = faux ;
+* norme / comp max du mode :
+lnorcomp = vrai ;
+* norme / masse totale du solide :
+lnormtot = faux ;
 
 inert = 0 ;
 si linert ;
@@ -33,12 +39,26 @@ xi = 0. ;
 *********************************************************************
 *                       Valeurs numeriques 
 *********************************************************************
-* opti impi 555 ;
 ***** General :
 
 *# nmode_ela :
-nmode_ela = 5 ;
+nmode_ela = 2 ;
 
+*# typmode :
+typmode = 1 ;
+
+si (typmode ega 1) ;
+  irigi = 0 ;
+finsi ;
+si (typmode ega 2) ;
+  irigi = 1 ;
+  nmode_ela = 0 ;
+finsi ;
+si (typmode ega 3);
+  rigide = faux ;
+  irigi = 0 ;
+finsi;
+*
 nsauvmode = nmode_ela ; 
 
 *# ltronq :
@@ -60,10 +80,10 @@ ntronq = 0 ;
 ****** Geometrie:
 
 *# stoia :
-stoia = faux  ;
+stoia = vrai  ;
 
 *# manchette :
-manchette = vrai ;
+manchette = faux ;
 
 *# theta_ini_x :
 theta_ini_x = 45. ;
@@ -170,13 +190,14 @@ lnoe = lect 100 150 200 225 250 275 300 325 350 375 400 425 450 475 500 550 600 
 * repsave = './data/manchette/' ;
 * opti 'FTRA' (chai './fig/manchette/modes.ps' );
 finsi ;
-lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
-lindmode = lect (dime lfind)*1 ; 
 
 *# nnoeuds :
+si (NMODE_ELA > 0) ;
+lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
 nnoeuds = 2*(extr lnoe nmode_ela) ;
-* nnoeuds = 800 ;
-
+lindmode = lect (dime lfind)*1 ; 
+finsi ; 
+nnoeuds = 600 ;
 * Position du centre de gravite : manchette ou stoianovici : 
  LG = (h/2.) ;
 *
@@ -184,7 +205,7 @@ nnoeuds = 2*(extr lnoe nmode_ela) ;
 *
 ***** Temporel:
 *# t :
-T = 10.e-6 ;
+T = 1.5 ;
 
 *# n :
 n = 6 ;
@@ -193,7 +214,7 @@ n = 6 ;
 dte = 2.e-6 ;
 
 *# nsort :
-NSORT = 1 ;
+NSORT = 100 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -204,21 +225,6 @@ rigide = vrai ;
 *   - typmode = 1 : rota rig + ela
 *   - typmode = 2 : rota rig seule
 *   - typmode = 3 : ela only 
-
-*# typmode :
-  typmode = 1 ;
-
-si (typmode ega 1) ;
-  irigi = 0 ;
-finsi ;
-si (typmode ega 2) ;
-  irigi = 1 ;
-finsi ;
-si (typmode ega 3);
-  rigide = faux ;
-  irigi = 0 ;
-finsi;
-
 *
 ***** Conditions initiales:
 * nutation initiale de la toupie (Castem: angles en degres!):
@@ -353,6 +359,18 @@ finsi ;
 si (linert) ;
   repfig = (chai repfig'inert/') ;
   repsave = (chai repsave'inert/') ;
+  si lnorcomp ;
+  repfig = (chai repfig'norcomp/') ;
+  repsave = (chai repsave'norcomp/') ;
+  finsi ;
+  si lnortot ;
+  repfig = (chai repfig'nortot/') ;
+  repsave = (chai repsave'nortot/') ;
+  finsi ;
+  si lnormtot ;
+  repfig = (chai repfig'normtot/') ;
+  repsave = (chai repsave'normtot/') ;
+  finsi ;
 finsi ;
 * on rajoute la valeur de xi :
 repsave = (chai repsave'xi_'(enti (100.*xi))'/') ; 
@@ -361,7 +379,8 @@ repsave = (chai repsave'thini_'(enti theta_ini_x)'/') ;
 * on rajoute la valeur de nmode_ela :
 repsave = (chai repsave'nmode_'nmode_ela'/') ; 
 
-opti 'FTRA' (chai repfig script'.ps') ;
+* opti 'FTRA' (chai repfig script'.ps') ;
+opti 'FTRA' (chai './fig/pendule_timo.ps') ;
 opti 'SORT' (chai repsave script'.csv') ;
 
 * on rajoute le pas de temps :
@@ -372,8 +391,8 @@ opti 'SORT' (chai repsave script'.csv') ;
 ***** RECO totale voulue ?
 RECOTOT = FAUX ;
 EVOLRECO = VRAI ;
-FLVTK = faux ;
-lanime = VRAI ;
+FLVTK = vrai ;
+lanime = faux ;
 * SI (RECOTOT EGA FAUX);
 *   FLVTK = FAUX ;
 * FINSI ;
@@ -455,6 +474,9 @@ KelaY = K et clelaY ;
 Tmode_RX  = vibr 'IRAM' 0.5 1 KRX M1 ; 
 Tmode_RY  = vibr 'IRAM' 0.5 1 KRY M1 ;
 Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
+
+nsauvini = 0 ;
+si ((typmode ega 1) ou (typmode ega 3)) ;
 * On teste egalement en presence de modes elastiques:
 * Tmode_elaX = vibr 'IRAM' 20. nmode_ela KelaX M1 ;
 * Tmode_elaY = vibr 'IRAM' 20. nmode_ela KelaY M1 ;
@@ -508,16 +530,17 @@ postvibr Tmodela ;
 
 * fin bmno ;
 * opti donn 5 ; 
-
 *
+* fin si typmode = 1 ou 3 :
+finsi ;
+
 ptrep_RX =    Tmode_RX . 'MODES' . 1 . 'POINT_REPERE';
 ptrep_RY =    Tmode_RY . 'MODES' . 1 . 'POINT_REPERE';
 ptrep_RZ =    Tmode_RZ . 'MODES' . 1 . 'POINT_REPERE';
+si ((typmode ega 1) ou (typmode ega 3)) ;
 ptrep_ela_1 =    Tmodela . 'MODES' . 1 . 'POINT_REPERE';
 ptrep_ela_2 =    Tmodela . 'MODES' . 2 . 'POINT_REPERE';
-* ptrep_ela_3 =    Tmodela . 'MODES' . 3 . 'POINT_REPERE';
-* ptrep_ela_4 =    Tmodela . 'MODES' . 4 . 'POINT_REPERE';
-*
+finsi ;
 *********************************************************************
 *                     Traitement rotations rigides: 
 *********************************************************************
@@ -566,7 +589,7 @@ Tmode = (Tmode_RX et Tmode_RY et Tmode_RZ ) ;
 FINSI;
 * Que modes elastiques:
 SI (typmode EGA 3);
-Tmode = (Tmode_ela) ;
+Tmode = (Tmodela) ;
 FINSI;
 *
 * opti donn 5 ;
@@ -590,7 +613,8 @@ TSORT . 'VARIABLE' . 'TRAVAIL_EXTERIEUR' = VRAI ;
  U0_RX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' (theta_ini_x*pi/180.) ;
  U0_RY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' (theta_ini_y*pi/180.) ;
  U0_RZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' (theta_ini_z*pi/180.) ;
- U0_ela_1 = MANU 'CHPO' ptrep_ela_1 'NATUR' 'DIFFUS' 'ALFA' 0. ;
+
+*  U0_ela_1 = MANU 'CHPO' ptrep_ela_1 'NATUR' 'DIFFUS' 'ALFA' 0. ;
 * U0_ela_2 = MANU 'CHPO' ptrep_ela_2 'NATUR' 'DIFFUS' 'ALFA' 0.;
 * assemblage en 1 chpoint:
 *  U0_P = (U0_RX et U0_RY et U0_RZ et U0_ela_1 et U0_ela_2);
@@ -1048,8 +1072,9 @@ TSORT . 'quat4' = tresu . deplacement . ptrep_rig4 ;
 
 ncolexce = 34 ; 
 
-si reprise ;
-repe bsauvq nmode_ela ;
+* si reprise ;
+* repe bsauvq nmode_ela ;
+repe bsauvq nsauvini ;
   ptrpi = tmodela . modes . &bsauvq . point_repere ;  
   tsort . (chai 'q'&bsauvq)    = table ; 
   tsort . (chai 'q'&bsauvq'v') = table ;
@@ -1057,7 +1082,7 @@ repe bsauvq nmode_ela ;
   tsort . (chai 'q'&bsauvq'v') = tresu . vitesse . ptrpi ; 
   ncolexce = ncolexce + 2 ;
 fin bsauvq ;
-finsi ; 
+* finsi ; 
 
 si (limpact) ;
 * Pusure durant les impacts : 
@@ -1209,4 +1234,6 @@ si lanime ;
   MESS 'anime trace' ;
 finsi ;
 *
+* opti donn 5 ; 
+
 FIN ;
