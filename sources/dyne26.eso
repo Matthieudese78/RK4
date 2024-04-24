@@ -722,36 +722,36 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
       write(*,'(20F15.10)'),inertie(id,id,ib)
       enddo
 *     mff 
-      do in1=1,na2
-        do in2=1,na2
-          mff(in1,in2) = 0.d0 
-        enddo
-      enddo
-      do in1=1,na3
-        if (.not.itrig(ib,in1)) then
-          do in2=1,na3
-            if (.not.itrig(ib,in2)) then
-              do id=1,3
-              do ip=1,npdef
-                mff(in1,in2) = mff(in1,in2) +
-     &          xmpoi(ip,ib)*xtphi(id,ip,in1,ib)*xtphi(id,ip,in2,ib)
-              enddo
-              enddo
-            endif
-          enddo
-        endif
-      enddo
-      WRITE(*,*)'masse modale : '
-      do in=1,na3
-      i2 = ina1 + in
-      if (.not.itrig(ib,in)) then
-        write(*,'(20F12.8)'),(xm(i2,1))
-      endif
-      enddo
-      WRITE(*,*)'mff : '
-      do in=1,na3
-        write(*,'(20F15.10)'),(mff(in,in2),in2= 1,na3)
-      enddo
+*      do in1=1,na2
+*        do in2=1,na2
+*          mff(in1,in2) = 0.d0 
+*        enddo
+*      enddo
+*      do in1=1,na3
+*        if (.not.itrig(ib,in1)) then
+*          do in2=1,na3
+*            if (.not.itrig(ib,in2)) then
+*              do id=1,3
+*              do ip=1,npdef
+*                mff(in1,in2) = mff(in1,in2) +
+*     &          xmpoi(ip,ib)*xtphi(id,ip,in1,ib)*xtphi(id,ip,in2,ib)
+*              enddo
+*              enddo
+*            endif
+*          enddo
+*        endif
+*      enddo
+*      WRITE(*,*)'masse modale : '
+*      do in=1,na3
+*      i2 = ina1 + in
+*      if (.not.itrig(ib,in)) then
+*        write(*,'(20F12.8)'),(xm(i2,1))
+*      endif
+*      enddo
+*      WRITE(*,*)'mff : '
+*      do in=1,na3
+*        write(*,'(20F15.10)'),(mff(in,in2),in2= 1,na3)
+*      enddo
 *     on corrige les masses et raideurs generalisees pour que ca colle avec les valeurs integrees
 *      do in=1,na3
 *        i2 = ina1 + in
@@ -772,6 +772,8 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
 *         write(*,'(3(1X,F8.5))') , (xtphi(id,ip,in,ib),id=1,3)
 *         enddo
 *        enddo
+
+*     fin if rigide and iarota(ib).ne.0 :
       endif
 ************************************************************************
 ************************************************************************
