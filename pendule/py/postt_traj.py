@@ -19,14 +19,14 @@ import sys
 stoia = True
 manchette = False
 limpact = True
-linert = False
+linert = True
 lnortot = False
-lnorcomp = False
+lnorcomp = True
 lnormtot = False
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 xi = 0.
 thini = 45.
-nmode = 2
+nmode = 6
 #%% rep_load
 repload = './pickle/'
 repsave = './fig/'
@@ -98,7 +98,7 @@ df['pene'] = df['uzp2'].abs() + zsol
 df['pene'] = df['pene'].apply(lambda x: 0 if x < 0 else x)
 # df['estock'] = 0.*df['edef']
 df['estock'] = 0.5*Kchoc*(df['pene']**2)
-df['etot'] = df['edef'] + df['ec'] + df['ecbar']
+df['etot'] = df['epot'] + df['edef'] + df['ec'] + df['ecbar']
 # df['etot'] = df['estock'] + df['epot'] + df['edef'] + df['ec'] + df['ecbar']
 
 if limpact:
@@ -129,7 +129,7 @@ if limpact:
 
   # vols :  on isole les 4 premiers groupes de chocs :
   crit = 0.05
-  nstchoc = 5 
+  nstchoc = 4 
   lgrp = [[] for _ in range(nstchoc)]
   t0 = df.iloc[fst[0]]['t']
   lgrp[0].append(t0)
@@ -210,6 +210,38 @@ kwargs1 = {
     "label1": [r"$W_{X}$",r"$E_{vibr}$",r"$E_{pot}$",r"$E_{tot}$"],
     "labelx": r"$t \quad (s)$",
     "labely": r"$W_{X}$"+" (rad/s)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df[df['t']<0.9], **kwargs1)
+
+kwargs1 = {
+    "tile1": "wy sleeve = f(t)" + "\n",
+    "tile_save": "wy_ft",
+    "colx": ["t"],
+    "coly": ["wy"],
+    "rep_save": repsect1,
+    "label1": [r"$W_{Y}$",r"$E_{vibr}$",r"$E_{pot}$",r"$E_{tot}$"],
+    "labelx": r"$t \quad (s)$",
+    "labely": r"$W_{Y}$"+" (rad/s)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df[df['t']<0.9], **kwargs1)
+
+kwargs1 = {
+    "tile1": "wz sleeve = f(t)" + "\n",
+    "tile_save": "wz_ft",
+    "colx": ["t"],
+    "coly": ["wz"],
+    "rep_save": repsect1,
+    "label1": [r"$W_{Z}$",r"$E_{vibr}$",r"$E_{pot}$",r"$E_{tot}$"],
+    "labelx": r"$t \quad (s)$",
+    "labely": r"$W_{Z}$"+" (rad/s)",
     "color1": color1,
     "endpoint": [False,False,False,False],
     "xpower": 5,
@@ -419,6 +451,24 @@ for ichoc in np.arange(nstchoc):
       "label1": [r"$v_{n}$",r"$E_{fric}$",r"$E_{f}$"],
       "labelx": r"$t \quad (s)$",
       "labely": "Normal speed (m/s)",
+      "color1": color1,
+      "endpoint": False,
+      "xpower": 5,
+      "ypower": 5,
+      "loc_leg": "upper left",
+  }
+  traj.pltraj2d_list(**kwargs)
+
+  kwargs = {
+      "tile1": f"force normale choc {ichoc} = f(t)" + "\n",
+      "tile_save": f"choc{ichoc}_fn_ft",
+      "x": [df[(df['t']>=lgrp[ichoc][0]) & (df['t']<=lgrp[ichoc][1])]['t']], 
+      "y": [df[(df['t']>=lgrp[ichoc][0]) & (df['t']<=lgrp[ichoc][1])]['fn']], 
+      "rep_save": repsect1,
+      # "label2": [r"$E_{kin}^{ref}$",r"$E_{bar}$"],
+      "label1": [r"$F_{n}$",r"$E_{fric}$",r"$E_{f}$"],
+      "labelx": r"$t \quad (s)$",
+      "labely": "Normal Force (N)",
       "color1": color1,
       "endpoint": False,
       "xpower": 5,

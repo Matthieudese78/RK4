@@ -42,7 +42,7 @@ xi = 0. ;
 ***** General :
 
 *# nmode_ela :
-nmode_ela = 2 ;
+nmode_ela = 6 ;
 
 *# typmode :
 typmode = 1 ;
@@ -197,7 +197,7 @@ lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
 nnoeuds = 2*(extr lnoe nmode_ela) ;
 lindmode = lect (dime lfind)*1 ; 
 finsi ; 
-nnoeuds = 600 ;
+* nnoeuds = 600 ;
 * Position du centre de gravite : manchette ou stoianovici : 
  LG = (h/2.) ;
 *
@@ -205,7 +205,7 @@ nnoeuds = 600 ;
 *
 ***** Temporel:
 *# t :
-T = 1.5 ;
+T = 4. ;
 
 *# n :
 n = 6 ;
@@ -214,7 +214,7 @@ n = 6 ;
 dte = 2.e-6 ;
 
 *# nsort :
-NSORT = 100 ;
+NSORT = 5 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;

@@ -6,13 +6,13 @@ from csv_to_pickle import csvs2pickle
 stoia = True
 manchette = False
 limpact = True
-linert = False
+linert = True
 lnortot = False
-lnorcomp = False
+lnorcomp = True
 lnormtot = False
 xi = 0.
 thini = 45.
-nmode = 2
+nmode = 6
 #%%
 repload = '../data/'
 repsave = './pickle/'
