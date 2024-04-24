@@ -193,29 +193,54 @@
         endif
       enddo
       enddo
-*     partie skl :
+*     partie skl : partie (f' * g)
       do in=1,na3
         i2 = ina1 + in
         do j=1,na3
           j2 = ina1 + j
           dmth(1,1) = dmth(1,1) + 
-     &    (q2(i2,1)*(skl(2,2,in,j,ib) + skl(3,3,in,j,ib))*q2(j2,1))
+     &    (q1(i2,1)*(skl(2,2,in,j,ib) + skl(3,3,in,j,ib))*q2(j2,1))
           dmth(2,2) = dmth(2,2) + 
-     &    (q2(i2,1)*(skl(1,1,in,j,ib) + skl(3,3,in,j,ib))*q2(j2,1))
+     &    (q1(i2,1)*(skl(1,1,in,j,ib) + skl(3,3,in,j,ib))*q2(j2,1))
           dmth(3,3) = dmth(3,3) + 
-     &    (q2(i2,1)*(skl(1,1,in,j,ib) + skl(2,2,in,j,ib))*q2(j2,1))
+     &    (q1(i2,1)*(skl(1,1,in,j,ib) + skl(2,2,in,j,ib))*q2(j2,1))
           dmth(1,2) = dmth(1,2) - 
-     &    (q2(i2,1)*skl(2,1,in,j,ib)*q2(j2,1))
+     &    (q1(i2,1)*skl(2,1,in,j,ib)*q2(j2,1))
           dmth(1,3) = dmth(1,3) - 
-     &    (q2(i2,1)*skl(3,1,in,j,ib)*q2(j2,1))
+     &    (q1(i2,1)*skl(3,1,in,j,ib)*q2(j2,1))
           dmth(2,3) = dmth(2,3) - 
-     &    (q2(i2,1)*skl(3,2,in,j,ib)*q2(j2,1))
+     &    (q1(i2,1)*skl(3,2,in,j,ib)*q2(j2,1))
           mthth(2,1,ib) = mthth(2,1,ib) - 
-     &    (q2(i2,1)*skl(1,2,in,j,ib)*q2(j2,1))
+     &    (q1(i2,1)*skl(1,2,in,j,ib)*q2(j2,1))
           mthth(3,1,ib) = mthth(3,1,ib) - 
-     &    (q2(i2,1)*skl(1,3,in,j,ib)*q2(j2,1))
+     &    (q1(i2,1)*skl(1,3,in,j,ib)*q2(j2,1))
           mthth(3,2,ib) = mthth(3,2,ib) - 
-     &    (q2(i2,1)*skl(2,3,in,j,ib)*q2(j2,1))
+     &    (q1(i2,1)*skl(2,3,in,j,ib)*q2(j2,1))
+        enddo
+      enddo
+*     partie skl : partie (f * g')
+      do in=1,na3
+        i2 = ina1 + in
+        do j=1,na3
+          j2 = ina1 + j
+          dmth(1,1) = dmth(1,1) + 
+     &    (q2(i2,1)*(skl(2,2,in,j,ib) + skl(3,3,in,j,ib))*q1(j2,1))
+          dmth(2,2) = dmth(2,2) + 
+     &    (q2(i2,1)*(skl(1,1,in,j,ib) + skl(3,3,in,j,ib))*q1(j2,1))
+          dmth(3,3) = dmth(3,3) + 
+     &    (q2(i2,1)*(skl(1,1,in,j,ib) + skl(2,2,in,j,ib))*q1(j2,1))
+          dmth(1,2) = dmth(1,2) - 
+     &    (q2(i2,1)*skl(2,1,in,j,ib)*q1(j2,1))
+          dmth(1,3) = dmth(1,3) - 
+     &    (q2(i2,1)*skl(3,1,in,j,ib)*q1(j2,1))
+          dmth(2,3) = dmth(2,3) - 
+     &    (q2(i2,1)*skl(3,2,in,j,ib)*q1(j2,1))
+          mthth(2,1,ib) = mthth(2,1,ib) - 
+     &    (q2(i2,1)*skl(1,2,in,j,ib)*q1(j2,1))
+          mthth(3,1,ib) = mthth(3,1,ib) - 
+     &    (q2(i2,1)*skl(1,3,in,j,ib)*q1(j2,1))
+          mthth(3,2,ib) = mthth(3,2,ib) - 
+     &    (q2(i2,1)*skl(2,3,in,j,ib)*q1(j2,1))
         enddo
       enddo
 **     on remplit les symetriques :
