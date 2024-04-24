@@ -398,13 +398,13 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 ******************************************************************
 *     M_{fth} (dim : nmodes x 3) : couplage elas-rotas shabana p 320
 ******************************************************************
-*        call cmfth(Q1,XM,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
+        call cmfth(Q1,XM,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
 *******************************************************************
 ******************************************************************
 *    M_{thth} (dim : 3 x 3) : modif tenseur d'inertie du aux defo elastiques.
 *                          (shabana p 320)
 ******************************************************************
-*        call cmthth(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
+        call cmthth(Q1,KTROT,NA1,NB1M,IIB,ind1,na3,ina1) 
 *******************************************************************
 * remplissage mtot :  
 *******************************************************************
@@ -537,10 +537,10 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
       endif
 ******************************************************************
 *       rotation : 
-*      call cqvth(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
+      call cqvth(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
 ******************************************************************
 *       coordonnees modales : 
-*      call cqvf(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
+      call cqvf(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
 ******************************************************************
 ******************************************************************
 *      on implemente les forces d'inertie d'entrainement
@@ -580,132 +580,125 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *        do j=1,3
 *          jw(id) = jw(id) + 
 *     &    (inertie(id,j,iib)+mthth(id,j,iib))*omeg2(j,1,iib)
-**     &    (mthth(id,j,iib))*omeg2(j,1,iib)
 *        enddo
 *      enddo
 *      wjw(1) = omeg2(2,1,iib)*jw(3) - omeg2(3,1,iib)*jw(2) 
 *      wjw(2) = omeg2(3,1,iib)*jw(1) - omeg2(1,1,iib)*jw(3) 
 *      wjw(3) = omeg2(1,1,iib)*jw(2) - omeg2(2,1,iib)*jw(1) 
-*************************************************************************
-**       NEW MTOT : equilibre dynamique a t_n+1
-*************************************************************************
-**       translations :
-**       M^{-1}(1,1) * F_R
-*        id = 1
-*        in1 = ntrig + 3 + 1
-*        do in=1,na3
-*          i2 = ina1 + in
-*          q3(i2,1) = 0.d0
-*          if (itrig(iib,in)) then
-*            do j=1,ntrig
-*              q3(i2,1) = q3(i2,1) + mtot(id,j,iib) * ftrans(j)
-*            enddo
-**           M^{-1}(1,2) * F_th
-*            do j=1,3
-*              j2 = j + ntrig
-*              q3(i2,1) = q3(i2,1) +
-*     &         mtot(id,j2,iib)*(rtgex(j) + qvth(j,iib))
-**     &         mtot(id,j2,iib)*(rtgex(j) - wjw(j))
-*            enddo
-**           M^{-1}(1,3) * F_f
-*            do inf=1,na3
-*              i3 = ina1 + inf
-*              if (.not.itrig(iib,inf)) then
-*                q3(i2,1) = q3(i2,1) +
-*     &           mtot(id,in1,iib)*(FTOTA(i3,1)-FAMOR(i3)+qvf(inf,iib))
-*                in1 = in1 + 1
-*              endif
-*            enddo
-*            id = id + 1
-*          endif
-*        enddo
-**       rotations :
-*        do id=1,3 
-*          id2 = id + ntrig
-*          in1 = 3 + ntrig + 1
-*          omeg3(id,1,iib) = 0.d0
-*          do j=1,ntrig
-**           M^{-1}(2,1) * F_R
-*            omeg3(id,1,iib) = omeg3(id,1,iib) +
-*     &                         mtot(id2,j,iib) * ftrans(j)
-*          enddo
-*          do j=1,3
-*            j2 = j + ntrig
-**           M^{-1}(2,2) * F_th
-*            omeg3(id,1,iib) = omeg3(id,1,iib) +
-*     &      mtot(id2,j2,iib)*(rtgex(j) + qvth(j,iib))
-*          enddo
-**         M^{-1}(2,3) * F_f
-*          do in=1,na3
-*            i2 = ina1 + in
-*            if (.not.itrig(iib,in)) then
-*              omeg3(id,1,iib) = omeg3(id,1,iib) +
-*     &        mtot(id2,in1,iib)*(FTOTA(i2,1)-FAMOR(i2)+qvf(in,iib))  
-*              in1 = in1 + 1
-*            endif
-*          enddo
-*        enddo
-**       flexible :
-*        in1 = 3 + ntrig + 1
-*        do in=1,na3
-*          i2 = ina1 + in
-*          if (.not.itrig(iib,in)) then
-**           M^{-1}(3,1) * F_R
-*            do j=1,ntrig
-*              q3(i2,1) = q3(i2,1) + mtot(in1,j,iib) * ftrans(j)
-*            enddo
-**           M^{-1}(3,2) * F_th
-*            do j=1,3
-*              j2 = j + ntrig
-*              q3(i2,1) = q3(i2,1) +
-*     &        mtot(in1,j2,iib) * (rtgex(j) + qvth(j,iib))
-*            enddo
-**           M^{-1}(3,3) * F_f
-*            in2 = 3 + ntrig + 1
-*            do inf=1,na3
-*              i3 = ina1 + inf
-*              if (.not.itrig(iib,inf)) then 
-*                q3(i2,1) = q3(i2,1) +
-*     &          mtot(in1,in2,iib)*(FTOTA(i3,1)-FAMOR(i3)+qvf(inf,iib))
-*                in2 = in2 + 1
-*              endif
-*            enddo
-*            in1 = in1 + 1
-*          endif
-*        enddo
-
-*****       test : vieux eq dyn pour les ddls flexibles
-**        flexible :
-*        write(*,*)'old eq dyn. :'
+************************************************************************
+*       NEW MTOT : equilibre dynamique a t_n+1
+************************************************************************
+*       translations :
+*       M^{-1}(1,1) * F_R
+        id = 1
+        in1 = ntrig + 3 + 1
         do in=1,na3
-          i = ina1 + in
-          unsm = 1.d0 / ( xm(i,1) + dt2*xasm(i,1) - finert(i,1) )
-*          write(*,*)'unsm i = ',i
-*          write(*,*)'       = ',unsm
-*          write(*,*)'ftota ',ftota(i,1)
-*          write(*,*)'famor = ',famor(i)
-*          write(*,*)'finert = ',finert(i,1)
-          q3(i,1) = (ftota(i,1)-famor(i)) * unsm
-*          write(*,*)'q3 = ',q3(i,1)
+          i2 = ina1 + in
+          q3(i2,1) = 0.d0
+          if (itrig(iib,in)) then
+            do j=1,ntrig
+              q3(i2,1) = q3(i2,1) + mtot(id,j,iib) * ftrans(j)
+            enddo
+*           M^{-1}(1,2) * F_th
+            do j=1,3
+              j2 = j + ntrig
+              q3(i2,1) = q3(i2,1) +
+     &         mtot(id,j2,iib)*(rtgex(j) + qvth(j,iib))
+*     &         mtot(id,j2,iib)*(rtgex(j) - wjw(j))
+            enddo
+*           M^{-1}(1,3) * F_f
+            do inf=1,na3
+              i3 = ina1 + inf
+              if (.not.itrig(iib,inf)) then
+                q3(i2,1) = q3(i2,1) +
+     &           mtot(id,in1,iib)*(FTOTA(i3,1)-FAMOR(i3)+qvf(inf,iib))
+                in1 = in1 + 1
+              endif
+            enddo
+            id = id + 1
+          endif
         enddo
-**        rotation :
-        do id=1,3
-          jw(id) = 0.d0
-          do j=1,3
-            jw(id) = jw(id) + inertie(id,j,iib)*omeg2(j,1,iib)
-          enddo
-        enddo
-        wjw(1) = omeg2(2,1,iib)*jw(3) - omeg2(3,1,iib)*jw(2)
-        wjw(2) = omeg2(3,1,iib)*jw(1) - omeg2(1,1,iib)*jw(3)
-        wjw(3) = omeg2(1,1,iib)*jw(2) - omeg2(2,1,iib)*jw(1)
-        do id = 1,3
+*       rotations :
+        do id=1,3 
+          id2 = id + ntrig
+          in1 = 3 + ntrig + 1
           omeg3(id,1,iib) = 0.d0
-          do j = 1,3
-            omeg3(id,1,iib) = omeg3(id,1,iib) + 
-     &      invinert(id,j,iib)*(rtgex(j) - wjw(j))
+          do j=1,ntrig
+*           M^{-1}(2,1) * F_R
+            omeg3(id,1,iib) = omeg3(id,1,iib) +
+     &                         mtot(id2,j,iib) * ftrans(j)
+          enddo
+          do j=1,3
+            j2 = j + ntrig
+*           M^{-1}(2,2) * F_th
+            omeg3(id,1,iib) = omeg3(id,1,iib) +
+     &      mtot(id2,j2,iib)*(rtgex(j) + qvth(j,iib))
+          enddo
+*         M^{-1}(2,3) * F_f
+          do in=1,na3
+            i2 = ina1 + in
+            if (.not.itrig(iib,in)) then
+              omeg3(id,1,iib) = omeg3(id,1,iib) +
+     &        mtot(id2,in1,iib)*(FTOTA(i2,1)-FAMOR(i2)+qvf(in,iib))  
+              in1 = in1 + 1
+            endif
           enddo
         enddo
-*****       
+*       flexible :
+        in1 = 3 + ntrig + 1
+        do in=1,na3
+          i2 = ina1 + in
+          if (.not.itrig(iib,in)) then
+*           M^{-1}(3,1) * F_R
+            do j=1,ntrig
+              q3(i2,1) = q3(i2,1) + mtot(in1,j,iib) * ftrans(j)
+            enddo
+*           M^{-1}(3,2) * F_th
+            do j=1,3
+              j2 = j + ntrig
+              q3(i2,1) = q3(i2,1) +
+     &        mtot(in1,j2,iib) * (rtgex(j) + qvth(j,iib))
+            enddo
+*           M^{-1}(3,3) * F_f
+            in2 = 3 + ntrig + 1
+            do inf=1,na3
+              i3 = ina1 + inf
+              if (.not.itrig(iib,inf)) then 
+                q3(i2,1) = q3(i2,1) +
+     &          mtot(in1,in2,iib)*(FTOTA(i3,1)-FAMOR(i3)+qvf(inf,iib))
+                in2 = in2 + 1
+              endif
+            enddo
+            in1 = in1 + 1
+          endif
+        enddo
+
+******       test : vieux eq dyn pour les ddls flexibles
+***        flexible :
+**        write(*,*)'old eq dyn. :'
+*        do in=1,na3
+*          i = ina1 + in
+*          unsm = 1.d0 / ( xm(i,1) + dt2*xasm(i,1) - finert(i,1) )
+*          q3(i,1) = (ftota(i,1)-famor(i)) * unsm
+*        enddo
+***        rotation :
+*        do id=1,3
+*          jw(id) = 0.d0
+*          do j=1,3
+*            jw(id) = jw(id) + inertie(id,j,iib)*omeg2(j,1,iib)
+*          enddo
+*        enddo
+*        wjw(1) = omeg2(2,1,iib)*jw(3) - omeg2(3,1,iib)*jw(2)
+*        wjw(2) = omeg2(3,1,iib)*jw(1) - omeg2(1,1,iib)*jw(3)
+*        wjw(3) = omeg2(1,1,iib)*jw(2) - omeg2(2,1,iib)*jw(1)
+*        do id = 1,3
+*          omeg3(id,1,iib) = 0.d0
+*          do j = 1,3
+*            omeg3(id,1,iib) = omeg3(id,1,iib) + 
+*     &      invinert(id,j,iib)*(rtgex(j) - wjw(j))
+*          enddo
+*        enddo
+******       
 *       maj des vitesses (differences centrees) :
         do in=1,na3
           i2 = ina1 + in
