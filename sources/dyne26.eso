@@ -145,6 +145,10 @@ C DYNE26    SOURCE    CB215821  20/11/04    21:16:12     10766
       NSB    = XPHILB(/1)
       NPLSB  = XPHILB(/2)
       NA2    = XPHILB(/3)
+*     juste pour test
+      na1 = xm(/1)
+      nb1m = xm(/2)
+*
       IDIMB  = XPHILB(/4)
       DEUXPI = 2.D0 * XPI
       lnor = .true.
@@ -541,15 +545,16 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
 *        rigide : on implente les matrices 
 *                 utiles au calculs des forces d'inertie
 ************************************************************************
+      write(*,*)'dyne26 : rigide',rigide
+      write(*,*)'         iarota(ib)',iarota(ib)
       if ((rigide).and.(iarota(ib).ne.0)) then
       
 *       rq : ibas est deja la base de modes
-        write(*,*)'dyne26 : call filldef'
-*       write(*,*)'         npdef = ',npdef
-*       write(*,*)'         na2 = ',na2
-*       write(*,*)'         nsb = ',nsb
-*       write(*,*)'         na1 = ',na1
-*       write(*,*)'         nb1m = ',nb1m
+       write(*,*)'         npdef = ',npdef
+       write(*,*)'         na2 = ',na2
+       write(*,*)'         nsb = ',nsb
+       write(*,*)'         na1 = ',na1
+       write(*,*)'         nb1m = ',nb1m
 *
         call filldef(ibas,ib,ktphi,ktrot,ktkam,npdef,lnor)
         xsum = 0.d0

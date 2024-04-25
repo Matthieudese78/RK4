@@ -66,7 +66,8 @@
       npdef = xtphi(/2)
 *
 *     write(*,*)'filldef : START'
-*     write(*,*)'filldef : npdef = ',npdef
+      write(*,*)'filldef : npdef = ',npdef
+      write(*,*)'filldef : npts = ',npts
 *     write(*,*)'          nsb = ',nsb
 *     write(*,*)'          na1 = ',na1
 *
@@ -83,6 +84,7 @@
 *     somme de la contribution des modes :
       xnorall = 0.d0
       na3 = inmsb(ib)
+      ina1 = iorsb(ib) - 1
 *
       do i=i,100
         nor(i) = 0.d0
@@ -90,6 +92,10 @@
       do ip=1,npdef
         lpoi(ip) = 0
         xmpoi(ip,ib) = 0.d0
+      enddo
+      do in=1,na3
+        i2 = ina1 + in
+        xmno(in,ib) = xm(i2,1)
       enddo
 *
 
@@ -148,15 +154,17 @@
 *         write(*,*)'acquisistion def modale : ',icdm
           if (.not.lcoo) then
             lcoo = .true.
-*           write(*,*)'call findpo'
-            call findpo(icdm,lpoi,npdef)
-*           write(*,*)'end findpo'
-*           write(*,*)'liste de pts : '
-*           write(*,*)'idim = ',idim
             npdef = xtphi(/2)
+            write(*,*)'call findpo, npdef = ',npdef
+            write(*,*)'call findpo, npts = ',npts
+            call findpo(icdm,lpoi,npts)
+            write(*,*)'end findpo, npdef = ',npdef
+            write(*,*)'end findpo, npts = ',npts
+            write(*,*)'liste de pts : '
+            write(*,*)'idim = ',idim
 *           donne lpoi : liste des noeuds de la def modale comportant une composante 'UX'
             do ip=1,npdef
-*             write(*,*)'point : ',lpoi(ip)
+*              write(*,*)'point : ',lpoi(ip)
               ipoin = lpoi(ip)
               if (.not.(ipoin.eq.0)) then
                 do id=1,idim
@@ -176,7 +184,7 @@
           xnortot = 0.d0
           do ip=1,npdef
             ipoin = lpoi(ip)
-*           write(*,*)'ipoin = ',ipoin
+            write(*,*)'ipoin = ',ipoin
             if (.not.(ipoin.eq.0)) then
               call extra9(icdm,ipoin,'UX',0,.false.,xval,iret)
               xtphi(1,ip,inel,ib) = xval
@@ -196,12 +204,13 @@
               xnortot = xnortot + ((xtphi(1,ip,inel,ib)**2) +
      &                             (xtphi(2,ip,inel,ib)**2) +
      &                             (xtphi(3,ip,inel,ib)**2))
+              write(*,*)'xcmax = ',xcmax
             endif
           enddo
           xnortot = dsqrt(xnortot)
-          xmno(inel,ib) = 0.d0
           ina1 = iorsb(ib) - 1
           i2 = ina1 + inel
+          xmno(inel,ib) = xm(i2,1)
 *         normalisation des modes :
 *         par defaut :
           xalpha = 1.d0

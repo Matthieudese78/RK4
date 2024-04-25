@@ -24,8 +24,8 @@
       DATA MOTLAG/'LX'/
 
 
-*     write(*,*)'findpo : ichp = ',ichp
-*     write(*,*)'findpo : npoi = ',npoi
+      write(*,*)'findpo : ichp = ',ichp
+      write(*,*)'findpo : npoi = ',npoi
 *     compteur de noeuds :      
       inoe = 0
 *
@@ -35,11 +35,12 @@
       SEGACT MCHPOI
 * --- BOUCLE SUR LES ZONES DU CHPOINT
       NBSOUS = IPCHP(/1)
-*     write(*,*)'findpo : nbsous = ',nbsous
+      write(*,*)'findpo : nbsous = ',nbsous
       DO 11 I = 1,NBSOUS
          MSOUPO = IPCHP(I)
          SEGACT MSOUPO
          NC = NOCOMP(/2)
+         write(*,*)'    nc = ',nc
          if (ifopoi.eq.1) then
             write(*,*)'findpo : couplage inertiel rotas - transl rig'
             write(*,*)'  Fourrier non pris en charge ici!'
@@ -50,7 +51,7 @@
 *             on ne fait la detection que sur 'UX' pour ne pas remplir avec 2 fois le mm point!
               if (nocomp(ic).eq.'UX') then
                  icc=ic
-*                write(*,*)' comp ux trouvee'
+                 write(*,*)' comp ux trouvee'
                  goto 13
               endif
  22         continue  
@@ -66,6 +67,7 @@
          mpoval = ipoval
          segact,mpoval
          do 14 kj = 1,num(/2)
+*            write(*,*)'noeud = ',num(1,kj)
             inoe = inoe + 1
             list(inoe) = num(1,kj)
  14      continue
