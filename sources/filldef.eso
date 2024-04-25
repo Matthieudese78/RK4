@@ -153,6 +153,7 @@
 *           write(*,*)'end findpo'
 *           write(*,*)'liste de pts : '
 *           write(*,*)'idim = ',idim
+            npdef = xtphi(/2)
 *           donne lpoi : liste des noeuds de la def modale comportant une composante 'UX'
             do ip=1,npdef
 *             write(*,*)'point : ',lpoi(ip)
