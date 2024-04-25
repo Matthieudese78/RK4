@@ -10,18 +10,18 @@ opti 'EPTR' 5 ;
 reprise = faux ;
 
 *# algo :
-rk4 = vrai ;
+rk4 = faux ;
 
-sw = faux ;
+sw = vrai ;
 nmb = faux ; 
 xpinv = faux ;
 
 *# linert :
-linert = vrai ;
+linert = faux ;
 * norme / norme eucl du mode :
 lnortot = faux ;
 * norme / comp max du mode :
-lnorcomp = vrai ;
+lnorcomp = faux ;
 * norme / masse totale du solide :
 lnormtot = faux ;
 
@@ -42,7 +42,7 @@ xi = 0. ;
 ***** General :
 
 *# nmode_ela :
-nmode_ela = 6 ;
+nmode_ela = 12 ;
 
 *# typmode :
 typmode = 1 ;
@@ -80,14 +80,13 @@ ntronq = 0 ;
 ****** Geometrie:
 
 *# stoia :
-stoia = vrai  ;
+stoia = vrai ;
 
 *# manchette :
 manchette = faux ;
 
 *# theta_ini_x :
 theta_ini_x = 45. ;
-
 theta_ini_y = 0. ;
 theta_ini_z = 0. ;
 
@@ -197,7 +196,7 @@ lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
 nnoeuds = 2*(extr lnoe nmode_ela) ;
 lindmode = lect (dime lfind)*1 ; 
 finsi ; 
-* nnoeuds = 600 ;
+nnoeuds = maxi (lect 500 nnoeuds) ;
 * Position du centre de gravite : manchette ou stoianovici : 
  LG = (h/2.) ;
 *
@@ -214,7 +213,7 @@ n = 6 ;
 dte = 2.e-6 ;
 
 *# nsort :
-NSORT = 5 ;
+NSORT = 10 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -389,9 +388,9 @@ opti 'SORT' (chai repsave script'.csv') ;
 * opti impi 333;
 * oeil1 = (5.*R) (5.*R) (0.5*h) ;
 ***** RECO totale voulue ?
-RECOTOT = FAUX ;
-EVOLRECO = VRAI ;
-FLVTK = vrai ;
+RECOTOT = faux ;
+EVOLRECO = vrai ;
+FLVTK = faux ;
 lanime = faux ;
 * SI (RECOTOT EGA FAUX);
 *   FLVTK = FAUX ;
@@ -418,7 +417,7 @@ G1 = 0. 0. LG ;
 * Cgrav = BARY MESHPOU ;
 * G1 = MESHPOU POIN 'PROC' Cgrav ;
 * Point d'observation le plus eloigne X,Y,Z >0: utile pour comp avec python
-Pobs = G1 ;
+Pobs = p2 ;
 list Pobs ;
 *
 *********************************************************************
@@ -708,6 +707,9 @@ CHA_PESA = CHAR 'FORC' FPESA evolF ;
     TSTL2 . 'FORCE_DE_CHOC_NORMALE' = VRAI ;
     TSTL2 . 'FORCE_DE_CHOC_TANGENTIELLE' = VRAI ;
     TSTL2 . 'PUISSANCE_USURE_INSTANTANEE' = VRAI ;
+    TSTL2 . 'UX' = VRAI ;
+    TSTL2 . 'UY' = VRAI ;
+    TSTL2 . 'UZ' = VRAI ;
     TSORL . TL2 = TSTL2 ; 
    finsi ;
 
@@ -858,7 +860,7 @@ REPE BRECOVITE Nt;
       VX1 = VX1 et VX2;
       VY1 = VY1 et VY2;
       VZ1 = VZ1 et VZ2;		  
-FIN BRECOVITE;
+FIN BRECOVITE ;
 *
  VX_ev = EVOL 'JAUN' MANU 't' tprog 'VX' VX1;
  VY_ev = EVOL 'ORAN' MANU 't' tprog 'VY' VY1;
@@ -876,35 +878,37 @@ Dess(VZ_ev) 'TITRE' 'recotot: VZ = f(t)' TAB1 LEGE;
 Dess(VX_ev et VY_ev et VZ_ev) 'TITRE' 'Vitesse = f(t)' TAB1 LEGE;
 
 * Acceleration:
-REPE BRECOACC Nt;
-      ACCE1 =  RECO  TRESU  Tmode (extr tprog &BRECOACC) 'ACCE' ;
-      AX2 = EXTR ACCE1 'UX' Pobs;
-      AY2 = EXTR ACCE1 'UY' Pobs;
-	    AZ2 = EXTR ACCE1 'UZ' Pobs;	
-      AX1 = AX1 et AX2;
-      AY1 = AY1 et AY2;
-      AZ1 = AZ1 et AZ2;		  
-FIN BRECOACC;
+*REPE BRECOACC Nt;
+*      ACCE1 =  RECO  TRESU  Tmode (extr tprog &BRECOACC) 'ACCE' ;
+*      AX2 = EXTR ACCE1 'UX' Pobs;
+*      AY2 = EXTR ACCE1 'UY' Pobs;
+*	    AZ2 = EXTR ACCE1 'UZ' Pobs;	
+*      AX1 = AX1 et AX2;
+*      AY1 = AY1 et AY2;
+*      AZ1 = AZ1 et AZ2;		  
+*FIN BRECOACC;
+**
+* AX_ev = EVOL 'JAUN' MANU 't' tprog 'AX' AX1;
+* AY_ev = EVOL 'ORAN' MANU 't' tprog 'AY' AY1;
+* AZ_ev = EVOL 'ROUG' MANU 't' tprog 'AZ' AZ1;
+* 	TAB1 . 'TITRE' . 1 = 'AX';
+*Dess(AX_ev) 'TITRE' 'recotot: AX = f(t)' TAB1 LEGE;
+*    TAB1 . 'TITRE' . 1 = 'AY';
+*Dess(AY_ev) 'TITRE' 'recotot: AY = f(t)' TAB1 LEGE;
+*    TAB1 . 'TITRE' . 1 = 'AZ';
+*Dess(AZ_ev) 'TITRE' 'recotot: AZ = f(t)' TAB1 LEGE;
+*    TAB1 . 'TITRE' . 1 = 'AX';
+*	TAB1 . 'TITRE' . 2 = 'AY';	
+*	TAB1 . 'TITRE' . 3 = 'AZ';
+*Dess(AX_ev et AY_ev et AZ_ev) 'TITRE' 'recotot: Acceleration = f(t)' TAB1 LEGE;
 *
- AX_ev = EVOL 'JAUN' MANU 't' tprog 'AX' AX1;
- AY_ev = EVOL 'ORAN' MANU 't' tprog 'AY' AY1;
- AZ_ev = EVOL 'ROUG' MANU 't' tprog 'AZ' AZ1;
- 	TAB1 . 'TITRE' . 1 = 'AX';
-Dess(AX_ev) 'TITRE' 'recotot: AX = f(t)' TAB1 LEGE;
-    TAB1 . 'TITRE' . 1 = 'AY';
-Dess(AY_ev) 'TITRE' 'recotot: AY = f(t)' TAB1 LEGE;
-    TAB1 . 'TITRE' . 1 = 'AZ';
-Dess(AZ_ev) 'TITRE' 'recotot: AZ = f(t)' TAB1 LEGE;
-    TAB1 . 'TITRE' . 1 = 'AX';
-	TAB1 . 'TITRE' . 2 = 'AY';	
-	TAB1 . 'TITRE' . 3 = 'AZ';
-Dess(AX_ev et AY_ev et AZ_ev) 'TITRE' 'recotot: Acceleration = f(t)' TAB1 LEGE;
-* formatT = chai '(D1.' (ABS NdecT) ')';
-* list formatT;
-* List T;
-* Tmot = (chai 'FORMAT' (mot (F1.2)) T );
-* list Tmot;
-* DTe = (chai 'FORMAT' '(F1.2)' DTe);
+** formatT = chai '(D1.' (ABS NdecT) ')';
+** list formatT;
+** List T;
+** Tmot = (chai 'FORMAT' (mot (F1.2)) T );
+** list Tmot;
+** DTe = (chai 'FORMAT' '(F1.2)' DTe);
+
 * FIN RECOTOT:
 FINSI;
 *********************************************************************
@@ -1072,7 +1076,7 @@ TSORT . 'quat4' = tresu . deplacement . ptrep_rig4 ;
 
 ncolexce = 34 ; 
 
-* si reprise ;
+si reprise ;
 * repe bsauvq nmode_ela ;
 repe bsauvq nsauvini ;
   ptrpi = tmodela . modes . &bsauvq . point_repere ;  
@@ -1082,7 +1086,7 @@ repe bsauvq nsauvini ;
   tsort . (chai 'q'&bsauvq'v') = tresu . vitesse . ptrpi ; 
   ncolexce = ncolexce + 2 ;
 fin bsauvq ;
-* finsi ; 
+finsi ; 
 
 si (limpact) ;
 * Pusure durant les impacts : 
@@ -1091,12 +1095,18 @@ TSORT . 'fn' = table ;
 TSORT . 'ft' = table ;
 TSORT . 'vt' = table ;
 TSORT . 'vn' = table ;
+TSORT . 'uxpchoc' = table ;
+TSORT . 'uypchoc' = table ;
+TSORT . 'uzpchoc' = table ;
 TSORT . 'pusure' = TRESU . TL2 . 'PUISSANCE_USURE_INSTANTANEE' ;
 TSORT . 'vn' = TRESU . TL2 . 'VITESSE_NORMALE' ;
 TSORT . 'vt' = TRESU . TL2 . 'VITESSE_TANGENTIELLE' ;
 TSORT . 'fn' = TRESU . TL2 . 'FORCE_DE_CHOC_NORMALE' ;
 TSORT . 'ft' = TRESU . TL2 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
-ncolexce = ncolexce + 5 ;
+TSORT . 'uxpchoc' = TRESU . TL2 . 'UX' ;
+TSORT . 'uypchoc' = TRESU . TL2 . 'UY' ;
+TSORT . 'uzpchoc' = TRESU . TL2 . 'UZ' ;
+ncolexce = ncolexce + 8 ;
 finsi ;
 *
 
@@ -1114,13 +1124,13 @@ TSORT . 'vz1' = table ;
 TSORT . 'vx1' = vx1 ;
 TSORT . 'vy1' = vy1 ;
 TSORT . 'vz1' = vz1 ;
-TSORT . 'ax1' = table ;
-TSORT . 'ay1' = table ;
-TSORT . 'az1' = table ;
-TSORT . 'ax1' = ax1 ;
-TSORT . 'ay1' = ay1 ;
-TSORT . 'az1' = az1 ;
-ncolexce = ncolexce + 9 ;
+*TSORT . 'ax1' = table ;
+*TSORT . 'ay1' = table ;
+*TSORT . 'az1' = table ;
+*TSORT . 'ax1' = ax1 ;
+*TSORT . 'ay1' = ay1 ;
+*TSORT . 'az1' = az1 ;
+ncolexce = ncolexce + 6 ;
 FINSI ; 
 * EVOLRECO :
 SI (EVOLRECO EGA VRAI) ;
