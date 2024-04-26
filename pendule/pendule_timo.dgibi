@@ -10,18 +10,18 @@ opti 'EPTR' 5 ;
 reprise = faux ;
 
 *# algo :
-rk4 = faux ;
+rk4 = vrai ;
 
-sw = vrai ;
+sw = faux ;
 nmb = faux ; 
 xpinv = faux ;
 
 *# linert :
-linert = faux ;
+linert = vrai ;
 * norme / norme eucl du mode :
 lnortot = faux ;
 * norme / comp max du mode :
-lnorcomp = faux ;
+lnorcomp = vrai ;
 * norme / masse totale du solide :
 lnormtot = faux ;
 
@@ -34,7 +34,7 @@ finsi ;
 limpact = vrai ;
 
 *# xi :
-xi = 0. ;
+xi = 0.1 ;
 
 *********************************************************************
 *                       Valeurs numeriques 
@@ -80,10 +80,10 @@ ntronq = 0 ;
 ****** Geometrie:
 
 *# stoia :
-stoia = vrai ;
+stoia = faux ;
 
 *# manchette :
-manchette = faux ;
+manchette = vrai ;
 
 *# theta_ini_x :
 theta_ini_x = 45. ;

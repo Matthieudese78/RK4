@@ -16,12 +16,12 @@ import sys
 # from rich.console import Console
 # from matplotlib.font_manager import FontProperties
 #%%
-stoia = True
-manchette = False
+stoia = False
+manchette = True
 limpact = True
-linert = False
+linert = True
 lnortot = False
-lnorcomp = False
+lnorcomp = True
 lnormtot = False
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 xi = 0.
@@ -78,13 +78,13 @@ dt = df.iloc[1]['t'] - df.iloc[0]['t']
 Kchoc = 5.5E+07 
 muk = 0.075
 bamo = df['amor'][0]
-# thini = df['thini'][0]
-h = df['lbar'][0]
-zsol = -2.*np.cos(df['thini'][0]*np.pi/180.)*h,
+thini = df['thini'][0]
+h = df.loc[0,'lbar']
+zsol = -2.*np.cos(thini*np.pi/180.)*h
 # jx = 1.79664E-02
 M = df['M'][0]
 g = 9.81
-hini = h * (1. - np.cos(df['thini']*np.pi/180.))
+hini = h * (1. - np.cos(df.loc[0,'thini']*np.pi/180.))
 df['epot'] = M*g*df['uzg'] + M*g*hini
 # df['ecref'] = 0.5*jx*(df['wx']**2)
 df['ecbar'] = 0.*df['edef'] 
@@ -94,8 +94,9 @@ for i in np.arange(df['nmode'][0]):
 df['eintbar'] = df['edef'] + df['ecbar']
 df['ecdef'] = df['edef'] + df['ec'] + df['ecbar']
 
-df['pene'] = df['uzp2'].abs() + zsol 
-df['pene'] = df['pene'].apply(lambda x: 0 if x < 0 else x)
+df['pene'] = df['uzpchoc'] - zsol
+df['pene'] = df['pene'].apply(lambda x: 0 if x > 0 else x)
+# zsol = 0.
 # df['estock'] = 0.*df['edef']
 df['estock'] = 0.5*Kchoc*(df['pene']**2)
 df['etot'] = df['epot'] + df['edef'] + df['ec'] + df['ecbar']
@@ -129,7 +130,7 @@ if limpact:
 
   # vols :  on isole les 4 premiers groupes de chocs :
   crit = 0.05
-  nstchoc = 2 
+  nstchoc = 4 
   lgrp = [[] for _ in range(nstchoc)]
   t0 = df.iloc[fst[0]]['t']
   lgrp[0].append(t0)
@@ -215,7 +216,7 @@ kwargs1 = {
     "xpower": 5,
     "ypower": 5,
 }
-traj.pltraj2d(df[df['t']<0.9], **kwargs1)
+traj.pltraj2d(df, **kwargs1)
 
 kwargs1 = {
     "tile1": "wy sleeve = f(t)" + "\n",
@@ -231,7 +232,7 @@ kwargs1 = {
     "xpower": 5,
     "ypower": 5,
 }
-traj.pltraj2d(df[df['t']<0.9], **kwargs1)
+traj.pltraj2d(df, **kwargs1)
 
 kwargs1 = {
     "tile1": "wz sleeve = f(t)" + "\n",
@@ -247,7 +248,23 @@ kwargs1 = {
     "xpower": 5,
     "ypower": 5,
 }
-traj.pltraj2d(df[df['t']<0.9], **kwargs1)
+traj.pltraj2d(df, **kwargs1)
+#test reco :
+kwargs1 = {
+    "tile1": "uzpchoc vs uzp2" + "\n",
+    "tile_save": "uzreco_vs_uzliai_ft",
+    "colx": ["t","t"],
+    "coly": ["uzpchoc","uzp2"],
+    "rep_save": repsect1,
+    "label1": [r"$u_{z}(P_{choc})$",r"$u_z(P_2)$",r"$E_{pot}$",r"$E_{tot}$"],
+    "labelx": r"$t \quad (s)$",
+    "labely": r"$u_z$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+}
+traj.pltraj2d(df, **kwargs1)
 
 kwargs1 = {
     "tile1": "energies sleeve = f(t)" + "\n",
@@ -264,7 +281,7 @@ kwargs1 = {
     "ypower": 5,
     "alpha" : [0.7]*10,
 }
-traj.pltraj2d(df[df['t']<0.9], **kwargs1)
+traj.pltraj2d(df, **kwargs1)
 
 kwargs1 = {
     "tile1": "energies sleeve = f(t)" + "\n",
@@ -314,7 +331,8 @@ kwargs1 = {
 }
 traj.pltraj2d(df, **kwargs1)
 
-for i in np.arange(df['nmode'][0]):
+# for i in np.arange(df['nmode'][0]):
+for i in np.arange(4):
   kwargs1 = {
       "tile1": f"energies mode{i+1} = f(t)" + "\n",
       "tile_save": f"energies_mode{i+1}",
@@ -356,33 +374,54 @@ else:
     print(f"FOLDER : {repsect1} already exists.")
 #%%
 for ichoc in np.arange(nstchoc): 
+  indexchoc = df[(df['t']>=(lgrp[ichoc][0]-1.e-3)) & (df['t']<=(lgrp[ichoc][1]+1.e-3))].index
   kwargs = {
       "tile1": f"traj choc {ichoc} = f(t)" + "\n",
       "tile_save": f"choc{ichoc}_ft",
-      "x": df[(df['t']>=lgrp[ichoc][0]) & (df['t']<=lgrp[ichoc][1])]['t'], 
-      "y": df[(df['t']>=lgrp[ichoc][0]) & (df['t']<=lgrp[ichoc][1])]['uzp2'], 
+      "x": df.iloc[indexchoc]['t'], 
+      "y": df.iloc[indexchoc]['uzpchoc'], 
+      # "y": df.iloc[indexchoc]['pene'], 
       "rep_save": repsect1,
       "label1": r"$u_z$",
       "labelx": r"$t \quad (s)$",
       "labely": r"$u_z$" + " (m)",
-      "labelsol": "floor",
+      "labelsol": "ground",
       "color1": color1[0],
       "endpoint": False,
       "xpower": 5,
       "ypower": 5,
-      "sol": -2.*np.cos(df['thini'][0]*np.pi/180.)*h,
+      "sol": zsol,
+      # "sol": 0.,
       "loc_leg": "upper right",
   }
   traj.pltraj2d_list_sol(**kwargs)
 
 #%% lecture des arguments :
 for ichoc in np.arange(nstchoc): 
-  indexchoc = df[(df['t']>=(lgrp[ichoc][0]-5.e-3)) & (df['t']<=(lgrp[ichoc][1]+5.e-3))].index
+  indexchoc = df[(df['t']>=(lgrp[ichoc][0]-1.e-3)) & (df['t']<=(lgrp[ichoc][1]+1.e-3))].index
+
+  kwargs1 = {
+      "tile1": "uzpchoc vs uzp2" + "\n",
+      "tile_save": f"uzreco_vs_uzliai_{ichoc}",
+      "colx": ["t","t"],
+      "coly": ["uzpchoc","uzp2"],
+      "rep_save": repsect1,
+      "label1": [r"$u_{z}(P_{choc})$",r"$u_z(P_2)$",r"$E_{pot}$",r"$E_{tot}$"],
+      "labelx": r"$t \quad (s)$",
+      "labely": r"$u_z$"+" (m)",
+      "color1": color1,
+      "endpoint": [False,False,False,False],
+      "xpower": 5,
+      "ypower": 5,
+  }
+  traj.pltraj2d(df.iloc[indexchoc], **kwargs1)
+
   kwargs = {
       "tile1": f"traj+ener choc {ichoc} = f(t)" + "\n",
       "tile_save": f"choc{ichoc}_ener_ft",
       "x": df.iloc[indexchoc]['t'], 
-      "y": df.iloc[indexchoc]['uzp2'], 
+      "y": df.iloc[indexchoc]['uzpchoc'], 
+      # "y": df.iloc[indexchoc]['pene'], 
       "y2": [df.iloc[indexchoc]['ec'], 
       df.iloc[indexchoc]['eintbar'],
       df.iloc[indexchoc]['etot'], 
@@ -399,7 +438,7 @@ for ichoc in np.arange(nstchoc):
       "endpoint": False,
       "xpower": 5,
       "ypower": 5,
-      "sol": -2.*np.cos(df['thini'][0]*np.pi/180.)*h,
+      "sol": zsol,
       "loc_leg": "upper left",
       "loc_leg2": "upper right",
   }
@@ -407,20 +446,20 @@ for ichoc in np.arange(nstchoc):
   kwargs = {
       "tile1": f"ener choc {ichoc} = f(t)" + "\n",
       "tile_save": f"enerchoc{ichoc}_ft",
-      "x": [df.iloc[indexchoc]['t']]*3, 
+      "x": [df.iloc[indexchoc]['t']]*4, 
       "y": [df.iloc[indexchoc]['ec'], 
             df.iloc[indexchoc]['eintbar'],
+            df.iloc[indexchoc]['estock'], 
             df.iloc[indexchoc]['etot']], 
       "rep_save": repsect1,
-      "label1": [r"$E_{kin}^{ref}$",r"$E_{vibr}$",r"$E_{tot}$",r"$E_{stock}$"],
+      "label1": [r"$E_{kin}^{ref}$",r"$E_{vibr}$",r"$E_{stock}$",r"$E_{tot}$"],
       "labelx": r"$t \quad (s)$",
       "labely": "Energy (J)",
       "color1": color1,
       "endpoint": False,
       "xpower": 5,
       "ypower": 5,
-      "loc_leg": "upper left",
-      "loc_leg2": "upper right",
+      "loc_leg": "upper right",
   }
   traj.pltraj2d_list(**kwargs)
 
@@ -516,7 +555,7 @@ for ichoc in np.arange(nstchoc):
       "endpoint": False,
       "xpower": 5,
       "ypower": 5,
-      "sol": -2.*np.cos(df['thini'][0]*np.pi/180.)*h,
+      "sol": zsol,
       # "sol": None,
       "loc_leg": "upper left",
       "loc_leg2": "upper right",
@@ -536,7 +575,7 @@ for ichoc in np.arange(nstchoc-1):
       "tile1": f"traj vol {ichoc} = f(t)" + "\n",
       "tile_save": f"vol{ichoc}_ft",
       "x": df.iloc[indexvol]['t'], 
-      "y": df.iloc[indexvol]['uzp2'], 
+      "y": df.iloc[indexvol]['uzpchoc'], 
       "rep_save": repsect1,
       "label1": r"$u_z$",
       "labelx": r"$t \quad (s)$",
@@ -546,7 +585,7 @@ for ichoc in np.arange(nstchoc-1):
       "endpoint": False,
       "xpower": 5,
       "ypower": 5,
-      "sol": -2.*np.cos(df['thini'][0]*np.pi/180.)*h,
+      "sol": zsol,
       "loc_leg": "upper right",
   }
   traj.pltraj2d_list_sol(**kwargs)
@@ -558,7 +597,7 @@ for ichoc in np.arange(nstchoc-1):
       "tile1": f"traj+ener vol {ichoc} = f(t)" + "\n",
       "tile_save": f"vol{ichoc}_ener_ft",
       "x": df.iloc[indexvol]['t'], 
-      "y": df.iloc[indexvol]['uzp2'], 
+      "y": df.iloc[indexvol]['uzpchoc'], 
       "y2": [df.iloc[indexvol]['ec'], 
       df.iloc[indexvol]['eintbar'], 
       df.iloc[indexvol]['etot']], 
@@ -574,7 +613,7 @@ for ichoc in np.arange(nstchoc-1):
       "endpoint": False,
       "xpower": 5,
       "ypower": 5,
-      "sol": -2.*np.cos(df['thini'][0]*np.pi/180.)*h,
+      "sol": zsol,
       "loc_leg": "upper left",
       "loc_leg2": "upper right",
   }

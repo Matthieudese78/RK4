@@ -3,14 +3,14 @@ import os
 from csv_to_pickle import csvs2pickle
 
 #%%
-stoia = True
-manchette = False
+stoia = False
+manchette = True
 limpact = True
-linert = False
+linert = True
 lnortot = False
-lnorcomp = False
+lnorcomp = True
 lnormtot = False
-xi = 0.
+xi = 0.1
 thini = 45.
 nmode = 12
 #%%
