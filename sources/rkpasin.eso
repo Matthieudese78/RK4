@@ -744,8 +744,8 @@ CMS :     pour l'energie de deformation et cinetique (xec), on a calule pour tte
              DQ1 = Q1(I2,1) - Q1(I2,2)
              DWIN = -(F1 + F2)/2D0 * DQ1
 *
-             WINT(I2,1) = WINT(I2,2) + DWIN
-*             wint(i2,1) = (xk(i2,1)*(q1(i2,1)**2))/4.d0
+*             WINT(I2,1) = WINT(I2,2) + DWIN
+             wint(i2,1) = (xk(i2,1)*(q1(i2,1)**2))/2.d0
 *             wint(i2,1) = wint(i2,2) +
 *     &       (xk(i2,1)*(5.d-1*(q1(i2,1)+q1(i2,5))*DQ1))
 *            energie cinetique associee au mode i2 :
