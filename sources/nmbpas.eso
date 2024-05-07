@@ -727,7 +727,8 @@ c           F2 = F2 - XASM(I)*Q2(I,1)
 *          WEXT(I,1) = WEXT(I,2) + DWEX
 *         finalemenent ds wext on met l'energie cinetique du mode
           wext(i,1) = (xm(i,1) * (q2(i,1)**2)/2.d0)
-          WINT(I,1) = WINT(I,2) + DWIN
+          wint(i,1) = (xk(i,1)*(q1(i,1)**2))/2.d0
+*          WINT(I,1) = WINT(I,2) + DWIN
 cmsw      WRITE(*,*)'wext(i,1) = ',wext(i,1) 
 cmsw      WRITE(*,*)'wint(i,1) = ',wint(i,1) 
 
