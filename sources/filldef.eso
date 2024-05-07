@@ -184,7 +184,7 @@
           xnortot = 0.d0
           do ip=1,npdef
             ipoin = lpoi(ip)
-            write(*,*)'ipoin = ',ipoin
+*            write(*,*)'ipoin = ',ipoin
             if (.not.(ipoin.eq.0)) then
               call extra9(icdm,ipoin,'UX',0,.false.,xval,iret)
               xtphi(1,ip,inel,ib) = xval
@@ -204,7 +204,7 @@
               xnortot = xnortot + ((xtphi(1,ip,inel,ib)**2) +
      &                             (xtphi(2,ip,inel,ib)**2) +
      &                             (xtphi(3,ip,inel,ib)**2))
-              write(*,*)'xcmax = ',xcmax
+*              write(*,*)'xcmax = ',xcmax
             endif
           enddo
           xnortot = dsqrt(xnortot)

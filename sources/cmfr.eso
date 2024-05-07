@@ -73,10 +73,6 @@
 **       enddo
 * 1    continue
 
-*       write(*,*)'MFR :'
-*       do in=1,na3
-*          write(*,'(3(1X,F8.5))') , (mfr(in,id,ib),id=1,3)
-*       enddo
 ******************************************************************
 *     NEW : AVEC BLF
 ******************************************************************
@@ -87,6 +83,10 @@
           enddo
         enddo
       enddo
+*      write(*,*)'MFR :'
+*      do in=1,na3
+*         write(*,'(3(1X,F8.5))') , (mfr(in,id,ib),id=1,3)
+*      enddo
 
 *
       END

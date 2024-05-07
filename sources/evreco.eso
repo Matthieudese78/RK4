@@ -449,7 +449,6 @@ c              NUMOO.NUDDL(i)= composante du i^eme ddl a traiter
            IPTROT(2) = 0
            IPTROT(3) = 0
            IPTROT(4) = 0 
-           
 *
 cbp      QUEL TYPE DE SORTIE DE LA TABLE DYNE (CHPOINT OU LISTREEEL)?
 
@@ -565,6 +564,7 @@ c Dans l'objet solution de type DEPL on ne trouve pas la liste des DEPL
 *           Recombinaison des deplacements
 * old:      CALL EVORIG(IROT,ICDR,IBOO,ILEX,0,0,0,IDEFO)
 *            WRITE(*,*)'Evreco: appel evorig2'
+*            write(*,*)'              ityp = ',ityp
             CALL EVORIG2(ISTA,IBOO,ILEX,ILEN1,ILEN2,ITYP,
      &              ICDR,IPTROT,IDEFROT,RECOELA,LTRIG,ITRIG)
 *            NUMOO = IBOO

@@ -90,20 +90,20 @@ C --- BOUCLE SUR LES MODES ----------------------------------
       IF (LDEP.EQ.0) GOTO 100
 *      WRITE(*,*)'EVOL24: RECO ELASTIQUE'
       DO 40 I=1,LDEP
-*        WRITE(*,*)'evol24: boucle 40'
+*       WRITE(*,*)'evol24: boucle 40'
         ICHP=MLENT1.LECT(I)
 *       WRITE(*,*)'evol24: pointeur ',I,'^eme defo modale: ICHP = ',ICHP
 C   --- BOUCLE SUR LES DDL ----------------------------------
 
 c         recup du noeud et du nom de composante
           MPOINT = NUMO(IP)
-*          WRITE(*,*)'evol24: EXTRA9 MPOINT = ',MPOINT
-*          WRITE(*,*)'               composante = ',NUJ 
+*         WRITE(*,*)'evol24: EXTRA9 MPOINT = ',MPOINT
+*         WRITE(*,*)'               composante = ',NUJ 
           call EXTRA9(ICHP,MPOINT,NUJ,0,.FALSE.,XFLOT,IRET)
 c         TRAV(I^eme mode,IP^eme ddl)=[ \phi_I(x_IP) ]_{I=1...LDEP}
           TRAV(I,IP)=XFLOT
-*          WRITE(*,*)
-*     &    'evol24: TRAV(',I,'^eme mode,',IP,'^eme ddl) = ',XFLOT
+*         WRITE(*,*)
+*     &   'evol24: TRAV(',I,'^eme mode,',IP,'^eme ddl) = ',XFLOT
  40   CONTINUE
  
 C ---------------------------------------------------------------------
@@ -165,6 +165,7 @@ C   --- BOUCLE SUR LES PAS DE TEMPS A SORTIR ------------------------
 *          WRITE(*,*)'        PROG(',JL,') = ',PROG(JL)
 c         x_ip(t_J) = \sum_I  alpha_I(t_J)  * \phi_I(x_IP)
 *          WRITE(*,*)'evol24: appel PROSC1'
+*          write(*,*)'        nbr de modes, ldep = ',ldep
           CALL PROSC1(TRAVV(1,JL),TRAV(1,IP),X,LDEP)
           PROG(JL) = X
 *          WRITE(*,*)'evol24: PROG(',JL,') = ',XP

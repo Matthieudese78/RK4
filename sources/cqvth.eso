@@ -174,12 +174,14 @@
 *     termes diagonaux :
       do in=1,na3
         i2 = ina1 + in
+        if (.not.itrig(ib,in)) then
         dmth(1,1) = dmth(1,1) + 
      &  (2.d0*q2(i2,1)*(ikl(2,2,in,ib) + ikl(3,3,in,ib)))
         dmth(2,2) = dmth(2,2) + 
      &  (2.d0*q2(i2,1)*(ikl(1,1,in,ib) + ikl(3,3,in,ib)))
         dmth(3,3) = dmth(3,3) + 
      &  (2.d0*q2(i2,1)*(ikl(1,1,in,ib) + ikl(2,2,in,ib)))
+        endif
       enddo
 *     termes non diagonaux :
       do k=1,3
@@ -187,8 +189,10 @@
         if (k.ne.l) then
           do in=1,na3
             i2 = ina1 + in
+            if (.not.itrig(ib,in)) then
             dmth(k,l) = dmth(k,l) - 
      &                  q2(i2,1)*(ikl(k,l,in,ib)+ikl(l,k,in,ib)) 
+            endif
           enddo
         endif
       enddo
@@ -196,8 +200,10 @@
 *     partie skl : partie (f' * g)
       do in=1,na3
         i2 = ina1 + in
+        if (.not.itrig(ib,in)) then
         do j=1,na3
           j2 = ina1 + j
+          if (.not.itrig(ib,j)) then
           dmth(1,1) = dmth(1,1) + 
      &    (q1(i2,1)*(skl(2,2,in,j,ib) + skl(3,3,in,j,ib))*q2(j2,1))
           dmth(2,2) = dmth(2,2) + 
@@ -216,13 +222,17 @@
      &    (q1(i2,1)*skl(1,3,in,j,ib)*q2(j2,1))
           dmth(3,2) = dmth(3,2) - 
      &    (q1(i2,1)*skl(2,3,in,j,ib)*q2(j2,1))
+          endif
         enddo
+        endif
       enddo
 *     partie skl : partie (f * g')
       do in=1,na3
         i2 = ina1 + in
+        if (.not.itrig(ib,in)) then
         do j=1,na3
           j2 = ina1 + j
+          if (.not.itrig(ib,j)) then
           dmth(1,1) = dmth(1,1) + 
      &    (q2(i2,1)*(skl(2,2,in,j,ib) + skl(3,3,in,j,ib))*q1(j2,1))
           dmth(2,2) = dmth(2,2) + 
@@ -241,7 +251,9 @@
      &    (q2(i2,1)*skl(1,3,in,j,ib)*q1(j2,1))
           dmth(3,2) = dmth(3,2) - 
      &    (q2(i2,1)*skl(2,3,in,j,ib)*q1(j2,1))
+          endif
         enddo
+        endif
       enddo
 **     on remplit les symetriques :
 *      dmth(2,1) = dmth(1,2)

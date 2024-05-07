@@ -351,7 +351,7 @@ C DYNE26    SOURCE    CB215821  20/11/04    21:16:12     10766
            IF (TYPRET.EQ.'MOT') THEN
             IF ((CMOT1(1:4).EQ.'VRAI').AND.(RIGIDE)) THEN
               ITRIG(IB,INEL) = .TRUE.
-*              WRITE(*,*)'DYNE26: ITRIG(',IN,') = ',ITRIG(IN)
+              WRITE(*,*)'DYNE26: ITRIG(',INEL,') = ',itrig(ib,inel)
             ENDIF
            ENDIF
          ENDIF
@@ -660,14 +660,21 @@ cms :   TODO retirer (on ne veut pas alterer le fonctionnement des modes flexibl
 
 *       dynamique :
       do in=1,na3
+        blf(1,in,ib) = 0.d0
+        blf(2,in,ib) = 0.d0
+        blf(3,in,ib) = 0.d0
+        if (.not.itrig(ib,in)) then
         do ip=1,npdef
           blf(1,in,ib)= blf(1,in,ib) + xmpoi(ip,ib)*(xtphi(1,ip,in,ib))
           blf(2,in,ib)= blf(2,in,ib) + xmpoi(ip,ib)*(xtphi(2,ip,in,ib))
           blf(3,in,ib)= blf(3,in,ib) + xmpoi(ip,ib)*(xtphi(3,ip,in,ib))
         enddo
+        endif
       enddo
       write(*,*)'        blf : '
+      write(*,*)'           na3 = ',na3
       do in=1,na3
+        write(*,*)'in = ',in
         write(*,'(1X,F15.10)') , (blf(id,in,ib),id=1,3)
       enddo
 *     TEST : ikl0 : X0_k wedge X0_l (l^th line of the modal shape matrix)

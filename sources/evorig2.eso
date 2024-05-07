@@ -98,6 +98,7 @@
         SEGINI IDEPEL
 *         On veut la table des deplacements:
         MODYN = MOCLE2(1)
+*        write(*,*)'evorig2 reco depl'
         TYPRET = ' '
         CALL ACCTAB (ITDYNE ,'MOT',I0,X0,MODYN,L0,IRET0,
      &                      TYPRET,I1,X1,' ',L1,IDYN1)
@@ -117,14 +118,17 @@
 *         RECO depl elastique:
 *        WRITE(*,*)'EVORIG2: appel evol24 comp UX'
         COMPEL = 'UX'
+*        write(*,*)'        composante = ',compel
         CALL EVOL24(IDEPELX,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
      &                  ITRIG,IDEPTRX,IDYN1)
 *        WRITE(*,*)'EVORIG2: appel evol24 comp UY'
         COMPEL = 'UY'
+*        write(*,*)'        composante = ',compel
         CALL EVOL24(IDEPELY,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
      &                  ITRIG,IDEPTRY,IDYN1)
 *        WRITE(*,*)'EVORIG2: appel evol24 comp UZ'
         COMPEL = 'UZ'
+*        write(*,*)'        composante = ',compel
         CALL EVOL24(IDEPELZ,ILEX,ILEN1,ILEN3,IP,COMPEL,IBOO,LTRIG,
      &                  ITRIG,IDEPTRZ,IDYN1)
 *         On obtient les 3 listreels:          

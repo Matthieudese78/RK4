@@ -150,7 +150,9 @@
         xt(id) = bl0(id,ib) 
         do in=1,na3
           i2 = ina1 + in
-          xt(id) = xt(id) + blf(id,in,ib)*q1(i2,1) 
+          if (.not.itrig(ib,in)) then
+            xt(id) = xt(id) + blf(id,in,ib)*q1(i2,1) 
+          endif
         enddo
       enddo
 *     on fait le produit vectoriel
@@ -172,11 +174,11 @@
         enddo
       enddo
 * done
-      write(*,*)'MRTH tot :'
-      do id=1,3
-         do j=1,3
-         write(*,*) , (mrth(id,j,ib))
-         enddo
-      enddo
+*      write(*,*)'MRTH tot :'
+*      do id=1,3
+*         do j=1,3
+*         write(*,*) , (mrth(id,j,ib))
+*         enddo
+*      enddo
 *
       END
