@@ -107,9 +107,9 @@
 *     partie statique : int_V rho X0 wedge Phi dV
       do in=1,na3 
         if (.not.(itrig(ib,in))) then
-        mfth(in,1,ib) = mfth(in,1,ib) + ikl(2,3,in,ib) - ikl(3,2,ib)
-        mfth(in,2,ib) = mfth(in,2,ib) + ikl(3,1,in,ib) - ikl(1,3,ib)
-        mfth(in,3,ib) = mfth(in,3,ib) + ikl(1,2,in,ib) - ikl(2,1,ib)
+        mfth(in,1,ib) = mfth(in,1,ib) + ikl(2,3,in,ib) - ikl(3,2,in,ib)
+        mfth(in,2,ib) = mfth(in,2,ib) + ikl(3,1,in,ib) - ikl(1,3,in,ib)
+        mfth(in,3,ib) = mfth(in,3,ib) + ikl(1,2,in,ib) - ikl(2,1,in,ib)
         endif
       enddo
 *     partie flexible : int_V rho (Phi q_f) wedge Phi dV
