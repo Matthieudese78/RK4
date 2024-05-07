@@ -18,11 +18,17 @@ xpinv = faux ;
 
 *# linert :
 linert = vrai ;
+
 * norme / norme eucl du mode :
+*# lnortot :
 lnortot = faux ;
+
 * norme / comp max du mode :
+*# lnorcomp :
 lnorcomp = vrai ;
+
 * norme / masse totale du solide :
+*# lnormtot :
 lnormtot = faux ;
 
 inert = 0 ;
@@ -34,7 +40,7 @@ finsi ;
 limpact = vrai ;
 
 *# xi :
-xi = 0.1 ;
+xi = 0. ;
 
 *********************************************************************
 *                       Valeurs numeriques 
@@ -42,7 +48,7 @@ xi = 0.1 ;
 ***** General :
 
 *# nmode_ela :
-nmode_ela = 12 ;
+nmode_ela = 20 ;
 
 *# typmode :
 typmode = 1 ;
@@ -80,13 +86,18 @@ ntronq = 0 ;
 ****** Geometrie:
 
 *# stoia :
-stoia = faux ;
+stoia = vrai ;
+
+*# trig :
+trig = vrai ;
 
 *# manchette :
-manchette = vrai ;
+manchette = faux ;
 
 *# theta_ini_x :
 theta_ini_x = 45. ;
+
+theta_ini_x = 90. - theta_ini_x ;
 theta_ini_y = 0. ;
 theta_ini_z = 0. ;
 
@@ -156,17 +167,22 @@ finsi ;
 *# parametres de contact :
 Normale_PPLAN = 0. 0. -1. ; 
 * Stoianovici : 
-Jeu1 = 2.*h*(sin theta_ini_x) ;
+* Jeu1 = 2.*h*(sin theta_ini_x) ;
+Jeu1 = h*(1. + (cos theta_ini_x)) ;
 * Stoianovici : 
 muk = 0.075 ;
 Kchoc = 5.5E+07 ;
 
-
 *# bamo :
-Bamo = 2.*JX_G*((Kchoc/JX_G)**0.5)*xi ;
+Bamo = 2.0E+07 ;
 
-* Bamo = 2.0E+04 ;
+* Bamo = 2.*M*((Kchoc/M)**0.5)*xi ;
+* Bamo = 2.*JX_G*((Kchoc/JX_G)**0.5)*xi ;
 
+* xi = bamo / (2.*JX_G*((Kchoc/JX_G)**0.5)) ;
+xi = bamo / (2.*M*((Kchoc/M)**0.5)) ;
+
+Bamo = 2.0E+02 ;
 
 K_T= 0.01*Kchoc ;
 
@@ -176,9 +192,10 @@ K_T= 0.01*Kchoc ;
 * stoianovici & hurmuzlu : plus longue barre : 
 * Frequences des modes :
 si (stoia) ;
-lfind = prog 111. 361. 751. 1281. 1946. 2151. 2744. 3671. 4722. 5892. 6454. 7177. 8571. 10069. 10757. 11666. ; 
-ltrac = lect 6 11 15 ; 
-lnoe = lect 80 90 100 125 150 175 200 225 250 275 300 325 350 400 450 500 550 600 700 800 ;
+lfind = prog 111. 361. 751. 1281. 1946. 2151. 2744. 3671. 4722. 5892. 6454. 7177. 8571. 10069. 10757. 11666. 13287.2 15046.3 15060. 16885.2 18798.9 19362.9 20778.5 22826.3 23665.8 24934.7 27099.5 27968.8 ; 
+ltrac = lect 6 11 15 19 22 25 28 ; 
+lnoe = lect 80 90 100 125 150 175 200 225 250 275 300 325 350 400 450 500 550 600 700 800 900 ;
+lnoe = lnoe et (lect 10 * 1000) ;
 * repsave = './data/stoia/' ;
 * opti 'FTRA' './fig/stoia/modes.ps';
 finsi ; 
@@ -189,14 +206,14 @@ lnoe = lect 100 150 200 225 250 275 300 325 350 375 400 425 450 475 500 550 600 
 * repsave = './data/manchette/' ;
 * opti 'FTRA' (chai './fig/manchette/modes.ps' );
 finsi ;
-
 *# nnoeuds :
 si (NMODE_ELA > 0) ;
 lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
 nnoeuds = 2*(extr lnoe nmode_ela) ;
 lindmode = lect (dime lfind)*1 ; 
 finsi ; 
-nnoeuds = maxi (lect 500 nnoeuds) ;
+* nnoeuds = maxi (lect 500 nnoeuds) ;
+* nnoeuds = 1200 ;
 * Position du centre de gravite : manchette ou stoianovici : 
  LG = (h/2.) ;
 *
@@ -204,7 +221,7 @@ nnoeuds = maxi (lect 500 nnoeuds) ;
 *
 ***** Temporel:
 *# t :
-T = 4. ;
+T = 1. ;
 
 *# n :
 n = 6 ;
@@ -213,7 +230,7 @@ n = 6 ;
 dte = 2.e-6 ;
 
 *# nsort :
-NSORT = 10 ;
+NSORT = 5 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -237,6 +254,19 @@ WXini = 0. ;
 WYini = 0. ;
 *# wzini :
 WZini = 0. ;
+
+*# uxini :
+uxini = 0. ;
+*# uyini :
+uyini = 0. ;
+*# uzini :
+uzini = 0. ;
+*# vxini :
+vxini = 0. ;
+*# vyini :
+vyini = 0. ;
+*# vzini :
+vzini = 0. ;
 
 *# quat1 :
 quat1 = 1. ;
@@ -348,6 +378,10 @@ si (manchette) ;
   repfig = (chai repfig'manchette/') ;
   repsave = (chai repsave'manchette/') ;
 finsi ; 
+si (trig) ;
+  repfig = (chai   repfig'trig/') ;
+  repsave = (chai repsave'trig/') ;
+finsi ;
 si (limpact) ;
   repfig = (chai repfig'impact/') ;
   repsave = (chai repsave'impact/') ;
@@ -483,8 +517,10 @@ tmode_elax = vibr 'PROCHE' lfind lindmode kelax m1 ;
 tmode_elay = vibr 'PROCHE' lfind lindmode kelay m1 ; 
 * 
 tmodela = tmode_elaX ;
+
+* Tmode_elaX = vibr 'IRAM' 20. 40 KelaX M1 ;
 * opti trac x ;
-* postvibr tmodela ; 
+* postvibr tmode_elaX ; 
 * opti donn 5 ; 
 *
 si (ltronq) ;
@@ -562,17 +598,72 @@ Tmode_RX . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= G1 ;
 Tmode_RX . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P1;
 Tmode_RX . 'MODES' . 1 . 'MASSE'= M ;
 Tmode_RX . 'MODES' . 1 . 'COMPOSANTE' = 'RX' ;
+
 Tmode_RY . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
 Tmode_RY . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= G1  ;
 Tmode_RY . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P1 ;
 Tmode_RY . 'MODES' . 1 . 'MASSE'= M ;
 Tmode_RY . 'MODES' . 1 . 'COMPOSANTE' = 'RY' ;
+
 Tmode_RZ . 'MODES' . 1  .'ROTATION_RIGIDE' = 'VRAI' ;
 Tmode_RZ . 'MODES' . 1 . 'CENTRE_DE_GRAVITE'= G1  ;
 Tmode_RZ . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= P1 ;
 Tmode_RZ . 'MODES' . 1 . 'MASSE'= M ;
 Tmode_RZ . 'MODES' . 1 . 'COMPOSANTE' = 'RZ' ;
 *
+si (trig) ;
+  Tmode_RX . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= G1;
+  Tmode_RY . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= G1 ;
+  Tmode_RZ . 'MODES' . 1 . 'CENTRE_DE_ROTATION'= G1 ;
+
+***** Translations : 
+  PTREP_M_TX = 0. 0. 0. ;
+  PTREP_M_TY = 0. 0. 0. ;
+  PTREP_M_TZ = 0. 0. 0. ;
+
+  TMODE_M_TX = TABLE 'BASE_MODALE' ; 
+  TMODE_M_TX . MODES = TABLE 'BASE_DE_MODES' ;
+  TMODE_M_TX . MODES . 'MAILLAGE' = meshpou ;
+  TMODE_M_TX . MODES . 1 = TABLE 'MODE' ;
+
+  TMODE_M_TY = TABLE 'BASE_MODALE' ; 
+  TMODE_M_TY . MODES = TABLE 'BASE_DE_MODES' ;
+  TMODE_M_TY . MODES . 'MAILLAGE' = meshpou ;
+  TMODE_M_TY . MODES . 1 = TABLE 'MODE' ;
+
+  TMODE_M_TZ = TABLE 'BASE_MODALE' ; 
+  TMODE_M_TZ . MODES = TABLE 'BASE_DE_MODES' ;
+  TMODE_M_TZ . MODES . 'MAILLAGE' = meshpou ;
+  TMODE_M_TZ . MODES . 1 = TABLE 'MODE' ;
+
+  TMODE_M_TX . MODES . 1 . POINT_REPERE = PTREP_M_TX ;
+  TMODE_M_TY . MODES . 1 . POINT_REPERE = PTREP_M_TY ;
+  TMODE_M_TZ . MODES . 1 . POINT_REPERE = PTREP_M_TZ ;
+
+  TMODE_M_TX . MODES . 1 . MASSE_GENERALISEE = M ; 
+  TMODE_M_TY . MODES . 1 . MASSE_GENERALISEE = M ;
+  TMODE_M_TZ . MODES . 1 . MASSE_GENERALISEE = M ;
+
+  TMODE_M_TX . MODES . 1 . FREQUENCE = 0. ;
+  TMODE_M_TY . MODES . 1 . FREQUENCE = 0. ;
+  TMODE_M_TZ . MODES . 1 . FREQUENCE = 0. ;
+
+  TMODE_M_TX . MODES . 1 . 'TRANSLATION_RIGIDE' = 'VRAI' ;
+  TMODE_M_TY . MODES . 1 . 'TRANSLATION_RIGIDE' = 'VRAI' ;
+  TMODE_M_TZ . MODES . 1 . 'TRANSLATION_RIGIDE' = 'VRAI' ;
+
+  TMODE_M_TX . MODES . 'MAILLAGE' = meshpou ;
+  TMODE_M_TY . MODES . 'MAILLAGE' = meshpou ;
+  TMODE_M_TZ . MODES . 'MAILLAGE' = meshpou ;
+
+  DEF_TX = MANU 'CHPO' meshpou 6 'UX' 1. 'UY' 0. 'UZ' 0. 'RX' 0. 'RY' 0. 'RZ' 0. 'NATUR' 'DIFFUS' ;
+  DEF_TY = MANU 'CHPO' meshpou 6 'UX' 0. 'UY' 1. 'UZ' 0. 'RX' 0. 'RY' 0. 'RZ' 0. 'NATUR' 'DIFFUS' ;
+  DEF_TZ = MANU 'CHPO' meshpou 6 'UX' 0. 'UY' 0. 'UZ' 1. 'RX' 0. 'RY' 0. 'RZ' 0. 'NATUR' 'DIFFUS' ;
+
+  TMODE_M_TX . 'MODES' . 1  . 'DEFORMEE_MODALE' = DEF_TX ;
+  TMODE_M_TY . 'MODES' . 1  . 'DEFORMEE_MODALE' = DEF_TY ;
+  TMODE_M_TZ . 'MODES' . 1  . 'DEFORMEE_MODALE' = DEF_TZ ;
+finsi ;
 *********************************************************************
 *                     Assemblage des bases modales : 
 *********************************************************************
@@ -591,7 +682,9 @@ SI (typmode EGA 3);
 Tmode = (Tmodela) ;
 FINSI;
 *
-* opti donn 5 ;
+si (trig) ;
+  Tmode = Tmode et (Tmode_m_tx et tmode_m_ty et tmode_m_tz) ;
+finsi ;
 ************************************************************************
 *     					Parametrage DYNE
 ************************************************************************
@@ -625,10 +718,25 @@ si (typmode ega 3);
   WYini = 0. ; 
   WZini = 0. ;
 finsi;
+
  V0_PX = MANU 'CHPO' ptrep_RX 'NATUR' 'DIFFUS' 'ALFA' WXini ;
  V0_PY = MANU 'CHPO' ptrep_RY 'NATUR' 'DIFFUS' 'ALFA' WYini ;
  V0_PZ = MANU 'CHPO' ptrep_RZ 'NATUR' 'DIFFUS' 'ALFA' WZini ;
  V0_P = (V0_PX et V0_PY et V0_PZ);
+
+si (trig) ;
+** translations :
+ U0_TX = MANU 'CHPO' PTREP_M_TX 'NATUR' 'DIFFUS' 'ALFA' UXINI ;
+ U0_TY = MANU 'CHPO' PTREP_M_TY 'NATUR' 'DIFFUS' 'ALFA' UYINI ;
+ U0_TZ = MANU 'CHPO' PTREP_M_TZ 'NATUR' 'DIFFUS' 'ALFA' UZINI ;
+ V0_TX = MANU 'CHPO' PTREP_M_TX 'NATURE' 'DIFFUS' 'ALFA' VXini ;
+ V0_TY = MANU 'CHPO' PTREP_M_TY 'NATURE' 'DIFFUS' 'ALFA' VYini ;
+ V0_TZ = MANU 'CHPO' PTREP_M_TZ 'NATURE' 'DIFFUS' 'ALFA' VZini ;
+
+ U0_P = (u0_p et U0_TX et U0_TY et U0_TZ) ;
+ V0_P = (v0_p et V0_TX et V0_TY et V0_TZ) ;
+**
+finsi ;
 
 * init coord modales si reprise :
  si ((typmode ega 1) et (reprise)) ;
@@ -682,6 +790,9 @@ CHA_PESA = CHAR 'FORC' FPESA evolF ;
 	 TL2  =  TABLE  'LIAISON_ELEMENTAIRE'    ;
 	 TL2 . 'TYPE_LIAISON'  =  MOT 'POINT_PLAN_FROTTEMENT' ;
 	 TL2 . 'SUPPORT'       =  p2 ;
+   si (trig) ;
+	  TL2 . 'SUPPORT'       =  p1 ;
+   finsi ;
 	 TL2 . 'RAIDEUR'       =  Kchoc ;
    TL2 . 'COEFFICIENT_GLISSEMENT' = muk ; 
    TL2 . 'COEFFICIENT_ADHERENCE' = (0.1*muk) ; 
@@ -756,16 +867,19 @@ W1 = tresu . vitesse . ptrep_rig1;
 W2 = tresu . vitesse . ptrep_rig2;
 W3 = tresu . vitesse . ptrep_rig3;
 *
-* W1_ev = EVOL 'ROSE' MANU 't' tprog 'W1' W1;
-* W2_ev = EVOL 'VIOL' MANU 't' tprog 'W2' W2;
-* W3_ev = EVOL 'BLEU' MANU 't' tprog 'W3' W3;
-* *
-* TAB1 . 'TITRE' . 1 = 'W1';
-* Dess (W1_ev) 'TITRE' 'W1 = f(t)' TAB1 'LEGE';
-* TAB1 . 'TITRE' . 1 = 'W2';
-* Dess (W2_ev) 'TITRE' 'W2 = f(t)' TAB1 'LEGE';
-* TAB1 . 'TITRE' . 1 = 'W3';
-* Dess (W3_ev) 'TITRE' 'W3 = f(t)' TAB1 'LEGE';
+W1_ev = EVOL 'ROSE' MANU 't' tprog 'W1' W1;
+W2_ev = EVOL 'VIOL' MANU 't' tprog 'W2' W2;
+W3_ev = EVOL 'BLEU' MANU 't' tprog 'W3' W3;
+*
+TAB1 = TABLE ; 
+TAB1 . 'TITRE' = TABLE ;
+*
+TAB1 . 'TITRE' . 1 = 'W1';
+Dess (W1_ev) 'TITRE' 'W1 = f(t)' TAB1 'LEGE';
+TAB1 . 'TITRE' . 1 = 'W2';
+Dess (W2_ev) 'TITRE' 'W2 = f(t)' TAB1 'LEGE';
+TAB1 . 'TITRE' . 1 = 'W3';
+Dess (W3_ev) 'TITRE' 'W3 = f(t)' TAB1 'LEGE';
 *
 A1 = tresu . acceleration . ptrep_rig1;
 A2 = tresu . acceleration . ptrep_rig2;
@@ -985,18 +1099,24 @@ finsi ;
 UXp1_ev = EVOL 'ROUG' 'RECO' TRESU tmode 'DEPL' p1 'UX' ;
 UYp1_ev = EVOL 'VERT' 'RECO' TRESU tmode 'DEPL' p1 'UY' ;
 UZp1_ev = EVOL 'BLEU' 'RECO' TRESU tmode 'DEPL' p1 'UZ' ;
+TAB1 . 'TITRE' . 1 = 'uxp1';	
+TAB1 . 'TITRE' . 2 = 'uyp1';	
+TAB1 . 'TITRE' . 3 = 'uzp1';	
 UXp1 = EXTR uxp1_ev 'ORDO' 1 ;
 UYp1 = EXTR uyp1_ev 'ORDO' 1 ;
 UZp1 = EXTR uzp1_ev 'ORDO' 1 ;
-dess (uxp1_ev et uYp1_ev et uzp1_ev) 'TITRE' 'P1' ;
+dess (uxp1_ev et uYp1_ev et uzp1_ev) 'TITRE' tab1 'P1' ;
 
 UXp2_ev = EVOL 'ROUG' 'RECO' TRESU tmode 'DEPL' p2 'UX' ;
 UYp2_ev = EVOL 'VERT' 'RECO' TRESU tmode 'DEPL' p2 'UY' ;
 UZp2_ev = EVOL 'BLEU' 'RECO' TRESU tmode 'DEPL' p2 'UZ' ;
+TAB1 . 'TITRE' . 1 = 'uxp2';	
+TAB1 . 'TITRE' . 2 = 'uyp2';	
+TAB1 . 'TITRE' . 3 = 'uzp2';	
 UXp2 = EXTR uxp2_ev 'ORDO' 1 ;
 UYp2 = EXTR uyp2_ev 'ORDO' 1 ;
 UZp2 = EXTR uzp2_ev 'ORDO' 1 ;
-dess (uxp2_ev et uYp2_ev et uzp2_ev) 'TITRE' 'P2' ;
+dess (uxp2_ev et uYp2_ev et uzp2_ev) 'TITRE' tab1 'P2' ;
 ***************************************************************************
 *                  SORTIE
 
