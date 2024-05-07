@@ -24,9 +24,9 @@ lnortot = False
 lnorcomp = True
 lnormtot = False
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
-xi = 0.
+xi = 0.99
 thini = 45.
-nmode = 12
+nmode = 20
 #%% rep_load
 repload = './pickle/'
 repsave = './fig/'
@@ -80,11 +80,11 @@ muk = 0.075
 bamo = df['amor'][0]
 thini = df['thini'][0]
 h = df.loc[0,'lbar']
-zsol = -2.*np.cos(thini*np.pi/180.)*h
+hini = h * (1. - np.cos(df.loc[0,'thini']*np.pi/180.))
+zsol = -h*(1.+ np.cos(thini*np.pi/180.))
 # jx = 1.79664E-02
 M = df['M'][0]
 g = 9.81
-hini = h * (1. - np.cos(df.loc[0,'thini']*np.pi/180.))
 df['epot'] = M*g*df['uzg'] + M*g*hini
 # df['ecref'] = 0.5*jx*(df['wx']**2)
 df['ecbar'] = 0.*df['edef'] 
@@ -127,10 +127,9 @@ if limpact:
   # etotst = [df.iloc[fsti-1]['etot'] for fsti in fst]
   # df = df[df['t']<=(instant_choc[-1]+0.1)]
   df['ef'] = 0.*df['edef'] 
-
   # vols :  on isole les 4 premiers groupes de chocs :
   crit = 0.05
-  nstchoc = 4 
+  nstchoc = 3 
   lgrp = [[] for _ in range(nstchoc)]
   t0 = df.iloc[fst[0]]['t']
   lgrp[0].append(t0)
@@ -154,12 +153,14 @@ if limpact:
     lindvol.append(df[(df['t']>=tfinprec) & (df['t']<=lgrp[ichoc][0])].index)
 
   # valeur de l'energie totale avant chaque choc :
-  lest = [df.iloc[fsti[0]-1]['ecdef'] for i,fsti in enumerate(lindchoc)]
+  lest = [df.iloc[fsti[0]-1]['etot'] for i,fsti in enumerate(lindchoc)]
   # energie dissipee : calcul par difference
 
   def calcef(df,**kwargs):
     #  ef = kwargs['lst'] - (df["etot"] + df["estock"]) 
-     ef = kwargs['lst'] - (df["ecdef"] + df["estock"]) 
+     ef = df['lst'] - (df["etot"] + df["estock"]) 
+    #  ef = df['lst'] - (df["ecdef"] + df["estock"]) 
+    #  ef = kwargs['lst'] - (df["ecdef"] + df["estock"]) 
     #  print(f"ef = {ef}")
      return ef
 
