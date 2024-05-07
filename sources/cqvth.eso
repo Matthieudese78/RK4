@@ -210,11 +210,11 @@
      &    (q1(i2,1)*skl(3,1,in,j,ib)*q2(j2,1))
           dmth(2,3) = dmth(2,3) - 
      &    (q1(i2,1)*skl(3,2,in,j,ib)*q2(j2,1))
-          mthth(2,1,ib) = mthth(2,1,ib) - 
+          dmth(2,1) = dmth(2,1) - 
      &    (q1(i2,1)*skl(1,2,in,j,ib)*q2(j2,1))
-          mthth(3,1,ib) = mthth(3,1,ib) - 
+          dmth(3,1) = dmth(3,1) - 
      &    (q1(i2,1)*skl(1,3,in,j,ib)*q2(j2,1))
-          mthth(3,2,ib) = mthth(3,2,ib) - 
+          dmth(3,2) = dmth(3,2) - 
      &    (q1(i2,1)*skl(2,3,in,j,ib)*q2(j2,1))
         enddo
       enddo
@@ -235,11 +235,11 @@
      &    (q2(i2,1)*skl(3,1,in,j,ib)*q1(j2,1))
           dmth(2,3) = dmth(2,3) - 
      &    (q2(i2,1)*skl(3,2,in,j,ib)*q1(j2,1))
-          mthth(2,1,ib) = mthth(2,1,ib) - 
+          dmth(2,1) = dmth(2,1) - 
      &    (q2(i2,1)*skl(1,2,in,j,ib)*q1(j2,1))
-          mthth(3,1,ib) = mthth(3,1,ib) - 
+          dmth(3,1) = dmth(3,1) - 
      &    (q2(i2,1)*skl(1,3,in,j,ib)*q1(j2,1))
-          mthth(3,2,ib) = mthth(3,2,ib) - 
+          dmth(3,2) = dmth(3,2) - 
      &    (q2(i2,1)*skl(2,3,in,j,ib)*q1(j2,1))
         enddo
       enddo
