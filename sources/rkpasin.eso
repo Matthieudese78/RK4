@@ -561,7 +561,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *        endif
 *       QVR : 
         if (itrig(iib,in)) then
-          ftota(i2,ind1) = ftota(i2,ind1) + qvr(in,iib)
+          ftota(i2,ind1) = ftota(i2,ind1) + qvr(id,iib)
           ftrans(id) = ftota(i2,ind1) 
           id = id + 1
         endif
