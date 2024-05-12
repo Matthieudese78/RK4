@@ -592,10 +592,10 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *        endif
 *       QVR : 
         if (itrig(iib,in)) then
-          ftota(i2,ind1) = ftota(i2,ind1) + qvr(id,iib)
-          ftrans(id) = ftota(i2,ind1) 
+          ftota(i2,1) = ftota(i2,1) + qvr(id,iib)
           write(*,*)' id = ',id
           write(*,*)' qvr = ',qvr(id,iib)
+          ftrans(id) = ftota(i2,1) 
           id = id + 1
         endif
       enddo
@@ -634,8 +634,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
           q3(i2,1) = 0.d0
           if (itrig(iib,in)) then
             do j=1,ntrig
-              q3(i2,1) = q3(i2,1) + mtot(id,j,iib) * ftrans(j)
               write(*,*)'m^-1 : ',mtot(id,j,iib)
+              q3(i2,1) = q3(i2,1) + mtot(id,j,iib)*ftota(i2,1)
             enddo
             write(*,*)'trans mode ',in
             write(*,*)'      q3 = ',q3(i2,1)
@@ -652,7 +652,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
               i3 = ina1 + inf
               if (.not.itrig(iib,inf)) then
                 q3(i2,1) = q3(i2,1) +
-     &           mtot(id,in1,iib)*(FTOTA(i3,1)-FAMOR(i3)+qvf(inf,iib))
+     &          mtot(id,in1,iib)*(FTOTA(i3,1)-FAMOR(i3)+qvf(inf,iib))
                 in1 = in1 + 1
               endif
             enddo
@@ -662,7 +662,6 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *       rotations :
         do id=1,3 
           id2 = id + ntrig
-          in1 = 3 + ntrig + 1
           omeg3(id,1,iib) = 0.d0
           do j=1,ntrig
 *           M^{-1}(2,1) * F_R
@@ -676,6 +675,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
      &      mtot(id2,j2,iib)*(rtgex(j) + qvth(j,iib))
           enddo
 *         M^{-1}(2,3) * F_f
+          in1 = 3 + ntrig + 1
           do in=1,na3
             i2 = ina1 + in
             if (.not.itrig(iib,in)) then
