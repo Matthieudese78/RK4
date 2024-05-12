@@ -20,22 +20,22 @@ stoia = True
 manchette = False
 trig = True
 limpact = True
-linert = True
+linert = False
 lnortot = False
-lnorcomp = True
+lnorcomp = False
 lnormtot = False
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 
-bamo = 2.0e2
-# bamo = 0.
+# bamo = 2.0e2
+bamo = 0.
 Kchoc = 5.5e07
 if stoia:
   M = 0.59868
 if trig:
-  vimpact = 1.
+  vimpact = 4.
 xi = bamo / (2.0 * M * (np.sqrt(Kchoc / M)))
 # xi = 1742.69
-thini = 80.
+thinc = 10.
 nmode = 6
 #%% rep_load
 repload = './pickle/'
@@ -68,8 +68,10 @@ if (linert):
     repload = f'{repload}normtot/'
     repsave = f'{repsave}normtot/'
 
-repload = f'{repload}xi_{int(100.*xi)}/thini_{int(thini)}/nmode_{nmode}/'
-repsave = f'{repsave}xi_{int(100.*xi)}/thini_{int(thini)}/nmode_{nmode}/'
+# repload = f'{repload}xi_{int(100.*xi)}/thini_{int(thini)}/nmode_{nmode}/'
+# repsave = f'{repsave}xi_{int(100.*xi)}/thini_{int(thini)}/nmode_{nmode}/'
+repload = f'{repload}xi_{int(100.*xi)}/thinc_{int(thinc)}/nmode_{nmode}/'
+repsave = f'{repsave}xi_{int(100.*xi)}/thinc_{int(thinc)}/nmode_{nmode}/'
 
 if not os.path.exists(repsave):
     os.makedirs(repsave)
@@ -102,7 +104,7 @@ if trig:
 # jx = 1.79664E-02
 M = df['M'][0]
 g = 9.81
-df['epot'] = M*g*df['uzg'] + M*g*hini
+df['epot'] = M*g*df['uyg'] + M*g*hini
 # df['ecref'] = 0.5*jx*(df['wx']**2)
 df['ecbar'] = 0.*df['edef'] 
 for i in np.arange(df['nmode'][0]):
@@ -111,7 +113,7 @@ for i in np.arange(df['nmode'][0]):
 df['eintbar'] = df['edef'] + df['ecbar']
 df['ecdef'] = df['edef'] + df['ec'] + df['ecbar']
 
-df['pene'] = df['uzpchoc'] - zsol
+df['pene'] = df['uypchoc'] - zsol
 df['pene'] = df['pene'].apply(lambda x: 0 if x > 0 else x)
 # zsol = 0.
 # df['estock'] = 0.*df['edef']
@@ -280,16 +282,16 @@ kwargs1 = {
     "alpha": 0.5,
 }
 traj.pltraj2d(df, **kwargs1)
-# traj Oyz pchoc
+# traj Oxy pchoc
 kwargs1 = {
-    "tile1": "traj Oyz" + "\n",
-    "tile_save": "traj_oyz_pchoc",
-    "colx": ["uypchoc"],
-    "coly": ["uzpchoc"],
+    "tile1": "traj Oxy" + "\n",
+    "tile_save": "traj_ozy_pchoc",
+    "colx": ["uxpchoc"],
+    "coly": ["uypchoc"],
     "rep_save": repsect1,
     "label1": [None],
-    "labelx": r"$u_y$"+" (m)",
-    "labely": r"$u_z$"+" (m)",
+    "labelx": r"$u_x$"+" (m)",
+    "labely": r"$u_y$"+" (m)",
     "color1": color1,
     "endpoint": [False,False,False,False],
     "xpower": 5,
@@ -297,16 +299,16 @@ kwargs1 = {
     "alpha": 1.,
 }
 traj.pltraj2d(df, **kwargs1)
-# traj Oxz pchoc
+# traj Ozy pchoc
 kwargs1 = {
-    "tile1": "traj Oxz" + "\n",
-    "tile_save": "traj_oxz_pchoc",
-    "colx": ["uxpchoc"],
-    "coly": ["uzpchoc"],
+    "tile1": "traj Ozy" + "\n",
+    "tile_save": "traj_ozy_pchoc",
+    "colx": ["uzpchoc"],
+    "coly": ["uypchoc"],
     "rep_save": repsect1,
     "label1": [None],
-    "labelx": r"$u_x$"+" (m)",
-    "labely": r"$u_z$"+" (m)",
+    "labelx": r"$u_z$"+" (m)",
+    "labely": r"$u_y$"+" (m)",
     "color1": color1,
     "endpoint": [False,False,False,False],
     "xpower": 5,
@@ -315,16 +317,16 @@ kwargs1 = {
 }
 traj.pltraj2d(df, **kwargs1)
 
-# traj Oyz g
+# traj Ozx g
 kwargs1 = {
-    "tile1": "traj Oyz" + "\n",
-    "tile_save": "traj_oyz_g",
-    "colx": ["uyg"],
-    "coly": ["uzg"],
+    "tile1": "traj Oxy" + "\n",
+    "tile_save": "traj_oxy_g",
+    "colx": ["uxg"],
+    "coly": ["uyg"],
     "rep_save": repsect1,
     "label1": [None],
-    "labelx": r"$u_y$"+" (m)",
-    "labely": r"$u_z$"+" (m)",
+    "labelx": r"$u_x$"+" (m)",
+    "labely": r"$u_y$"+" (m)",
     "color1": color1,
     "endpoint": [False,False,False,False],
     "xpower": 5,
@@ -332,16 +334,17 @@ kwargs1 = {
     "alpha": 1.,
 }
 traj.pltraj2d(df, **kwargs1)
-# traj Oxz g
+
+# traj Ozy g
 kwargs1 = {
-    "tile1": "traj Oxz" + "\n",
-    "tile_save": "traj_oxz_g",
-    "colx": ["uxg"],
-    "coly": ["uzg"],
+    "tile1": "traj Ozy" + "\n",
+    "tile_save": "traj_ozy_g",
+    "colx": ["uzg"],
+    "coly": ["uyg"],
     "rep_save": repsect1,
     "label1": [None],
-    "labelx": r"$u_x$"+" (m)",
-    "labely": r"$u_z$"+" (m)",
+    "labelx": r"$u_z$"+" (m)",
+    "labely": r"$u_y$"+" (m)",
     "color1": color1,
     "endpoint": [False,False,False,False],
     "xpower": 5,
@@ -552,12 +555,12 @@ for ichoc in np.arange(nstchoc):
       "tile1": f"traj choc {ichoc} = f(t)" + "\n",
       "tile_save": f"choc{ichoc}_ft",
       "x": df.iloc[indexchoc]['t'], 
-      "y": df.iloc[indexchoc]['uzpchoc'], 
+      "y": df.iloc[indexchoc]['uypchoc'], 
       # "y": df.iloc[indexchoc]['pene'], 
       "rep_save": repsect1,
       "label1": r"$u_z$",
       "labelx": r"$t \quad (s)$",
-      "labely": r"$u_z$" + " (m)",
+      "labely": r"$u_y$" + " (m)",
       "labelsol": "ground",
       "color1": color1[0],
       "endpoint": False,
@@ -577,11 +580,11 @@ for ichoc in np.arange(nstchoc):
       "tile1": "uzpchoc vs uzp2" + "\n",
       "tile_save": f"uzreco_vs_uzliai_{ichoc}",
       "colx": ["t","t"],
-      "coly": ["uzpchoc","uzp2"],
+      "coly": ["uypchoc","uyp2"],
       "rep_save": repsect1,
-      "label1": [r"$u_{z}(P_{choc})$",r"$u_z(P_2)$",r"$E_{pot}$",r"$E_{tot}$"],
+      "label1": [r"$u_{y}(P_{choc})$",r"$u_y(P_2)$",r"$E_{pot}$",r"$E_{tot}$"],
       "labelx": r"$t \quad (s)$",
-      "labely": r"$u_z$"+" (m)",
+      "labely": r"$u_y$"+" (m)",
       "color1": color1,
       "endpoint": [False,False,False,False],
       "xpower": 5,
@@ -593,19 +596,19 @@ for ichoc in np.arange(nstchoc):
       "tile1": f"traj+ener choc {ichoc} = f(t)" + "\n",
       "tile_save": f"choc{ichoc}_ener_ft",
       "x": df.iloc[indexchoc]['t'], 
-      "y": df.iloc[indexchoc]['uzpchoc'], 
+      "y": df.iloc[indexchoc]['uypchoc'], 
       # "y": df.iloc[indexchoc]['pene'], 
       "y2": [df.iloc[indexchoc]['ec'], 
       df.iloc[indexchoc]['eintbar'],
       df.iloc[indexchoc]['etot'], 
       df.iloc[indexchoc]['estock']], 
       "rep_save": repsect1,
-      "label1": r"$u_z$",
+      "label1": r"$u_y$",
       "labelsol": "floor",
       # "label2": [r"$E_{kin}^{ref}$",r"$E_{bar}$"],
       "label2": [r"$E_{kin}^{ref}$",r"$E_{vibr}$",r"$E_{tot}$",r"$E_{stock}$"],
       "labelx": r"$t \quad (s)$",
-      "labely": r"$u_z$" + " (m)",
+      "labely": r"$u_y$" + " (m)",
       "labely2": "Energy (J)",
       "color1": color1[0],
       # "endpoint": False,
@@ -713,17 +716,17 @@ for ichoc in np.arange(nstchoc):
 
   kwargs = {
       "tile1": f"traj+fn choc {ichoc} = f(t)" + "\n",
-      "tile_save": f"choc{ichoc}_uzfn_ft",
+      "tile_save": f"choc{ichoc}_uyfn_ft",
       "x": df.iloc[indexchoc]['t'], 
-      "y": df.iloc[indexchoc]['uzpchoc'], 
+      "y": df.iloc[indexchoc]['uypchoc'], 
       "y2": [df.iloc[indexchoc]['fn']], 
       "rep_save": repsect1,
-      "label1": r"$u_z$",
+      "label1": r"$u_y$",
       "labelsol": "floor",
       # "label2": [r"$E_{kin}^{ref}$",r"$E_{bar}$"],
       "label2": [r"$F_{n}$",r"$E_{vibr}$",r"$E_{tot}$"],
       "labelx": r"$t \quad (s)$",
-      "labely": r"$u_z$" + " (m)",
+      "labely": r"$u_y$" + " (m)",
       "labely2": "Normal Force (N)",
       "color1": color1[0],
       "endpoint": False,
@@ -749,11 +752,11 @@ for ichoc in np.arange(nstchoc-1):
       "tile1": f"traj vol {ichoc} = f(t)" + "\n",
       "tile_save": f"vol{ichoc}_ft",
       "x": df.iloc[indexvol]['t'], 
-      "y": df.iloc[indexvol]['uzpchoc'], 
+      "y": df.iloc[indexvol]['uypchoc'], 
       "rep_save": repsect1,
-      "label1": r"$u_z$",
+      "label1": r"$u_y$",
       "labelx": r"$t \quad (s)$",
-      "labely": r"$u_z$" + " (m)",
+      "labely": r"$u_y$" + " (m)",
       "labelsol": "floor",
       "color1": color1[0],
       "endpoint": False,
@@ -771,17 +774,17 @@ for ichoc in np.arange(nstchoc-1):
       "tile1": f"traj+ener vol {ichoc} = f(t)" + "\n",
       "tile_save": f"vol{ichoc}_ener_ft",
       "x": df.iloc[indexvol]['t'], 
-      "y": df.iloc[indexvol]['uzpchoc'], 
+      "y": df.iloc[indexvol]['uypchoc'], 
       "y2": [df.iloc[indexvol]['ec'], 
       df.iloc[indexvol]['eintbar'], 
       df.iloc[indexvol]['etot']], 
       "rep_save": repsect1,
-      "label1": r"$u_z$",
+      "label1": r"$u_y$",
       "labelsol": "floor",
       # "label2": [r"$E_{kin}^{ref}$",r"$E_{bar}$"],
       "label2": [r"$E_{kin}^{ref}$",r"$E_{vibr}$",r"$E_{tot}$"],
       "labelx": r"$t \quad (s)$",
-      "labely": r"$u_z$" + " (m)",
+      "labely": r"$u_y$" + " (m)",
       "labely2": "Energy (J)",
       "color1": color1[0],
       "endpoint": False,

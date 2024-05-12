@@ -23,7 +23,6 @@ def pendulum_motion(y, t, L, g, M, J):
     domega_dt = (M * g * (L / 2.0) * np.sin(theta)) / J
     return [dtheta_dt, domega_dt]
 
-
 # %%
 lclean = True
 lstdout = False
@@ -41,13 +40,13 @@ stoia = "vrai"
 manchette = "faux"
 trig = "vrai"
 limpact = "vrai"
-linert = "faux"
+linert = "vrai"
 lnortot = "faux"
-lnorcomp = "faux"
+lnorcomp = "vrai"
 lnormtot = "faux"
 # algo 
-rk4 = "faux" 
-nmb = "vrai" 
+rk4 = "vrai" 
+nmb = "faux" 
 sw = "faux" 
 #
 flvtk = "vrai"
@@ -73,13 +72,13 @@ if (typmode==2):
   nmode_ela = 0
 # angle d'incidence :
 # theta_ini_x = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0]
-theta_ini_x = [0.0]
+thinc = [10.]
 #%%
 # prediction de l'instant d'impact :
 tc = []
 if (not (trig=="vrai")):
-  for i, thi in enumerate(theta_ini_x):
-      thini = np.pi/2.0 - thi * np.pi/180.0
+  for i, thi in enumerate(thinc):
+      thini = np.pi/2.0 - thi*np.pi/180.0
       initial_conditions = [thini, 0.0]
       # Time points to integrate over
       t = np.linspace(0, 2.0, int(1e5))
@@ -104,14 +103,14 @@ if (not (trig=="vrai")):
 
 if (trig=="vrai"):
   # le supplement d'amplitude du a la rotation ini de la poutre est pris en compte dans jeu1 du .dgibi
-  for i, thi in enumerate(theta_ini_x):
+  for i, thi in enumerate(thinc):
     #   tc.append((vimpact/g)+2.e-2)
-      tc.append(3.)
+      tc.append(1.5)
 
 print("Instants choc : ")
 [print(tci) for tci in tc]
 # %% loop :
-for icalc, thi in enumerate(theta_ini_x):
+for icalc, thi in enumerate(thinc):
     thini = np.pi / 2.0 - (thi * np.pi / 180.0)
     # un quart de periode de pendule :
     # t = 0.25*(2.*np.pi*np.sqrt(h/g)*(1.+((np.pi-thini)**2/16.)))
@@ -133,7 +132,7 @@ for icalc, thi in enumerate(theta_ini_x):
     if lnorcomp == "vrai":
         nameglob = f"{nameglob}norcomp/"
 
-    nameglob = f"{nameglob}xi_{int(100.*xi)}/thini_{int(90.-thi)}/nmode_{nmode_ela}"
+    nameglob = f"{nameglob}xi_{int(100.*xi)}/thinc_{int(thi)}/nmode_{nmode_ela}"
 
     repsave = f"{destination}data/{nameglob}/"
 
@@ -170,8 +169,8 @@ for icalc, thi in enumerate(theta_ini_x):
         "typmode": typmode,
         #          nmode :
         "nmode_ela": nmode_ela,
-        #          thini :
-        "theta_ini_x": thi,
+        #          thinc :
+        "thinc": thi,
         #          vimpact : pour le cas trig
         "vimpact": vimpact,
         #
@@ -237,7 +236,7 @@ for icalc, thi in enumerate(theta_ini_x):
     # 1ER CALCUL
     os.chdir(destination)
     #
-    print(f"calcul {icalc+1} / {len(theta_ini_x)}")
+    print(f"calcul {icalc+1} / {len(thinc)}")
     print(f"angle incidence {thi}")
     print(f"angle initial {90. - thi}")
     # castem21 $script > /dev/null 2>error.log
