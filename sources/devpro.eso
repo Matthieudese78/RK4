@@ -112,7 +112,7 @@ cmsw     &                                        FTOTBA(IN2)
  40           CONTINUE
               FTOTBA(IN2) = FTOTBA(IN2) + XRET
             ENDIF
-cmsw            WRITE(*,*)'DEVPRO : FTOTBA(',IN,') = ',FTOTBA(IN)
+            WRITE(*,*)'DEVPRO : FTOTBA(',IN,') = ',FTOTBA(IN)
  30      CONTINUE
  20   CONTINUE
 

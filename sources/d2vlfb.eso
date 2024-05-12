@@ -175,10 +175,10 @@ cmsw          WRITE(IOIMP,*)'      FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
 cmsw          ENDDO
 cmsw        ENDDO
       ENDIF
-*      WRITE(*,*)'D2VLFB: '
-*      DO I=1,NA1
-*          WRITE(*,*)'      FTOTA(',I,IND,') = ',FTOTA(I,IND)
-*      ENDDO      
+      WRITE(*,*)'D2VLFB: '
+      DO I=1,NA1
+          WRITE(*,*)'      FTOTA(',I,IND,') = ',FTOTA(I,IND)
+      ENDDO      
 *      DO IP=1,NPLB
 *        DO ID=1,IDIMB
 *          WRITE(*,*)'      FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
