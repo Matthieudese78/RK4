@@ -5,6 +5,7 @@ from csv_to_pickle import csvs2pickle
 #%%
 stoia = True
 manchette = False
+trig = True
 limpact = True
 linert = False
 lnortot = False
@@ -23,6 +24,9 @@ if (stoia):
 if (manchette):
   repload = f'{repload}manchette/'
   repsave = f'{repsave}manchette/'
+if trig: 
+  repload = f"{repload}trig/"
+  repsave = f"{repsave}trig/"
 if (limpact):
   repload = f'{repload}impact/'
   repsave = f'{repsave}impact/'

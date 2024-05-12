@@ -18,6 +18,7 @@ from matplotlib.font_manager import FontProperties
 #%%
 stoia = True
 manchette = False
+trig = True
 limpact = True
 linert = True
 lnorcomp = True
@@ -51,6 +52,9 @@ if (stoia):
 if (manchette):
   repload = f'{repload}manchette/'
   repsave = f'{repsave}manchette/'
+if trig: 
+  repload = f"{repload}trig/"
+  repsave = f"{repsave}trig/"
 if (limpact):
   repload = f'{repload}impact/'
   repsave = f'{repsave}impact/'

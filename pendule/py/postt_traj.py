@@ -16,17 +16,27 @@ import sys
 # from rich.console import Console
 # from matplotlib.font_manager import FontProperties
 #%%
-stoia = False
-manchette = True
+stoia = True
+manchette = False
+trig = True
 limpact = True
 linert = True
 lnortot = False
 lnorcomp = True
 lnormtot = False
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
-xi = 0.99
-thini = 45.
-nmode = 20
+
+bamo = 2.0e2
+# bamo = 0.
+Kchoc = 5.5e07
+if stoia:
+  M = 0.59868
+if trig:
+  vimpact = 1.
+xi = bamo / (2.0 * M * (np.sqrt(Kchoc / M)))
+# xi = 1742.69
+thini = 80.
+nmode = 6
 #%% rep_load
 repload = './pickle/'
 repsave = './fig/'
@@ -36,6 +46,9 @@ if (stoia):
 if (manchette):
   repload = f'{repload}manchette/'
   repsave = f'{repsave}manchette/'
+if trig: 
+  repload = f"{repload}trig/"
+  repsave = f"{repsave}trig/"
 if (limpact):
   repload = f'{repload}impact/'
   repsave = f'{repsave}impact/'
@@ -75,6 +88,7 @@ df.reset_index(drop=True,inplace=True)
 
 dt = df.iloc[1]['t'] - df.iloc[0]['t'] 
 #%% energie potentielle :
+g = 9.81
 Kchoc = 5.5E+07 
 muk = 0.075
 bamo = df['amor'][0]
@@ -82,6 +96,9 @@ thini = df['thini'][0]
 h = df.loc[0,'lbar']
 hini = h * (1. - np.cos(df.loc[0,'thini']*np.pi/180.))
 zsol = -h*(1.+ np.cos(thini*np.pi/180.))
+if trig:
+  zsol = -(((vimpact**2)/(2.*g))-(0.5*h*(1.-(np.cos(thini*np.pi/180.)))))
+  # df['ec'] = df['ec'] + 0.5*M*((df['vxg']**2)+(df['vyg']**2)+(df['vzg']**2))
 # jx = 1.79664E-02
 M = df['M'][0]
 g = 9.81
@@ -117,7 +134,7 @@ if limpact:
   fst = df.index[df['tag'] & ~ df['tag'].shift(1).fillna(False)]
   lst = df.index[df['tag'] & ~ df['tag'].shift(-1).fillna(False)]
   # prb1 = [(i,j) for i,j in zip(fst,lst)]
-  dt = df.iloc[fst[0]+1]['t'] - df.iloc[fst[0]]['t']
+  dt = df.iloc[1]['t'] - df.iloc[0]['t']
   # on vire le dernier choc :
   # fst = fst[:-1]
   # lst = lst[:-1]
@@ -129,24 +146,33 @@ if limpact:
   df['ef'] = 0.*df['edef'] 
   # vols :  on isole les 4 premiers groupes de chocs :
   crit = 0.05
-  nstchoc = 3 
+  nstchoc = 1 
   lgrp = [[] for _ in range(nstchoc)]
   t0 = df.iloc[fst[0]]['t']
+  # on remplit lgrp[0] avec le premier et le dernier choc par defaut
   lgrp[0].append(t0)
+  lgrp[0].append(df.iloc[lst[-1]]['t'])
   igrp = 0
-  ichoc = 0
-  while igrp <= (nstchoc-1): 
+  for ichoc,tci in enumerate(fst):
+  # while igrp <= (nstchoc-1): 
     ichoc += 1
-    if ((df.iloc[fst[ichoc]]['t'] - df.iloc[fst[ichoc-1]]['t'])>=crit):
-      igrp += 1
-      lgrp[igrp-1].append(df.iloc[lst[ichoc-1]]['t'])
-      if (igrp<nstchoc): 
-        lgrp[igrp].append(df.iloc[fst[ichoc]]['t'])
+    if (ichoc<=(len(fst)-1)):
+      print(f'ichoc = {ichoc}')
+      if ((df.iloc[fst[ichoc]]['t'] - df.iloc[lst[ichoc-1]]['t'])>=crit):
+        igrp += 1
+        lgrp[igrp-1].append(df.iloc[lst[ichoc-1]]['t'])
+        if (igrp<nstchoc): 
+          lgrp[igrp].append(df.iloc[fst[ichoc]]['t'])
+    if ((ichoc==(len(fst)-1)) and (igrp<0)):
+      lgrp[igrp].append(df.iloc[lst[ichoc]]['t'])
 
+  nstchoc = np.min([nstchoc,igrp])
+  lgrp = lgrp[:nstchoc]
   lindchoc = []
   lindvol = []
   tfinprec = 0.
   for ichoc in np.arange(nstchoc):
+    print(f'ichoc = {ichoc}')
     lindchoc.append(df[(df['t']>=lgrp[ichoc][0]) & (df['t']<=lgrp[ichoc][1])].index)
     if (ichoc>0):
       tfinprec = lgrp[ichoc-1][1]
@@ -158,7 +184,7 @@ if limpact:
 
   def calcef(df,**kwargs):
     #  ef = kwargs['lst'] - (df["etot"] + df["estock"]) 
-     ef = df['lst'] - (df["etot"] + df["estock"]) 
+     ef = kwargs['lst'] - (df["etot"] + df["estock"]) 
     #  ef = df['lst'] - (df["ecdef"] + df["estock"]) 
     #  ef = kwargs['lst'] - (df["ecdef"] + df["estock"]) 
     #  print(f"ef = {ef}")
@@ -214,11 +240,13 @@ kwargs1 = {
     "labely": r"$W_{X}$"+" (rad/s)",
     "color1": color1,
     "endpoint": [False,False,False,False],
+    # "endpoint": False,
     "xpower": 5,
     "ypower": 5,
+    "alpha": 0.5,
 }
 traj.pltraj2d(df, **kwargs1)
-
+#%%
 kwargs1 = {
     "tile1": "wy sleeve = f(t)" + "\n",
     "tile_save": "wy_ft",
@@ -232,6 +260,7 @@ kwargs1 = {
     "endpoint": [False,False,False,False],
     "xpower": 5,
     "ypower": 5,
+    "alpha": 0.5,
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -248,8 +277,146 @@ kwargs1 = {
     "endpoint": [False,False,False,False],
     "xpower": 5,
     "ypower": 5,
+    "alpha": 0.5,
 }
 traj.pltraj2d(df, **kwargs1)
+# traj Oyz pchoc
+kwargs1 = {
+    "tile1": "traj Oyz" + "\n",
+    "tile_save": "traj_oyz_pchoc",
+    "colx": ["uypchoc"],
+    "coly": ["uzpchoc"],
+    "rep_save": repsect1,
+    "label1": [None],
+    "labelx": r"$u_y$"+" (m)",
+    "labely": r"$u_z$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+    "alpha": 1.,
+}
+traj.pltraj2d(df, **kwargs1)
+# traj Oxz pchoc
+kwargs1 = {
+    "tile1": "traj Oxz" + "\n",
+    "tile_save": "traj_oxz_pchoc",
+    "colx": ["uxpchoc"],
+    "coly": ["uzpchoc"],
+    "rep_save": repsect1,
+    "label1": [None],
+    "labelx": r"$u_x$"+" (m)",
+    "labely": r"$u_z$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+    "alpha": 1.,
+}
+traj.pltraj2d(df, **kwargs1)
+
+# traj Oyz g
+kwargs1 = {
+    "tile1": "traj Oyz" + "\n",
+    "tile_save": "traj_oyz_g",
+    "colx": ["uyg"],
+    "coly": ["uzg"],
+    "rep_save": repsect1,
+    "label1": [None],
+    "labelx": r"$u_y$"+" (m)",
+    "labely": r"$u_z$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+    "alpha": 1.,
+}
+traj.pltraj2d(df, **kwargs1)
+# traj Oxz g
+kwargs1 = {
+    "tile1": "traj Oxz" + "\n",
+    "tile_save": "traj_oxz_g",
+    "colx": ["uxg"],
+    "coly": ["uzg"],
+    "rep_save": repsect1,
+    "label1": [None],
+    "labelx": r"$u_x$"+" (m)",
+    "labely": r"$u_z$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+    "alpha": 1.,
+}
+traj.pltraj2d(df, **kwargs1)
+# uz(pchoc) = f(t)
+kwargs1 = {
+    "tile1": "uz(Pchoc) = f(t)" + "\n",
+    "tile_save": "uzpchoc_ft",
+    "colx": ["t"],
+    "coly": ["uzpchoc"],
+    "rep_save": repsect1,
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$u_z$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+    "alpha": 1.,
+}
+traj.pltraj2d(df, **kwargs1)
+kwargs1 = {
+    "tile1": "uz(G) = f(t)" + "\n",
+    "tile_save": "uzg_ft",
+    "colx": ["t"],
+    "coly": ["uzg"],
+    "rep_save": repsect1,
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$u_z$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+    "alpha": 1.,
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "uy(Pchoc) = f(t)" + "\n",
+    "tile_save": "uypchoc_ft",
+    "colx": ["t"],
+    "coly": ["uypchoc"],
+    "rep_save": repsect1,
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$u_y$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+    "alpha": 1.,
+}
+traj.pltraj2d(df, **kwargs1)
+
+kwargs1 = {
+    "tile1": "uy(G) = f(t)" + "\n",
+    "tile_save": "uyg_ft",
+    "colx": ["t"],
+    "coly": ["uyg"],
+    "rep_save": repsect1,
+    "label1": [None],
+    "labelx": r"$t$"+" (s)",
+    "labely": r"$u_y$"+" (m)",
+    "color1": color1,
+    "endpoint": [False,False,False,False],
+    "xpower": 5,
+    "ypower": 5,
+    "alpha": 1.,
+}
+traj.pltraj2d(df, **kwargs1)
+
 #test reco :
 kwargs1 = {
     "tile1": "uzpchoc vs uzp2" + "\n",
@@ -264,6 +431,7 @@ kwargs1 = {
     "endpoint": [False,False,False,False],
     "xpower": 5,
     "ypower": 5,
+    "alpha": 0.5,
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -280,7 +448,7 @@ kwargs1 = {
     "endpoint": [False,False,False,False],
     "xpower": 5,
     "ypower": 5,
-    "alpha" : [0.7]*10,
+    "alpha" : 0.7,
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -297,6 +465,7 @@ kwargs1 = {
     "endpoint": [False,False,False,False],
     "xpower": 5,
     "ypower": 5,
+    "alpha": 0.5,
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -313,6 +482,7 @@ kwargs1 = {
     "endpoint": [False,False,False,False],
     "xpower": 5,
     "ypower": 5,
+    "alpha": 0.5,
 }
 traj.pltraj2d(df, **kwargs1)
 
@@ -329,11 +499,12 @@ kwargs1 = {
     "endpoint": [False,False,False,False],
     "xpower": 5,
     "ypower": 5,
+    "alpha": 0.5,
 }
 traj.pltraj2d(df, **kwargs1)
 
 # for i in np.arange(df['nmode'][0]):
-for i in np.arange(4):
+for i in np.arange(np.min([11,2*nmode])):
   kwargs1 = {
       "tile1": f"energies mode{i+1} = f(t)" + "\n",
       "tile_save": f"energies_mode{i+1}",
@@ -347,7 +518,7 @@ for i in np.arange(4):
       "endpoint": [False,False,False,False],
       "xpower": 5,
       "ypower": 5,
-      "alpha" : [0.7]*10,
+      "alpha" : 0.7,
   }
   traj.pltraj2d(df, **kwargs1)
   kwargs1 = {
@@ -363,6 +534,7 @@ for i in np.arange(4):
       "endpoint": [False,False,False,False],
       "xpower": 5,
       "ypower": 5,
+      "alpha": 0.5,
   }
   traj.pltraj2d(df, **kwargs1)
 
@@ -436,7 +608,8 @@ for ichoc in np.arange(nstchoc):
       "labely": r"$u_z$" + " (m)",
       "labely2": "Energy (J)",
       "color1": color1[0],
-      "endpoint": False,
+      # "endpoint": False,
+      "endpoint": [False,False,False,False],
       "xpower": 5,
       "ypower": 5,
       "sol": zsol,

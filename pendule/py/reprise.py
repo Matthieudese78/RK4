@@ -26,7 +26,7 @@ def pendulum_motion(y, t, L, g, M, J):
 
 # %%
 lclean = True
-lstdout = True
+lstdout = False
 # %% lraidtimo :
 # %% script / dir :
 filename = "pendule_timo.dgibi"
@@ -41,53 +41,75 @@ stoia = "vrai"
 manchette = "faux"
 trig = "vrai"
 limpact = "vrai"
-linert = "vrai"
+linert = "faux"
 lnortot = "faux"
-lnorcomp = "vrai"
+lnorcomp = "faux"
 lnormtot = "faux"
+# algo 
+rk4 = "faux" 
+nmb = "vrai" 
+sw = "faux" 
+#
+flvtk = "vrai"
 #
 h = 0.6
 g = 9.81
 M = 0.59868
 Jx = 0.07185
 #
-bamo = 2.0e7
+# bamo = 2.0e2
+bamo = 0.
 Kchoc = 5.5e07
 xi = bamo / (2.0 * M * (np.sqrt(Kchoc / M)))
+# pour trig vitesse normale a l'impact (m/s):
+vimpact = 4.
 # tourne avec 20 modes : dte = 2.e7
-dte = 4.0e-6
-nsort = 4
+dte = 2.0e-6
+nsort = 10
 #
-nmode_ela = 20
+nmode_ela = 6
+typmode = 1
+if (typmode==2):
+  nmode_ela = 0
 # angle d'incidence :
-theta_ini_x = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]
+# theta_ini_x = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0]
+theta_ini_x = [0.0]
+#%%
 # prediction de l'instant d'impact :
 tc = []
-for i, thi in enumerate(theta_ini_x):
-    thini = np.pi / 2.0 - thi * np.pi / 180.0
-    initial_conditions = [thini, 0.0]
-    # Time points to integrate over
-    t = np.linspace(0, 2.0, int(1e5))
-    # Integrate the differential equation
-    solution = odeint(pendulum_motion, initial_conditions, t, args=(h, g, M, Jx))
-    # Extract theta and omega from the solution
-    theta, omega = solution[:, 0], solution[:, 1]
-    # instant choc :
-    thc = thini + 2.0 * (thi * np.pi / 180.0)
-    crit = 1.0e-4
-    ichoc = np.where(np.abs(theta - thc) < crit)[0]
-    tci = np.min(t[ichoc]) + 2.0e-2
-    print("Instants choc : ")
-    print(tci)
-    tc.append(tci)
-    # plt.plot(t, theta, label='Theta (rad)')
-    # plt.plot(t, omega, label='Omega (rad/s)')
-    # plt.xlabel('Time (s)')
-    # plt.ylabel('Values')
-    # plt.title('Pendulum Motion')
-    # plt.legend()
-    # plt.grid(True)
-    # plt.show()
+if (not (trig=="vrai")):
+  for i, thi in enumerate(theta_ini_x):
+      thini = np.pi/2.0 - thi * np.pi/180.0
+      initial_conditions = [thini, 0.0]
+      # Time points to integrate over
+      t = np.linspace(0, 2.0, int(1e5))
+      # Integrate the differential equation
+      solution = odeint(pendulum_motion, initial_conditions, t, args=(h, g, M, Jx))
+      # Extract theta and omega from the solution
+      theta, omega = solution[:, 0], solution[:, 1]
+      # instant choc :
+      thc = thini + 2.0*(thi*np.pi/180.0)
+      crit = 1.0e-4
+      ichoc = np.where(np.abs(theta - thc) < crit)[0]
+      tci = np.min(t[ichoc]) + 2.0e-2
+      tc.append(tci)
+      # plt.plot(t, theta, label='Theta (rad)')
+      # plt.plot(t, omega, label='Omega (rad/s)')
+      # plt.xlabel('Time (s)')
+      # plt.ylabel('Values')
+      # plt.title('Pendulum Motion')
+      # plt.legend()
+      # plt.grid(True)
+      # plt.show()
+
+if (trig=="vrai"):
+  # le supplement d'amplitude du a la rotation ini de la poutre est pris en compte dans jeu1 du .dgibi
+  for i, thi in enumerate(theta_ini_x):
+    #   tc.append((vimpact/g)+2.e-2)
+      tc.append(3.)
+
+print("Instants choc : ")
+[print(tci) for tci in tc]
 # %% loop :
 for icalc, thi in enumerate(theta_ini_x):
     thini = np.pi / 2.0 - (thi * np.pi / 180.0)
@@ -132,6 +154,10 @@ for icalc, thi in enumerate(theta_ini_x):
         "lnortot": lnortot,
         #          lnormtot :
         "lnormtot": lnormtot,
+        #          algo :
+        "rk4"     : rk4, 
+        "nmb"     : nmb, 
+        "sw"      : sw ,
         #          bamo :
         "bamo": bamo,
         #          t :
@@ -140,10 +166,16 @@ for icalc, thi in enumerate(theta_ini_x):
         "dte": dte,
         #          nsort :
         "nsort": nsort,
+        #          typmode :
+        "typmode": typmode,
         #          nmode :
         "nmode_ela": nmode_ela,
         #          thini :
         "theta_ini_x": thi,
+        #          vimpact : pour le cas trig
+        "vimpact": vimpact,
+        #
+        "flvtk" : flvtk,
     }
 
     dfini = pd.DataFrame(dictini, index=[0])
@@ -161,6 +193,12 @@ for icalc, thi in enumerate(theta_ini_x):
         print(f"FOLDER : {destination}fig/ created.")
     else:
         print(f"FOLDER : {destination}fig/ already exists.")
+
+    if not os.path.exists(f"{destination}depl_vtk/"):
+        os.makedirs(f"{destination}depl_vtk/")
+        print(f"FOLDER : {destination}depl_vtk/ created.")
+    else:
+        print(f"FOLDER : {destination}depl_vtk/ already exists.")
 
     if not os.path.exists(repsave):
         os.makedirs(repsave)
@@ -200,6 +238,8 @@ for icalc, thi in enumerate(theta_ini_x):
     os.chdir(destination)
     #
     print(f"calcul {icalc+1} / {len(theta_ini_x)}")
+    print(f"angle incidence {thi}")
+    print(f"angle initial {90. - thi}")
     # castem21 $script > /dev/null 2>error.log
     if lstdout:
         command_to_run = [f"castem21 {filename}"]
