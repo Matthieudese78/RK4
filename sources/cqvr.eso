@@ -178,6 +178,7 @@
       wv(3)=(omeg2(1,1,ib)*v1(2)-omeg2(2,1,ib)*v1(1))
 *
       do id=1,3
+        qvr(id,ib) = 0.d0
         do j=1,3
          qvr(id,ib)=qvr(id,ib) - rot(id,j,1,ib)*(w2bl(j)+(2.d0*wv(j)))
         enddo
