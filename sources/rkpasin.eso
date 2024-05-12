@@ -427,7 +427,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
         if (itrig(iib,in)) then
           mtot(id,id,iib) = xm(i2,1)  
           id = id + 1
-          write(*,*)'trans rig : xm = ',xm(i2,1)
+*          write(*,*)'trans rig : xm = ',xm(i2,1)
         endif
       enddo
       endif
@@ -518,30 +518,26 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *          write(*,'(20F15.5)') , 
 *     &    (mtot(id,3+ntrig+in,iib),in=1,(na3-ntrig))
 *       enddo
-      write(*,*)'        matrice totale :'
-      do in=1,ntot
-         write(*,'(5(1X,F8.5))') , (mtot(in,in1,iib),in1=1,ntot)
-      enddo
+*      write(*,*)'        matrice totale :'
+*      do in=1,ntot
+*         write(*,'(5(1X,F8.5))') , (mtot(in,in1,iib),in1=1,ntot)
+*      enddo
 *      write(*,'(20F15.5)')((mtot(k,j),j= 1,3),k= 1,3)
 *     inversion de mtot : on part du principe qu'il y a 3 rotas rigides 
 *         (nbr de modes flexibles = in1 - 7)
 *      write(*,*)'rkpas : ntrig = ',ntrig
 *      write(*,*)'        in1 = ',in1
 *      write(*,*)'        na2 = ',na2
-      write(*,*)'   3 + ntrig    ntot = ',ntot
-      write(*,*)'        ninv = ',ninv
+*      write(*,*)'   3 + ntrig    ntot = ',ntot
+*      write(*,*)'        ninv = ',ninv
       ninv = 3 + na3 
       call invalm(mtot(1,1,iib),ntot,ninv,kerre,1.d-18)
-      write(*,*)'        matrice inversee :'
-      do i1=1,ntot
-         write(*,*)'line :',i1
-         do i2=1,ntot
-          write(*,*) , mtot(i1,i2,iib)
-         enddo
-      enddo
 *      write(*,*)'        matrice inversee :'
-*      do in=1,ntot
-*         write(*,'(5(1X,F15.8))') , (mtot(in,in1,iib),in1=1,ntot)
+*      do i1=1,ntot
+*         write(*,*)'line :',i1
+*         do i2=1,ntot
+*          write(*,*) , mtot(i1,i2,iib)
+*         enddo
 *      enddo
       do in=1,ntot
          do in2=1,ntot
@@ -551,17 +547,10 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
          endif
          enddo
       enddo
-*      call invalm(mtot(1,1,iib),ntot,ninv,kerre,1.d-10)
-*      write(*,*)'        matrice inversee :'
-*      do i1=1,ntot
-*         do i2=1,ntot
-*          write(*,*) , mtot(i1,i2,iib)
-*         enddo
-*      enddo
 
 *******************************************************************
 *       Quadratic velocity vector : coriolis, centrifuge ...
-********************3 + ntrig*********************************************
+*******************************************************************
 *       translation : 
       if (ntrig.gt.0) then
         call cqvr(Q1,q2,KTROT,NA1,IIB,ind1,na3,ina1) 
@@ -593,13 +582,11 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *       QVR : 
         if (itrig(iib,in)) then
           ftota(i2,1) = ftota(i2,1) + qvr(id,iib)
-          write(*,*)' id = ',id
-          write(*,*)' qvr = ',qvr(id,iib)
           id = id + 1
         endif
       enddo
       write(*,*)'rkpasin : ftrans : '
-      write(*,'(3(1X,F15.10))') ,(ftrans(i),i=1,3)
+      write(*,'(3(1X,F15.10))') ,(qvr(i,iib),i=1,3)
 *     passage du couple exterieur resultant dans le body frame :
       do id=1,3
         rtgex(id) = 0.d0
@@ -628,7 +615,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *       translations :
 *       M^{-1}(1,1) * F_R
         id = 1
-        write(*,*)'trans :'
+*        write(*,*)'trans :'
         do in=1,na3
           i2 = ina1 + in
           q3(i2,1) = 0.d0
@@ -641,8 +628,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
                 jtot = jtot + 1
               endif
             enddo
-            write(*,*)'trans mode ',in
-            write(*,*)'      q3 = ',q3(i2,1)
+*            write(*,*)'trans mode ',in
+*            write(*,*)'      q3 = ',q3(i2,1)
 *           M^{-1}(1,2) * F_th
             do j=1,3
               j2 = j + ntrig
