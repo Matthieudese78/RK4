@@ -101,13 +101,14 @@ manchette = faux ;
 *# vimpact :
 vimpact = 1. ;
 
-*# theta_ini_x :
-theta_ini_x = 40. ;
+*# thinc :
+thinc = 10. ;
+
 
 * theta_ini_x = angle d'incidence au moment du choc, le vrai thini est :
-theta_ini_x = 90. - theta_ini_x ;
+theta_ini_x = 0. ;
 theta_ini_y = 0. ;
-theta_ini_z = 0. ;
+theta_ini_z = 90. - thinc ;
 
 si (stoia) ;
 * Module d'Young :
@@ -129,8 +130,8 @@ M = V * rho_ac ;
 * opti donn 5 ; 
 * Moment d'inertie / centre de gravite:
 Jx_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
-Jy_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
-Jz_G = 0.5*M*(R**2) ; 
+Jy_G = 0.5*M*(R**2) ; 
+Jz_G = (1./12.)*M*((h**2) + (3.*(R**2))) ;
 * opti donn 5 ; 
 * Moments quadratiques de la poutre:
 IGx = (Pi*((2.*R)**4))/64. ;
@@ -165,27 +166,26 @@ M = rho_ac * v ;
 * JY_G = 2.583844235854036 ;
 * JZ_G = 0.010527338424895177 ;
 jx_g = (1./12.)*M*((3.*((R_ext**2)+(R_int**2))) + (h**2)) ;
-jy_g = jx_g ;
-jz_g = 0.5*M*((R_int**2)+(R_ext**2)) ;
+jy_g = 0.5*M*((R_int**2)+(R_ext**2)) ;
+jz_g = jx_g ;
 * Moments quadratiques de la poutre :
 IGx = ( Pi*((D_ext**4) - (D_int**4) )/64. ) ;
 IGy = IGx ;
 IG = ( Pi*((D_ext**4) -  (D_int**4) )/32. ) ;
 finsi ; 
 *# parametres de contact :
-Normale_PPLAN = 0. 0. -1. ; 
+Normale_PPLAN = 0. -1. 0. ; 
 si (non trig) ;
 * Stoianovici : le centre de roation est P1
-Jeu1 = h*(1. + (cos theta_ini_x)) ;
+Jeu1 = h*(1. + (cos theta_ini_z)) ;
 finsi ;
 si trig ;
 * le centre de rotation est alors le CDM = G1.
 * le supplement d'altitude du a la rotation initiale est
 * (h/2)(1-cos(thini)) --> retranche a la chute libre (vimpact^2/2g)
-  thinc = 90. - theta_ini_x ;
-  jeu2 = ((vimpact**2)/(2.*g)) - (0.5*h*(1.-(cos theta_ini_x))) ;
-*  jeu2 = jeu1 + (h*(sin thinc)) ;
-  jeu1 = jeu2 + h*(1.-(sin thinc)) ;
+  jeu1 = ((vimpact**2)/(2.*g)) - (0.5*h*(1.+(-1.)*(cos theta_ini_z))) ;
+  jeu2 = jeu1 + h ;
+*  jeu2 = jeu1 + h*(1.+(-1.)*(sin thinc)) ;
 finsi ;
 
 * Stoianovici : 
@@ -425,8 +425,8 @@ si (linert) ;
 finsi ;
 * on rajoute la valeur de xi :
 repsave = (chai repsave'xi_'(enti (100.*xi))'/') ; 
-* on rajoute la valeur de thini :
-repsave = (chai repsave'thini_'(enti theta_ini_x)'/') ; 
+* on rajoute la valeur de thinc :
+repsave = (chai repsave'thinc_'(enti thinc)'/') ; 
 * on rajoute la valeur de nmode_ela :
 repsave = (chai repsave'nmode_'nmode_ela'/') ; 
 
@@ -454,9 +454,9 @@ lanime = faux ;
 *                            Maillage 
 *********************************************************************
 P1 = 0. 0. 0. ;
-P2 = 0. 0. h ; 
+P2 = 0. h 0. ; 
 * Centre de masse theorique:
-G1 = 0. 0. LG ; 
+G1 = 0. LG 0. ; 
 ***** Maillage: nombre d'element de la poutre:
  n1 = (enti (nnoeuds/2)) ;
  n2 = nnoeuds - n1 ; 
@@ -511,15 +511,17 @@ CLRY = BLOQ 'RX' 'RZ' meshpou;
 CLRZ = BLOQ 'RX' 'RY' meshpou;
 * CLela = BLOQ 'RZ' meshpou ;
 * CLela = BLOQ 'ROTA' p1 ;
+* modes dans le plan (Oxy) :
+CLelaZ = BLOQ 'UZ' meshpou ;
+* modes dans le plan (Ozy) :
 CLelaX = BLOQ 'UX' meshpou ;
-CLelaY = BLOQ 'UY' meshpou ;
 KRX = K et CLRX ;
 KRY = K et CLRY ;
 KRZ = K et CLRZ ;
 * KelaX = K ;
 * KelaY = K ;
+KelaZ = K et clelaZ ;
 KelaX = K et clelaX ;
-KelaY = K et clelaY ;
 * Kela = K ;
 *********************************************************************
 *                          Calculs des modes: 
@@ -534,10 +536,10 @@ si ((typmode ega 1) ou (typmode ega 3)) ;
 * On teste egalement en presence de modes elastiques:
 * Tmode_elaX = vibr 'IRAM' 20. nmode_ela KelaX M1 ;
 * Tmode_elaY = vibr 'IRAM' 20. nmode_ela KelaY M1 ;
+tmode_elaz = vibr 'PROCHE' lfind lindmode kelaz m1 ; 
 tmode_elax = vibr 'PROCHE' lfind lindmode kelax m1 ; 
-tmode_elay = vibr 'PROCHE' lfind lindmode kelay m1 ; 
 * 
-tmodela = tmode_elaX ;
+tmodela = tmode_elaz ;
 
 * Tmode_elaX = vibr 'IRAM' 20. 40 KelaX M1 ;
 * opti trac x ;
@@ -558,15 +560,15 @@ repe bmode (nmode_ela - ntronq) ;
   lect1 = lect &bmode ;
   tracomp = dans lect1 ltrac ;
 * on complete le maillage repere :
-  Tmodela . 'MAILLAGE_REPERE' = (Tmodela . 'MAILLAGE_REPERE') et (Tmode_elax . 'MODES' . &bmode . 'POINT_REPERE') ;
+  Tmodela . 'MAILLAGE_REPERE' = (Tmodela . 'MAILLAGE_REPERE') et (Tmode_elaz . 'MODES' . &bmode . 'POINT_REPERE') ;
 * on renumerote :
-  tmode_elax . modes . &bmode . 'NUMERO_MODE' = numode ; 
-  tmodela . modes . numode = tmode_elax . modes . &bmode ;
+  tmode_elaz . modes . &bmode . 'NUMERO_MODE' = numode ; 
+  tmodela . modes . numode = tmode_elaz . modes . &bmode ;
   si (non tracomp) ;
 * on complete le maillage repere :
-  Tmodela . 'MAILLAGE_REPERE' = (Tmodela . 'MAILLAGE_REPERE') et (Tmode_elay . 'MODES' . &bmode . 'POINT_REPERE') ;
-  tmode_elay . modes . &bmode . 'NUMERO_MODE' = (numode + 1) ; 
-  tmodela . modes . (numode + 1) = tmode_elay . modes . &bmode ;
+  Tmodela . 'MAILLAGE_REPERE' = (Tmodela . 'MAILLAGE_REPERE') et (Tmode_elax . 'MODES' . &bmode . 'POINT_REPERE') ;
+  tmode_elax . modes . &bmode . 'NUMERO_MODE' = (numode + 1) ; 
+  tmodela . modes . (numode + 1) = tmode_elax . modes . &bmode ;
   numode = numode + 1 ;
   finsi ;
 * incrementation de numode : 
@@ -575,8 +577,8 @@ fin bmode ;
 nsauvini = (numode - 1) ;
 finsi ;
 
-* postvibr Tmode_elaX ;
-* postvibr Tmode_elaY ;
+* postvibr Tmode_elaz ;
+* postvibr Tmode_elax ;
 
 * opti trac x ;
 postvibr Tmodela ;
@@ -779,7 +781,7 @@ finsi ;
 *
 *** TCHAR:
 TCHAR = TABL 'CHARGEMENT';
-FPES   = FORC 'FZ' ((-1.)*(m*g)) G1;
+FPES   = FORC 'FY' ((-1.)*(m*g)) G1;
 FPESA = PJBA FPES Tmode ;
 
 Fprog = prog (dime tprog)*1. ; 
@@ -806,7 +808,7 @@ CHA_PESA = CHAR 'FORC' FPESA evolF ;
 	 TL1.'TYPE_LIAISON'  =  MOT 'POINT_PLAN' ;
 	 TL1.'SUPPORT'       =  G1              ;
 	 TL1.'RAIDEUR'       =  1.              ;
-	 TL1.'NORMALE' = (poin 1. 0. 0.) ;
+	 TL1.'NORMALE' = (poin 0. -1. 0.) ;
 *    On prend volontairement un jeu demesure (liaison fictive):
 	 TL1.'JEU'           =  10.              ;
 *
@@ -862,20 +864,20 @@ CHA_PESA = CHAR 'FORC' FPESA evolF ;
     TSTL2 . 'UZ' = VRAI ;
     TSORL . TL2 = TSTL2 ; 
    finsi ;
-*   si (limpact et trig) ;
-*    TTLB . 3 = TL3 ;
-**   sortie liaison point-plan :
-*    TSTL3 = table ;
-*    TSTL3 . 'VITESSE_NORMALE' = VRAI ;
-*    TSTL3 . 'VITESSE_TANGENTIELLE' = VRAI ;
-*    TSTL3 . 'FORCE_DE_CHOC_NORMALE' = VRAI ;
-*    TSTL3 . 'FORCE_DE_CHOC_TANGENTIELLE' = VRAI ;
-*    TSTL3 . 'PUISSANCE_USURE_INSTANTANEE' = VRAI ;
-*    TSTL3 . 'UX' = VRAI ;
-*    TSTL3 . 'UY' = VRAI ;
-*    TSTL3 . 'UZ' = VRAI ;
-*    TSORL . TL3 = TSTL3 ; 
-*   finsi ;
+   si (limpact et trig) ;
+    TTLB . 3 = TL3 ;
+*   sortie liaison point-plan :
+    TSTL3 = table ;
+    TSTL3 . 'VITESSE_NORMALE' = VRAI ;
+    TSTL3 . 'VITESSE_TANGENTIELLE' = VRAI ;
+    TSTL3 . 'FORCE_DE_CHOC_NORMALE' = VRAI ;
+    TSTL3 . 'FORCE_DE_CHOC_TANGENTIELLE' = VRAI ;
+    TSTL3 . 'PUISSANCE_USURE_INSTANTANEE' = VRAI ;
+    TSTL3 . 'UX' = VRAI ;
+    TSTL3 . 'UY' = VRAI ;
+    TSTL3 . 'UZ' = VRAI ;
+    TSORL . TL3 = TSTL3 ; 
+   finsi ;
 
 * opti donn 5 ; 
 ************************************************************************
@@ -1196,7 +1198,7 @@ TSORT . 'amor' = prog (dime tprog)*bamo ;
 TSORT . 'algo' = (mots (dime tprog)*algo) ;
 TSORT . 'rigi' = lect (dime tprog)*irigi ;
 TSORT . 'inert' = lect (dime tprog)*inert ;
-TSORT . 'thini' = prog (dime tprog)*theta_ini_x ;
+TSORT . 'thini' = prog (dime tprog)*theta_ini_z ;
 * TSORT . 'thini_y' = prog (dime tprog)*theta_ini_x ;
 * TSORT . 'thini_z' = prog (dime tprog)*theta_ini_x ;
 TSORT . 'nnoe' = lect (dime tprog)*nnoeuds ;
@@ -1279,6 +1281,26 @@ TSORT . 'ft' = TRESU . TL2 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
 TSORT . 'uxpchoc' = TRESU . TL2 . 'UX' ;
 TSORT . 'uypchoc' = TRESU . TL2 . 'UY' ;
 TSORT . 'uzpchoc' = TRESU . TL2 . 'UZ' ;
+ncolexce = ncolexce + 8 ;
+finsi ;
+si (limpact et trig) ;
+* Pusure durant les impacts : 
+TSORT . 'pusure2' = table ;
+TSORT . 'fn2' = table ;
+TSORT . 'ft2' = table ;
+TSORT . 'vt2' = table ;
+TSORT . 'vn2' = table ;
+TSORT . 'uxpchoc2' = table ;
+TSORT . 'uypchoc2' = table ;
+TSORT . 'uzpchoc2' = table ;
+TSORT . 'pusure2' = TRESU . TL3 . 'PUISSANCE_USURE_INSTANTANEE' ;
+TSORT . 'vn2' = TRESU . TL3 . 'VITESSE_NORMALE' ;
+TSORT . 'vt2' = TRESU . TL3 . 'VITESSE_TANGENTIELLE' ;
+TSORT . 'fn2' = TRESU . TL3 . 'FORCE_DE_CHOC_NORMALE' ;
+TSORT . 'ft2' = TRESU . TL3 . 'FORCE_DE_CHOC_TANGENTIELLE' ;
+TSORT . 'uxpchoc2' = TRESU . TL3 . 'UX' ;
+TSORT . 'uypchoc2' = TRESU . TL3 . 'UY' ;
+TSORT . 'uzpchoc2' = TRESU . TL3 . 'UZ' ;
 ncolexce = ncolexce + 8 ;
 finsi ;
 *
