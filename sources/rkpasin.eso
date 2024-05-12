@@ -606,6 +606,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
         do j=1,3
           rtgex(id) = rtgex(id) + rot(j,id,1,iib)*fmomtot(j,1,iib)
         enddo
+        rtgex(id) = rtgex(id) + qvth(id,iib)
       enddo
 *      write(*,*)'         rtgex : '
 *      write(*,'(3(1X,F15.10))') ,(rtgex(i),i=1,3)
@@ -646,8 +647,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             do j=1,3
               j2 = j + ntrig
               q3(i2,1) = q3(i2,1) +
-     &         mtot(id,j2,iib)*(rtgex(j) + qvth(j,iib))
-*     &         mtot(id,j2,iib)*(rtgex(j) - wjw(j))
+     &         mtot(id,j2,iib)*rtgex(j)
+*     &         mtot(id,j2,iib)*(rtgex(j) + qvth(j,iib))
             enddo
 *           M^{-1}(1,3) * F_f
             in1 = ntrig + 3 + 1
@@ -686,7 +687,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             j2 = j + ntrig
 *           M^{-1}(2,2) * F_th
             omeg3(id,1,iib) = omeg3(id,1,iib) +
-     &      mtot(id2,j2,iib)*(rtgex(j) + qvth(j,iib))
+     &      mtot(id2,j2,iib)*rtgex(j)
+*     &      mtot(id2,j2,iib)*(rtgex(j) + qvth(j,iib))
           enddo
 *         M^{-1}(2,3) * F_f
           in1 = 3 + ntrig + 1
@@ -719,7 +721,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             do j=1,3
               j2 = j + ntrig
               q3(i2,1) = q3(i2,1) +
-     &        mtot(in1,j2,iib) * (rtgex(j) + qvth(j,iib))
+     &        mtot(in1,j2,iib) * rtgex(j)
+*     &        mtot(in1,j2,iib) * (rtgex(j) + qvth(j,iib))
             enddo
 *           M^{-1}(3,3) * F_f
             in2 = 3 + ntrig + 1
@@ -757,7 +760,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
 *          omeg3(id,1,iib) = 0.d0
 *          do j = 1,3
 *            omeg3(id,1,iib) = omeg3(id,1,iib) + 
-*     &      invinert(id,j,iib)*(rtgex(j) - wjw(j))
+*     &      invinert(id,j,iib)*rtgex(j)
+**     &      invinert(id,j,iib)*(rtgex(j) - wjw(j))
 *          enddo
 *        enddo
 ******       
