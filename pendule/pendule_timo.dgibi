@@ -102,8 +102,9 @@ manchette = faux ;
 vimpact = 1. ;
 
 *# theta_ini_x :
-theta_ini_x = 45. ;
+theta_ini_x = 40. ;
 
+* theta_ini_x = angle d'incidence au moment du choc, le vrai thini est :
 theta_ini_x = 90. - theta_ini_x ;
 theta_ini_y = 0. ;
 theta_ini_z = 0. ;
@@ -192,15 +193,13 @@ muk = 0.075 ;
 Kchoc = 5.5E+07 ;
 
 *# bamo :
-Bamo = 2.0E+07 ;
+Bamo = 0. ;
 
 * Bamo = 2.*M*((Kchoc/M)**0.5)*xi ;
 * Bamo = 2.*JX_G*((Kchoc/JX_G)**0.5)*xi ;
 
 * xi = bamo / (2.*JX_G*((Kchoc/JX_G)**0.5)) ;
 xi = bamo / (2.*M*((Kchoc/M)**0.5)) ;
-
-Bamo = 2.0E+02 ;
 
 K_T= 0.01*Kchoc ;
 
@@ -225,6 +224,7 @@ lnoe = lect 100 150 200 225 250 275 300 325 350 375 400 425 450 475 500 550 600 
 * opti 'FTRA' (chai './fig/manchette/modes.ps' );
 finsi ;
 *# nnoeuds :
+nnoeuds = 60 ;
 si (NMODE_ELA > 0) ;
 lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
 nnoeuds = 2*(extr lnoe nmode_ela) ;
@@ -239,13 +239,13 @@ finsi ;
 *
 ***** Temporel:
 *# t :
-T = 1. ;
+T = 0.02 ;
 
 *# n :
 n = 6 ;
 
 *# dte :
-dte = 2.e-6 ;
+dte = 1.e-4 ;
 
 *# nsort :
 NSORT = 5 ;
@@ -442,7 +442,10 @@ opti 'SORT' (chai repsave script'.csv') ;
 ***** RECO totale voulue ?
 RECOTOT = faux ;
 EVOLRECO = vrai ;
+
+*# flvtk :
 FLVTK = faux ;
+
 lanime = faux ;
 * SI (RECOTOT EGA FAUX);
 *   FLVTK = FAUX ;
@@ -599,9 +602,9 @@ finsi ;
 *********************************************************************
 * Si l'on veut avoir les bons moments d'inertie (theoriques), 
 * on les rentre manuellement en tant que masses generalisees:
-     Tmode_RX . modes . 1 . masse_generalisee = Jx_G;
-     Tmode_RY . modes . 1 . masse_generalisee = Jy_G;
-     Tmode_RZ . modes . 1 . masse_generalisee = Jz_G;
+Tmode_RX . modes . 1 . masse_generalisee = Jx_G;
+Tmode_RY . modes . 1 . masse_generalisee = Jy_G;
+Tmode_RZ . modes . 1 . masse_generalisee = Jz_G;
 * Pour les rotas rigides:
 Tmode_RX . modes . 1 . frequence = 0. ;
 Tmode_RY . modes . 1 . frequence = 0. ;
@@ -703,6 +706,9 @@ FINSI;
 si (trig) ;
   Tmode = Tmode et (Tmode_m_tx et tmode_m_ty et tmode_m_tz) ;
 finsi ;
+* opti trac x ; 
+* postvibr tmode ; 
+* opti donn 5 ; 
 ************************************************************************
 *     					Parametrage DYNE
 ************************************************************************
@@ -788,6 +794,7 @@ CHA_PESA = CHAR 'FORC' FPESA evolF ;
   TCHAR .'BASE_B' = TABL;  
   TCHAR .'BASE_B' = CHA_PES;
 
+* opti donn 5 ; 
 * TODO: Determiner si le chargement doit reeelement etre exprime 
 *                  en base A ET en base B.
 *
