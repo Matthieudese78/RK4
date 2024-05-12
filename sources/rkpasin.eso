@@ -656,7 +656,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
               i3 = ina1 + inf
               if (.not.itrig(iib,inf)) then
                 q3(i2,1) = q3(i2,1) +
-     &          mtot(id,in1,iib)*(FTOTA(i3,1)-FAMOR(i3)+qvf(inf,iib))
+     &          mtot(id,in1,iib)*(FTOTA(i3,1)-FAMOR(i3))
+*     &          mtot(id,in1,iib)*(FTOTA(i3,1)-FAMOR(i3)+qvf(inf,iib))
                 in1 = in1 + 1
               endif
             enddo
@@ -696,7 +697,8 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
             i2 = ina1 + in
             if (.not.itrig(iib,in)) then
               omeg3(id,1,iib) = omeg3(id,1,iib) +
-     &        mtot(id2,in1,iib)*(FTOTA(i2,1)-FAMOR(i2)+qvf(in,iib))  
+*     &        mtot(id2,in1,iib)*(FTOTA(i2,1)-FAMOR(i2)+qvf(in,iib))  
+     &        mtot(id2,in1,iib)*(FTOTA(i2,1)-FAMOR(i2))  
               in1 = in1 + 1
             endif
           enddo
@@ -730,7 +732,7 @@ cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VLFB'
               i3 = ina1 + inf
               if (.not.itrig(iib,inf)) then 
                 q3(i2,1) = q3(i2,1) +
-     &          mtot(in1,in2,iib)*(FTOTA(i3,1)-FAMOR(i3)+qvf(inf,iib))
+     &          mtot(in1,in2,iib)*(FTOTA(i3,1)-FAMOR(i3))
                 in2 = in2 + 1
               endif
             enddo
