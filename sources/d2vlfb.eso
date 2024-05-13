@@ -167,18 +167,18 @@ cbp : rem : on pourrait aussi le faire pour FTOTA et FTOTBA
          FTOTA(I,IND) = FTOTA(I,IND) + FTOTBA(I)
       ENDDO
 *
-      IF (IIMPI.EQ.333) THEN
+cmsw      IF (IIMPI.EQ.333) THEN
 cmsw        WRITE(IOIMP,*)'D2VLFB: '
 cmsw        DO IP=1,NPLB
 cmsw          DO ID=1,IDIMB
 cmsw          WRITE(IOIMP,*)'      FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
 cmsw          ENDDO
 cmsw        ENDDO
-      ENDIF
-      WRITE(*,*)'D2VLFB: '
-      DO I=1,NA1
-          WRITE(*,*)'      FTOTA(',I,IND,') = ',FTOTA(I,IND)
-      ENDDO      
+cmsw      ENDIF
+*      WRITE(*,*)'D2VLFB: '
+*      DO I=1,NA1
+*          WRITE(*,*)'      FTOTA(',I,IND,') = ',FTOTA(I,IND)
+*      ENDDO      
 *      DO IP=1,NPLB
 *        DO ID=1,IDIMB
 *          WRITE(*,*)'      FTOTB(',IP,ID,') = ',FTOTB(IP,ID)
