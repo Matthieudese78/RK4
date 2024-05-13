@@ -25,7 +25,7 @@ def pendulum_motion(y, t, L, g, M, J):
 
 # %%
 lclean = True
-lstdout = False
+lstdout = True
 # %% lraidtimo :
 # %% script / dir :
 filename = "pendule_timo.dgibi"
@@ -56,17 +56,16 @@ g = 9.81
 M = 0.59868
 Jx = 0.07185
 #
-# bamo = 2.0e2
-bamo = 0.
+bamo = 0
 Kchoc = 5.5e07
 xi = bamo / (2.0 * M * (np.sqrt(Kchoc / M)))
 # pour trig vitesse normale a l'impact (m/s):
 vimpact = 4.
 # tourne avec 20 modes : dte = 2.e7
-dte = 2.0e-6
+dte = 1.0e-6
 nsort = 10
 #
-nmode_ela = 6
+nmode_ela = 20
 typmode = 1
 if (typmode==2):
   nmode_ela = 0
@@ -105,7 +104,7 @@ if (trig=="vrai"):
   # le supplement d'amplitude du a la rotation ini de la poutre est pris en compte dans jeu1 du .dgibi
   for i, thi in enumerate(thinc):
     #   tc.append((vimpact/g)+2.e-2)
-      tc.append(1.5)
+      tc.append(0.5)
 
 print("Instants choc : ")
 [print(tci) for tci in tc]

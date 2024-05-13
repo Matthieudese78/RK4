@@ -20,9 +20,9 @@ stoia = True
 manchette = False
 trig = True
 limpact = True
-linert = False
+linert = True
 lnortot = False
-lnorcomp = False
+lnorcomp = True
 lnormtot = False
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 
@@ -36,7 +36,7 @@ if trig:
 xi = bamo / (2.0 * M * (np.sqrt(Kchoc / M)))
 # xi = 1742.69
 thinc = 10.
-nmode = 6
+nmode = 11
 #%% rep_load
 repload = './pickle/'
 repsave = './fig/'
@@ -148,7 +148,7 @@ if limpact:
   df['ef'] = 0.*df['edef'] 
   # vols :  on isole les 4 premiers groupes de chocs :
   crit = 0.05
-  nstchoc = 1 
+  nstchoc = 10 
   lgrp = [[] for _ in range(nstchoc)]
   t0 = df.iloc[fst[0]]['t']
   # on remplit lgrp[0] avec le premier et le dernier choc par defaut
