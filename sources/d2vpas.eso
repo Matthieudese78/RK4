@@ -507,109 +507,77 @@ CMS : one ne profite pour recompter les modes elastiques non translation rigide 
 CMS :     pour l'energie de deformation, on a calule pour ttes les ss bases, rots rigides ou non : 
           edef(iib) = 0.d0
           na3  = inmsb(iib)
-          ina2 = iorsb(iib) - 1
+          ina1 = iorsb(iib) - 1
           do in=1,na3
-            i2 = in + ina2
+            i2 = in + ina1
             if (.not.itrig(iib,in)) then
-             edef(iib) = edef(iib) + (xk(i2,1) * (q1(i2,1)**2)/2.d0)
+             edef(iib) = edef(iib) + (xk(i2,1)*(q1(i2,1)**2)/2.d0)
+             wint(i2,1) = (xk(i2,1)*(q1(i2,1)**2))/2.d0
+             wext(i2,1) = (xm(i2,1)*(q2(i2,1)**2))/2.d0
             endif
+            if ((itrig(iib,in))) then
+              tcin(iib) = tcin(iib) + 0.5*xm(i2,1)*(q2(i2,1)**2.d0)
+            endif 
           enddo
           if (lcb) then 
 *           energie potentielle magnetique :
             edef(iib) = edef(iib) - (- ((1.1+rot(3,3,1,ibad))**(-1.d0))
      &               + (1.d-3*((1.1+rot(3,3,1,ibad))**(-10.d0))))
-*           write(*,*)'edef = ',edef(iib)
           endif
-*         write(*,*)'d2vpas : edef = ',edef(iib)
-CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
-          IF (IAROTA(IIB).EQ.0) GOTO 9
-***       Calcul de l'energie cinetique en translation :
-*          NA3  = INMSB(IIB)
-*              = nbr de modes elasiques ds la ss base (incluant les transl. rigides)
-*          INA2 = IORSB(IIB) - 1
-          XTC = 0.D0
-          DO IN = 1,NA3
-            IN2 = INA2 + IN
-*            WRITE(*,*)'ITRIG(',IIB,IN,') = ',ITRIG(IIB,IN)
-            IF ((ITRIG(IIB,IN))) THEN
-              DO ID=1,IDIM
-                XTC = XTC + 
-     &       0.5*MTSB(IIB)*((XPHILB(IIB,1,IN,ID)*Q2(IN2,1))**2.d0) 
-cmsw               WRITE(*,*)' MTSB(',IIB,') = ',MTSB(IIB)
-cmsw                WRITE(*,*)' XPHILB(',IIB,1,IN,ID,') = ',
-cmsw     &                     XPHILB(IIB,1,IN,ID)
-cmsw               WRITE(*,*)' Q2(',IN2,2,') = ',Q2(IN2,2)
-cmsw               WRITE(*,*)' XTC = ',XTC 
-              ENDDO
-            ELSE
-*              On ajoute l'energie cinetique associee aux modes flexibles : 
-               XTC = XTC + (0.5 * (Q2(IN2,2)**2) * XM(IN,1))
-            ENDIF 
-          ENDDO
-          TCIN(IIB) = TCIN(IIB) + XTC
-
-*         Energie potentielle de pesanteur : 
-*           - la gravite est en -ez
-*           - le cdm du solide est le point de liaison numero 1 
-*          if (nliab.ne.0) then
-**           write(*,'(3(1X,F8.5))') , (xptb(1,1,id),id=1,3)
-*            epot(iib) = xptb(1,1,3)*mtsb(iib)*9.81 
-*          endif
-cmsw          WRITE(*,*)'D2VPAS : transl. + rota + flex. TCIN = ',TCIN(IIB)
+*          if (iarota(iib).eq.0) goto 9
  9      CONTINUE
       ENDIF
 ************************************************************************
 *     calcul des travaux + decalage pour pas suivant
 ************************************************************************
-      IF (IIMPI.EQ.333) THEN
+cmsw      IF (IIMPI.EQ.333) THEN
 cmsw           WRITE(IOIMP,*)'D2VPAS : appel au sous-programme D2VENE'
-      ENDIF
+cmsw      ENDIF
 cmsw      WRITE(*,*)'D2VPAS: avant D2VENE'
 cmsw      WRITE(*,*)'        NA1 = ',NA1
 cmsw      WRITE(*,*)'        NPAS = ',NPAS
 cmsw      WRITE(*,*)'        NPC1 = ',NPC1
 cmsw      WRITE(*,*)'        NB1C = ',NB1C
 ********************************************************************
-* test : on sort d2vene de la subroutine :
-        
-        IF(NB1C.NE.1)THEN
-          do 21 I=1,NA1
-            FAMO2(I) = 0.D0
-            FAMO1(I) = 0.D0
-          do 21 J=1,NB1C
-            FAMO2(I) = FAMO2(I) + XASM(I,J)*Q2(J,1)
-            FAMO1(I) = FAMO1(I) + XASM(I,J)*Q2(J,2)
- 21       continue
-        ELSE
-          do I=1,NA1
-            FAMO2(I) = XASM(I,1)*Q2(I,1)
-            FAMO1(I) = XASM(I,1)*Q2(I,2)
-          enddo
-        ENDIF
-
-        DO I=1, NA1
-          DQ1 = Q1(I,1) - Q1(I,2)
-
-          F1 = FEXA(I,NPAS,2)
-          F2 = FEXA(I,NPAS,1)
-          DWEX = (F1 + F2)/2D0 * DQ1
-
-          F1 = FTOTA(I,2) - F1
-          F2 = FTOTA(I,1) - F2
-
-*  on ajoute les forces d'amortissement
-c           F1 = F1 - XASM(I)*Q2(I,2)
-c           F2 = F2 - XASM(I)*Q2(I,1)
-          F1 = F1 - FAMO2(I)
-          F2 = F2 - FAMO1(I)
-          DWIN = -(F1 + F2)/2D0 * DQ1
-
-          WEXT(I,1) = WEXT(I,2) + DWEX
-          WINT(I,1) = WINT(I,2) + DWIN
-cmsw      WRITE(*,*)'wext(i,1) = ',wext(i,1) 
-cmsw      WRITE(*,*)'wint(i,1) = ',wint(i,1) 
-
-        enddo
+** D2VENE : on sort d2vene de la subroutine :
+*        IF(NB1C.NE.1)THEN
+*          do 21 I=1,NA1
+*            FAMO2(I) = 0.D0
+*            FAMO1(I) = 0.D0
+*          do 21 J=1,NB1C
+*            FAMO2(I) = FAMO2(I) + XASM(I,J)*Q2(J,1)
+*            FAMO1(I) = FAMO1(I) + XASM(I,J)*Q2(J,2)
+* 21       continue
+*        ELSE
+*          do I=1,NA1
+*            FAMO2(I) = XASM(I,1)*Q2(I,1)
+*            FAMO1(I) = XASM(I,1)*Q2(I,2)
+*          enddo
+*        ENDIF
+*
+*        DO I=1, NA1
+*          DQ1 = Q1(I,1) - Q1(I,2)
+*
+*          F1 = FEXA(I,NPAS,2)
+*          F2 = FEXA(I,NPAS,1)
+*          DWEX = (F1 + F2)/2D0 * DQ1
+*
+*          F1 = FTOTA(I,2) - F1
+*          F2 = FTOTA(I,1) - F2
+*
+**  on ajoute les forces d'amortissement
+*c           F1 = F1 - XASM(I)*Q2(I,2)
+*c           F2 = F2 - XASM(I)*Q2(I,1)
+*          F1 = F1 - FAMO2(I)
+*          F2 = F2 - FAMO1(I)
+*          DWIN = -(F1 + F2)/2D0 * DQ1
+*
+*          WEXT(I,1) = WEXT(I,2) + DWEX
+*          WINT(I,1) = WINT(I,2) + DWIN
+*cmsw      WRITE(*,*)'wext(i,1) = ',wext(i,1) 
+*cmsw      WRITE(*,*)'wint(i,1) = ',wint(i,1) 
+*
+*        enddo
 
 ********************************************************************
 *      CALL D2VENE(NA1,1,NPAS,FEXA,Q1,Q2,FTOTA,WEXT,WINT,
