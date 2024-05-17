@@ -132,10 +132,10 @@
         endif
       enddo
 * 
-      write(*,*)'MFTH :'
-      do in=1,na3
-         write(*,'(3(1X,F15.10))') , (mfth(in,id,ib),id=1,3)
-      enddo
+*      write(*,*)'MFTH :'
+*      do in=1,na3
+*         write(*,'(3(1X,F15.10))') , (mfth(in,id,ib),id=1,3)
+*      enddo
 
 *
       END

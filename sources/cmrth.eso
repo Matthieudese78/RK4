@@ -174,9 +174,9 @@
         enddo
       enddo
 * done
-      write(*,*)'MRTH :'
-      do id=1,3
-         write(*,'(3(1X,F8.5))') , (mrth(id,j,ib),j=1,3)
-      enddo
+*      write(*,*)'MRTH :'
+*      do id=1,3
+*         write(*,'(3(1X,F8.5))') , (mrth(id,j,ib),j=1,3)
+*      enddo
 *
       END
