@@ -36,42 +36,49 @@ destination = f"../calc/"
 repcast = f"../../build/"
 # slicevtk = 50
 # %% parametres du calcul
-stoia = "vrai"
 manchette = "faux"
+stoia = "vrai"
 trig = "vrai"
 limpact = "vrai"
-linert = "vrai"
+linert = "faux"
+lnorcomp = "faux"
 lnortot = "faux"
-lnorcomp = "vrai"
 lnormtot = "faux"
+
+# modes hors plan ?
+ltronq = "faux"
+
 # algo 
-rk4 = "vrai" 
+rk4 = "faux" 
 nmb = "faux" 
-sw = "faux" 
+sw  = "vrai" 
 #
 flvtk = "vrai"
+#
+macro = True
 #
 h = 0.6
 g = 9.81
 M = 0.59868
 Jx = 0.07185
 #
-bamo = 0
+# bamo = 2.e7
+bamo = 0.
 Kchoc = 5.5e07
 xi = bamo / (2.0 * M * (np.sqrt(Kchoc / M)))
 # pour trig vitesse normale a l'impact (m/s):
 vimpact = 4.
 # tourne avec 20 modes : dte = 2.e7
 dte = 1.0e-6
-nsort = 10
+nsort = 5
 #
-nmode_ela = 20
+nmode_ela = 80
 typmode = 1
 if (typmode==2):
   nmode_ela = 0
 # angle d'incidence :
 # theta_ini_x = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0]
-thinc = [10.]
+thinc = [45.]
 #%%
 # prediction de l'instant d'impact :
 tc = []
@@ -103,8 +110,10 @@ if (not (trig=="vrai")):
 if (trig=="vrai"):
   # le supplement d'amplitude du a la rotation ini de la poutre est pris en compte dans jeu1 du .dgibi
   for i, thi in enumerate(thinc):
-    #   tc.append((vimpact/g)+2.e-2)
-      tc.append(0.5)
+      if (not macro):
+        tc.append((vimpact/g)+2.e-2)
+      if (macro):
+        tc.append(3.)
 
 print("Instants choc : ")
 [print(tci) for tci in tc]
@@ -131,9 +140,18 @@ for icalc, thi in enumerate(thinc):
     if lnorcomp == "vrai":
         nameglob = f"{nameglob}norcomp/"
 
+    namepickle = f'{nameglob}xi_{int(100.*xi)}/thinc_{int(thi)}/nmode_{nmode_ela}/vc_{int(vimpact)}/'
+
+    if macro:
+      namepickle = f'{nameglob}xi_{int(100.*xi)}/thinc_{int(thi)}/calc_3s/nmode_{nmode_ela}/vc_{int(vimpact)}/'
+
+
     nameglob = f"{nameglob}xi_{int(100.*xi)}/thinc_{int(thi)}/nmode_{nmode_ela}"
 
     repsave = f"{destination}data/{nameglob}/"
+
+    if (not macro):
+      namepickle = nameglob
 
     dictini = {
         #          stoia :
@@ -152,6 +170,8 @@ for icalc, thi in enumerate(thinc):
         "lnortot": lnortot,
         #          lnormtot :
         "lnormtot": lnormtot,
+        #          ltronq :
+        "ltronq": ltronq,
         #          algo :
         "rk4"     : rk4, 
         "nmb"     : nmb, 
@@ -261,7 +281,7 @@ for icalc, thi in enumerate(thinc):
     print("sauvegarde du 1er calcul...")
     kwpi = {
         "rep_load": repsave,
-        "rep_save": f"./pickle/{nameglob}/",
+        "rep_save": f"./pickle/{namepickle}",
         "name_save": f"result",
     }
     csv2pickle(**kwpi)

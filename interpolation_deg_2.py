@@ -2,7 +2,15 @@
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
-
+import trajectories as traj
+import os 
+#%% repsave
+repsave = f"./fig/coulomb_oden/"
+if not os.path.exists(repsave):
+    os.makedirs(repsave)
+    print(f"FOLDER : {repsave} created.")
+else:
+    print(f"FOLDER : {repsave} already exists.")
 # %% interpolation
 thlim = 5.e-3
 theta = np.linspace(0.,thlim,400)
@@ -13,6 +21,53 @@ y3 = 0.5*(1. + (2. - np.abs(theta-(thlim/2.))/(thlim/2.)) * ((theta-(thlim/2.))/
 # plt.scatter(theta,y,s=4)
 plt.scatter(theta,(y3),s=4)
 plt.scatter(theta,(1.-y3),s=4)
+#%% interpolation Oden :
+mu = 0.3
+Fn = 1.
+vlim = 1.e-5
+x1 = np.linspace(-3.*vlim,-vlim,1000)
+x2 = np.linspace(vlim,3.*vlim,1000)
+y1 = mu*Fn*np.ones_like(x1)
+y2 = -mu*Fn*np.ones_like(x2)
+vt = np.linspace(-vlim,vlim,1000)
+yt = -mu*Fn * (2. - (np.abs(vt))/vlim) * vt/vlim
+x = np.concatenate((x1,vt,x2))/vlim
+yoden = np.concatenate((y1,yt,y2))
+
+plt.plot(x,yoden)
+#%% non-smooth 1d Coulomb's law :
+# x = np.linspace(-3.,3.,1000)
+Y = mu*Fn*np.ones_like(x)
+y1d = np.empty_like(x)
+y1d[x<0] = Y[x<0]
+y1d[x>=0] = -Y[x>=0]
+plt.plot(x,y1d)
+#%%
+kwargs = {
+    "tile1": f"ener tot beam = f(t)" + "\n",
+    "tile_save": f"friction_law",
+    "x": [x,
+          x], 
+    "y": [y1d,
+          yoden], 
+    "rep_save": repsave,
+    # "label2": [r"$E_{kin}^{ref}$",r"$E_{bar}$"],
+    # "label1": [r"$E_{tot}^{inert}+E_{stock}$",r"$E_{tot}^{LTE}+E_{stock}$"],
+    "label1": ["non-regularized","Oden"],
+    "labelx": r"$\frac{\vec{v}_t \cdot \vec{t}_{shock}}{v_{lim}}$",
+    "labely": r"$\vec{F}_t \cdot \vec{t}_{shock}$",
+    "color1": ["black","blue"],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "loc_leg": "upper right",
+    # "loc_leg": (1.01,0.85),
+    "alpha" : 0.7,
+}
+traj.pltraj2d_list(**kwargs)
+
+#%% interpolation Oden :
+
 #%%
 # relation amor pour un contact ccone total (a plat) a 1 m . s^-1 :
 # 2.*np.pi*R_tete*1.*eta = x %

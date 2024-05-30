@@ -272,7 +272,8 @@
 *
 *           warning : 
             if ((.not.lnormod).and.
-     &          (xmno(inel,ib).gt.(1.05*mtsb(ib)))) then
+     &          (xmno(inel,ib).ne.xmno(inel,ib))) then
+*     &          (xmno(inel,ib).gt.(1.05*mtsb(ib)))) then
               write(*,*)'filldef : '
               write(*,*)'masse mode norme > 1.05*masse tot ss base!!!'
               call exit(1)

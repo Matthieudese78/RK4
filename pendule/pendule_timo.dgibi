@@ -52,7 +52,7 @@ xi = 0. ;
 ***** General :
 
 *# nmode_ela :
-nmode_ela = 20 ;
+nmode_ela = 83 ;
 
 *# typmode :
 typmode = 1 ;
@@ -72,7 +72,7 @@ finsi;
 nsauvmode = nmode_ela ; 
 
 *# ltronq :
-ltronq = vrai ; 
+ltronq = faux ; 
 
 * meme si on mets les modes 3d : on enleve que les 2 modes rigides en x et en y :
 
@@ -90,19 +90,19 @@ ntronq = 0 ;
 ****** Geometrie:
 
 *# stoia :
-stoia = vrai ;
+stoia = faux ;
 
 *# trig :
 trig = vrai ;
 
 *# manchette :
-manchette = faux ;
+manchette = vrai ;
 
 *# vimpact :
 vimpact = 1. ;
 
 *# thinc :
-thinc = 10. ;
+thinc = 45. ;
 
 
 * theta_ini_x = angle d'incidence au moment du choc, le vrai thini est :
@@ -179,13 +179,24 @@ si (non trig) ;
 * Stoianovici : le centre de roation est P1
 Jeu1 = h*(1. + (cos theta_ini_z)) ;
 finsi ;
+*
 si trig ;
 * le centre de rotation est alors le CDM = G1.
 * le supplement d'altitude du a la rotation initiale est
 * (h/2)(1-cos(thini)) --> retranche a la chute libre (vimpact^2/2g)
-  jeu1 = ((vimpact**2)/(2.*g)) - (0.5*h*(1.+(-1.)*(cos theta_ini_z))) ;
+* jeu1 = ((vimpact**2)/(2.*g)) - (0.5*h*(1.+(-1.)*(cos theta_ini_z))) ;
+* jeu2 = jeu1 + h ;
+* deplacement du a la rotation initiale :
+  uy0 = (0.5*h*(1.+((-1.)*(cos theta_ini_z)))) ;
+* n = - ey :
+  uy0n = (-1.)*uy0 ;
+* instant d'impact :
+  tc = vimpact / g ;
+* jeu1 : extremtite basse de la poutre P1 : on "remonte" le sol de la valeur du depl ini du a la rotation :
+*  jeu1 = (g*(tc**2))/2. + uy0n ;
+  jeu1 = ((g*(tc**2))/2.) +  ((-1.)*uy0) ;
+* jeu2 : extremtite haute de la poutre P2 :
   jeu2 = jeu1 + h ;
-*  jeu2 = jeu1 + h*(1.+(-1.)*(sin thinc)) ;
 finsi ;
 
 * Stoianovici : 
@@ -209,17 +220,50 @@ K_T= 0.01*Kchoc ;
 * stoianovici & hurmuzlu : plus longue barre : 
 * Frequences des modes :
 si (stoia) ;
-lfind = prog 111. 361. 751. 1281. 1946. 2151. 2744. 3671. 4722. 5892. 6454. 7177. 8571. 10069. 10757. 11666. 13287.2 15046.3 15060. 16885.2 18798.9 19362.9 20778.5 22826.3 23665.8 24934.7 27099.5 27968.8 ; 
-ltrac = lect 6 11 15 19 22 25 28 ; 
-lnoe = lect 80 90 100 125 150 175 200 225 250 275 300 325 350 400 450 500 550 600 700 800 900 ;
-lnoe = lnoe et (lect 10 * 1000) ;
+lf1 = prog 161.9695 445.5621 870.8862 1433.9836 2131.7929 2960.5079 3915.7908 4302.8402 4992.8617 6186.5983 7491.6322 8605.6845 8902.43920 10413.4 12019.0 12908.5 13713.6 15491.8 17211.4 17348.4 19278.3 21276.6 21514.3 23338.8 25460.3 25817.2 27644.6 29873.9 30120.5 32151.0 34423.6 34472.5 36835.1 38726.8 39235.8 41671.8 43030.2 44140.5 46639.5 47333.6 ;
+
+
+lf2 = prog 49166.6 51637.1 51719.5 54296.5 55940.8 56895.6 59515.2 60244.6 62153.8 64548.6 64809.8 67481.9 68852.7 70168.9 72869.5 73157. ;
+
+lf3 = prog 75582.8 77461.4 78307.7 81043.2 81766.1 83788.5 86070.9 86542.7 89305.1 90376. 92074.8 94681.3 94851.3 97633.9 ; 
+
+lf4 = prog 98986.8 100422. 103215. 103293. 106012. 107599. 108813. 111618. 111905. 114425. 116211. 117234. 120045. 120518. 122858. 124826. 125671. 128484. 129133. ;
+
+lfind = lf1 et lf2  et lf3 et lf4 ;
+
+ltrac = lect 8 12 16 19 23 26 29 31 34 37 40 42 45 48 50 53 56 58 61 63 66 68 71 74 76 79 81 84 86 ;
+** old (avec bloc depl p1) :
+* lfind = prog 111. 361. 751. 1281. 1946. 2151. 2744. 3671. 4722. 5892. 6454. 7177. 8571. 10069. 10757. 11666. 13287.2 15046.3 15060. 16885.2 18798.9 19362.9 20778.5 22826.3 23665.8 24934.7 27099.5 27968.8 ; 
+* ltrac = lect 6 11 15 19 22 25 28 ; 
+**
+* lnoe = lect 80 90 100 125 150 175 200 225 250 275 300 325 350 400 450 500 550 600 700 800 900 ;
+* lnoe = lnoe et (lect 10 * 1000) ;
+*
+lnoe = (lect (dime lfind) * 1000) ;
 * repsave = './data/stoia/' ;
 * opti 'FTRA' './fig/stoia/modes.ps';
 finsi ; 
 si (manchette) ;
-lfind = prog 109. 351. 721. 819. 1207. 1795. 2458. 2472. 3224. 4039. 4098. 4907. 5738. 5820. 6769. 7750. 8755. 9021. 9782. 10665. 10828. 11888. 12311. 12961. ;
-ltrac = lect 4 7 11 13 18 20 23 ; 
-lnoe = lect 100 150 200 225 250 275 300 325 350 375 400 425 450 475 500 550 600 650 700 800 900 1000 ;
+
+lf1 = prog 158.8819 432.1710 831.5880 1342.8100 1639.0475 1951.8575 2644.6332 3278.0991 3407.9641 ;
+lf2 = prog 4230.0731 4917.1588 5100.7487 6011.3129 6556.2306 6954.4829 7924.1893 8195.3186 8915.3877 9834.4268 9923.8825 ;
+lf3 = prog (0.109462E+05)  (0.114736E+05)  (0.119793E+05)  (0.130208E+05)  (0.131127E+05)  (0.140684E+05)  (0.147519E+05)  (0.151203E+05)  (0.161746E+05)  (0.163911E+05) ;
+lf4 = prog (0.172296E+05)  (0.180304E+05)  (0.182835E+05)  (0.193339E+05)  (0.196697E+05)  (0.203778E+05)  (0.213091E+05)  (0.214105E+05)  (0.224218E+05)  (0.229485E+05) ;  
+lf5 = prog (0.233757E+05)  (0.236646E+05)  (0.239309E+05)  (0.241171E+05)  (0.245469E+05)  (0.245880E+05)  (0.254321E+05)  (0.262275E+05)  (0.262804E+05)  (0.263599E+05) ; 
+lf6 = prog (0.272316E+05)  (0.273175E+05)  (0.278671E+05)  (0.282500E+05)  (0.283101E+05)  (0.293112E+05)  (0.293364E+05)  (0.295068E+05)  (0.303918E+05)  (0.304021E+05) ; 
+lf7 = prog (0.311465E+05)  (0.314719E+05)  (0.315149E+05)  (0.325735E+05)  (0.326440E+05)  (0.327863E+05)  (0.336950E+05)  (0.337841E+05)  (0.344262E+05)  (0.348361E+05) ; 
+lf8 = prog (0.349304E+05)  (0.359974E+05)  (0.360662E+05)  (0.360784E+05)  (0.371794E+05)  (0.372253E+05)  (0.377063E+05)  (0.383699E+05)  (0.383814E+05)  (0.393464E+05) (0.395131E+05)  (0.396004E+05)  (0.406581E+05) ;
+
+lfind = lf1 et lf2 et lf3 et lf4 et lf5 et lf6 et lf7 et lf8 ;
+
+ltrac = lect 5 8 11 14 17 19 22 25 27 30 32 35 37 40 46 48 53 58 61 66 69 73 77 80 ;
+
+** old (avec bloc depl p1) :
+* lfind = prog 109. 351. 721. 819. 1207. 1795. 2458. 2472. 3224. 4039. 4098. 4907. 5738. 5820. 6769. 7750. 8755. 9021. 9782. 10665. 10828. 11888. 12311. 12961. ;
+*ltrac = lect 4 7 11 13 18 20 23 ; 
+* lnoe = lect 100 150 200 225 250 275 300 325 350 375 400 425 450 475 500 550 600 650 700 800 900 1000 ;
+*
+lnoe = (lect (dime lfind) * 1000) ;
 * repsave = './data/manchette/' ;
 * opti 'FTRA' (chai './fig/manchette/modes.ps' );
 finsi ;
@@ -227,11 +271,11 @@ finsi ;
 nnoeuds = 60 ;
 si (NMODE_ELA > 0) ;
 lfind = extr lfind (lect 1 'PAS' 1 nmode_ela) ;
-nnoeuds = 2*(extr lnoe nmode_ela) ;
+nnoeuds = (extr lnoe nmode_ela) ;
 lindmode = lect (dime lfind)*1 ; 
 finsi ; 
 * nnoeuds = maxi (lect 500 nnoeuds) ;
-* nnoeuds = 1200 ;
+* nnoeuds = 1000 ;
 * Position du centre de gravite : manchette ou stoianovici : 
  LG = (h/2.) ;
 *
@@ -239,16 +283,16 @@ finsi ;
 *
 ***** Temporel:
 *# t :
-T = 0.02 ;
+T = 8.e-6 ;
 
 *# n :
 n = 6 ;
 
 *# dte :
-dte = 1.e-4 ;
+dte = 1.e-6 ;
 
 *# nsort :
-NSORT = 5 ;
+NSORT = 2 ;
 *
 NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
 tprog = prog 0. 'PAS' Dte 'NPAS' (NPASe + 1 ) ;
@@ -295,7 +339,6 @@ quat3 = 0. ;
 *# quat4 :
 quat4 = 0. ;
 
-* opti donn 5 ;
 * si reprise on ecrase theta_ini avec la fonction vect2quat :
 si (reprise) ;
   nquat = (sqrt ((quat1**2) + (quat2**2) + (quat3**2) + (quat4**2))) ;
@@ -501,10 +544,9 @@ mmanch = vmanch*rho_ac ;
 *                       Conditions limites 
 ****************************************************************************
 CL1 = BLOQ 'DEPL' P1;
-K = K et cl1 ; 
-*********************************************************************
-*                            CLs 
-*********************************************************************
+si (non trig) ;
+  k = k et cl1 ;
+finsi ;
 * On prend un point qui n appartient pas au plan (Oyz):
 CLRX = BLOQ 'RY' 'RZ' meshpou;
 CLRY = BLOQ 'RX' 'RZ' meshpou;
@@ -515,9 +557,17 @@ CLRZ = BLOQ 'RX' 'RY' meshpou;
 CLelaZ = BLOQ 'UZ' meshpou ;
 * modes dans le plan (Ozy) :
 CLelaX = BLOQ 'UX' meshpou ;
-KRX = K et CLRX ;
-KRY = K et CLRY ;
-KRZ = K et CLRZ ;
+*
+si (non trig) ;
+  KRX = K et CLRX ;
+  KRY = K et CLRY ;
+  KRZ = K et CLRZ ;
+finsi ;
+si trig ;
+  KRX = K et CLRX et cl1 ;
+  KRY = K et CLRY et cl1 ;
+  KRZ = K et CLRZ et cl1 ;
+finsi ;
 * KelaX = K ;
 * KelaY = K ;
 KelaZ = K et clelaZ ;
@@ -533,6 +583,7 @@ Tmode_RZ  = vibr 'IRAM' 0.5 1 KRZ M1 ;
 
 nsauvini = 0 ;
 si ((typmode ega 1) ou (typmode ega 3)) ;
+nsauvini = nmode_ela ;
 * On teste egalement en presence de modes elastiques:
 * Tmode_elaX = vibr 'IRAM' 20. nmode_ela KelaX M1 ;
 * Tmode_elaY = vibr 'IRAM' 20. nmode_ela KelaY M1 ;
@@ -540,11 +591,21 @@ tmode_elaz = vibr 'PROCHE' lfind lindmode kelaz m1 ;
 tmode_elax = vibr 'PROCHE' lfind lindmode kelax m1 ; 
 * 
 tmodela = tmode_elaz ;
-
-* Tmode_elaX = vibr 'IRAM' 20. 40 KelaX M1 ;
+*
+si (non ltronq) ;
+  numode = 1 ;
+  repe bord nmode_ela ;
+*   on renumerote :
+    tmodela . modes . &bord . 'NUMERO_MODE' = numode ; 
+*   incrementation de numode : 
+    numode = numode + 1 ;
+  fin bord ;
+finsi ;
+*
+* tmodela = vibr 'IRAM' 161. 150 kelaz M1 ;
 * opti trac x ;
-* postvibr tmode_elaX ; 
-* opti donn 5 ; 
+* postvibr tmodela ; 
+* opti donn 5 ;
 *
 si (ltronq) ;
 * mail1 = extr (TMODE_ELAX . modes . 1 . deformee_modale) 'MAIL' 'NOMU';
@@ -577,11 +638,10 @@ fin bmode ;
 nsauvini = (numode - 1) ;
 finsi ;
 
-* postvibr Tmode_elaz ;
-* postvibr Tmode_elax ;
-
 * opti trac x ;
-postvibr Tmodela ;
+* postvibr tmodela ; 
+* opti donn 5 ;
+
 * calcul des xmno : 
 * nmno = (enti (2. * (nmode_ela - ntronq))) ;
 * repe bmno nmno ;
@@ -903,7 +963,6 @@ tprog = TRESU . TEMPS_DE_SORTIE;
 *
 Nt = dime tprog;
 *
-* opti donn 5 ; 
 ************************************************************************
 *     					POST TRAITEMENT
 ************************************************************************
