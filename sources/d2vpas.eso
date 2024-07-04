@@ -514,13 +514,15 @@ CMS : on calcule pour ttes les ss bases, rots rigides ou non :
              wint(i2,1) = (xk(i2,1)*(q1(i2,1)**2))/2.d0
              edef(iib) = edef(iib) + (xk(i2,1)*(q1(i2,1)**2)/2.d0)
             endif
+*           si itrig, il y a des rotas rigides dans la ss base :
             if ((itrig(iib,in))) then
               tcin(iib) = tcin(iib) + 0.5*xm(i2,1)*(q2(i2,1)**2.d0)
             endif 
+*           si il n'y a pas de rotas rigides : tcin est remplie avec l'energie cinetique des modes elastiques :
+            if (iarota(iib).eq.0) then 
+              tcin(iib) = tcin(iib) + 0.5*xm(i2,1)*(q2(i2,1)**2.d0)
+            endif
           enddo
-          if (iarota(iib).eq.0) then 
-            tcin(iib) = tcin(iib) + 0.5*xm(i2,1)*(q2(i2,1)**2.d0)
-          endif
           if (lcb) then 
 *           energie potentielle magnetique :
             edef(iib) = edef(iib) - (- ((1.1+rot(3,3,1,ibad))**(-1.d0))
