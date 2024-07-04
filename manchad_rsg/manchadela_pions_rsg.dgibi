@@ -3063,7 +3063,6 @@ PI3 = TRESU . TRAVAIL_INTERIEUR . PTREP_RIG3;
 *
 EC1 = TRESU . TRAVAIL_EXTERIEUR . PTREP_RIG1 ;
 *
-*
 si (lraidtimo) ;
 W1_AD = TRESU . VITESSE . PTREP_RIG21;
 W2_AD = TRESU . VITESSE . PTREP_RIG22;
@@ -3244,38 +3243,41 @@ TSORT . 'Fext' = Fext * Fprog2 ;
 TSORT . 'vlimoden' = table ;
 TSORT . 'vlimoden' = prog (dime tprog)*vlimoden ;
 
-TSORT . 'WX'  = table ;
-TSORT . 'WY'  = table ;
-TSORT . 'WZ'  = table ;
-TSORT . 'AX'  = table ;
-TSORT . 'AY'  = table ;
-TSORT . 'AZ'  = table ;
-TSORT . 'PIX' = table ;
-TSORT . 'PIY' = table ;
-TSORT . 'PIZ' = table ;
-TSORT . 'EC'  = table ;
+TSORT . 'wx'  = table ;
+TSORT . 'wy'  = table ;
+TSORT . 'wz'  = table ;
+TSORT . 'ax'  = table ;
+TSORT . 'ay'  = table ;
+TSORT . 'az'  = table ;
+TSORT . 'pix' = table ;
+TSORT . 'piy' = table ;
+TSORT . 'piz' = table ;
+TSORT . 'ec'  = table ;
 TSORT . 'edef'  = table ;
 
-TSORT . 'WX'  = W1 ;
-TSORT . 'WY'  = W2 ;
-TSORT . 'WZ'  = W3 ;
-TSORT . 'AX'  = A1 ;
-TSORT . 'AY'  = A2 ;
-TSORT . 'AZ'  = A3 ;
-TSORT . 'EC'  = EC1 ;
-TSORT . 'PIX' = PI1 ;
-TSORT . 'PIY' = PI2 ;
-TSORT . 'PIZ' = PI3 ;
+TSORT . 'wx'  = w1 ;
+TSORT . 'wy'  = w2 ;
+TSORT . 'wz'  = w3 ;
+TSORT . 'ax'  = a1 ;
+TSORT . 'ay'  = a2 ;
+TSORT . 'az'  = a3 ;
+TSORT . 'ec'  = ec1 ;
+TSORT . 'pix' = pi1 ;
+TSORT . 'piy' = pi2 ;
+TSORT . 'piz' = pi3 ;
 TSORT . 'edef'  = tresu . travail_exterieur . ptrep_rig2 ;
+* energie totale manchette :
+tsort . 'et' = (tresu . travail_exterieur . ptrep_rig1) + (tresu . travail_exterieur . ptrep_rig2) ;
+
 * pour les ss bases ss rotas tigides :
 *   l'energie cinetique est stockee dans le premier mode dans travail_exterieur.
-*   l'energie de deformation est stockee dans le premier mode dans travail_interieur.
+*   l'energie de deformation est stockee dans le premier mode dans travail_interieur. --> plus maintenant !!
 *       (cf. rkpas)
 ptrepad1 = tmode_ad . modes . 1 . point_repere ;
 tsort . 'ecad' = table ;
 tsort . 'edefad' = table ;
-tsort . 'ecad' = TRESU . TRAVAIL_EXTERIEUR . ptrepad1 ;
-tsort . 'edefad' = TRESU . TRAVAIL_INTERIEUR . ptrepad1 ;
+tsort . 'ecad' = TRESU . travail_exterieur . ptrepad1 ;
+tsort . 'edefad' = TRESU . travail_exterieur . ptrepad1 ;
 
 * sauvegarde du quaternion :
 tsort . 'quat1' = table ; 
@@ -3473,27 +3475,28 @@ si (ltrans) ;
 finsi ;
 
 si (lraidtimo) ;
-  TSORT . 'WX_AD'  = table ;
-  TSORT . 'WY_AD'  = table ;
-  TSORT . 'WZ_AD'  = table ;
-  TSORT . 'AX_AD'  = table ;
-  TSORT . 'AY_AD'  = table ;
-  TSORT . 'AZ_AD'  = table ;
-  TSORT . 'PIX_AD' = table ;
-  TSORT . 'PIY_AD' = table ;
-  TSORT . 'PIZ_AD' = table ;
-  TSORT . 'EC_AD'  = table ;
 
-  TSORT . 'WX_AD'  = W1_AD ;
-  TSORT . 'WY_AD'  = W2_AD ;
-  TSORT . 'WZ_AD'  = W3_AD ;
-  TSORT . 'AX_AD'  = A1_AD ;
-  TSORT . 'AY_AD'  = A2_AD ;
-  TSORT . 'AZ_AD'  = A3_AD ;
-  TSORT . 'PIX_AD' = PI1_AD ;
-  TSORT . 'PIY_AD' = PI2_AD ;
-  TSORT . 'PIZ_AD' = PI3_AD ;
-  TSORT . 'EC_AD'  = EC1_AD ;
+  TSORT . 'wx_ad'  = table ;
+  TSORT . 'wy_ad'  = table ;
+  TSORT . 'wz_ad'  = table ;
+  TSORT . 'ax_ad'  = table ;
+  TSORT . 'ay_ad'  = table ;
+  TSORT . 'az_ad'  = table ;
+  TSORT . 'pix_ad' = table ;
+  TSORT . 'piy_ad' = table ;
+  TSORT . 'piz_ad' = table ;
+  TSORT . 'ec_ad'  = table ;
+  TSORT . 'wx_ad'  = w1_ad ;
+  TSORT . 'wy_ad'  = w2_ad ;
+  TSORT . 'wz_ad'  = w3_ad ;
+  TSORT . 'ax_ad'  = a1_ad ;
+  TSORT . 'ay_ad'  = a2_ad ;
+  TSORT . 'az_ad'  = a3_ad ;
+  TSORT . 'pix_ad' = pi1_ad ;
+  TSORT . 'piy_ad' = pi2_ad ;
+  TSORT . 'piz_ad' = pi3_ad ;
+  TSORT . 'ec_ad'  = ec1_ad ;
+
   ncolexce = ncolexce + 10 ;
 sinon ;
 * sauvegarde des coord modales :

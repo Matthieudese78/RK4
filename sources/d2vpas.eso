@@ -409,6 +409,7 @@ cms    si on veut une resistance au spin, on rajoute
        endif
        DO 8 IIB=1,NSB
 CMS :     Rotas rigides ssi il y a une grande rota ds la ss base en question !!
+          TCIN(IIB) = 0.D0
           IF (IAROTA(IIB).EQ.0) GOTO 8
 *         Calcul second membre avant prod � gauche par (J^-1)*exp(-dtheta)* :
           DO I=1,3
@@ -459,7 +460,6 @@ cmsw            WRITE(*,*)'         base IIB = ',IIB
 cmsw            WRITE(*,*)'D2VPAS : rota PICIN = ',PICIN(IIB,I)
           ENDDO
 ***       Calcul de l energie cinetique en rotation : 
-          TCIN(IIB) = 0.D0
           DO I=1,3
             DYN2(I) = 0.D0
             DO J=1,3
@@ -500,25 +500,27 @@ c           Q3(I,1) = (FTOTA(I,1)-FAMOR(I)) / (XM(I,1) - FINERT(I,1))
           Q2(I,1) = Q2(I,2) + (Q3(I,2) + Q3(I,1))*DT2
  51     CONTINUE
       ENDIF
-* On rajoute l energie cinetique de translation à l energie cinetique de rotation :
-      IF (RIGIDE) THEN
-CMS : one ne profite pour recompter les modes elastiques non translation rigide :
+* calcul des energies :
+CMS : on calcule pour ttes les ss bases, rots rigides ou non : 
+*      IF (RIGIDE) THEN
         DO 9 IIB=1,NSB
-CMS :     pour l'energie de deformation, on a calule pour ttes les ss bases, rots rigides ou non : 
           edef(iib) = 0.d0
           na3  = inmsb(iib)
           ina1 = iorsb(iib) - 1
           do in=1,na3
             i2 = in + ina1
             if (.not.itrig(iib,in)) then
-             edef(iib) = edef(iib) + (xk(i2,1)*(q1(i2,1)**2)/2.d0)
-             wint(i2,1) = (xk(i2,1)*(q1(i2,1)**2))/2.d0
              wext(i2,1) = (xm(i2,1)*(q2(i2,1)**2))/2.d0
+             wint(i2,1) = (xk(i2,1)*(q1(i2,1)**2))/2.d0
+             edef(iib) = edef(iib) + (xk(i2,1)*(q1(i2,1)**2)/2.d0)
             endif
             if ((itrig(iib,in))) then
               tcin(iib) = tcin(iib) + 0.5*xm(i2,1)*(q2(i2,1)**2.d0)
             endif 
           enddo
+          if (iarota(iib).eq.0) then 
+            tcin(iib) = tcin(iib) + 0.5*xm(i2,1)*(q2(i2,1)**2.d0)
+          endif
           if (lcb) then 
 *           energie potentielle magnetique :
             edef(iib) = edef(iib) - (- ((1.1+rot(3,3,1,ibad))**(-1.d0))
@@ -526,7 +528,7 @@ CMS :     pour l'energie de deformation, on a calule pour ttes les ss bases, rot
           endif
 *          if (iarota(iib).eq.0) goto 9
  9      CONTINUE
-      ENDIF
+*      ENDIF
 ************************************************************************
 *     calcul des travaux + decalage pour pas suivant
 ************************************************************************
