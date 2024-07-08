@@ -9,6 +9,12 @@ opti 'EPTR' 5 ;
 *# reprise :
 reprise = faux ;
 
+*# sw :
+sw = vrai ;
+
+*# rk4 :
+rk4 = faux ;
+
 **************************************************************
 *                   REPERE :
 **************************************************************
@@ -25,13 +31,13 @@ ez = (-1.) 0. 0. ;
 *                   Temps :
 **************************************************************
 *# lbloq :
-lbloq = vrai ;
+lbloq = faux ;
 
 *# ttot :
-ttot = 128. ;
+ttot = 4. ;
 
 *# t :
-T = 128. ;
+T = 1.e-2 ;
 
 *# phase :
 phase = 0. ;
@@ -67,7 +73,7 @@ finsi ;
 *         adaptateur rigide ou raidtimo ?
 **************************************************************
 * le cone est il fixe ?
-lconefixe = faux ;
+lconefixe = vrai ;
 * adaptateur : modele elastique ou modele FE ?
 lraidtimo = faux ;
 * liaison cercle-cone ?
@@ -107,7 +113,7 @@ lhautbas = faux ;
 lplam = faux ;
 * seulement 1 point cercle pour les pions haut et bas ?
 *# lpcirc :
-lpcirc = vrai ;
+lpcirc = faux ;
 *# blqry :
 blqry = faux ;
 
@@ -175,6 +181,13 @@ finsi ;
 *
 opti 'FTRA' (chai 'fig/'script'.ps');
 *
+si (rk4) ;
+script = (chai script'_rk4') ;
+finsi ;
+
+si (sw) ;
+script = (chai script'_sw') ;
+finsi ;
 ****************************************************************************
 *                       CHARGEMENT 
 ****************************************************************************
@@ -1819,8 +1832,10 @@ finsi ;
 XCMAJ = 0. ;
 YCMAJ = 0. ;
 ZCMAJ = 4.68000E-02 ;
-*
-LRSG = faux ; 
+
+*# lrsg :
+LRSG = vrai ; 
+
 SI LRSG ; 
 * Rq : CAS TEST RSG incline :
 *  WZini = 1 rad/s --> VYini = - R_tete*WZini
@@ -2172,27 +2187,37 @@ CHA1_AD = CHAR 'FORC' FEX1_AD evol0 ;
 *************
 * SINUS :
 *************
+si ((lsin) ou (lsinb)) ;
 * Freq = 8.6574 ; 
-FEX2   = FORC 'FZ' Fext GTOT_AD_BR ;
-FEX2_P = PJBA FEX2 TMODE_AD ;
-si (lbloq) ;
-  FEX2_p = PJBA FEX2 TMODE ;
+  FEX2   = FORC 'FZ' Fext GTOT_AD_BR ;
+  FEX2_P = PJBA FEX2 TMODE_AD ;
+  si (lbloq) ;
+    FEX2_p = PJBA FEX2 TMODE ;
+  finsi ;
+  evol2 = evol 'ROSE' 'MANU' 't' tprog 'F' Fprog2 ;
+  CHA2_P = CHAR 'FORC' FEX2_P evol2 ;   
+  CHA2 = CHAR 'FORC' FEX2 evol2 ;
 finsi ;
-evol2 = evol 'ROSE' 'MANU' 't' tprog 'F' Fprog2 ;
-CHA2_P = CHAR 'FORC' FEX2_P evol2 ;   
-CHA2 = CHAR 'FORC' FEX2 evol2 ;
 
 **** TCHAR :
 TCHAR = TABL 'CHARGEMENT';
 TCHAR .'BASE_B' = TABLE ;  
 * TCHAR .'BASE_B' = CHA1 et cha1_ad  ;
-TCHAR .'BASE_B' = CHA1 et cha1_ad et cha2 ;
+si ((lsin) ou (lsinb)) ;
+  TCHAR .'BASE_B' = CHA1 et cha1_ad et cha2 ;
+sinon ;
+  TCHAR .'BASE_B' = CHA1 et cha1_ad ;
+finsi ;
 
 * Base A: pour la chute libre (FEXB n'est pas introduit dans le calcul de FTOTA, contrairement aux forces de liasons qui sont projetees dasn devpro)
 *   On doit definir le poids en base 1 sans quoi le solide ne chute pas :
 TCHAR .'BASE_A' = TABLE ;  
 * TCHAR .'BASE_A' = CHA1_P et cha1_ad_p ;  
-TCHAR .'BASE_A' = CHA1_P et cha1_ad_p et cha2_p ;  
+si ((lsin) ou (lsinb)) ;
+  TCHAR .'BASE_A' = CHA1_P et cha1_ad_p et cha2_p ;  
+sinon ;
+  TCHAR .'BASE_B' = CHA1_p et cha1_ad_p ;
+finsi ;
 
 ****************************************************************************   
 *              LIAISONS 
@@ -2636,10 +2661,24 @@ finsi ;
 
 si (non lbloq) ;
 
+  si (rk4) ;
+
   si (lamode)  ;
   TRESU = DYNE 'RKMK4' TMODE_TOT TCHAR TLIAI Tamor TINI TSORT NPASe DTe NSORT;
   sinon ;
   TRESU = DYNE 'RKMK4' TMODE_TOT TCHAR TLIAI TINI TSORT NPASe DTe NSORT;
+  finsi ;
+
+  finsi ;
+
+  si (sw)  ;
+
+  si (lamode)  ;
+  TRESU = DYNE 'DIFFERENCES_CENTREES' TMODE_TOT TCHAR TLIAI Tamor TINI TSORT NPASe DTe NSORT;
+  sinon ;
+  TRESU = DYNE 'DIFFERENCES_CENTREES' TMODE_TOT TCHAR TLIAI TINI TSORT NPASe DTe NSORT;
+  finsi ;
+
   finsi ;
 
 finsi ;
@@ -2766,10 +2805,11 @@ TSORT = 'TABL' ;
 TSORT . 't'  = TABLE ; 
 TSORT . 't'  = tprog ; 
 ncolexce = ncolexce + 1 ;
-
-TSORT . 'Fext' = table ;
-TSORT . 'Fext' = Fext * Fprog2 ;
-ncolexce = ncolexce + 1 ;
+si (lsinb ou lsin) ;
+  TSORT . 'Fext' = table ;
+  TSORT . 'Fext' = Fext * Fprog2 ;
+  ncolexce = ncolexce + 1 ;
+finsi ;
 
 * centre du cercle manchette :
 TSORT . 'uxp2'  = TABLE ; 
@@ -3212,6 +3252,7 @@ si reprise ;
 sinon ;
   TSORT . 't' = tprog ;
 finsi ;
+ncolexce = ncolexce + 1 ;
 
 TSORT . 'slice' = table ;
 TSORT . 'slice' = (lect (dime tprog)*slice) ;
@@ -3227,6 +3268,7 @@ TSORT . 'nmode' = lect (dime tprog)*nmode ;
 
 TSORT . 'nmode_ad' = table ;
 TSORT . 'nmode_ad' = lect (dime tprog)*nmode_ad ;
+ncolexce = ncolexce + 4 ;
 
 TSORT . 'nsauvini' = table ;
 TSORT . 'nsauvini' = lect (dime tprog)*nsauvini ;
@@ -3237,11 +3279,16 @@ TSORT . 'spinini' = prog (dime tprog)*spinini ;
 TSORT . 'Fext0' = table ;
 TSORT . 'Fext0' = prog (dime tprog)*Fext ;
 
-TSORT . 'Fext' = table ;
-TSORT . 'Fext' = Fext * Fprog2 ;
+ncolexce = ncolexce + 3 ;
+
+* si (lsinb ou lsin) ;
+*   TSORT . 'Fext' = table ;
+*   TSORT . 'Fext' = Fext * Fprog2 ;
+* finsi ;
 
 TSORT . 'vlimoden' = table ;
 TSORT . 'vlimoden' = prog (dime tprog)*vlimoden ;
+ncolexce = ncolexce + 1 ;
 
 TSORT . 'wx'  = table ;
 TSORT . 'wy'  = table ;
@@ -3254,6 +3301,7 @@ TSORT . 'piy' = table ;
 TSORT . 'piz' = table ;
 TSORT . 'ec'  = table ;
 TSORT . 'edef'  = table ;
+TSORT . 'et'  = table ;
 
 TSORT . 'wx'  = w1 ;
 TSORT . 'wy'  = w2 ;
@@ -3266,20 +3314,27 @@ TSORT . 'pix' = pi1 ;
 TSORT . 'piy' = pi2 ;
 TSORT . 'piz' = pi3 ;
 TSORT . 'edef'  = tresu . travail_exterieur . ptrep_rig2 ;
+
 * energie totale manchette :
 tsort . 'et' = (tresu . travail_exterieur . ptrep_rig1) + (tresu . travail_exterieur . ptrep_rig2) ;
 
+ncolexce = ncolexce + 12 ;
+
+si (non lconefixe) ;
 * pour les ss bases ss rotas tigides :
 *   l'energie cinetique est stockee dans le premier mode dans travail_exterieur.
 *   l'energie de deformation est stockee dans le premier mode dans travail_interieur. --> plus maintenant !!
 *       (cf. rkpas)
-ptrepad1 = tmode_ad . modes . 1 . point_repere ;
-tsort . 'ecad' = table ;
-tsort . 'edefad' = table ;
-tsort . 'ecad' = TRESU . travail_exterieur . ptrepad1 ;
-tsort . 'edefad' = TRESU . travail_exterieur . ptrepad1 ;
+  ptrepad1 = tmode_ad . modes . 1 . point_repere ;
+  tsort . 'ecad'   = table ;
+  tsort . 'edefad' = table ;
+  tsort . 'ecad'   = TRESU . travail_exterieur . ptrepad1 ;
+  tsort . 'edefad' = TRESU . travail_exterieur . ptrepad2 ;
+*
+  ncolexce = ncolexce + 2 ;
+finsi ;
 
-* sauvegarde du quaternion :
+* sauvegarde du quaternion manchette :
 tsort . 'quat1' = table ; 
 tsort . 'quat2' = table ; 
 tsort . 'quat3' = table ; 
@@ -3289,7 +3344,7 @@ TSORT . 'quat2' = tresu . 'DEPLACEMENT' . ptrep_rig2 ;
 TSORT . 'quat3' = tresu . 'DEPLACEMENT' . ptrep_rig3 ; 
 TSORT . 'quat4' = tresu . 'DEPLACEMENT' . ptrep_rig4 ; 
 
-ncolexce = 28 ;
+ncolexce = ncolexce + 4 ;
 
 * sauvegarde des coord modales :
 repe bsauvq (nsauvini) ;
@@ -3297,10 +3352,11 @@ repe bsauvq (nsauvini) ;
   tsort . (chai 'q'&bsauvq)    = table ; 
   tsort . (chai 'q'&bsauvq'v') = table ;
   tsort . (chai 'q'&bsauvq'a') = table ;
-  tsort . (chai 'q'&bsauvq) = tresu . deplacement . ptrpi ; 
+  tsort . (chai 'q'&bsauvq)    = tresu . deplacement . ptrpi ; 
   tsort . (chai 'q'&bsauvq'v') = tresu . vitesse . ptrpi ; 
   tsort . (chai 'q'&bsauvq'a') = tresu . acceleration . ptrpi ; 
   ncolexce = ncolexce + 3 ;
+* energies modes elastiques : pas necessaire pour l'instant
 fin bsauvq ;
 * sauvegarde des coord modales --> translation :
 tsort . 'qtx' = table ;
@@ -3650,6 +3706,7 @@ SI (lpcirc) ;
 *
   ncolexce = ncolexce + 18 ;
 FINSI ; 
+
 ****************************************************************************
 *
 rep_sauv = './data/' ;
