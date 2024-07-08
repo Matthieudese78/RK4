@@ -115,7 +115,7 @@
       LOGICAL L0,L1,REPRIS,RIGIDE,linert
       CHARACTER*8 TYPRET
 *
-      linert = .true.
+      linert = .false.
       RIGIDE = KTROT.NE.0
       IF (RIGIDE) THEN
         MTROT = KTROT

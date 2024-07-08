@@ -258,7 +258,7 @@ c       +travail interieur
               ENDDO
             ENDIF
          ENDIF
-
+*
       ENDIF
       
 c    +liaisons_A
