@@ -3268,7 +3268,8 @@ TSORT . 'nmode' = lect (dime tprog)*nmode ;
 
 TSORT . 'nmode_ad' = table ;
 TSORT . 'nmode_ad' = lect (dime tprog)*nmode_ad ;
-ncolexce = ncolexce + 4 ;
+
+ncolexce = ncolexce + 5 ;
 
 TSORT . 'nsauvini' = table ;
 TSORT . 'nsauvini' = lect (dime tprog)*nsauvini ;
@@ -3290,31 +3291,30 @@ TSORT . 'vlimoden' = table ;
 TSORT . 'vlimoden' = prog (dime tprog)*vlimoden ;
 ncolexce = ncolexce + 1 ;
 
-TSORT . 'wx'  = table ;
-TSORT . 'wy'  = table ;
-TSORT . 'wz'  = table ;
-TSORT . 'ax'  = table ;
-TSORT . 'ay'  = table ;
-TSORT . 'az'  = table ;
-TSORT . 'pix' = table ;
-TSORT . 'piy' = table ;
-TSORT . 'piz' = table ;
+TSORT . 'WX'  = table ;
+TSORT . 'WY'  = table ;
+TSORT . 'WZ'  = table ;
+TSORT . 'AX'  = table ;
+TSORT . 'AY'  = table ;
+TSORT . 'AZ'  = table ;
+TSORT . 'PIX' = table ;
+TSORT . 'PIY' = table ;
+TSORT . 'PIZ' = table ;
 TSORT . 'ec'  = table ;
 TSORT . 'edef'  = table ;
 TSORT . 'et'  = table ;
 
-TSORT . 'wx'  = w1 ;
-TSORT . 'wy'  = w2 ;
-TSORT . 'wz'  = w3 ;
-TSORT . 'ax'  = a1 ;
-TSORT . 'ay'  = a2 ;
-TSORT . 'az'  = a3 ;
-TSORT . 'ec'  = ec1 ;
-TSORT . 'pix' = pi1 ;
-TSORT . 'piy' = pi2 ;
-TSORT . 'piz' = pi3 ;
+TSORT . 'WX'  = W1 ;
+TSORT . 'WY'  = W2 ;
+TSORT . 'WZ'  = W3 ;
+TSORT . 'AX'  = A1 ;
+TSORT . 'AY'  = A2 ;
+TSORT . 'AZ'  = A3 ;
+TSORT . 'PIX' = PI1 ;
+TSORT . 'PIY' = PI2 ;
+TSORT . 'PIZ' = PI3 ;
+TSORT . 'ec'  = EC1 ;
 TSORT . 'edef'  = tresu . travail_exterieur . ptrep_rig2 ;
-
 * energie totale manchette :
 tsort . 'et' = (tresu . travail_exterieur . ptrep_rig1) + (tresu . travail_exterieur . ptrep_rig2) ;
 
@@ -3531,28 +3531,27 @@ si (ltrans) ;
 finsi ;
 
 si (lraidtimo) ;
+  TSORT . 'WX_AD'  = table ;
+  TSORT . 'WY_AD'  = table ;
+  TSORT . 'WZ_AD'  = table ;
+  TSORT . 'AX_AD'  = table ;
+  TSORT . 'AY_AD'  = table ;
+  TSORT . 'AZ_AD'  = table ;
+  TSORT . 'PIX_AD' = table ;
+  TSORT . 'PIY_AD' = table ;
+  TSORT . 'PIZ_AD' = table ;
+  TSORT . 'EC_AD'  = table ;
 
-  TSORT . 'wx_ad'  = table ;
-  TSORT . 'wy_ad'  = table ;
-  TSORT . 'wz_ad'  = table ;
-  TSORT . 'ax_ad'  = table ;
-  TSORT . 'ay_ad'  = table ;
-  TSORT . 'az_ad'  = table ;
-  TSORT . 'pix_ad' = table ;
-  TSORT . 'piy_ad' = table ;
-  TSORT . 'piz_ad' = table ;
-  TSORT . 'ec_ad'  = table ;
-  TSORT . 'wx_ad'  = w1_ad ;
-  TSORT . 'wy_ad'  = w2_ad ;
-  TSORT . 'wz_ad'  = w3_ad ;
-  TSORT . 'ax_ad'  = a1_ad ;
-  TSORT . 'ay_ad'  = a2_ad ;
-  TSORT . 'az_ad'  = a3_ad ;
-  TSORT . 'pix_ad' = pi1_ad ;
-  TSORT . 'piy_ad' = pi2_ad ;
-  TSORT . 'piz_ad' = pi3_ad ;
-  TSORT . 'ec_ad'  = ec1_ad ;
-
+  TSORT . 'WX_AD'  = W1_AD ;
+  TSORT . 'WY_AD'  = W2_AD ;
+  TSORT . 'WZ_AD'  = W3_AD ;
+  TSORT . 'AX_AD'  = A1_AD ;
+  TSORT . 'AY_AD'  = A2_AD ;
+  TSORT . 'AZ_AD'  = A3_AD ;
+  TSORT . 'PIX_AD' = PI1_AD ;
+  TSORT . 'PIY_AD' = PI2_AD ;
+  TSORT . 'PIZ_AD' = PI3_AD ;
+  TSORT . 'EC_AD'  = EC1_AD ;
   ncolexce = ncolexce + 10 ;
 sinon ;
 * sauvegarde des coord modales :

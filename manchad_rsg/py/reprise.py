@@ -26,10 +26,10 @@ repcast = f'../../build/'
 if (lraidtimo=="vrai"):
     repcast = f'../../cast_raidtimo/'
 #%%
-lstdout = False
+lstdout = True
 #%% nombre de slices :
 nslice = 4
-ttot = 4.
+ttot = 4.e-2
 slicevtk = nslice
 #%% parametres du calcul 
 
@@ -53,7 +53,7 @@ mu = 0.6
 xi = 0.05
 f1 = 2.
 f2 = 20.
-t = 2.
+t = 1.e-2
 lexp  = "faux" 
 raidiss = "vrai" 
 lbloq  = "faux" 
@@ -208,7 +208,7 @@ dictini = {
   #          f2 : 
              'f2' : f2,
   #          t : 
-             't' : 0.1,
+             't' : t,
   #          dte : 
              'dte' : dte,
   #          nsort : 
@@ -306,7 +306,7 @@ for colname, colvalue in dfini.iteritems():
     # Find and replace the line with the updated value
     for i in range(len(lines)):
         if lines[i].strip() == tag:
-            print(f"line : {lines[i].strip()}")
+            # print(f"line : {lines[i].strip()}")
             lines[i + 1] = f'{replacement}\n'
             break
 
@@ -388,7 +388,7 @@ print(f"    files copied")
 #  lecture du dataframe :
 df = pd.read_pickle(f"{repload}{scriptload}")
 df.sort_values(by='t',inplace=True)
-#  trnasfo quaternion to vecteur de rotation : 
+#  transfo quaternion to vecteur de rotation : 
 q = np.array([df['quat1'].iloc[-1],df['quat2'].iloc[-1],df['quat3'].iloc[-1],df['quat4'].iloc[-1]])
 vect = rotation.quat2vect2(q)
 if (lraidtimo=="vrai"):
@@ -406,6 +406,8 @@ dict_rep = {
              't' : t,
   #          reprise : 
              'reprise' : "vrai",
+  #          lrsg : 
+             'lrsg' : "faux",
   #          lsin : 
              'lsin' : lsin,
   #          lsinb : 
@@ -454,7 +456,8 @@ dict_rep = {
   #          nmode_ad : 
              'nmode_ad' : df['nmode_ad'].drop_duplicates().values[0],
   #          instant reprise : ici a 0 , le chargement commence.
-             'trep' : 0.,
+            #  'trep' : 0.,
+             'trep' : df['t'].iloc[-1],
   #          amplitude F sinus ou sinus balaye : 
              'Fext' : Fext,  
   #          vlimoden 
@@ -636,7 +639,7 @@ for slice in range(2,nslice+1):
     #          reprise : 
                'reprise' : "vrai",
     #          lrsg : 
-               'lrsg' : "vrai",
+               'lrsg' : "faux",
     #          sw : 
                'sw' : sw,
     #          rk4 : 
@@ -837,19 +840,19 @@ for vtu, pvd in zip(vtu_files,pvd_files):
     shutil.copy(pvd,repvtk)
 print(f"vtk last slice saved")
 
-#%%########################## MV SLICE 0
-# deplacement du calcul 0 :
-#############################
-rep0 = f'{repglob}pickle/slice_0/'
-if not os.path.exists(rep0):
-    os.makedirs(rep0)
-    print(f"FOLDER : {rep0} created.")
-else:
-    print(f"FOLDER : {rep0} already exists.")
-calc0 = f"{repglob}pickle/{rawname}_0.pickle"
+# #%%########################## MV SLICE 0
+# # deplacement du calcul 0 :
+# #############################
+# rep0 = f'{repglob}pickle/slice_0/'
+# if not os.path.exists(rep0):
+#     os.makedirs(rep0)
+#     print(f"FOLDER : {rep0} created.")
+# else:
+#     print(f"FOLDER : {rep0} already exists.")
+# calc0 = f"{repglob}pickle/{rawname}_0.pickle"
 
-shutil.move(calc0,f"{rep0}result.pickle")
-print(f"slice 0 moved to {rep0}")
+# shutil.move(calc0,f"{rep0}result.pickle")
+# print(f"slice 0 moved to {rep0}")
 
 #%%######################################### CLEAN
 # menage :
