@@ -28,12 +28,12 @@ if (lraidtimo=="vrai"):
 #%%
 lstdout = True
 #%% nombre de slices :
-nslice = 4
-ttot = 4.e-2
+nslice = 9
+ttot = 10.
 slicevtk = nslice
 #%% parametres du calcul 
 
-linert = False
+linert = True
 if linert:
     repcast = f'../../cinert/'
 
@@ -41,9 +41,9 @@ lrsg = "vrai"
 
 lconefixe = "vrai"
 
-sw = "vrai"
+sw = "faux"
 
-rk4 = "faux"
+rk4 = "vrai"
 
 # raideur de choc de l'experience basee sur le temps de choc :
 lkxp = "faux"
@@ -53,7 +53,7 @@ mu = 0.6
 xi = 0.05
 f1 = 2.
 f2 = 20.
-t = 1.e-2
+t = 0.5
 lexp  = "faux" 
 raidiss = "vrai" 
 lbloq  = "faux" 
@@ -62,12 +62,12 @@ blqry = "faux"
 dte = 1.e-6
 # dte = 5.e-6
 # nsort = 16
-nsort = 10
+nsort = 5000
 # 3 modes de flexion :
 nmode = 3
 n_tronq = 0
 nmode_ad = 6
-Fext = 2.*79.44
+Fext = 0.
 # Fext = 137. * np.sqrt(2.)
     # pour b_lam = 6.5 :
 # Fext = 0.72*(2.*79.44)
@@ -77,12 +77,12 @@ Fext = 2.*79.44
 fefin = 5.
 vlimoden = 1.e-5
 # amortissement modal :
-lamode = "vrai"
+lamode = "faux"
 amode_m = 0.02
 amode_ad = 0.02
 # amortissement ccone :
-# amo_ccone = 5.*3.4
-amo_ccone = 3.4
+amo_ccone = 5.*3.4
+# amo_ccone = 3.4
 # rappel : on a aussi remis thlim a 10^-5 dans devfb10.
 # amo_ccone = 3.4
 # on donne les 1ers angles en degres !
@@ -199,7 +199,7 @@ dictini = {
   #          xi : 
              'xi' : xi,
   #          lamode : 
-             'lamode' : "vrai",
+             'lamode' : lamode,
   #          amode : 
              'amode_ad' : amode_ad,
              'amode_m' :  amode_m,
@@ -219,7 +219,7 @@ dictini = {
              'n_tronq' : n_tronq,
   #          nmode_ad : 
              'nmode_ad' : nmode_ad,
-  #          amplitude F sinus : 
+  #          spin initial : 
              'spinini' : spinini,
   #          amplitude F sinus : 
              'Fext' : 0.,

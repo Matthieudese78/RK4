@@ -1840,7 +1840,7 @@ SI LRSG ;
 * Rq : CAS TEST RSG incline :
 *  WZini = 1 rad/s --> VYini = - R_tete*WZini
 *       --> repere Cast3m : 
-  w_ini = 2.*PI ; 
+  w_ini = 3.*PI ; 
 * w_ini = PI ; 
 *   EZ = - ex repere Cast3m :
   WXini = (-1.)*w_ini ;
@@ -3320,19 +3320,17 @@ tsort . 'et' = (tresu . travail_exterieur . ptrep_rig1) + (tresu . travail_exter
 
 ncolexce = ncolexce + 12 ;
 
-si (non lconefixe) ;
 * pour les ss bases ss rotas tigides :
 *   l'energie cinetique est stockee dans le premier mode dans travail_exterieur.
 *   l'energie de deformation est stockee dans le premier mode dans travail_interieur. --> plus maintenant !!
 *       (cf. rkpas)
-  ptrepad1 = tmode_ad . modes . 1 . point_repere ;
-  tsort . 'ecad'   = table ;
-  tsort . 'edefad' = table ;
-  tsort . 'ecad'   = TRESU . travail_exterieur . ptrepad1 ;
-  tsort . 'edefad' = TRESU . travail_exterieur . ptrepad2 ;
+ptrepad1 = tmode_ad . modes . 1 . point_repere ;
+tsort . 'ecad'   = table ;
+tsort . 'edefad' = table ;
+tsort . 'ecad'   = TRESU . travail_exterieur . ptrepad1 ;
+tsort . 'edefad' = TRESU . travail_exterieur . ptrepad2 ;
 *
-  ncolexce = ncolexce + 2 ;
-finsi ;
+ncolexce = ncolexce + 2 ;
 
 * sauvegarde du quaternion manchette :
 tsort . 'quat1' = table ; 
