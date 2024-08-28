@@ -1,19 +1,21 @@
 #!/bin/python3
 #%%
 import numpy as np
-import numpy.linalg as LA
+# import numpy.linalg as LA
 import pandas as pd
-import trajectories as traj
-import rotation as rota
-import repchange as rc
+# import trajectories as traj
+# import rotation as rota
+# import repchange as rc
 import os
 #
-import matplotlib as mpl
+# import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+from matplotlib.ticker import MaxNLocator
+# import matplotlib.patches as patches
 from matplotlib import ticker
-from mpl_toolkits.mplot3d import Axes3D
-import tikzplotlib as tikz
+# from mpl_toolkits.mplot3d import Axes3D
+# import tikzplotlib as tikz
+
 
 #%% usefull parameters :
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
@@ -57,7 +59,7 @@ defkwargs = {
     "spinz" : 0. 
 }
 # %% Scripts :
-icas1 = 4
+icas1 = 5
 lialgo = [1,2,3]
 #%%
 if (icas1==1):
@@ -129,7 +131,7 @@ if not os.path.exists(repsect1):
     print(f"FOLDER : {repsect1} created.")
 else:
     print(f"FOLDER : {repsect1} already exists.")
-#
+#%%
 kwargs1 = {
     "tile1": f"{script1} ctime = f(n), for all algos" + "\n",
     "tile_save": "ctime_log2",
@@ -138,10 +140,10 @@ kwargs1 = {
     "coly": "ctime",
     "rep_save": repsect1,
     "label1": ["SW","NMB","RK4"],
-    "labelx": r"$\log_2(h)$",
+    "labelx": r"$\log_2(h^{-1})$",
     "labely": "Computation time (ms)",
     "color1": color1,
-    "msize": 8,
+    "msize": 50,
     "loc_leg": "lower right",
 }
 
@@ -177,10 +179,14 @@ else:
     y_data = df[ind][coly]
 # plt.xscale('log',base=2)
 
+# x-axis formatting :
 formatter = ticker.ScalarFormatter(useMathText=True)
 formatter.set_scientific(True)
 formatter.set_powerlimits((-2, 2))
 axes.xaxis.set_major_formatter(formatter)
+# en fait x axis en integer :
+axes.xaxis.set_major_locator(MaxNLocator(integer=True))
+# y-axis formatting :
 formatter = ticker.ScalarFormatter(useMathText=True)
 formatter.set_scientific(True)
 formatter.set_powerlimits((-2, 2))
@@ -192,7 +198,7 @@ if type(ind) != list:
 else:
     [
         axes.scatter(
-            xi, y_data[i], label=label1[i], marker='o', s=sp, color=color1[i]
+            xi, y_data[i], label=label1[i], marker='o', s=sp, color=color1[i], alpha=0.5
         )
         for i, xi in enumerate(x_data)
     ]
@@ -203,8 +209,8 @@ axes.grid(True)
 
 plt.legend(loc=loc_leg,facecolor='white')
 
-axes.set_xlabel(labelx)
-axes.set_ylabel(labely)
+axes.set_xlabel(labelx,fontsize=14)
+axes.set_ylabel(labely,fontsize=14)
 f.savefig(rep_save + title_save + ".png", bbox_inches="tight", format="png")
 # f.savefig(rep_save + title_save + ".ps", bbox_inches="tight", format="ps")
 # tikz.save(rep_save + title_save + ".tex")
