@@ -62,7 +62,7 @@ blqry = "faux"
 dte = 1.e-6
 # dte = 5.e-6
 # nsort = 16
-nsort = 5000
+nsort = 500
 # 3 modes de flexion :
 nmode = 3
 n_tronq = 0
