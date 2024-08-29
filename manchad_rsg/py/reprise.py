@@ -26,10 +26,10 @@ repcast = f'../../build/'
 if (lraidtimo=="vrai"):
     repcast = f'../../cast_raidtimo/'
 #%%
-lstdout = True
+lstdout = False
 #%% nombre de slices :
-nslice = 9
-ttot = 10.
+nslice = 0
+ttot = 1.
 slicevtk = nslice
 #%% parametres du calcul 
 
@@ -53,7 +53,7 @@ mu = 0.6
 xi = 0.05
 f1 = 2.
 f2 = 20.
-t = 0.5
+t = 1.
 lexp  = "faux" 
 raidiss = "vrai" 
 lbloq  = "faux" 
@@ -77,7 +77,7 @@ Fext = 0.
 fefin = 5.
 vlimoden = 1.e-5
 # amortissement modal :
-lamode = "faux"
+lamode = "vrai"
 amode_m = 0.02
 amode_ad = 0.02
 # amortissement ccone :
@@ -344,7 +344,8 @@ kwpi = {'rep_load' : f"{repglob}calc_{slice}/data/",
         'name_save' : f"{rawname}_{slice}"}
 csv2pickle(**kwpi)
 
-# sys.exit()
+if nslice==0:
+  sys.exit()
 
 #%%########################## CALCUL 1
 # CALCUL 1 : DEBUT DU CHARGEMENT POT :

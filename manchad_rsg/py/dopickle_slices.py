@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
   # on discretise ?
 ndiscr = 1
 l2048 = False
-linert = False
+linert = True
 lraidtimo = False
 raidiss = True
-lamode = False
+lamode = True
 lkxp = False
 # Fext = 387.
 # Fext = 193.
@@ -74,6 +74,9 @@ if l2048:
   if not os.path.exists(f"{repsave}2048/"):
     os.makedirs(f"{repsave}2048/")
     print(f"FOLDER : {repsave} created.")
+
+print(f"namerep = {namerep}")
+print(f"repload = {repload}")
 #%% concatenating slices :
 all_files = glob.glob(repload + "*.pickle")
 

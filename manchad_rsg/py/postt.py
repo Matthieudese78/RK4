@@ -47,7 +47,7 @@ lchoc = False
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
 
-linert = False
+linert = True
 lamode = True
 lkxp = False
 lpion = False
@@ -400,7 +400,7 @@ if (lpcirc):
     indi_ph3 = df[(np.abs(df["FN_pcirch3"])>icrit)].index
 
 #%% fenetrage en temps :
-transition = True
+transition = False
 if transition:
     tslice = 1.e-2
     ntrans = 3
@@ -1520,3 +1520,5 @@ if (lchoc):
         "logcol" : False
     }
     traj.scat2d_df_colorbar(df.loc[indchoc], **kwargs1)
+
+# %%
