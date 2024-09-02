@@ -1010,7 +1010,9 @@ cmsw      WRITE(*,*)'DEVFB10 : Rcurv/Rcirc = ',RC/XRAYP
 *        Veritable limite "physique" :      
 *        XATRANS = 0.00030498823335122383
 *
-         IF (dabs(XDN).GE.(XATRANS*((RC/XRAYP)-1.D0))) THEN
+* avant interpolation parab-hertz :         
+*        IF (dabs(XDN).GE.(XATRANS*((RC/XRAYP)-1.D0))) THEN
+         IF (dabs(XDN).GE.(1.01*XATRANS*((RC/XRAYP)-1.D0))) THEN
 *           HERTZ 
             LHERTZ = .TRUE.
             WRITE(*,*)'DEVFB10 : CAS HERTZ'
@@ -1071,7 +1073,9 @@ cmsw        WRITE(*,*)'         Chertz = ',XChertz
 *                write(IOIMP,*)'    FNB(',IPROF,') = ',FNB(IPROF)
                ENDIF
             ENDDO
-         ELSE
+* avant interpolation parab-hertz :         ELSE
+
+         elseif (dabs(XDN).LE.(1.01*XATRANS*((RC/XRAYP)-1.D0))) then
 *           PARABOLIC 
             LPARAB = .TRUE.
             WRITE(*,*)'DEVFB10 : CAS PARABOLIC'
