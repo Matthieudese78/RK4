@@ -119,7 +119,6 @@ cms : pour detecter les Nan
 *     raideur verticale du cas flat :
       xkvert =  3.27043021 * (10.d0**9)
 *     les grandeurs permettant de distinguer le cas Hertz du cas Parabolique
-
 *        Veritable limite "physique" entre Hertz et Prabolique sur le graphe rcurv/rcirc , delta_n :      
       XATRANS = 0.012533086738156748
 *     Veritable limite "physique" :      
@@ -1246,7 +1245,7 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
          CALL CALCRGB(FNB,FTB,XPRB,NECH,XNCB,NPOI,
      &                FNBRES,FTBRES,GRES)
 ************************************************************************  
-*                     INTERPOLATION
+*                     INTERPOLATION : HERTZ - FLAT
 *   pour le cas limite, interpolation avec le cas à plat :
 *             - si le cone est quasi a plat :
 *                 - si rcurv/rcirc < 1. 
@@ -1334,6 +1333,122 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
           goto 10
          endif
          endif
+************************************************************************  
+* interpolation parab-hertz : start 
+************************************************************************  
+          IF ((dabs(XDN).GT.(0.99*XATRANS*((RC/XRAYP)-1.D0))) .and. 
+     &        (dabs(XDN).LT.(1.01*XATRANS*((RC/XRAYP)-1.D0))) .and. 
+     &        ((rc/xrayp).ge.1.d0) .and.
+     &        (.not.lflat).and.(.not.lflat1)) then
+            WRITE(*,*)'DEVFB10 : interpolation parab-hertz'
+*           Un profil parabolique a deja ete calcule ainsi que les forces et couples resultants sous fnbres et ftbres. 
+*           On calcul
+*           TAU est fction affine de Rcurv/Rcirc :
+            XTAU = dabs(XBTAU + (XATAU * (RC/XRAYP)))
+*           On calcul la largeur de contact angulaire XTHMAX en radians :
+*              Attention ! Delta_imp en micrometre !!
+            XTHMAX = XAMAX * (1.D0 - EXP(-dabs(XDN)*(10.**6)/XTAU)) *
+     &                            XPI / 180.D0
+            WRITE(*,*)'         XTHMAX deg = ',
+     &                  XAMAX * (1.D0 - EXP(-dabs(XDN)*(10.**6)/XTAU))
+*           1/2 largeur du contact
+            XL12 = (XRAYP * XTHMAX) / 2.D0
+*              Attention ! Delta_imp en micrometre !!
+            XCHERTZ = XACH*dabs(XDN)*1.D6 + XBCH
+            XREQ = XRAYP*RC/(XRAYP + RC)
+*           Calcul pre-call de calcnor : 
+            XDTH = XTHMAX/(REAL(NECH - 1))
+            XDL = XRAYP * XDTH
+            CALL CALCNOR(XTHMAX,NPE,TPE,XCE,YCE,XNUT,XALPHA,XRAYP,
+     &                XGC,YGC,XD,
+     &                XPROF,YPROF,ZPROF,
+     &                XNCONE,YNCONE,ZNCONE,XDTH,NECH)
+            XFNX = 0.D0
+            XFNY = 0.D0
+            XFNZ = 0.D0
+*           Pour modele de Hertz : THMAX en degres ou radian car c'est un ratio
+            IF (LNORSEUL) THEN 
+              DO IPROF=1,NECH
+              XFNX = XFNX + (XCHERTZ*XL12 / (2.D0*XREQ)) *
+     &    dsqrt(dabs(1.D0 - ((THPROF/(0.5*XTHMAX))**2)))*XNCONE(IPROF)* 
+     &                                 XDL 
+
+               XFNY = XFNY + (XCHERTZ*XL12 / (2.D0*XREQ)) *
+     &    dsqrt(dabs(1.D0 - ((THPROF/(0.5*XTHMAX))**2)))*YNCONE(IPROF)* 
+     &                                 XDL 
+
+               XFNZ = XFNZ + (XCHERTZ*XL12 / (2.D0*XREQ)) *
+     &    dsqrt(dabs(1.D0 - ((THPROF/(0.5*XTHMAX))**2)))*ZNCONE(IPROF)* 
+     &                                 XDL 
+              ENDDO
+            ENDIF
+            if (.not.lnorseul) then
+            do iprof=1,nech
+               THPROF = ((-1.)*XTHMAX/2.D0) + REAL(IPROF-1)*XDTH
+*              Pour le calcul de la resultante tangentielle,
+*               on va avoir besoin de FNB :
+               FNB(IPROF) = (XCHERTZ*XL12 / (2.D0*XREQ)) *
+     &            dsqrt(dabs(1.D0 - ((THPROF/(0.5*XTHMAX))**2))) * XDL
+            enddo
+            endif
+*           Calcul de la resultante et du couple resultant pour le nouceau profil de Hertz                   
+            CALL CALCVTB(NPOI,XTHMAX,NPE,TPE,XCE,YCE,XCO,ZCO,
+     &                  XRAYP,XNUT,XALPHA,
+     &                  XNCONE,YNCONE,ZNCONE,XDTH,NECH,KTROT,ISB,IND,
+     &                  VNB,VTB,XPRB,XNCB,XPTB,NPLB,XPTP2,-1)
+
+            IF (ISBC.GT.0) THEN
+              CALL CALCVTB(IPSOM,XTHMAX,NPE,TPE,XCE,YCE,XCO,ZCO,
+     &                   XRAYP,XNUT,XALPHA,
+     &                   XNCONE,YNCONE,ZNCONE,XDTH,NECH,KTROT,ISBC,IND,
+     &                   VNBCO,VTBCO,XPRBCO,XNCB,XPTB,NPLB,XPTP2,ISBC)
+              DO ID=1,3
+                DO IPROF=1,NECH
+                  VNB(IPROF) = VNB(IPROF) - VNBCO(IPROF)
+                  VTB(ID,IPROF) = VTB(ID,IPROF) - VTBCO(ID,IPROF)
+                ENDDO
+              ENDDO
+            ENDIF
+            IF (XAMOR.GT.0.d0) THEN
+               DO ID=1,3
+                 DO IPROF=1,NECH
+                    FNB(IPROF) = FNB(IPROF) - (XAMOR* XDL * VNB(IPROF))
+                 ENDDO
+               ENDDO
+            ENDIF
+*           On prend les tables fnbresf, ftbresf, gresf du cas interpolation flat ci-dessus (non utilisees car cas disjoints)
+            CALL CALCFTB(FNB,VTB,NECH,XGLIS,VLIM,FTB,XPUS,XPUSTOT,
+     &                xglisadh)
+            CALL CALCRGB(FNB,FTB,XPRB,NECH,XNCB,NPOI,
+     &                FNBRESF,FTBRESF,GRESF)
+*           Interpolation des resultantes et couples resultants entre parab et hertz 
+
+            if (deginter.eq.2) then      
+*              limites haute et basse du domaine d'interpolation dans le graph (rcurv/rcirc,delta_n) :
+               xhaut = (1.01*XATRANS*((RC/XRAYP)-1.D0))
+               xbas  = (0.99*XATRANS*((RC/XRAYP)-1.D0))
+               xdnlim = xhaut - xbas
+*              fnbres, ftbres, gres --> resultante parabolic 
+*              fnbresf, ftbresf, gresf --> resultante hertz 
+*              xinter vaut 1 en xbas --> profil purement parabolique 
+*              xinter vaut 0 en xhaut --> profil purement Hertz 
+               xinter = (1.d0/2.d0)*(1.d0 + 
+     &                  ((2.d0 - (dabs(xdn-(xdnlim/2.d0))/(xdnlim/2.d0))) *
+     &                  ((xdn-(xdnlim/2.d0))/(xdnlim/2.d0))))
+              fnbres(1) = (1.d0 - xinter)*(fnbresf(1))+(xinter)*(fnbres(1))
+              fnbres(2) = (1.d0 - xinter)*(fnbresf(2))+(xinter)*(fnbres(2))
+              fnbres(3) = (1.d0 - xinter)*(fnbresf(3))+(xinter)*(fnbres(3))
+              ftbres(1) = (1.d0 - xinter)*(ftbresf(1))+(xinter)*(ftbres(1))
+              ftbres(2) = (1.d0 - xinter)*(ftbresf(2))+(xinter)*(ftbres(2))
+              ftbres(3) = (1.d0 - xinter)*(ftbresf(3))+(xinter)*(ftbres(3))
+              gres(1) = (1.d0 - xinter)*(gresf(1))+(xinter)*(gres(1))
+              gres(2) = (1.d0 - xinter)*(gresf(2))+(xinter)*(gres(2))
+              gres(3) = (1.d0 - xinter)*(gresf(3))+(xinter)*(gres(3))
+            endif
+************************************************************************  
+* interpolation parab-hertz : end 
+************************************************************************  
+          ENDIF
 
 ************************************************************************  
 *           Remplissage FTOTB
@@ -1344,11 +1459,15 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
           ftotb(npoi,3) = ftotb(npoi,3) + fnbres(3) + ftbres(3)
 *           moment
           if (lmom) then
-          ftotb(npoi,4) = ftotb(npoi,4) + gres(1)   
-          ftotb(npoi,5) = ftotb(npoi,5) + gres(2)   
-          ftotb(npoi,6) = ftotb(npoi,6) + gres(3)   
+            ftotb(npoi,4) = ftotb(npoi,4) + gres(1)   
+            ftotb(npoi,5) = ftotb(npoi,5) + gres(2)   
+            ftotb(npoi,6) = ftotb(npoi,6) + gres(3)   
           endif
 
+
+************************************************************************  
+*        si cone mobile : remplissage resultante & couple pour le cone
+************************************************************************  
          IF (ISBC.GT.0) THEN
 *          Implementation de FTOTB au point de liason du cone :
 *          Fres_cone = - Fres_cercle
