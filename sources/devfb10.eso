@@ -116,35 +116,37 @@ cms : pour detecter les Nan
       lmom = .true.
 
 *--------------------------------------------------------------------*
+*     raideur verticale du cas flat :
+      xkvert =  3.27043021 * (10.d0**9)
 *     les grandeurs permettant de distinguer le cas Hertz du cas Parabolique
 
 *        Veritable limite "physique" entre Hertz et Prabolique sur le graphe rcurv/rcirc , delta_n :      
-         XATRANS = 0.012533086738156748
-*        Veritable limite "physique" :      
-*        XATRANS = 0.00030498823335122383
-**       Cas Hertz :
-         XAMAX = 194.4
-         XATAU = 20421.124219237907
-         XBTAU = -20420.933942756194
-*        Pour Chertz2 :
-         XACH = -13619.717998379898
-         XBCH = -528.7181273178094
-**       Cas Parabolique :
-*           Calcul des coeffs A0 et A2 :
-*           A0 : 
-         YFTY0  = -1.68244079 * (10.D0**6)
-         XBETA0 = 1.07926347 * (10.D0**6)
-         XALF0  = 0.997563673
-         XD0    = -5.85040053 * (10.D0**(-2))
-         XREF0  = 10.D0**(-5)
-         XP0    = 0.822937776
-*           A2 : 
-         YFTY2  = -1.25487133 * (10.D0**4)
-         XBETA2 = 1.16651218 * (10.D0**4)
-         XALF2  = 0.D0
-         XD2    = -1.94886983 * (10.D0**(-2)) 
-         XREF2  = 1.00814747
-         XP2    = 1.10651702
+      XATRANS = 0.012533086738156748
+*     Veritable limite "physique" :      
+*     XATRANS = 0.00030498823335122383
+**    Cas Hertz :
+      XAMAX = 194.4
+      XATAU = 20421.124219237907
+      XBTAU = -20420.933942756194
+*     Pour Chertz2 :
+      XACH = -13619.717998379898
+      XBCH = -528.7181273178094
+**    Cas Parabolique :
+*        Calcul des coeffs A0 et A2 :
+*        A0 : 
+      YFTY0  = -1.68244079 * (10.D0**6)
+      XBETA0 = 1.07926347 * (10.D0**6)
+      XALF0  = 0.997563673
+      XD0    = -5.85040053 * (10.D0**(-2))
+      XREF0  = 10.D0**(-5)
+      XP0    = 0.822937776
+*        A2 : 
+      YFTY2  = -1.25487133 * (10.D0**4)
+      XBETA2 = 1.16651218 * (10.D0**4)
+      XALF2  = 0.D0
+      XD2    = -1.94886983 * (10.D0**(-2)) 
+      XREF2  = 1.00814747
+      XP2    = 1.10651702
 *--------------------------------------------------------------------*
 *--------------------------------------------------------------------*
 * --- choc elementaire CERCLE_CONE
@@ -583,7 +585,6 @@ cmsw     WRITE(*,*)'DEVFB10 : XCOOLB(ID,ISB,NPOI) = ',XCOOLB(3,ISB,NPOI)
      &                     XPROF,YPROF,ZPROF,
      &                     XNCONE,YNCONE,ZNCONE,XDTH,NECH)
 *            Calcul force normale : 
-             XKVERT =  3.27043021 * (10.D0**9)
              XFNX = 0.D0
              XFNY = 0.D0
              XFNZ = 0.D0
@@ -1270,7 +1271,6 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
           write(*,*)'call calcflat : interpolation'
           write(*,*)'     % incline : ',(xnut/thlim)*100.
           write(*,*)'     % flat : ',((thlim-xnut)/thlim)*100.
-          xkvert =  3.27043021 * (10.d0**9)
           call calcflat(xnut,xalpha,xdn,xthmf,xkvert,nech,xrayp,
      &                  xincid,xgc,ygc,xd,
      &                  xco,zco,xce,yce,zce,npe,tpe,
