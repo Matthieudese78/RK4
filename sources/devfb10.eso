@@ -1094,9 +1094,10 @@ cmsw        WRITE(*,*)'         Chertz = ',XChertz
 *                write(IOIMP,*)'    FNB(',IPROF,') = ',FNB(IPROF)
                ENDIF
             ENDDO
-* avant interpolation parab-hertz :         ELSE
-
-         elseif (dabs(XDN).LE.(1.01*XATRANS*((RC/XRAYP)-1.D0))) then
+*           fin cas Hertz
+         ENDIF
+*        Cas Parabolique :
+         if (dabs(XDN).LT.(1.01*XATRANS*((RC/XRAYP)-1.D0))) then
 *           PARABOLIC 
             LPARAB = .TRUE.
             WRITE(*,*)'DEVFB10 : CAS PARABOLIC'
