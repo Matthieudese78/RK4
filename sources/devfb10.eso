@@ -114,6 +114,38 @@ cms : pour detecter les Nan
 *			- si il le faut : il s'agit des moments par rapport a 
 *				la fibre neutre. devmom ne fait que completer par relation de Chasles.
       lmom = .true.
+
+*--------------------------------------------------------------------*
+*     les grandeurs permettant de distinguer le cas Hertz du cas Parabolique
+
+*        Veritable limite "physique" entre Hertz et Prabolique sur le graphe rcurv/rcirc , delta_n :      
+         XATRANS = 0.012533086738156748
+*        Veritable limite "physique" :      
+*        XATRANS = 0.00030498823335122383
+**       Cas Hertz :
+         XAMAX = 194.4
+         XATAU = 20421.124219237907
+         XBTAU = -20420.933942756194
+*        Pour Chertz2 :
+         XACH = -13619.717998379898
+         XBCH = -528.7181273178094
+**       Cas Parabolique :
+*           Calcul des coeffs A0 et A2 :
+*           A0 : 
+         YFTY0  = -1.68244079 * (10.D0**6)
+         XBETA0 = 1.07926347 * (10.D0**6)
+         XALF0  = 0.997563673
+         XD0    = -5.85040053 * (10.D0**(-2))
+         XREF0  = 10.D0**(-5)
+         XP0    = 0.822937776
+*           A2 : 
+         YFTY2  = -1.25487133 * (10.D0**4)
+         XBETA2 = 1.16651218 * (10.D0**4)
+         XALF2  = 0.D0
+         XD2    = -1.94886983 * (10.D0**(-2)) 
+         XREF2  = 1.00814747
+         XP2    = 1.10651702
+*--------------------------------------------------------------------*
 *--------------------------------------------------------------------*
 * --- choc elementaire CERCLE_CONE
 *                      avec ou sans amortissement
@@ -1005,20 +1037,12 @@ cmsw      WRITE(*,*)'DEVFB10 : Rcurv/Rcirc = ',RC/XRAYP
 * Calcul de la force normale via formule analytique :
 * IF (LPENE) THEN
 ************************************************************************ 
-*        Veritable limite "physique" :      
-         XATRANS = 0.012533086738156748
-*        Veritable limite "physique" :      
-*        XATRANS = 0.00030498823335122383
-*
 * avant interpolation parab-hertz :         
 *        IF (dabs(XDN).GE.(XATRANS*((RC/XRAYP)-1.D0))) THEN
          IF (dabs(XDN).GE.(1.01*XATRANS*((RC/XRAYP)-1.D0))) THEN
 *           HERTZ 
             LHERTZ = .TRUE.
             WRITE(*,*)'DEVFB10 : CAS HERTZ'
-            XAMAX = 194.4
-            XATAU = 20421.124219237907
-            XBTAU = -20420.933942756194
 *           TAU est fction affine de Rcurv/Rcirc :
             XTAU = dabs(XBTAU + (XATAU * (RC/XRAYP)))
 cmsw        WRITE(*,*)'         XTAU = ',XTAU
@@ -1030,9 +1054,6 @@ cmsw        WRITE(*,*)'         XTAU = ',XTAU
      &                  XAMAX * (1.D0 - EXP(-dabs(XDN)*(10.**6)/XTAU))
 *           1/2 largeur du contact
             XL12 = (XRAYP * XTHMAX) / 2.D0
-*           CHERTZ2 : 
-            XACH = -13619.717998379898
-            XBCH = -528.7181273178094
 *              Attention ! Delta_imp en micrometre !!
             XCHERTZ = XACH*dabs(XDN)*1.D6 + XBCH
             XREQ = XRAYP*RC/(XRAYP + RC)
@@ -1079,25 +1100,10 @@ cmsw        WRITE(*,*)'         Chertz = ',XChertz
 *           PARABOLIC 
             LPARAB = .TRUE.
             WRITE(*,*)'DEVFB10 : CAS PARABOLIC'
-*           Calcul des coeffs A0 et A2 :
-*           A0 : 
-            YFTY0  = -1.68244079 * (10.D0**6)
-            XBETA0 = 1.07926347 * (10.D0**6)
-            XALF0  = 0.997563673
-            XD0    = -5.85040053 * (10.D0**(-2))
-            XREF0  = 10.D0**(-5)
-            XP0    = 0.822937776
 *           TODO VIRER : Bricolage : 
 *           IF ((RC/XRAYP).LT.1.D0) RC = (XALF0 + 1.D-4) * XRAYP
             XA0 = ( YFTY0 + XBETA0 * (((RC/XRAYP) - XALF0)**(XD0)) )*
      &                           (dabs(XDN)/XREF0)**XP0
-*           A2 : 
-            YFTY2  = -1.25487133 * (10.D0**4)
-            XBETA2 = 1.16651218 * (10.D0**4)
-            XALF2  = 0.D0
-            XD2    = -1.94886983 * (10.D0**(-2)) 
-            XREF2  = 1.00814747
-            XP2    = 1.10651702
             XA2    = ( YFTY2 + XBETA2 * ((dabs(XDN) - XALF2)**(XD2)) )*
      &                     ((RC/XRAYP)/(XREF2-1.D0))**XP2
 *           THMAX : en radians 
