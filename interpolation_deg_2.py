@@ -66,8 +66,109 @@ kwargs = {
 }
 traj.pltraj2d_list(**kwargs)
 
-#%% interpolation Oden :
-
+#%% interpolation parabolique-hertz : 
+# limite du domaine parab-hertz :
+R_tete = 4.68e-2
+xatrans = 0.012533086738156748
+rc = 1.001*R_tete
+xhaut = (1.01*xatrans*((rc/R_tete)-1.))
+xbas  = (0.99*xatrans*((rc/R_tete)-1.))
+xmid = (xhaut - xbas) / 2.
+xdnlim = 2*xmid
+dimp = np.linspace(-xmid,xmid,400)
+xdnlim = np.array([xdnlim]*len(dimp))
+xinter = (2. - np.abs(dimp)/(xdnlim/2.)) * (dimp/(xdnlim/2.))
+plt.scatter(dimp,xinter,s=4)
+# avec le vrai dimp : 
+x0 = xbas + xmid
+dimp2 = np.linspace(xbas,xhaut,400)
+xinter2 = (2. - np.abs(dimp2 - x0)/(xdnlim/2.)) * ((dimp2 - x0)/(xdnlim/2.))
+# plt.scatter(dimp,xinter2,s=4)
+kwargs = {
+    "tile1": f"interpolation hertz-parab, Rcurv fixe = 1.001 Rcirc, transition = atrans +/- 1% " + "\n",
+    "tile_save": f"interpolation_hertz_parab",
+    "x": [dimp2], 
+    "y": [xinter2], 
+    "rep_save": repsave,
+    # "label2": [r"$E_{kin}^{ref}$",r"$E_{bar}$"],
+    # "label1": [r"$E_{tot}^{inert}+E_{stock}$",r"$E_{tot}^{LTE}+E_{stock}$"],
+    "label1": ["Hertz-Parabolic"],
+    "labelx": r"$\delta_{imp}$",
+    "labely": r"$X_{inter}$",
+    "color1": ["blue"],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "loc_leg": "upper right",
+    # "loc_leg": (1.01,0.85),
+    "alpha" : 0.7,
+}
+traj.pltraj2d_list(**kwargs)
+#%% interpolation hertz-flat : nutation toujours > 0 
+thlim = 1.745e-5
+xnut = np.linspace(0.,thlim,400)
+thlim = np.array([thlim]*len(xnut))
+x0 = thlim/2.
+xinter = 0.5 * (1. + ((2. - np.abs(xnut-x0)/(thlim/2.)) * ((xnut-x0)/(thlim/2.))))
+plt.scatter(xnut,xinter,s=4)
+kwargs = {
+    "tile1": f"interpolation hertz-flat, thlim = 1.745 rad" + "\n",
+    "tile_save": f"interpolation_hertz_flat",
+    "x": [xnut], 
+    "y": [xinter], 
+    "rep_save": repsave,
+    # "label2": [r"$E_{kin}^{ref}$",r"$E_{bar}$"],
+    # "label1": [r"$E_{tot}^{inert}+E_{stock}$",r"$E_{tot}^{LTE}+E_{stock}$"],
+    "label1": ["Hertz-Flat"],
+    "labelx": r"$\theta_{nut}$",
+    "labely": r"$X_{inter}$",
+    "color1": ["blue"],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "loc_leg": "upper right",
+    # "loc_leg": (1.01,0.85),
+    "alpha" : 0.7,
+}
+traj.pltraj2d_list(**kwargs)
+#%% interpolation parabolique-hertz : 
+# limite du domaine parab-hertz :
+R_tete = 4.68e-2
+xatrans = 0.012533086738156748
+rc = 1.001*R_tete
+xhaut = (1.01*xatrans*((rc/R_tete)-1.))
+xbas  = (0.99*xatrans*((rc/R_tete)-1.))
+xmid = (xhaut - xbas) / 2.
+xdnlim = 2*xmid
+dimp = np.linspace(-xmid,xmid,400)
+xdnlim = np.array([xdnlim]*len(dimp))
+xinter = 0.5 * (1. + (2. - np.abs(dimp)/(xdnlim/2.)) * (dimp/(xdnlim/2.)))
+plt.scatter(dimp,xinter,s=4)
+# avec le vrai dimp : 
+x0 = xbas + xmid
+dimp2 = np.linspace(xbas,xhaut,400)
+xinter2 = 0.5 * (1. + (2. - np.abs(dimp2 - x0)/(xdnlim/2.)) * ((dimp2 - x0)/(xdnlim/2.)))
+# plt.scatter(dimp,xinter2,s=4)
+kwargs = {
+    "tile1": f"interpolation hertz-parab, Rcurv fixe = 1.001 Rcirc, transition = atrans +/- 1% " + "\n",
+    "tile_save": f"interpolation_hertz_parab",
+    "x": [dimp2], 
+    "y": [xinter2], 
+    "rep_save": repsave,
+    # "label2": [r"$E_{kin}^{ref}$",r"$E_{bar}$"],
+    # "label1": [r"$E_{tot}^{inert}+E_{stock}$",r"$E_{tot}^{LTE}+E_{stock}$"],
+    "label1": ["Hertz-Parabolic"],
+    "labelx": r"$\delta_{imp}$",
+    "labely": r"$X_{inter}$",
+    "color1": ["blue"],
+    "endpoint": False,
+    "xpower": 5,
+    "ypower": 5,
+    "loc_leg": "upper right",
+    # "loc_leg": (1.01,0.85),
+    "alpha" : 0.7,
+}
+traj.pltraj2d_list(**kwargs)
 #%%
 # relation amor pour un contact ccone total (a plat) a 1 m . s^-1 :
 # 2.*np.pi*R_tete*1.*eta = x %
@@ -77,7 +178,6 @@ vref = 1.
 eta = amor / (2.*np.pi*R_tete*vref)
 
 #%%
-
 print(np.log(0.1))
 print(np.log(10.))
 #%%
