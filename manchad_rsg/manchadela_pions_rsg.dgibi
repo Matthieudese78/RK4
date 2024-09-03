@@ -37,22 +37,20 @@ lbloq = faux ;
 ttot = 4. ;
 
 *# t :
-T = 1.e-2 ;
+T = 1. ;
 
 *# phase :
 phase = 0. ;
 
 *# dte :
-dte = 1./1024. ;
-
-* dte = 2.e-6 ;
+dte = 2.e-6 ;
 
 * on prend le multiple de 2 le plus proche pour le pdt : 
 ndte = (enti ((log (1./dte))/(log 2.))) + 1 ;
 dte = (1./(2.**ndte)) ;
 
 *# nsort :
-nsort = 1 ;
+nsort = 2500 ;
 
 
 * NPASe = (ENTI 'PROCH' (T / DTe)) - 1 ;
@@ -128,7 +126,7 @@ vlimoden = 1.e-5 ;
 *# lsin :
 lsin = faux ;
 *# lsinb :
-lsinb = vrai ;
+lsinb = faux ;
 
 ****************************************************************************
 *                       PARAMETRES SORTIE 
