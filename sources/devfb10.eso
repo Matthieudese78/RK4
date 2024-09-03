@@ -116,7 +116,7 @@ cms : pour detecter les Nan
       lmom = .true.
 
 *--------------------------------------------------------------------*
-*     raideur verticale du cas flat :
+**     raideur verticale du cas flat :
       xkvert =  3.27043021 * (10.d0**9)
 *     les grandeurs permettant de distinguer le cas Hertz du cas Parabolique
 *        Veritable limite "physique" entre Hertz et Prabolique sur le graphe rcurv/rcirc , delta_n :      
@@ -146,6 +146,19 @@ cms : pour detecter les Nan
       XD2    = -1.94886983 * (10.D0**(-2)) 
       XREF2  = 1.00814747
       XP2    = 1.10651702
+* interpolations :
+*   hertz-flat :
+*   angle limite a partir duquel on interpole :
+*                 - si rcurv/rcirc < 1. 
+*                 - si xnut < thlim = 1.745e-5 rad <=> 1.e-3 deg
+      thlim = 1.745*1.d-5
+*   hertz-parab : pourcentage des pentes limites du domaine d'interpolation dans le graph (rcurv/rcirc - 1 ; delta_n)
+*     - cas 1 : si delta_n >= xhigh * xatrans * ((rcurc/rcirc) - 1) --> calcul profil Hertz.
+*     - cas 2 : si delta_n < xhigh * xatrans * ((rcurc/rcirc) - 1) --> calcul profil parabolique.
+*     - cas 3 : si xhigh * xatrans * ((rcurc/rcirc) - 1) > delta_n > xlow * xatrans * ((rcurc/rcirc) - 1) --> calcul d'un profil parabolique dont le couple et la reaction resultante seront interpoles avec ceux du profil parabolic deja calcules lors du cas 2. .
+*       les coeffs xhigh et xlow du domaine d'interpolation du cas 3 :
+      xlow  = 0.8
+      xhigh = 1.2
 *--------------------------------------------------------------------*
 *--------------------------------------------------------------------*
 * --- choc elementaire CERCLE_CONE
@@ -1039,7 +1052,7 @@ cmsw      WRITE(*,*)'DEVFB10 : Rcurv/Rcirc = ',RC/XRAYP
 ************************************************************************ 
 * avant interpolation parab-hertz :         
 *        IF (dabs(XDN).GE.(XATRANS*((RC/XRAYP)-1.D0))) THEN
-         IF (dabs(XDN).GE.(1.01*XATRANS*((RC/XRAYP)-1.D0))) THEN
+         IF (dabs(XDN).GE.(xhigh*XATRANS*((RC/XRAYP)-1.D0))) THEN
 *           HERTZ 
             LHERTZ = .TRUE.
             WRITE(*,*)'DEVFB10 : CAS HERTZ'
@@ -1097,7 +1110,7 @@ cmsw        WRITE(*,*)'         Chertz = ',XChertz
 *           fin cas Hertz
          ENDIF
 *        Cas Parabolique :
-         if (dabs(XDN).LT.(1.01*XATRANS*((RC/XRAYP)-1.D0))) then
+         if (dabs(XDN).LT.(xhigh*XATRANS*((RC/XRAYP)-1.D0))) then
 *           PARABOLIC 
             LPARAB = .TRUE.
             WRITE(*,*)'DEVFB10 : CAS PARABOLIC'
@@ -1260,7 +1273,6 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 *   Fres = ((thlim - xnut)/thlim)*Fres_flat + (xnut/thlim)*Fres_incl
          if (linter) then
 *        angle qui fonctionne :
-         thlim = 1.745*1.d-5
 *        angle test :
 *         thlim = 1.745*1.d-6
          if ((.not.lflat).and.
@@ -1303,6 +1315,7 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
         if (deginter.eq.2) then      
 *          xinter vaut 0 en 0 et 1 en thlim
 *          (1 - xinter) vaut 1 en 0 et 0 en thlim
+* formule interpolation confirmee par interpolation_deg_2.py:            
            xinter = (1.d0/2.d0)*(1.d0 + 
      &              ((2.d0 - (dabs(xnut-(thlim/2.d0))/(thlim/2.d0))) *
      &              ((xnut-(thlim/2.d0))/(thlim/2.d0))))
@@ -1336,8 +1349,8 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 ************************************************************************  
 * interpolation parab-hertz : start 
 ************************************************************************  
-          IF ((dabs(XDN).GT.(0.99*XATRANS*((RC/XRAYP)-1.D0))) .and. 
-     &        (dabs(XDN).LT.(1.01*XATRANS*((RC/XRAYP)-1.D0))) .and. 
+          IF ((dabs(XDN).GT.(xlow*XATRANS*((RC/XRAYP)-1.D0))) .and. 
+     &        (dabs(XDN).LT.(xhigh*XATRANS*((RC/XRAYP)-1.D0))) .and. 
      &        ((rc/xrayp).ge.1.d0) .and.
      &        (.not.lflat).and.(.not.lflat1)) then
             WRITE(*,*)'DEVFB10 : interpolation parab-hertz'
@@ -1425,8 +1438,8 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 
             if (deginter.eq.2) then      
 *              limites haute et basse du domaine d'interpolation dans le graph (rcurv/rcirc,delta_n) :
-               xhaut = (1.01*XATRANS*((RC/XRAYP)-1.D0))
-               xbas  = (0.99*XATRANS*((RC/XRAYP)-1.D0))
+               xhaut = (xhigh*XATRANS*((RC/XRAYP)-1.D0))
+               xbas  = (xlow*XATRANS*((RC/XRAYP)-1.D0))
                xdnlim = xhaut - xbas
 *              fnbres, ftbres, gres --> resultante parabolic 
 *              fnbresf, ftbresf, gresf --> resultante hertz 
@@ -1507,7 +1520,7 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 ************************************************************************ 
 
 ************************************************************************  
-*     SI PAS PENETRATION :               
+*     SI PAS PENETRATION ou saut du a cas particulier (flat ou interpolation hertz-flat):               
  10   CONTINUE
 ************************************************************************ 
 
