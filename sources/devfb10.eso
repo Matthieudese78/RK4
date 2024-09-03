@@ -1446,18 +1446,18 @@ cmsw            WRITE(*,*)'    VTB(',ID,IPROF,') = ',VTB(ID,IPROF)
 *              fnbresf, ftbresf, gresf --> resultante hertz 
 *              xinter vaut 1 en xbas --> profil purement parabolique 
 *              xinter vaut 0 en xhaut --> profil purement Hertz 
-              fnbres(1) = (1.d0 - xinter)*(fnbresf(1))+(xinter)*(fnbres(1))
-              fnbres(2) = (1.d0 - xinter)*(fnbresf(2))+(xinter)*(fnbres(2))
-              fnbres(3) = (1.d0 - xinter)*(fnbresf(3))+(xinter)*(fnbres(3))
-              ftbres(1) = (1.d0 - xinter)*(ftbresf(1))+(xinter)*(ftbres(1))
-              ftbres(2) = (1.d0 - xinter)*(ftbresf(2))+(xinter)*(ftbres(2))
-              ftbres(3) = (1.d0 - xinter)*(ftbresf(3))+(xinter)*(ftbres(3))
-              gres(1) = (1.d0 - xinter)*(gresf(1))+(xinter)*(gres(1))
-              gres(2) = (1.d0 - xinter)*(gresf(2))+(xinter)*(gres(2))
-              gres(3) = (1.d0 - xinter)*(gresf(3))+(xinter)*(gres(3))
         xinter = (1.d0/2.d0)*(1.d0 + 
      &            ((2.d0 - (dabs(xdn-xph0)/(xdnlim/2.d0))) *
      &            ((xdn-xph0)/(xdnlim/2.d0))))
+        fnbres(1) = (1.d0 - xinter)*(fnbres(1))+(xinter)*(fnbresf(1))
+        fnbres(2) = (1.d0 - xinter)*(fnbres(2))+(xinter)*(fnbresf(2))
+        fnbres(3) = (1.d0 - xinter)*(fnbres(3))+(xinter)*(fnbresf(3))
+        ftbres(1) = (1.d0 - xinter)*(ftbres(1))+(xinter)*(ftbresf(1))
+        ftbres(2) = (1.d0 - xinter)*(ftbres(2))+(xinter)*(ftbresf(2))
+        ftbres(3) = (1.d0 - xinter)*(ftbres(3))+(xinter)*(ftbresf(3))
+        gres(1) = (1.d0 - xinter)*(gres(1))+(xinter)*(gresf(1))
+        gres(2) = (1.d0 - xinter)*(gres(2))+(xinter)*(gresf(2))
+        gres(3) = (1.d0 - xinter)*(gres(3))+(xinter)*(gresf(3))
             endif
 ************************************************************************  
 * interpolation parab-hertz : end 
