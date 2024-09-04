@@ -47,8 +47,8 @@ lchoc = False
 # namerep = "manchadela_RSG"
 # namerep = "manchadela_RSG_conefixe"
 
-linert = True
-lamode = True
+linert = False
+lamode = False
 lkxp = False
 lpion = False
 lpcirc = False
@@ -99,9 +99,10 @@ if (raidiss):
 repload = f'./pickle/{namerep}/'
 rep_save = f"./fig/{namerep}/"
 
-ltest = False
+ltest = True
 if ltest:
     repload = f'./pickle/manchadela_pions_1/'
+    # repload = f'./pickle/manchadela_0deg/'
     rep_save = f"./fig/manchadela_pions_1/"
 # %%
 

@@ -26,24 +26,26 @@ repcast = f'../../build/'
 if (lraidtimo=="vrai"):
     repcast = f'../../cast_raidtimo/'
 #%%
-lstdout = False
+lstdout = True
 #%% nombre de slices :
 nslice = 0
 ttot = 1.
 slicevtk = nslice
 #%% parametres du calcul 
 
-linert = True
+linert = False
 if linert:
     repcast = f'../../cinert/'
 
-lrsg = "vrai"
+lrsg = "faux"
 
-lconefixe = "vrai"
+lchoc45 = "vrai"
 
-sw = "faux"
+lconefixe = "faux"
 
-rk4 = "vrai"
+sw = "vrai"
+
+rk4 = "faux"
 
 # raideur de choc de l'experience basee sur le temps de choc :
 lkxp = "faux"
@@ -53,7 +55,7 @@ mu = 0.6
 xi = 0.05
 f1 = 2.
 f2 = 20.
-t = 1.
+t = 1.5
 lexp  = "faux" 
 raidiss = "vrai" 
 lbloq  = "faux" 
@@ -66,7 +68,7 @@ nsort = 5000
 # 3 modes de flexion :
 nmode = 3
 n_tronq = 0
-nmode_ad = 6
+nmode_ad = 7
 Fext = 0.
 # Fext = 137. * np.sqrt(2.)
     # pour b_lam = 6.5 :
@@ -77,7 +79,7 @@ Fext = 0.
 fefin = 5.
 vlimoden = 1.e-5
 # amortissement modal :
-lamode = "vrai"
+lamode = "faux"
 amode_m = 0.02
 amode_ad = 0.02
 # amortissement ccone :
@@ -155,6 +157,8 @@ dictini = {
              'reprise' : "vrai",
   #          lrsg : 
              'lrsg' : lrsg,
+  #          lchoc45 : 
+             'lchoc45' : lchoc45,
   #          lconefixe : 
              'lconefixe' : lconefixe,
   #          sw : 

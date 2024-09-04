@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
   # on discretise ?
 ndiscr = 1
 l2048 = False
-linert = True
+linert = False
 lraidtimo = False
 raidiss = True
-lamode = True
+lamode = False
 lkxp = False
 # Fext = 387.
 # Fext = 193.
@@ -134,8 +134,8 @@ dftot = pd.concat(dfs,ignore_index=True)
 del dfs
 dftot.sort_values(by='t',inplace=True)
 dftot.reset_index(drop=True,inplace=True)
-dtfinal = dftot['t'][1] - dftot['t'][0] 
-print(f"time step saved data = dtfinal = {dtfinal}")
+dtfinal = (dftot['t'][1]*1.e6 - dftot['t'][0]*1.e6) 
+print(f"time step saved data = dtfinal = {dtfinal} " + r"$\mu$" + "s")
 if l2048:
   dftot.to_pickle(f"{repsave}2048/result.pickle")
 else:
