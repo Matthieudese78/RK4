@@ -37,7 +37,7 @@ lbloq = faux ;
 ttot = 4. ;
 
 *# t :
-T = 1. ;
+T = 4. ;
 
 *# phase :
 phase = 0. ;
@@ -71,7 +71,7 @@ finsi ;
 *         adaptateur rigide ou raidtimo ?
 **************************************************************
 * le cone est il fixe ?
-lconefixe = vrai ;
+lconefixe = faux ;
 * adaptateur : modele elastique ou modele FE ?
 lraidtimo = faux ;
 * liaison cercle-cone ?
@@ -82,7 +82,7 @@ lpion = faux ;
 ltrans = faux ;
 * amortissement modal ?
 *# lamode :
-lamode = vrai ;
+lamode = faux ;
 *# amode_ad :
 amode_ad = 0.02 ;
 *# amode_m :
@@ -341,7 +341,7 @@ lela = vrai ;
 *# lkxp :
 lkxp = faux ; 
 *# nmode :
-nmode = 3 ;
+nmode = 6 ;
 
 *# n_tronq :
 n_tronq = 0 ;
@@ -1838,7 +1838,7 @@ SI LRSG ;
 * Rq : CAS TEST RSG incline :
 *  WZini = 1 rad/s --> VYini = - R_tete*WZini
 *       --> repere Cast3m : 
-  w_ini = 3.*PI ; 
+  w_ini = 2.*PI ; 
 * w_ini = PI ; 
 *   EZ = - ex repere Cast3m :
   WXini = (-1.)*w_ini ;
@@ -1872,7 +1872,9 @@ SI LRSG ;
 
 FINSI ; 
 
+*# lchoc45 :
 lchoc45 = faux ; 
+
 SI lchoc45 ; 
 * ZCMAJ = 1.04*R_tete ;
 * XCMAJ = (0.04/2.)*R_tete ;
