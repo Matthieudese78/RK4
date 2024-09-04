@@ -157,8 +157,8 @@ cms : pour detecter les Nan
 *     - cas 2 : si delta_n < xhigh * xatrans * ((rcurc/rcirc) - 1) --> calcul profil parabolique.
 *     - cas 3 : si xhigh * xatrans * ((rcurc/rcirc) - 1) > delta_n > xlow * xatrans * ((rcurc/rcirc) - 1) --> calcul d'un profil parabolique dont le couple et la reaction resultante seront interpoles avec ceux du profil parabolic deja calcules lors du cas 2. .
 *       les coeffs xhigh et xlow du domaine d'interpolation du cas 3 :
-      xlow  = 0.8
-      xhigh = 1.2
+      xlow  = 0.99
+      xhigh = 1.01
 *--------------------------------------------------------------------*
 *--------------------------------------------------------------------*
 * --- choc elementaire CERCLE_CONE
