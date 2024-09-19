@@ -312,7 +312,7 @@ kwargs1 = {
     "coly": ["wx","wy","wz"],
     "ind" : lindconv,
     "rep_save": repsect2,
-    "label1": labelconv,
+    "label1": [None]*3,
     "labelx": [r"$t \quad (s)$"] * 3,
     "labely": [r"$W_X \quad (rad/s)$", r"$W_Y \quad (rad/s)$",r"$W_Z \quad (rad/s)$"],
     "color1": color1,
@@ -327,7 +327,7 @@ kwargs1 = {
     "coly": ["ec","edef","et"],
     "ind" : lindconv,
     "rep_save": repsect2,
-    "label1": labelconv,
+    "label1": [None]*3,
     "labelx": [r"$t \quad (s)$"] * 3,
     "labely": [r"$E_{kin} \quad (J)$", r"$E_{pot} \quad (J)$",r"$E_{tot} \quad (J)$"],
     "color1": color1,
@@ -342,7 +342,7 @@ kwargs1 = {
     "coly": ["pix","piy","piz"],
     "ind" : lindconv,
     "rep_save": repsect2,
-    "label1": labelconv,
+    "label1": [None]*3,
     "labelx": [r"$t \quad (s)$"] * 3,
     "labely": [r"$\pi_{x} \quad (m^2.s^{-1})$", r"$\pi_{y} \quad (m^2.s^{-1})$", r"$\pi_{z} \quad (m^2.s^{-1})$"],
     "color1": color1,
@@ -496,3 +496,4 @@ if (lindiv):
         "color1": color1[2],
     }
     traj.pltraj2d(df, **kwargs1)
+# %%
