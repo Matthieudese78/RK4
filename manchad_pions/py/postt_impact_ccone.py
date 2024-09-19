@@ -267,7 +267,6 @@ if globalstat:
 #%%
 if globalstat:
     # col_names = [r"$F_n$",r"$F_t$",r"$E_wear$",r"$t_{mean}$"]
-
     dict_gene = {"$F_n$"        : str("$" + "%.2f" % np.abs(stat_ccone[4]) ) + "$ N",
                  "$F_t$"        : str("$" + "%.2f" % stat_ccone_tang[4]) + "$ N",
                  "$E_{wear}$"   : str("$" + "%.2f" % (stat_ccone_pus[0]*1.e3)) + "$ mJ", 
@@ -291,6 +290,20 @@ if globalstat:
     df_latex = pd.DataFrame(dict_params,index=[0])
     latex_df = df_latex.to_latex(escape=False)
     with open(f'{repsect1}Cparams_ccone.tex', 'w') as f:
+        f.write(latex_df)
+#%%
+cumulatestat = True
+if cumulatestat:
+    # col_names = [r"$F_n$",r"$F_t$",r"$E_wear$",r"$t_{mean}$"]
+    dict_gene = {"$E_{wear}$"   : str("$" + "%.2f" % (stat_ccone_pus[2]*1.e3)) + "$ mJ", 
+                 "$t_{tot}$"    : "$" + str("%.2f" % stat_ccone[3]) + "$ s",
+                 "$N_{shock}$"  : "$" + str(int(stat_ccone[0])) + "$",
+                 } 
+    # df_latex = pd.DataFrame(dict_mean,index=row_names)
+    df_latex = pd.DataFrame(dict_gene,index=[0])
+    # df_latex = pd.DataFrame(dict_gene)
+    latex_df = df_latex.to_latex(escape=False)
+    with open(f'{repsect1}Cumulated_stats_ccone.tex', 'w') as f:
         f.write(latex_df)
 #%%
 nbseg = 10

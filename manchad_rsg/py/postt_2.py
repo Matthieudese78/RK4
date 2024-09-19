@@ -10,6 +10,11 @@ import os
 # %% usefull parameters :
 color1 = ["blue", "red", "green", "orange", "purple", "pink"]
 view = [20, -50]
+#%% paramtres du problemes :
+muk = 0.075
+# masse manchette :
+M = 11.46 
+g = 9.81
 # %% quel type de modele ?
 lraidtimo = False
 lconefixe = True
@@ -42,6 +47,8 @@ else:
 # %% lecture du dataframe :
 df = pd.read_pickle(f"{repload}result.pickle")
 
+#%% altitude initiale
+hini = df['uxg_m'][0]
 # %% On change de repere pour le tracer des trajectoires :
 exb = np.array([0.0, -1.0, 0.0])
 eyb = np.array([0.0, 0.0, 1.0])
@@ -210,6 +217,51 @@ rc.repchgdf(df, **kwargs1)
 # %%          COLORATION SYNTAXIQUE : 
 kcol = {'colx' : 'PUSURE', 'ampl' : 200., 'logcol' : False}
 dfcolpus = traj.color_from_value(df.loc[indchoc],**kcol)
+# %%          ENERGIES : 
+df['epot'] = M*g*df['uxg_m'] + M*g*hini
+# df['ecref'] = 0.5*jx*(df['wx']**2)
+df['ecbar'] = 0.*df['edef'] 
+for j in np.arange(df['nmode'][0]):
+  df['ecbar'] = df['ecbar'] + df[f'ec{j+1}']
+  df[f'emode{j+1}'] = df[f'ec{j+1}'] + df[f'edef{j+1}']
+df['eintbar'] = df['edef'] + df['ecbar']
+df['ecdef'] = df['edef'] + df['ec'] + df['ecbar']
+
+# estock in the ground :
+df['pene'] = df['DIMP'].apply(lambda x: 0 if x > 0 else x)
+
+df['etot'] = df['epot'] + df['edef'] + df['ec'] + df['ecbar']
+df['etotstock'] = 0.*df['edef'] 
+df['etotstock'] = df['etot'] + df['estock']
+
+  indchoc = df[df['FN_CCONE'].abs()>0.]
+  # indni = df.drop(indchoc).index
+  df['efric'] = 0.*df['edef'] 
+  df['efric'] = muk*df['ft'].abs()*dt
+
+  lest = [df.iloc[fsti[0]-1]['etot'] for j,fsti in enumerate(lindchoc[i])]
+  lest2 = [df.iloc[fsti[0]-1]['etot'] for j,fsti in enumerate(lindchoc2[i])]
+  # energie dissipee : calcul par difference
+  def calcef(df,**kwargs):
+     ef = kwargs['lst'] - (df["etot"] + df["estock"]) 
+     return ef
+  df['ef'] = 0.*df['edef']
+  for j,indi in enumerate(lindchoc[i]):
+      kw = {'lst' : lest[j], 'ind' : indi}
+      dict1 = {'ef' : df.apply(calcef,**kw,axis=1)}
+      df1 = pd.DataFrame(dict1)
+      df.loc[indi, 'ef'] = df1.iloc[indi]
+      del df1
+  for j,indi in enumerate(lindchoc2[i]):
+      kw = {'lst' : lest2[j], 'ind' : indi}
+      dict1 = {'ef' : df.apply(calcef,**kw,axis=1)}
+      df1 = pd.DataFrame(dict1)
+      df.loc[indi, 'ef'] = df1.iloc[indi]
+      del df1
+# moyenne de l'energie totale a la fin du calcul :    
+moylast = np.mean(dfcomp[0].iloc[-1000:]['etot']+dfcomp[0].iloc[-1000:]['estock'])
+etot0 = dfcomp[0].iloc[0]['etot']
+np.abs(etot0 - moylast)*100./etot0
 # %%          PLOTS :
 repsect1 = f"{rep_save}traj_relatives/"
 if not os.path.exists(repsect1):

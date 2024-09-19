@@ -8,11 +8,31 @@ import rotation as rota
 import repchange as rc
 import os
 import matplotlib.pyplot as plt
-import mplcursors
+# import mplcursors
 
 #%% usefull parameters :
 color1 = ["red", "green", "blue", "orange", "purple", "pink"]
 view = [20, -50]
+#%%
+# t = np.linspace(0,128,200)
+# lfreq = np.linspace(2.,20.,len(t))
+
+# repsect1 = f"./fig/fig_freq_chargmnt/"
+# kwargs1 = {
+#     "tile1": "frequence chargmt = f(t)" + "\n",
+#     "tile_save": "freq_ft",
+#     "x": t,
+#     "y": lfreq,
+#     "rep_save": repsect1,
+#     "label1": None,
+#     "labelx": r"$t \quad (s)$",
+#     "labely": r"$f_{load} \quad (Hz)$",
+#     "color1": color1[0],
+#     "endpoint": False,
+#     "xpower": 5,
+#     "ypower": 5,
+# }
+# traj.pltraj2d_list(**kwargs1)
 #%% usefull parameters : pins
 dint_a = 70.e-3 
 d_ext = 63.5*1.e-3 
@@ -458,7 +478,7 @@ kwargs1 = {
     "rep_save": repsect1,
     "label1": None,
     "labelx": r"$t \quad (s)$",
-    "labely": r"$Frequency \quad (Hz)$",
+    "labely": r"$f_{load} \quad (Hz)$",
     "color1": color1[0],
     "endpoint": False,
     "xpower": 5,

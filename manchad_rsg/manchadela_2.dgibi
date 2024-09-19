@@ -491,6 +491,7 @@ FIN BTRONQ ;
 * postvibr Tmode ; 
 postvibr Tmode_tronq ; 
 tmode = Tmode_tronq ; 
+tmodela = tmode_tronq ;
 
 *********************************************************************
 *                  TMODE : translations et rotations 
@@ -1464,9 +1465,13 @@ A3 = TRESU . ACCELERATION . PTREP_RIG3;
 PI1 = TRESU . TRAVAIL_INTERIEUR . PTREP_RIG1;
 PI2 = TRESU . TRAVAIL_INTERIEUR . PTREP_RIG2;
 PI3 = TRESU . TRAVAIL_INTERIEUR . PTREP_RIG3;
-*
+* Energie cinetique :
 EC1 = TRESU . TRAVAIL_EXTERIEUR . PTREP_RIG1 ;
-*
+*** Energie de deformation :
+EP1 = tresu . TRAVAIL_EXTERIEUR . ptrep_rig2 ;
+*** Energie totale = hamiltonien :
+ET1 = EC1 + EP1 ;
+
 si (lraidtimo) ;
 W1_AD = TRESU . VITESSE . PTREP_RIG21;
 W2_AD = TRESU . VITESSE . PTREP_RIG22;
@@ -1597,27 +1602,31 @@ TSORT = 'TABL' ;
 TSORT . 't' = table ;
 TSORT . 't' = tprog ;
 
-TSORT . 'WX'  = table ;
-TSORT . 'WY'  = table ;
-TSORT . 'WZ'  = table ;
-TSORT . 'AX'  = table ;
-TSORT . 'AY'  = table ;
-TSORT . 'AZ'  = table ;
-TSORT . 'PIX' = table ;
-TSORT . 'PIY' = table ;
-TSORT . 'PIZ' = table ;
-TSORT . 'EC'  = table ;
+TSORT . 'WX'   = table ;
+TSORT . 'WY'   = table ;
+TSORT . 'WZ'   = table ;
+TSORT . 'AX'   = table ;
+TSORT . 'AY'   = table ;
+TSORT . 'AZ'   = table ;
+TSORT . 'PIX'  = table ;
+TSORT . 'PIY'  = table ;
+TSORT . 'PIZ'  = table ;
+TSORT . 'EC'   = table ;
+TSORT . 'edef' = table ;
+TSORT . 'et'   = table ;
 
-TSORT . 'WX'  = W1 ;
-TSORT . 'WY'  = W2 ;
-TSORT . 'WZ'  = W3 ;
-TSORT . 'AX'  = A1 ;
-TSORT . 'AY'  = A2 ;
-TSORT . 'AZ'  = A3 ;
-TSORT . 'EC'  = EC1 ;
-TSORT . 'PIX' = PI1 ;
-TSORT . 'PIY' = PI2 ;
-TSORT . 'PIZ' = PI3 ;
+TSORT . 'WX'   = W1 ;
+TSORT . 'WY'   = W2 ;
+TSORT . 'WZ'   = W3 ;
+TSORT . 'AX'   = A1 ;
+TSORT . 'AY'   = A2 ;
+TSORT . 'AZ'   = A3 ;
+TSORT . 'EC'   = EC1 ;
+TSORT . 'edef' = ep1 ;
+TSORT . 'et'   = et1 ;
+TSORT . 'PIX'  = PI1 ;
+TSORT . 'PIY'  = PI2 ;
+TSORT . 'PIZ'  = PI3 ;
 
 tsort . 'q1' = table ; 
 tsort . 'q2' = table ; 
@@ -1719,7 +1728,19 @@ TSORT . 'uxph_ad' = UXPH_AD ;
 TSORT . 'uyph_ad' = UYPH_AD ;
 TSORT . 'uzph_ad' = UZPH_AD ;
 
-ncolexce = 54 ;
+ncolexce = 56 ;
+* 
+repe bsauve (nmode) ;
+  ptrpi = tmodela . modes . &bsauve . point_repere ;  
+  tsort . (chai 'edef'&bsauve)    = table ; 
+  tsort . (chai 'ec'&bsauve) = table ;
+* tsort . (chai 'q'&bsauve'a') = table ;
+  tsort . (chai 'edef'&bsauve)  = tresu . travail_interieur . ptrpi ; 
+  tsort . (chai 'ec'&bsauve) = tresu . travail_exterieur . ptrpi ; 
+
+* tsort . (chai 'q'&bsauve'a') = tresu . acceleration . ptrpi ; 
+  ncolexce = ncolexce + 2 ;
+fin bsauve ;
 
 * force tansmise au systeme ie. mesuree par le cellule de force :
 si (ltrans) ;
