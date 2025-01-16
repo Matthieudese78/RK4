@@ -90,7 +90,7 @@ ntronq = 0 ;
 ****** Geometrie:
 
 *# stoia :
-stoia = faux ;
+stoia = vrai ;
 
 *# trig :
 trig = vrai ;

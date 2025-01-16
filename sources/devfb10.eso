@@ -120,7 +120,10 @@ cms : pour detecter les Nan
       xkvert =  3.27043021 * (10.d0**9)
 *     les grandeurs permettant de distinguer le cas Hertz du cas Parabolique
 *        Veritable limite "physique" entre Hertz et Prabolique sur le graphe rcurv/rcirc , delta_n :      
-      XATRANS = 0.012533086738156748
+*     old : 19/11/24 --> uilise dans le manuscrit !!
+*      XATRANS = 0.012533086738156748
+*     new : 19/11/24 real a_crete mesure dans : /home/matthieu/Documents/Cast3M/corps_rigide_castem/fortran/dev_git/rotations_rigides/dgibi_manchette/calcul_raideur/cercle_cone/cercle_cone/loop/nb_rota/py/optim.py
+      XATRANS = 0.017024596182084833 
 *     Veritable limite "physique" :      
 *     XATRANS = 0.00030498823335122383
 **    Cas Hertz :
@@ -157,8 +160,8 @@ cms : pour detecter les Nan
 *     - cas 2 : si delta_n < xhigh * xatrans * ((rcurc/rcirc) - 1) --> calcul profil parabolique.
 *     - cas 3 : si xhigh * xatrans * ((rcurc/rcirc) - 1) > delta_n > xlow * xatrans * ((rcurc/rcirc) - 1) --> calcul d'un profil parabolique dont le couple et la reaction resultante seront interpoles avec ceux du profil parabolic deja calcules lors du cas 2. .
 *       les coeffs xhigh et xlow du domaine d'interpolation du cas 3 :
-      xlow  = 0.99
-      xhigh = 1.01
+      xlow  = 0.95*11.
+      xhigh = 1.05*11.
 *--------------------------------------------------------------------*
 *--------------------------------------------------------------------*
 * --- choc elementaire CERCLE_CONE

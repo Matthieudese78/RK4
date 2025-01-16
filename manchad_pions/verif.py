@@ -205,8 +205,9 @@ ang = np.arctan(-3.3742894657438890E-002/-3.3765999995097301E-002)*180./np.pi
 # Paramètres du signal
 frequence_initiale = 2  # Hz
 frequence_finale = 20   # Hz
-duree = 1200             # secondes
-nombre_points = 1000000    # nombre de points pour l'échantillonnage
+duree = 128             # secondes
+# nombre_points = 1000000    # nombre de points pour l'échantillonnage
+nombre_points = 1.e3    # nombre de points pour l'échantillonnage
 
 # Générer le temps échantillonné
 temps = np.linspace(0, duree, nombre_points, endpoint=False)
@@ -216,7 +217,7 @@ frequence = np.linspace(frequence_initiale, frequence_finale, nombre_points)
 signal = np.sin(2 * np.pi * frequence * temps)
 
 # Tracer le signal
-plt.plot(temps, signal)
+plt.plot(temps[:500], signal[:500])
 plt.title('Signal Sinusoidal Balayé en Fréquence')
 plt.xlabel('Temps (s)')
 plt.ylabel('Amplitude')
